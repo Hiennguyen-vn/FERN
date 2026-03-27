@@ -33,7 +33,8 @@ The F&B ERP System has been set up with the following directory structure:
 │   ├── kafka/
 │   ├── postgres/
 │   │   ├── master/
-│   │   ├── operational/
+│   │   └── operational/
+│   ├── snowflake/
 │   │   └── reporting/
 │   └── redis/
 ├── deployment/
@@ -80,9 +81,9 @@ The F&B ERP System has been set up with the following directory structure:
 
 ### 3. Data Management
 - Three-layer database architecture:
-  * Master Data Layer (central configuration)
-  * Operational Data Layer (transactional data)
-  * Reporting Data Layer (aggregated analytics)
+  * PostgreSQL Master Data Layer (central configuration)
+  * PostgreSQL Operational Data Layer (transactional data)
+  * Snowflake Reporting Data Layer (aggregated analytics)
 
 ### 4. Deployment Strategy
 - Containerized services with Docker

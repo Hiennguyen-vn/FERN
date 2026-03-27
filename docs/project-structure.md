@@ -29,7 +29,8 @@ This document describes the recommended project structure for the F&B ERP System
 │   ├── kafka/
 │   ├── postgres/
 │   │   ├── master/
-│   │   ├── operational/
+│   │   └── operational/
+│   ├── snowflake/
 │   │   └── reporting/
 │   └── redis/
 ├── deployment/

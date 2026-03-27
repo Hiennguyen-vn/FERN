@@ -1,0 +1,10 @@
+flyway.url=jdbc:postgresql://127.0.0.1:55432/fern_operational
+flyway.user=fern
+flyway.password=fern
+
+# Example service-specific locations:
+# pos-service         -> filesystem:services/pos-service/src/main/resources/db/migration/postgresql/operational
+# inventory-service   -> filesystem:services/inventory-service/src/main/resources/db/migration/postgresql/operational
+# procurement-service -> filesystem:services/procurement-service/src/main/resources/db/migration/postgresql/operational
+# hr-service          -> filesystem:services/hr-service/src/main/resources/db/migration/postgresql/operational
+# finance-service     -> filesystem:services/finance-service/src/main/resources/db/migration/postgresql/operational

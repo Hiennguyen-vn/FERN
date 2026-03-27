@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: audit-service
+  datasource:
+    url: ${FERN_AUDIT_JDBC_URL:jdbc:snowflake://${FERN_SNOWFLAKE_ACCOUNT:local}.snowflakecomputing.com/?db=${FERN_SNOWFLAKE_DATABASE:FERN_REPORTING}&schema=AUDIT&warehouse=${FERN_SNOWFLAKE_WAREHOUSE:FERN_INGEST_WH}&role=${FERN_SNOWFLAKE_ROLE:SYSADMIN}${FERN_SNOWFLAKE_JDBC_OPTIONS:&JDBC_QUERY_RESULT_FORMAT=JSON}}
+    username: ${FERN_SNOWFLAKE_USER:fern}
+    password: ${FERN_SNOWFLAKE_PASSWORD:fern}
+  flyway:
+    enabled: true
+    schemas: AUDIT
+    default-schema: AUDIT
+    locations: classpath:db/migration/snowflake
+  kafka:
+    bootstrap-servers: ${FERN_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${FERN_AUDIT_CONSUMER_GROUP:audit-service}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+server:
+  port: ${PORT:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+fern:
+  security:
+    jwt:
+      secret: ${FERN_JWT_SECRET:XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv}
+      access-token-ttl-seconds: 900
+      refresh-token-ttl-seconds: 604800

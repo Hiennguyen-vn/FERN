@@ -1,0 +1,10 @@
+flyway.url=jdbc:snowflake://${FERN_SNOWFLAKE_ACCOUNT}.snowflakecomputing.com/?db=${FERN_SNOWFLAKE_DATABASE}&warehouse=${FERN_SNOWFLAKE_WAREHOUSE}&role=${FERN_SNOWFLAKE_ROLE}&JDBC_QUERY_RESULT_FORMAT=JSON
+flyway.user=${FERN_SNOWFLAKE_USER}
+flyway.password=${FERN_SNOWFLAKE_PASSWORD}
+flyway.schemas=RAW_EVENTS,REPORT,FINANCE_PROJECTION,AUDIT,NOTIFICATION
+
+# Example service-specific locations:
+# report-service      -> filesystem:services/report-service/src/main/resources/db/migration/snowflake
+# finance-service     -> filesystem:services/finance-service/src/main/resources/db/migration/snowflake
+# audit-service       -> filesystem:services/audit-service/src/main/resources/db/migration/snowflake
+# notification-service-> filesystem:services/notification-service/src/main/resources/db/migration/snowflake

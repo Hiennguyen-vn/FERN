@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${FERN_REDIS_HOST:localhost}
+      port: ${FERN_REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${FERN_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+fern:
+  security:
+    jwt:
+      secret: ${FERN_JWT_SECRET:XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv}
+      access-token-ttl-seconds: 900
+      refresh-token-ttl-seconds: 604800
+  routes:
+    iam: ${FERN_IAM_ROUTE_URI:http://localhost:8081}
+    org: ${FERN_ORG_ROUTE_URI:http://localhost:8082}
+    catalog: ${FERN_CATALOG_ROUTE_URI:http://localhost:8085}
+    audit: ${FERN_AUDIT_ROUTE_URI:http://localhost:8084}

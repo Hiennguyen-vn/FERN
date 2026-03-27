@@ -1,0 +1,11 @@
+flyway.url=jdbc:postgresql://127.0.0.1:55432/fern_master
+flyway.user=fern
+flyway.password=fern
+
+# Example service-specific locations:
+# iam-service         -> filesystem:services/iam-service/src/main/resources/db/migration
+# org-service         -> filesystem:services/org-service/src/main/resources/db/migration
+# catalog-service     -> filesystem:services/catalog-service/src/main/resources/db/migration/postgresql/master
+# procurement-service -> filesystem:services/procurement-service/src/main/resources/db/migration/postgresql/master
+# hr-service          -> filesystem:services/hr-service/src/main/resources/db/migration/postgresql/master
+# finance-service     -> filesystem:services/finance-service/src/main/resources/db/migration/postgresql/master

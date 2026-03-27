@@ -43,7 +43,7 @@
 3. **Database Layer Setup**
    - Master DB configuration
    - Operational shards
-   - Reporting database structure
+   - Snowflake reporting structure
 
 ### Core Business Services (Next 4 weeks)
 4. **Catalog Service**
@@ -85,7 +85,7 @@
 ### Week 1-2: Infrastructure Setup
 - API Gateway implementation
 - Basic IAM and authentication
-- Database setup (Master/Operational/Reporting layers)
+- Database setup (PostgreSQL Master/Operational + Snowflake Reporting)
 
 ### Week 3-4: Core Services
 - Catalog service implementation

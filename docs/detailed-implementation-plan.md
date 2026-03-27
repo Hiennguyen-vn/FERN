@@ -68,7 +68,7 @@ The F&B ERP System will be implemented following a microservices architecture wi
 
 **Deliverables**:
 - Basic system with core transaction processing
-- 3-layer database topology (Master/Operational/Reporting)
+- 3-layer database topology (PostgreSQL Master/Operational + Snowflake Reporting)
 - Kafka event backbone with outbox pattern
 - Basic stock balance projection
 - Scope-based authorization and routing
@@ -95,11 +95,11 @@ The F&B ERP System will be implemented following a microservices architecture wi
      * Configuration data
 
 2. **Operational Data Shards**
-   - Regional sharding with outlet partitioning
+   - PostgreSQL transactional layer with logical region sharding and outlet routing keys
    - Local read replicas for performance
 
 3. **Reporting Data Layer**
-   - Denormalized reporting database
+   - Snowflake reporting warehouse
    - Analytics-optimized schema
 
 ### 3.2 Event-Driven Architecture
@@ -137,7 +137,7 @@ The F&B ERP System will be implemented following a microservices architecture wi
 - Kubernetes orchestration
 - Single Kafka cluster
 - Redis cluster for caching and blacklisting
-- PostgreSQL clusters (Master/Operational/Reporting)
+- PostgreSQL clusters (Master/Operational) and Snowflake for reporting
 
 ### 4.2 V2 Evolution
 - Physical sharding by region

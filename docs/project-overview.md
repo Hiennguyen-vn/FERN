@@ -25,13 +25,14 @@ The F&B ERP System is organized into the following main components:
 
 ### 1.2 Data Architecture
 - **Database Layers**:
-  - Master Data Layer (central configuration and reference data)
-  - Operational Data Layer (transactional data)
-  - Reporting Data Layer (aggregated analytics data)
+  - PostgreSQL Master Data Layer (central configuration and reference data)
+  - PostgreSQL Operational Data Layer (transactional data)
+  - Snowflake Reporting Data Layer (aggregated analytics data)
 
 ### 1.3 Infrastructure Components
 - **Kafka**: Event streaming backbone
-- **PostgreSQL**: Primary database system
+- **PostgreSQL**: Primary OLTP database system
+- **Snowflake**: Reporting and warehouse platform
 - **Redis**: Caching and session management
 - **API Gateway**: Service mesh and routing
 
@@ -85,7 +86,8 @@ The F&B ERP System is organized into the following main components:
 ### 4.1 Backend Technologies
 - **Java 21** for service implementation
 - **Spring Boot** for microservice framework
-- **PostgreSQL** for data persistence
+- **PostgreSQL** for master and operational persistence
+- **Snowflake** for reporting persistence
 - **Kafka** for event streaming
 - **Redis** for caching and session management
 

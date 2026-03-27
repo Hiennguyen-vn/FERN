@@ -4,6 +4,35 @@ This document provides guidance for setting up the infrastructure components for
 
 ## 1. Database Setup
 
+### Unified Migration Command
+
+Use the repo-level migration script when you want one command to apply every owned schema migration:
+
+```bash
+cp infrastructure/migration.env.example .env.migrations
+./scripts/migrate-platform.sh all
+```
+
+`all` expects both PostgreSQL endpoints and Snowflake credentials to be available in `.env.migrations`.
+For local PostgreSQL-only work, run `master` and `operational` separately until Snowflake access is configured.
+The Docker PostgreSQL service is exposed on host port `55432` by default to avoid collisions with a developer's local PostgreSQL on `5432`.
+
+Useful variants:
+
+```bash
+./scripts/migrate-platform.sh master
+./scripts/migrate-platform.sh operational
+./scripts/migrate-platform.sh snowflake
+./scripts/migrate-platform.sh master --action validate
+./scripts/migrate-platform.sh snowflake --skip-snowflake-bootstrap
+```
+
+For one-command local bootstrap with Docker, PostgreSQL migrations, and the gateway/IAM/Org smoke flow:
+
+```bash
+./scripts/bootstrap-local.sh
+```
+
 ### 1.1 Master Database (PostgreSQL)
 
 The Master database contains system-wide configuration data including:
@@ -30,17 +59,22 @@ Operational databases contain transactional data for daily operations:
 2. Set up replication for read scalability
 3. Configure backup and recovery
 
-### 1.3 Reporting Database (PostgreSQL)
+### 1.3 Reporting Database (Snowflake)
 
 The Reporting database contains aggregated data for analytics:
 - Sales reports
 - Performance metrics
 - Business intelligence data
+- Audit and notification projections
 
 #### Setup Steps:
-1. Configure reporting database instance
-2. Set up ETL processes
-3. Configure data retention policies
+1. Create Snowflake database `FERN_REPORTING`
+2. Create ingest and BI warehouses
+3. Create reporting schemas and projection tables
+4. Configure Kafka-based projection consumers
+5. Configure retention and cost controls
+
+The unified migration script bootstraps Snowflake warehouses and the `FERN_REPORTING` database by default before running service-owned reporting migrations.
 
 ## 2. Messaging Infrastructure (Kafka)
 
@@ -125,6 +159,11 @@ Each service requires the following environment variables:
 - REDIS_HOST - Redis server hostname
 - JWT_SECRET_KEY - JWT secret key
 - SERVICE_DISCOVERY_URL - Service discovery endpoint
+- FERN_SNOWFLAKE_ACCOUNT - Snowflake account identifier
+- FERN_SNOWFLAKE_USER - Snowflake username
+- FERN_SNOWFLAKE_PASSWORD - Snowflake password or key-based auth secret
+- FERN_SNOWFLAKE_WAREHOUSE - Snowflake warehouse name
+- FERN_SNOWFLAKE_BI_WAREHOUSE - Snowflake BI/export warehouse name
 
 ## 6. Monitoring and Logging
 

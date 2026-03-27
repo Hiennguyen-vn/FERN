@@ -81,7 +81,7 @@ The architecture is optimized according to the following principles:
 ### 4.2 Technical Drivers
 - Microservices according to bounded context
 - Kafka as event backbone
-- PostgreSQL as main storage platform
+- PostgreSQL as main OLTP platform and Snowflake as reporting platform
 - Redis for cache and token blacklist
 - API Gateway as single entry point
 - Need to prepare early for read replica / shard / projection
@@ -413,8 +413,8 @@ Characteristics:
 - Not mutation source
 
 DB placement:
-- Reporting DB Primary for projection writes from consumer/jobs
-- Reporting DB Replicas for dashboard / export / large ad hoc reads
+- Snowflake reporting database for projection writes from consumer/jobs
+- Separate Snowflake warehouses for ingest and BI/export workloads
 
 ### 8.2 Why not "every service shares 1 cluster" as final architecture
 
@@ -806,10 +806,10 @@ Runtime:
 - API Gateway in front
 - Kafka cluster
 - Redis cluster
-- PostgreSQL clusters in 3 layers:
+- PostgreSQL clusters in 2 OLTP layers:
   - Master
   - Operational
-  - Reporting
+- Snowflake reporting warehouse
 
 Operational strategy:
 - V1 does not need 300 physical DBs

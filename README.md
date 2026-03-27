@@ -12,7 +12,7 @@ This is a comprehensive enterprise resource planning (ERP) system designed for a
 - **Online-only POS**: Low-latency point of sale system optimized for high transaction volume
 - **Microservices Architecture**: 12 bounded-context services with clear data ownership
 - **Event-Driven Design**: Kafka-based event backbone for async communication
-- **Three-Layer Data Topology**: Master, Operational (sharded), and Reporting databases
+- **Three-Layer Data Topology**: PostgreSQL Master, PostgreSQL Operational (shard-ready), and Snowflake Reporting
 - **Scope-Based Authorization**: JWT stateless tokens with Redis blacklist
 - **Comprehensive ERP Coverage**: POS, Inventory, Procurement, HR, Finance, Reporting
 
@@ -37,6 +37,7 @@ This is a comprehensive enterprise resource planning (ERP) system designed for a
 ├── infrastructure/          # Infrastructure configuration
 │   ├── kafka/
 │   ├── postgres/
+│   ├── snowflake/
 │   └── redis/
 ├── deployment/              # Kubernetes and deployment configs
 └── shared-libraries/        # Common configurations and libraries
@@ -46,9 +47,9 @@ This is a comprehensive enterprise resource planning (ERP) system designed for a
 
 ### Three-Layer Data Topology
 
-1. **Master Data Layer**: Central PostgreSQL for IAM, Org, Catalog, Configuration
-2. **Operational Data Layer**: Regional sharding with outlet partitioning
-3. **Reporting Data Layer**: Denormalized analytics for BI and dashboards
+1. **Master Data Layer**: Central PostgreSQL for IAM, Org, Catalog, Procurement Master, HR Master, Configuration
+2. **Operational Data Layer**: PostgreSQL transactional schemas with region/outlet routing keys and shard-ready design
+3. **Reporting Data Layer**: Snowflake warehouse for BI, projection, audit, and notification workloads
 
 ### Core Services
 
@@ -71,7 +72,7 @@ This is a comprehensive enterprise resource planning (ERP) system designed for a
 
 - **Language**: Java 21
 - **Framework**: Spring Boot
-- **Database**: PostgreSQL (Master/Operational/Reporting)
+- **Database**: PostgreSQL (Master/Operational) + Snowflake (Reporting)
 - **Messaging**: Apache Kafka
 - **Cache**: Redis
 - **Deployment**: Docker, Kubernetes
@@ -121,17 +122,33 @@ Comprehensive documentation is available in the `docs/` directory:
    cd fern-erp-system
 
    # Set up local infrastructure (Docker Compose)
-   docker-compose up -d kafka redis postgres
+   docker compose up -d kafka redis postgres
+
+   # Prepare database migration settings
+   cp infrastructure/migration.env.example .env.migrations
+
+   # Run all PostgreSQL and Snowflake migrations
+   # Fill Snowflake values in .env.migrations before using all
+   ./scripts/migrate-platform.sh all
+
+   # Local PostgreSQL-only bootstrap
+   ./scripts/migrate-platform.sh master
+   ./scripts/migrate-platform.sh operational
+
+   # One-command local bootstrap + smoke flow
+   ./scripts/bootstrap-local.sh
    ```
+
+   Local Docker PostgreSQL is exposed on `127.0.0.1:55432` by default to avoid clashing with a host PostgreSQL already using `5432`.
 
 3. **Build and Run Services**
    ```bash
    # Build all services
-   mvn clean install
+   ./mvnw clean install
 
    # Run individual service
    cd services/api-gateway
-   mvn spring-boot:run
+   ../../mvnw spring-boot:run
    ```
 
 ## Key Architectural Principles

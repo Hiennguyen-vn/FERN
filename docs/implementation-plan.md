@@ -47,10 +47,10 @@ Based on the architecture document, we'll implement services in this order:
 - Basic procurement workflows
 
 **Deliverables**:
-- 3-layer database topology (Master/Operational/Reporting)
+- 3-layer database topology (PostgreSQL Master/Operational + Snowflake Reporting)
 - Kafka event backbone with outbox pattern
 - Basic stock balance projection
-- Reporting DB for dashboards
+- Snowflake reporting warehouse for dashboards
 - Basic scope-based routing
 
 ### Phase 2: V2 Evolution

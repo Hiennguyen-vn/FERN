@@ -78,7 +78,8 @@ The F&B ERP System is a comprehensive microservices-based enterprise resource pl
 │   ├── kafka/
 │   ├── postgres/
 │   │   ├── master/
-│   │   ├── operational/
+│   │   └── operational/
+│   ├── snowflake/
 │   │   └── reporting/
 │   └── redis/
 ├── deployment/
@@ -94,17 +95,17 @@ The F&B ERP System is a comprehensive microservices-based enterprise resource pl
 
 1. **Master Data Layer**
    - Central PostgreSQL cluster
-   - Contains: IAM, Org, Catalog, Configuration
+   - Contains: IAM, Org, Catalog, Procurement Master, HR Master, Configuration
    - Used for: System-wide reference data
 
 2. **Operational Data Layer**
-   - Regional sharding with outlet partitioning
-   - Contains: Orders, Inventory, Transactions
+   - PostgreSQL transactional schemas with region/outlet routing keys
+   - Contains: Orders, Inventory, Procurement, Attendance, Payroll source-of-truth
    - Used for: Daily operational transactions
 
 3. **Reporting Data Layer**
-   - Denormalized analytics database
-   - Contains: Aggregates, Facts, Summaries
+   - Snowflake warehouse
+   - Contains: Raw events, facts, summaries, finance projections, audit, notifications
    - Used for: BI, Dashboards, Export
 
 ### Key Services (12 Microservices)
@@ -125,7 +126,7 @@ The F&B ERP System is a comprehensive microservices-based enterprise resource pl
 ### Technology Stack
 
 - **Backend**: Java 21, Spring Boot
-- **Database**: PostgreSQL (Master/Operational/Reporting)
+- **Database**: PostgreSQL (Master/Operational) + Snowflake (Reporting)
 - **Messaging**: Kafka (event-driven architecture)
 - **Cache**: Redis (JWT blacklist, session, catalog cache)
 - **Deployment**: Docker, Kubernetes
@@ -156,7 +157,7 @@ The F&B ERP System is a comprehensive microservices-based enterprise resource pl
 - Kafka event backbone with outbox pattern
 - Basic stock balance projection
 - Scope-based routing
-- Reporting DB for dashboards
+- Snowflake reporting warehouse for dashboards
 
 ### Phase 2: V2 - 6 Months
 
