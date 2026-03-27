@@ -6,7 +6,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -20,12 +19,14 @@ import com.fern.platform.common.ScopeRoots;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -51,6 +52,11 @@ class AuditControllerTest {
         principal = new FernPrincipal(1L, "bootstrap-admin", Set.of("bootstrap_admin"), Set.of("audit.read"), new ScopeRoots(List.of(1L), List.of()), 1L, 1L, "jti");
     }
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
     @Test
     void shouldBindAuditEventFiltersFromQueryString() throws Exception {
         doNothing().when(auditAuthorizer).requireRead(principal);
@@ -72,16 +78,16 @@ class AuditControllerTest {
                 "5",
                 "SUCCESS",
                 "UPDATE | PRODUCT | 5 | SUCCESS"
-        )));
+                )));
 
+        authenticate(principal);
         mockMvc.perform(get("/audit/events")
                         .param("sourceService", "catalog-service")
                         .param("action", "UPDATE")
                         .param("resourceType", "PRODUCT")
                         .param("resourceId", "5")
                         .param("correlationId", "corr-1")
-                        .param("limit", "25")
-                        .with(authentication(new UsernamePasswordAuthenticationToken(principal, null))))
+                        .param("limit", "25"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].id").value("1"))
                 .andExpect(jsonPath("$.items[0].sourceService").value("catalog-service"));
@@ -122,12 +128,16 @@ class AuditControllerTest {
                 "CREATE | USER | 3 | SUCCESS"
         ));
 
-        mockMvc.perform(get("/audit/events/1")
-                        .with(authentication(new UsernamePasswordAuthenticationToken(principal, null))))
+        authenticate(principal);
+        mockMvc.perform(get("/audit/events/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value("1"))
                 .andExpect(jsonPath("$.detailMasked").value(true));
 
         verify(auditQueryService).getAuditEvent(principal, 1L, false);
+    }
+
+    private void authenticate(FernPrincipal principal) {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null));
     }
 }

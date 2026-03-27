@@ -18,7 +18,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.iamservice.repository.AuthSessionRepository;
 import com.fern.platform.audit.AuditEvent;
 import com.fern.platform.audit.AuditEventPublisher;
+import com.fern.platform.common.FernPrincipalType;
+import com.fern.platform.common.ScopeRoots;
+import com.fern.platform.security.FernJwtClaims;
+import com.fern.platform.security.FernJwtProperties;
+import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -123,6 +133,8 @@ class IamServiceIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roleCodes[0]").value("bootstrap_admin"));
 
+        accessToken = loginAsBootstrapAdminAccessToken();
+
         mockMvc.perform(post("/users/%d/scopes".formatted(userId))
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -131,6 +143,8 @@ class IamServiceIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.scopeRoots.regions[0]").value(1));
+
+        accessToken = loginAsBootstrapAdminAccessToken();
 
         mockMvc.perform(put("/users/%d/permission-overrides".formatted(userId))
                         .header("Authorization", "Bearer " + accessToken)
@@ -153,6 +167,8 @@ class IamServiceIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.overrides[0].permissionCode").exists());
+
+        accessToken = loginAsBootstrapAdminAccessToken();
 
         mockMvc.perform(get("/users/%d/permission-overrides".formatted(userId))
                         .header("Authorization", "Bearer " + accessToken))
@@ -183,9 +199,9 @@ class IamServiceIntegrationTest {
         String rotatedRefreshToken = refreshJson.get("refreshToken").asText();
 
         assertThat(rotatedRefreshToken).isNotEqualTo(refreshToken);
-        assertThat(authSessionRepository.findAllByUserIdAndRevokedAtIsNull(bootstrapAdminId)).hasSize(1);
+        assertThat(authSessionRepository.findAllByUserIdAndRevokedAtIsNull(bootstrapAdminId)).hasSize(4);
         Long totalSessions = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM iam.auth_session WHERE user_id = 1", Long.class);
-        assertThat(totalSessions).isEqualTo(2);
+        assertThat(totalSessions).isEqualTo(5);
 
         mockMvc.perform(post("/auth/logout")
                         .header("Authorization", "Bearer " + rotatedAccessToken)
@@ -196,7 +212,7 @@ class IamServiceIntegrationTest {
                 .andExpect(status().isNoContent());
 
         assertThat(redisTemplate.keys("fern:iam:blacklist:*")).isNotEmpty();
-        assertThat(authSessionRepository.findAllByUserIdAndRevokedAtIsNull(bootstrapAdminId)).isEmpty();
+        assertThat(authSessionRepository.findAllByUserIdAndRevokedAtIsNull(bootstrapAdminId)).hasSize(3);
 
         verify(auditEventPublisher, atLeastOnce()).publishSecurityEvent(argThat(event ->
                 event.eventType().equals("iam.auth.login.succeeded") || event.eventType().equals("iam.auth.logout")));
@@ -242,10 +258,11 @@ class IamServiceIntegrationTest {
 
     @Test
     void shouldRejectManualLockedSuspendedAndInactiveStatuses() throws Exception {
-        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        String adminToken = loginAsBootstrapAdminAccessToken();
         Long userId = createUser(adminToken, "status-user", "Status123!").get("id").asLong();
 
         for (String statusValue : java.util.List.of("LOCKED", "SUSPENDED", "INACTIVE")) {
+            adminToken = loginAsBootstrapAdminAccessToken();
             mockMvc.perform(patch("/users/%d".formatted(userId))
                             .header("Authorization", "Bearer " + adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
@@ -266,7 +283,7 @@ class IamServiceIntegrationTest {
 
     @Test
     void shouldRejectDuplicatePermissionOverridesBeforeMutation() throws Exception {
-        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        String adminToken = loginAsBootstrapAdminAccessToken();
         Long userId = createUser(adminToken, "override-user", "Override123!").get("id").asLong();
 
         mockMvc.perform(put("/users/%d/permission-overrides".formatted(userId))
@@ -285,6 +302,7 @@ class IamServiceIntegrationTest {
                                 """))
                 .andExpect(status().isOk());
 
+        adminToken = loginAsBootstrapAdminAccessToken();
         reset(auditEventPublisher);
 
         mockMvc.perform(put("/users/%d/permission-overrides".formatted(userId))
@@ -322,7 +340,7 @@ class IamServiceIntegrationTest {
 
     @Test
     void shouldDifferentiateProfileStatusAndNoopUserUpdates() throws Exception {
-        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        String adminToken = loginAsBootstrapAdminAccessToken();
         Long userId = createUser(adminToken, "patch-user", "Patch123!").get("id").asLong();
 
         jdbcTemplate.update("DELETE FROM iam.outbox_event");
@@ -379,6 +397,9 @@ class IamServiceIntegrationTest {
         jdbcTemplate.update("DELETE FROM iam.outbox_event");
         redisTemplate.delete("fern:versions:policy");
         reset(auditEventPublisher);
+        adminToken = loginAsBootstrapAdminAccessToken();
+        reset(auditEventPublisher);
+        redisTemplate.delete("fern:versions:policy");
 
         mockMvc.perform(patch("/users/%d".formatted(userId))
                         .header("Authorization", "Bearer " + adminToken)
@@ -396,7 +417,7 @@ class IamServiceIntegrationTest {
 
     @Test
     void shouldAssignSystemScopeAndExposeItInEffectiveAccess() throws Exception {
-        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        String adminToken = loginAsBootstrapAdminAccessToken();
         Long userId = createUser(adminToken, "system-scope-user", "Scope123!").get("id").asLong();
 
         mockMvc.perform(post("/users/%d/scopes".formatted(userId))
@@ -414,6 +435,8 @@ class IamServiceIntegrationTest {
                 .andExpect(jsonPath("$.scopeRoots.regions[0]").value(1))
                 .andExpect(jsonPath("$.scopeRoots.outlets[0]").value(101));
 
+        adminToken = loginAsBootstrapAdminAccessToken();
+
         mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
@@ -428,7 +451,7 @@ class IamServiceIntegrationTest {
 
     @Test
     void shouldBumpPolicyVersionWhenPermissionOverridesChange() throws Exception {
-        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        String adminToken = loginAsBootstrapAdminAccessToken();
         Long userId = createUser(adminToken, "policy-override-user", "Override123!").get("id").asLong();
         redisTemplate.delete("fern:versions:policy");
 
@@ -453,7 +476,7 @@ class IamServiceIntegrationTest {
 
     @Test
     void shouldRevokeRefreshSessionsWhenUserIsDisabled() throws Exception {
-        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        String adminToken = loginAsBootstrapAdminAccessToken();
         createUser(adminToken, "refresh-user", "Refresh123!");
 
         MvcResult loginResult = mockMvc.perform(post("/auth/login")
@@ -495,6 +518,10 @@ class IamServiceIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(loginResult.getResponse().getContentAsString());
+    }
+
+    private String loginAsBootstrapAdminAccessToken() throws Exception {
+        return loginAsBootstrapAdmin().get("accessToken").asText();
     }
 
     private JsonNode createUser(String adminToken, String username, String password) throws Exception {

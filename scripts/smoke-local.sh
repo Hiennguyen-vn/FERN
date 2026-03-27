@@ -23,12 +23,19 @@ SMOKE_YIELD_UOM_CODE="${SMOKE_YIELD_UOM_CODE:-C${RUN_ID}}"
 SMOKE_INGREDIENT_CODE="${SMOKE_INGREDIENT_CODE:-ING${RUN_ID}}"
 SMOKE_PRODUCT_CODE="${SMOKE_PRODUCT_CODE:-PROD${RUN_ID}}"
 SMOKE_RECIPE_CODE="${SMOKE_RECIPE_CODE:-RCP${RUN_ID}}"
+SMOKE_SUPPLIER_CODE="${SMOKE_SUPPLIER_CODE:-SUP${RUN_ID}}"
+SMOKE_SUPPLIER_NAME="${SMOKE_SUPPLIER_NAME:-Smoke Supplier ${RUN_ID}}"
+SMOKE_SUPPLIER_INVOICE_NUMBER="${SMOKE_SUPPLIER_INVOICE_NUMBER:-INV-${RUN_ID}}"
 KEEP_INFRA_UP="${KEEP_INFRA_UP:-1}"
 SKIP_INFRA_BOOTSTRAP="${SKIP_INFRA_BOOTSTRAP:-0}"
 
 IAM_PID=""
 ORG_PID=""
 CATALOG_PID=""
+POS_PID=""
+INVENTORY_PID=""
+PROCUREMENT_PID=""
+FINANCE_PID=""
 AUDIT_PID=""
 GATEWAY_PID=""
 
@@ -64,32 +71,31 @@ else:
 }
 
 http_json() {
+  http_json_with_headers "$1" "$2" "${3:-}" "${4:-}"
+}
+
+http_json_with_headers() {
   local method="$1"
   local url="$2"
   local body="${3:-}"
   local auth_header="${4:-}"
+  shift 4 || true
   local response_file
   local status
 
   response_file="$(mktemp)"
-  if [[ -n "${auth_header}" && -n "${body}" ]]; then
-    status="$(curl -sS -o "${response_file}" -w '%{http_code}' -X "${method}" \
-      -H 'Content-Type: application/json' \
-      -H "Authorization: ${auth_header}" \
-      --data "${body}" \
-      "${url}")"
-  elif [[ -n "${auth_header}" ]]; then
-    status="$(curl -sS -o "${response_file}" -w '%{http_code}' -X "${method}" \
-      -H "Authorization: ${auth_header}" \
-      "${url}")"
-  elif [[ -n "${body}" ]]; then
-    status="$(curl -sS -o "${response_file}" -w '%{http_code}' -X "${method}" \
-      -H 'Content-Type: application/json' \
-      --data "${body}" \
-      "${url}")"
-  else
-    status="$(curl -sS -o "${response_file}" -w '%{http_code}' -X "${method}" "${url}")"
+  local -a curl_args=(-sS -o "${response_file}" -w '%{http_code}' -X "${method}")
+  if [[ -n "${auth_header}" ]]; then
+    curl_args+=(-H "Authorization: ${auth_header}")
   fi
+  if [[ -n "${body}" ]]; then
+    curl_args+=(-H 'Content-Type: application/json' --data "${body}")
+  fi
+  while [[ $# -gt 0 ]]; do
+    curl_args+=(-H "$1")
+    shift
+  done
+  status="$(curl "${curl_args[@]}" "${url}")"
 
   if [[ "${status}" -lt 200 || "${status}" -ge 300 ]]; then
     printf 'Request failed: %s %s -> %s\n' "${method}" "${url}" "${status}" >&2
@@ -121,6 +127,12 @@ login_access_token() {
 
   login_response="$(http_json POST "${base_url}/auth/login" "{\"username\":\"${username}\",\"password\":\"${password}\"}")" || exit 1
   printf '%s' "${login_response}" | json_get accessToken
+}
+
+docker_psql_scalar() {
+  local database="$1"
+  local sql="$2"
+  docker exec fern-postgres psql -U "${FERN_DB_USERNAME:-fern}" -d "${database}" -Atqc "${sql}"
 }
 
 wait_for_http() {
@@ -171,6 +183,22 @@ cleanup() {
     kill "${CATALOG_PID}" >/dev/null 2>&1 || true
     wait "${CATALOG_PID}" 2>/dev/null || true
   fi
+  if [[ -n "${POS_PID}" ]] && kill -0 "${POS_PID}" >/dev/null 2>&1; then
+    kill "${POS_PID}" >/dev/null 2>&1 || true
+    wait "${POS_PID}" 2>/dev/null || true
+  fi
+  if [[ -n "${INVENTORY_PID}" ]] && kill -0 "${INVENTORY_PID}" >/dev/null 2>&1; then
+    kill "${INVENTORY_PID}" >/dev/null 2>&1 || true
+    wait "${INVENTORY_PID}" 2>/dev/null || true
+  fi
+  if [[ -n "${PROCUREMENT_PID}" ]] && kill -0 "${PROCUREMENT_PID}" >/dev/null 2>&1; then
+    kill "${PROCUREMENT_PID}" >/dev/null 2>&1 || true
+    wait "${PROCUREMENT_PID}" 2>/dev/null || true
+  fi
+  if [[ -n "${FINANCE_PID}" ]] && kill -0 "${FINANCE_PID}" >/dev/null 2>&1; then
+    kill "${FINANCE_PID}" >/dev/null 2>&1 || true
+    wait "${FINANCE_PID}" 2>/dev/null || true
+  fi
   if [[ -n "${AUDIT_PID}" ]] && kill -0 "${AUDIT_PID}" >/dev/null 2>&1; then
     kill "${AUDIT_PID}" >/dev/null 2>&1 || true
     wait "${AUDIT_PID}" 2>/dev/null || true
@@ -206,7 +234,7 @@ wait_for_container_health fern-kafka 90
 log "Building runnable modules for smoke flow"
 (
   cd "${ROOT_DIR}" &&
-  ./mvnw -q -pl services/iam-service,services/org-service,services/catalog-service,services/audit-service,services/api-gateway -am install -DskipTests >"${LOG_DIR}/build.log" 2>&1
+  ./mvnw -q -pl services/iam-service,services/org-service,services/catalog-service,services/pos-service,services/inventory-service,services/procurement-service,services/finance-service,services/audit-service,services/api-gateway -am install -DskipTests >"${LOG_DIR}/build.log" 2>&1
 )
 
 log "Starting iam-service"
@@ -228,10 +256,42 @@ wait_for_http "org-service" "http://localhost:8082/actuator/health"
 log "Starting catalog-service"
 (
   cd "${ROOT_DIR}" &&
-  ./mvnw -q -f services/catalog-service/pom.xml spring-boot:run >"${LOG_DIR}/catalog-service.log" 2>&1
+  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/catalog-service/pom.xml spring-boot:run >"${LOG_DIR}/catalog-service.log" 2>&1
 ) &
 CATALOG_PID=$!
 wait_for_http "catalog-service" "http://localhost:8085/actuator/health"
+
+log "Starting inventory-service"
+(
+  cd "${ROOT_DIR}" &&
+  ./mvnw -q -f services/inventory-service/pom.xml spring-boot:run >"${LOG_DIR}/inventory-service.log" 2>&1
+) &
+INVENTORY_PID=$!
+wait_for_http "inventory-service" "http://localhost:8087/actuator/health"
+
+log "Starting pos-service"
+(
+  cd "${ROOT_DIR}" &&
+  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/pos-service/pom.xml spring-boot:run >"${LOG_DIR}/pos-service.log" 2>&1
+) &
+POS_PID=$!
+wait_for_http "pos-service" "http://localhost:8086/actuator/health"
+
+log "Starting procurement-service"
+(
+  cd "${ROOT_DIR}" &&
+  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/procurement-service/pom.xml spring-boot:run >"${LOG_DIR}/procurement-service.log" 2>&1
+) &
+PROCUREMENT_PID=$!
+wait_for_http "procurement-service" "http://localhost:8088/actuator/health"
+
+log "Starting finance-service"
+(
+  cd "${ROOT_DIR}" &&
+  ./mvnw -q -f services/finance-service/pom.xml spring-boot:run >"${LOG_DIR}/finance-service.log" 2>&1
+) &
+FINANCE_PID=$!
+wait_for_http "finance-service" "http://localhost:8091/actuator/health"
 
 log "Starting audit-service"
 (
@@ -316,7 +376,7 @@ user_response="$(http_json POST "http://localhost:8080/users" "{\"username\":\"$
 user_id="$(printf '%s' "${user_response}" | json_get id)"
 
 bootstrap_access_token="$(login_access_token "http://localhost:8080" "${BOOTSTRAP_USERNAME}" "${BOOTSTRAP_PASSWORD}")"
-http_json POST "http://localhost:8080/users/${user_id}/roles" "{\"roleCodes\":[\"${role_code}\"]}" "Bearer ${bootstrap_access_token}" >/dev/null
+http_json POST "http://localhost:8080/users/${user_id}/roles" "{\"roleCodes\":[\"${role_code}\",\"outlet_manager\",\"regional_finance\",\"finance\"]}" "Bearer ${bootstrap_access_token}" >/dev/null
 
 bootstrap_access_token="$(login_access_token "http://localhost:8080" "${BOOTSTRAP_USERNAME}" "${BOOTSTRAP_PASSWORD}")"
 http_json POST "http://localhost:8080/users/${user_id}/scopes" "{\"regionIds\":[${region_id}],\"outletIds\":[${outlet_id}]}" "Bearer ${bootstrap_access_token}" >/dev/null
@@ -326,6 +386,195 @@ smoke_access_token="$(login_access_token "http://localhost:8080" "${SMOKE_USER_U
 
 log "Calling Org API through gateway"
 http_json GET "http://localhost:8080/regions/${region_id}" "" "Bearer ${smoke_access_token}" >/dev/null
+
+log "Seeding operational inventory through gateway"
+adjustment_response="$(http_json POST "http://localhost:8080/stock-adjustments" "{\"regionId\":${region_id},\"outletId\":${outlet_id},\"ingredientId\":${ingredient_id},\"adjustmentDirection\":\"IN\",\"qty\":50.0000,\"businessDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"reason\":\"BOOTSTRAP\",\"note\":\"Seed opening stock\"}" "Bearer ${smoke_access_token}")"
+adjustment_id="$(printf '%s' "${adjustment_response}" | json_get id)"
+http_json_with_headers POST "http://localhost:8080/stock-adjustments/${adjustment_id}/post" "" "Bearer ${smoke_access_token}" "Idempotency-Key: smoke-adjustment-post-${RUN_ID}" >/dev/null
+
+waste_response="$(http_json POST "http://localhost:8080/waste-records" "{\"regionId\":${region_id},\"outletId\":${outlet_id},\"ingredientId\":${ingredient_id},\"qty\":2.0000,\"businessDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"reason\":\"SPILL\",\"note\":\"Smoke waste\"}" "Bearer ${smoke_access_token}")"
+waste_id="$(printf '%s' "${waste_response}" | json_get id)"
+http_json_with_headers POST "http://localhost:8080/waste-records/${waste_id}/post" "" "Bearer ${smoke_access_token}" "Idempotency-Key: smoke-waste-post-${RUN_ID}" >/dev/null
+
+stock_count_response="$(http_json POST "http://localhost:8080/stock-count-sessions" "{\"regionId\":${region_id},\"outletId\":${outlet_id},\"countDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"ingredientIds\":[${ingredient_id}],\"note\":\"Smoke stock count\"}" "Bearer ${smoke_access_token}")"
+stock_count_id="$(printf '%s' "${stock_count_response}" | json_get id)"
+http_json POST "http://localhost:8080/stock-count-sessions/${stock_count_id}/start" "" "Bearer ${smoke_access_token}" >/dev/null
+http_json PUT "http://localhost:8080/stock-count-sessions/${stock_count_id}/lines" "{\"lines\":[{\"ingredientId\":${ingredient_id},\"actualQty\":48.0000,\"note\":\"Count confirmed\"}]}" "Bearer ${smoke_access_token}" >/dev/null
+http_json_with_headers POST "http://localhost:8080/stock-count-sessions/${stock_count_id}/post" "" "Bearer ${smoke_access_token}" "Idempotency-Key: smoke-count-post-${RUN_ID}" >/dev/null
+
+inventory_balance_response="$(http_json GET "http://localhost:8080/stock-balances?outletId=${outlet_id}&ingredientId=${ingredient_id}" "" "Bearer ${smoke_access_token}")"
+balance_qty_on_hand="$(printf '%s' "${inventory_balance_response}" | json_get 0.qtyOnHand)"
+if [[ "${balance_qty_on_hand}" != "48.0000" && "${balance_qty_on_hand}" != "48.00" && "${balance_qty_on_hand}" != "48" ]]; then
+  printf 'Expected seeded inventory qty_on_hand 48.0000, got %s\n' "${balance_qty_on_hand}" >&2
+  exit 1
+fi
+
+log "Running POS flow through gateway"
+pos_session_response="$(http_json POST "http://localhost:8080/pos-sessions" "{\"regionId\":${region_id},\"outletId\":${outlet_id},\"currencyCode\":\"VND\",\"businessDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"note\":\"Smoke POS session\"}" "Bearer ${smoke_access_token}")"
+pos_session_id="$(printf '%s' "${pos_session_response}" | json_get id)"
+
+sale_order_response="$(http_json POST "http://localhost:8080/sale-orders" "{\"posSessionId\":${pos_session_id},\"orderType\":\"DINE_IN\",\"note\":\"Smoke main order\",\"lines\":[{\"productId\":${product_id},\"qty\":1.0000,\"note\":\"Initial line\"}]}" "Bearer ${smoke_access_token}")"
+sale_order_id="$(printf '%s' "${sale_order_response}" | json_get id)"
+
+updated_order_response="$(http_json PATCH "http://localhost:8080/sale-orders/${sale_order_id}" "{\"note\":\"Smoke updated order\",\"lines\":[{\"productId\":${product_id},\"qty\":1.0000,\"note\":\"Updated line\"}]}" "Bearer ${smoke_access_token}")"
+updated_total_amount="$(printf '%s' "${updated_order_response}" | json_get totalAmount)"
+if [[ "${updated_total_amount}" != "60500.00" && "${updated_total_amount}" != "60500.0" && "${updated_total_amount}" != "60500" ]]; then
+  printf 'Expected updated sale order total 60500.00, got %s\n' "${updated_total_amount}" >&2
+  exit 1
+fi
+
+http_json_with_headers POST "http://localhost:8080/sale-orders/${sale_order_id}/payments" "{\"paymentMethod\":\"CASH\",\"amount\":30000.00}" "Bearer ${smoke_access_token}" "Idempotency-Key: smoke-pay-cash-${RUN_ID}" >/dev/null
+payment_response="$(http_json_with_headers POST "http://localhost:8080/sale-orders/${sale_order_id}/payments" "{\"paymentMethod\":\"CARD\",\"amount\":30500.00,\"transactionRef\":\"SMOKE-TXN-${RUN_ID}\"}" "Bearer ${smoke_access_token}" "Idempotency-Key: smoke-pay-card-${RUN_ID}")"
+payment_status="$(printf '%s' "${payment_response}" | json_get paymentStatus)"
+if [[ "${payment_status}" != "PAID" ]]; then
+  printf 'Expected PAID payment status, got %s\n' "${payment_status}" >&2
+  exit 1
+fi
+
+complete_response="$(http_json POST "http://localhost:8080/sale-orders/${sale_order_id}/complete" "" "Bearer ${smoke_access_token}")"
+completed_status="$(printf '%s' "${complete_response}" | json_get status)"
+if [[ "${completed_status}" != "COMPLETED" ]]; then
+  printf 'Expected completed sale order, got %s\n' "${completed_status}" >&2
+  exit 1
+fi
+
+cancel_order_response="$(http_json POST "http://localhost:8080/sale-orders" "{\"posSessionId\":${pos_session_id},\"orderType\":\"TAKEAWAY\",\"note\":\"Smoke cancel order\",\"lines\":[{\"productId\":${product_id},\"qty\":1.0000}]}" "Bearer ${smoke_access_token}")"
+cancel_order_id="$(printf '%s' "${cancel_order_response}" | json_get id)"
+cancelled_response="$(http_json POST "http://localhost:8080/sale-orders/${cancel_order_id}/cancel" "" "Bearer ${smoke_access_token}")"
+cancelled_status="$(printf '%s' "${cancelled_response}" | json_get status)"
+if [[ "${cancelled_status}" != "CANCELLED" ]]; then
+  printf 'Expected cancelled sale order, got %s\n' "${cancelled_status}" >&2
+  exit 1
+fi
+
+for _ in $(seq 1 60); do
+  inventory_transactions="$(http_json GET "http://localhost:8080/inventory-transactions?outletId=${outlet_id}&ingredientId=${ingredient_id}&txnType=SALE_USAGE&sourceType=SALE_ORDER&sourceId=${sale_order_id}" "" "Bearer ${smoke_access_token}" 2>/dev/null || true)"
+  sale_usage_count="$(printf '%s' "${inventory_transactions}" | python3 -c 'import json,sys
+data=json.load(sys.stdin) if sys.stdin.readable() else []
+print(len(data))
+' 2>/dev/null || true)"
+  if [[ "${sale_usage_count}" == "1" ]]; then
+    break
+  fi
+  sleep 2
+done
+if [[ "${sale_usage_count:-0}" != "1" ]]; then
+  printf 'Timed out waiting for SALE_USAGE inventory transaction\n' >&2
+  exit 1
+fi
+
+inventory_balance_response="$(http_json GET "http://localhost:8080/stock-balances?outletId=${outlet_id}&ingredientId=${ingredient_id}" "" "Bearer ${smoke_access_token}")"
+balance_qty_on_hand="$(printf '%s' "${inventory_balance_response}" | json_get 0.qtyOnHand)"
+if [[ "${balance_qty_on_hand}" != "38.0000" && "${balance_qty_on_hand}" != "38.00" && "${balance_qty_on_hand}" != "38" ]]; then
+  printf 'Expected post-sale inventory qty_on_hand 38.0000, got %s\n' "${balance_qty_on_hand}" >&2
+  exit 1
+fi
+
+closed_session_response="$(http_json POST "http://localhost:8080/pos-sessions/${pos_session_id}/close" "" "Bearer ${smoke_access_token}")"
+closed_session_status="$(printf '%s' "${closed_session_response}" | json_get status)"
+if [[ "${closed_session_status}" != "CLOSED" ]]; then
+  printf 'Expected CLOSED session status, got %s\n' "${closed_session_status}" >&2
+  exit 1
+fi
+
+reconciled_session_response="$(http_json POST "http://localhost:8080/pos-sessions/${pos_session_id}/reconcile" "{\"countedCashAmount\":30000.00,\"note\":\"Smoke reconciliation\"}" "Bearer ${smoke_access_token}")"
+reconciled_session_status="$(printf '%s' "${reconciled_session_response}" | json_get status)"
+if [[ "${reconciled_session_status}" != "RECONCILED" ]]; then
+  printf 'Expected RECONCILED session status, got %s\n' "${reconciled_session_status}" >&2
+  exit 1
+fi
+
+log "Running procurement and finance trace flow through gateway"
+supplier_response="$(http_json POST "http://localhost:8080/suppliers" "{\"supplierCode\":\"${SMOKE_SUPPLIER_CODE}\",\"name\":\"${SMOKE_SUPPLIER_NAME}\",\"email\":\"supplier-${RUN_ID}@example.com\",\"phone\":\"0900123456\",\"address\":\"Smoke Address\",\"defaultRegionId\":${region_id},\"status\":\"INACTIVE\"}" "Bearer ${smoke_access_token}")"
+supplier_id="$(printf '%s' "${supplier_response}" | json_get id)"
+http_json POST "http://localhost:8080/suppliers/${supplier_id}/activate" "" "Bearer ${smoke_access_token}" >/dev/null
+
+purchase_order_response="$(http_json POST "http://localhost:8080/purchase-orders" "{\"regionId\":${region_id},\"outletId\":${outlet_id},\"supplierId\":${supplier_id},\"orderDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"expectedDeliveryDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"note\":\"Smoke purchase order\",\"lines\":[{\"ingredientId\":${ingredient_id},\"uomCode\":\"${SMOKE_BASE_UOM_CODE}\",\"qtyOrdered\":5.0000,\"expectedUnitPrice\":12500.00,\"taxPercent\":10.00}]}" "Bearer ${smoke_access_token}")"
+purchase_order_id="$(printf '%s' "${purchase_order_response}" | json_get id)"
+http_json POST "http://localhost:8080/purchase-orders/${purchase_order_id}/submit" "" "Bearer ${smoke_access_token}" >/dev/null
+http_json POST "http://localhost:8080/purchase-orders/${purchase_order_id}/approve" "" "Bearer ${smoke_access_token}" >/dev/null
+issued_purchase_order_response="$(http_json POST "http://localhost:8080/purchase-orders/${purchase_order_id}/issue" "" "Bearer ${smoke_access_token}")"
+purchase_order_line_id="$(printf '%s' "${issued_purchase_order_response}" | json_get lines.0.id)"
+
+goods_receipt_response="$(http_json POST "http://localhost:8080/goods-receipts" "{\"purchaseOrderId\":${purchase_order_id},\"receiptTime\":\"${SMOKE_EFFECTIVE_FROM}T10:00:00Z\",\"businessDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"supplierLotNumber\":\"LOT-${RUN_ID}\",\"note\":\"Smoke goods receipt\",\"lines\":[{\"purchaseOrderLineId\":${purchase_order_line_id},\"ingredientId\":${ingredient_id},\"uomCode\":\"${SMOKE_BASE_UOM_CODE}\",\"qtyReceived\":3.0000,\"unitCost\":12500.00}]}" "Bearer ${smoke_access_token}")"
+goods_receipt_id="$(printf '%s' "${goods_receipt_response}" | json_get id)"
+http_json POST "http://localhost:8080/goods-receipts/${goods_receipt_id}/receive" "" "Bearer ${smoke_access_token}" >/dev/null
+posted_goods_receipt_response="$(http_json_with_headers POST "http://localhost:8080/goods-receipts/${goods_receipt_id}/post" "" "Bearer ${smoke_access_token}" "Idempotency-Key: smoke-gr-post-${RUN_ID}")"
+goods_receipt_line_id="$(printf '%s' "${posted_goods_receipt_response}" | json_get lines.0.id)"
+
+supplier_invoice_response="$(http_json POST "http://localhost:8080/supplier-invoices" "{\"supplierId\":${supplier_id},\"regionId\":${region_id},\"outletId\":${outlet_id},\"currencyCode\":\"VND\",\"invoiceNumber\":\"${SMOKE_SUPPLIER_INVOICE_NUMBER}\",\"invoiceDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"lines\":[{\"lineType\":\"STOCK\",\"goodsReceiptLineId\":${goods_receipt_line_id},\"description\":\"Smoke ingredient delivery\",\"qtyInvoiced\":3.0000,\"unitPrice\":12500.00,\"taxPercent\":10.00,\"taxAmount\":3750.00,\"lineTotal\":41250.00}]}" "Bearer ${smoke_access_token}")"
+supplier_invoice_id="$(printf '%s' "${supplier_invoice_response}" | json_get id)"
+http_json POST "http://localhost:8080/supplier-invoices/${supplier_invoice_id}/approve" "" "Bearer ${smoke_access_token}" >/dev/null
+
+supplier_payment_response="$(http_json_with_headers POST "http://localhost:8080/supplier-payments" "{\"supplierId\":${supplier_id},\"currencyCode\":\"VND\",\"paymentMethod\":\"BANK_TRANSFER\",\"amount\":41250.00,\"paymentTime\":\"${SMOKE_EFFECTIVE_FROM}T12:00:00Z\",\"transactionRef\":\"PAY-${RUN_ID}\",\"invoiceAllocations\":[{\"supplierInvoiceId\":${supplier_invoice_id},\"allocatedAmount\":41250.00,\"note\":\"Smoke settlement\"}]}" "Bearer ${smoke_access_token}" "Idempotency-Key: smoke-supplier-payment-${RUN_ID}")"
+supplier_payment_id="$(printf '%s' "${supplier_payment_response}" | json_get id)"
+
+for _ in $(seq 1 60); do
+  inventory_transactions="$(http_json GET "http://localhost:8080/inventory-transactions?outletId=${outlet_id}&ingredientId=${ingredient_id}&txnType=PURCHASE_IN&sourceType=GOODS_RECEIPT&sourceId=${goods_receipt_id}" "" "Bearer ${smoke_access_token}" 2>/dev/null || true)"
+  purchase_in_count="$(printf '%s' "${inventory_transactions}" | python3 -c 'import json,sys
+data=json.load(sys.stdin) if sys.stdin.readable() else []
+print(len(data))
+' 2>/dev/null || true)"
+  if [[ "${purchase_in_count}" == "1" ]]; then
+    break
+  fi
+  sleep 2
+done
+if [[ "${purchase_in_count:-0}" != "1" ]]; then
+  printf 'Timed out waiting for PURCHASE_IN inventory transaction\n' >&2
+  exit 1
+fi
+
+inventory_balance_response="$(http_json GET "http://localhost:8080/stock-balances?outletId=${outlet_id}&ingredientId=${ingredient_id}" "" "Bearer ${smoke_access_token}")"
+balance_qty_on_hand="$(printf '%s' "${inventory_balance_response}" | json_get 0.qtyOnHand)"
+if [[ "${balance_qty_on_hand}" != "41.0000" && "${balance_qty_on_hand}" != "41.00" && "${balance_qty_on_hand}" != "41" ]]; then
+  printf 'Expected post-procurement inventory qty_on_hand 41.0000, got %s\n' "${balance_qty_on_hand}" >&2
+  exit 1
+fi
+
+purchase_order_status_response="$(http_json GET "http://localhost:8080/purchase-orders/${purchase_order_id}" "" "Bearer ${smoke_access_token}")"
+purchase_order_status="$(printf '%s' "${purchase_order_status_response}" | json_get status)"
+if [[ "${purchase_order_status}" != "PARTIALLY_RECEIVED" ]]; then
+  printf 'Expected PARTIALLY_RECEIVED purchase order status, got %s\n' "${purchase_order_status}" >&2
+  exit 1
+fi
+
+for _ in $(seq 1 60); do
+  finance_expense_count="$(docker_psql_scalar fern_operational "SELECT COUNT(*) FROM finance.expense_inventory_purchase WHERE goods_receipt_id = ${goods_receipt_id};" | tr -d '[:space:]')"
+  finance_posting_count="$(docker_psql_scalar fern_master "SELECT COUNT(*) FROM finance_projection.accounting_posting_projection WHERE reference_id = '${supplier_payment_id}';" | tr -d '[:space:]')"
+  finance_reconciliation_count="$(docker_psql_scalar fern_master "SELECT COUNT(*) FROM finance_projection.reconciliation_snapshot WHERE snapshot_type = 'SUPPLIER_PAYMENT' AND snapshot_value = 41250.00;" | tr -d '[:space:]')"
+  if [[ "${finance_expense_count}" == "1" && "${finance_posting_count}" == "1" && "${finance_reconciliation_count}" -ge 1 ]]; then
+    break
+  fi
+  sleep 2
+done
+if [[ "${finance_expense_count:-0}" != "1" || "${finance_posting_count:-0}" != "1" || "${finance_reconciliation_count:-0}" -lt 1 ]]; then
+  printf 'Timed out waiting for finance trace rows\n' >&2
+  exit 1
+fi
+
+bootstrap_access_token="$(login_access_token "http://localhost:8080" "${BOOTSTRAP_USERNAME}" "${BOOTSTRAP_PASSWORD}")"
+for endpoint in "/sale-orders/${sale_order_id}/complete" "/goods-receipts/${goods_receipt_id}/post" "/supplier-payments"; do
+  trace_found="0"
+  for _ in $(seq 1 60); do
+    trace_response="$(http_json GET "http://localhost:8080/audit/request-traces?sourceService=api-gateway&endpoint=${endpoint}&statusCode=200&limit=10" "" "Bearer ${bootstrap_access_token}" 2>/dev/null || true)"
+    trace_found="$(printf '%s' "${trace_response}" | python3 -c 'import json,sys
+try:
+    data=json.load(sys.stdin)
+    print(1 if data.get("items") else 0)
+except Exception:
+    print(0)
+' 2>/dev/null || true)"
+    if [[ "${trace_found}" == "1" ]]; then
+      break
+    fi
+    sleep 2
+  done
+  if [[ "${trace_found}" != "1" ]]; then
+    printf 'Timed out waiting for audit request trace for endpoint %s\n' "${endpoint}" >&2
+    exit 1
+  fi
+done
 
 log "Logging out smoke user and verifying revocation"
 http_json POST "http://localhost:8080/auth/logout" '{}' "Bearer ${smoke_access_token}" >/dev/null
@@ -340,4 +589,8 @@ log "Region ID: ${region_id}"
 log "Outlet ID: ${outlet_id}"
 log "Catalog product ID: ${product_id}"
 log "User ID: ${user_id}"
+log "POS session ID: ${pos_session_id}"
+log "Sale order ID: ${sale_order_id}"
+log "Goods receipt ID: ${goods_receipt_id}"
+log "Supplier payment ID: ${supplier_payment_id}"
 log "Service logs: ${LOG_DIR}"

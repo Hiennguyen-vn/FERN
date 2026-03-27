@@ -1,7 +1,6 @@
 package com.fern.auditservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -27,6 +26,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -118,11 +118,15 @@ class AuditServiceIntegrationTest {
         String serialized = objectMapper.writeValueAsString(summary);
         assertThat(serialized).contains("\"id\":\"" + summary.id() + "\"");
 
-        mockMvc.perform(get("/audit/events/{id}", summary.id()))
-                .with(authentication(new UsernamePasswordAuthenticationToken(systemPrincipal, null)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(summary.id().toString()))
-                .andExpect(jsonPath("$.payload.module").value("catalog"));
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(systemPrincipal, null));
+        try {
+            mockMvc.perform(get("/audit/events/{id}", summary.id()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(summary.id().toString()))
+                    .andExpect(jsonPath("$.payload.module").value("catalog"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
     }
 
     @Test

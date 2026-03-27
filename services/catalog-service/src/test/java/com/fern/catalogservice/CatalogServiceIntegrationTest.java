@@ -284,6 +284,31 @@ class CatalogServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectUserPrincipalOnInternalCatalogEndpoints() throws Exception {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        String userInternalToken = jwtService.encode(new FernJwtClaims(
+                1L,
+                "bootstrap-admin",
+                Set.of("bootstrap_admin"),
+                Set.of("catalog.internal.resolve"),
+                new ScopeRoots(true, List.of(), List.of()),
+                1L,
+                1L,
+                "catalog-user-internal-jti",
+                Instant.now(),
+                Instant.now().plusSeconds(900)
+        ), jwtService.accessTokenTtl());
+
+        mockMvc.perform(get("/internal/catalog/menu")
+                        .header("Authorization", "Bearer " + userInternalToken)
+                        .param("outletId", "101")
+                        .param("at", "2026-03-15"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldRejectActivatingRecipeVersionWithDiscontinuedIngredient() throws Exception {
         seedReferenceData();
         Long ingredientId = createIngredient("ING-OLD", "Old Ingredient", "ING", "GRAM", "DISCONTINUED");
@@ -350,7 +375,7 @@ class CatalogServiceIntegrationTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/internal/catalog/price-resolution")
-                        .header("Authorization", bearer())
+                        .header("Authorization", serviceBearer())
                         .param("productId", String.valueOf(productId))
                         .param("outletId", "202")
                         .param("at", "2026-03-15"))
@@ -358,7 +383,7 @@ class CatalogServiceIntegrationTest {
                 .andExpect(jsonPath("$.priceValue").value(42000.00));
 
         mockMvc.perform(get("/internal/catalog/price-resolution")
-                        .header("Authorization", bearer())
+                        .header("Authorization", serviceBearer())
                         .param("productId", String.valueOf(productId))
                         .param("outletId", "202")
                         .param("at", "2026-04-15"))
@@ -366,7 +391,7 @@ class CatalogServiceIntegrationTest {
                 .andExpect(jsonPath("$.priceValue").value(45000.00));
 
         mockMvc.perform(get("/internal/catalog/recipe-resolution")
-                        .header("Authorization", bearer())
+                        .header("Authorization", serviceBearer())
                         .param("productId", String.valueOf(productId))
                         .param("at", "2026-03-15"))
                 .andExpect(status().isOk())
@@ -374,7 +399,7 @@ class CatalogServiceIntegrationTest {
                 .andExpect(jsonPath("$.ingredients[0].qty").value(8.0000));
 
         mockMvc.perform(get("/internal/catalog/recipe-resolution")
-                        .header("Authorization", bearer())
+                        .header("Authorization", serviceBearer())
                         .param("productId", String.valueOf(productId))
                         .param("at", "2026-04-15"))
                 .andExpect(status().isOk())
