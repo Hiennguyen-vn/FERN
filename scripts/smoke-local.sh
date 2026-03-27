@@ -101,7 +101,7 @@ http_json_with_headers() {
     printf 'Request failed: %s %s -> %s\n' "${method}" "${url}" "${status}" >&2
     cat "${response_file}" >&2
     rm -f "${response_file}"
-    exit 1
+    return 1
   fi
 
   cat "${response_file}"

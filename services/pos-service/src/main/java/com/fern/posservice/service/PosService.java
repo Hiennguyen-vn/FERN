@@ -94,23 +94,38 @@ public class PosService {
     @Transactional
     public PosSessionResponse openSession(FernPrincipal principal, OpenSessionRequest request) {
         posAuthorizer.requireOutletPermission(principal, request.outletId(), PermissionCodes.POS_SESSION_OPEN);
-        boolean openExists = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM pos.pos_session
-                    WHERE outlet_id = :outletId AND status = 'OPEN'
-                )
-                """, params("outletId", request.outletId()), Boolean.class));
+        boolean openExists;
+        if (request.terminalId() != null) {
+            openExists = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM pos.pos_session
+                        WHERE outlet_id = :outletId
+                          AND terminal_id = :terminalId
+                          AND status = 'OPEN'
+                    )
+                    """, params("outletId", request.outletId(), "terminalId", request.terminalId()), Boolean.class));
+        } else {
+            openExists = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM pos.pos_session
+                        WHERE outlet_id = :outletId
+                          AND status = 'OPEN'
+                          AND terminal_id IS NULL
+                    )
+                    """, params("outletId", request.outletId()), Boolean.class));
+        }
         if (openExists) {
             throw new ConflictException("The outlet already has an open POS session");
         }
         Long id = insertForId("""
                 INSERT INTO pos.pos_session (
                     session_code, region_id, outlet_id, currency_code, cashier_user_id, manager_user_id,
-                    opened_at, business_date, status, note, created_at, updated_at
+                    terminal_id, opened_at, business_date, status, note, created_at, updated_at
                 ) VALUES (
                     :sessionCode, :regionId, :outletId, :currencyCode, :cashierUserId, NULL,
-                    :openedAt, :businessDate, 'OPEN', :note, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    :terminalId, :openedAt, :businessDate, 'OPEN', :note, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
                 """, params(
                 "sessionCode", "POSS-" + Instant.now(clock).toEpochMilli(),
@@ -118,6 +133,7 @@ public class PosService {
                 "outletId", request.outletId(),
                 "currencyCode", request.currencyCode(),
                 "cashierUserId", principal.userId(),
+                "terminalId", request.terminalId(),
                 "openedAt", Instant.now(clock),
                 "businessDate", request.businessDate(),
                 "note", request.note()
@@ -135,19 +151,22 @@ public class PosService {
     @Transactional(readOnly = true)
     public List<PosSessionResponse> listSessions(FernPrincipal principal, Long outletId, String status, LocalDate businessDate) {
         posAuthorizer.requireOutletPermission(principal, outletId, PermissionCodes.POS_SESSION_READ);
+        String terminalId = currentTerminalIdFilter();
         return jdbcTemplate.query("""
-                SELECT id, session_code, region_id, outlet_id, currency_code, cashier_user_id, manager_user_id, business_date,
+                SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
                        status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
                 FROM pos.pos_session
                 WHERE outlet_id = :outletId
+                  AND (CAST(:terminalId AS VARCHAR) IS NULL OR terminal_id = CAST(:terminalId AS VARCHAR))
                   AND (:status IS NULL OR status = :status)
                   AND (:businessDate IS NULL OR business_date = :businessDate)
                 ORDER BY opened_at DESC
-                """, params("outletId", outletId, "status", status, "businessDate", businessDate), (rs, rowNum) -> new PosSessionResponse(
+                """, params("outletId", outletId, "terminalId", terminalId, "status", status, "businessDate", businessDate), (rs, rowNum) -> new PosSessionResponse(
                 rs.getLong("id"),
                 rs.getString("session_code"),
                 rs.getLong("region_id"),
                 rs.getLong("outlet_id"),
+                rs.getString("terminal_id"),
                 rs.getString("currency_code"),
                 rs.getObject("cashier_user_id", Long.class),
                 rs.getObject("manager_user_id", Long.class),
@@ -718,7 +737,7 @@ public class PosService {
 
     private SessionRecord requireSession(Long id) {
         SessionRecord record = jdbcTemplate.query("""
-                SELECT id, session_code, region_id, outlet_id, currency_code, cashier_user_id, manager_user_id, business_date,
+                SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
                        status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
                 FROM pos.pos_session
                 WHERE id = :id
@@ -727,6 +746,7 @@ public class PosService {
                 rs.getString("session_code"),
                 rs.getLong("region_id"),
                 rs.getLong("outlet_id"),
+                rs.getString("terminal_id"),
                 rs.getString("currency_code"),
                 rs.getObject("cashier_user_id", Long.class),
                 rs.getObject("manager_user_id", Long.class),
@@ -782,6 +802,7 @@ public class PosService {
                 session.sessionCode(),
                 session.regionId(),
                 session.outletId(),
+                session.terminalId(),
                 session.currencyCode(),
                 session.cashierUserId(),
                 session.managerUserId(),
@@ -853,6 +874,15 @@ public class PosService {
         return attributes == null ? null : attributes.getRequest().getHeader(CorrelationId.HEADER);
     }
 
+    private String currentTerminalIdFilter() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes == null) {
+            return null;
+        }
+        String terminalId = attributes.getRequest().getParameter("terminalId");
+        return terminalId == null || terminalId.isBlank() ? null : terminalId;
+    }
+
     private Instant instant(ResultSet resultSet, String column) throws SQLException {
         OffsetDateTime value = resultSet.getObject(column, OffsetDateTime.class);
         return value == null ? null : value.toInstant();
@@ -886,6 +916,7 @@ public class PosService {
             String sessionCode,
             Long regionId,
             Long outletId,
+            String terminalId,
             String currencyCode,
             Long cashierUserId,
             Long managerUserId,

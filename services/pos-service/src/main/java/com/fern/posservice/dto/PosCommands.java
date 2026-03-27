@@ -16,6 +16,7 @@ public final class PosCommands {
         public record OpenSessionRequest(
                         @NotNull Long regionId,
                         @NotNull Long outletId,
+                        String terminalId,
                         @NotNull String currencyCode,
                         @NotNull LocalDate businessDate,
                         String note) {

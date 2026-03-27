@@ -14,6 +14,7 @@ public final class PosResponses {
                         String sessionCode,
                         Long regionId,
                         Long outletId,
+                        String terminalId,
                         String currencyCode,
                         Long cashierUserId,
                         Long managerUserId,

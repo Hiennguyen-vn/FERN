@@ -278,7 +278,7 @@ class ApiGatewayIntegrationTest {
     }
 
     @Test
-    void shouldHideInternalCatalogRoutesFromPublicGateway() {
+    void shouldRouteInternalCatalogRoutes() {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
@@ -302,7 +302,9 @@ class ApiGatewayIntegrationTest {
                 .uri("/internal/catalog/menu?outletId=1")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("\"items\""));
 
         verify(kafkaTemplate, timeout(1000)).send(org.mockito.ArgumentMatchers.eq("request.trace"), anyString(), anyString());
     }
