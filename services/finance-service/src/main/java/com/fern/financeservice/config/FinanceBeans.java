@@ -2,6 +2,7 @@ package com.fern.financeservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.SnowflakeIdGenerator;
+import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -16,6 +17,12 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 
 @Configuration
 public class FinanceBeans {
+    @Value("${fern.datasource.max-pool-size:10}")
+    private int maxPoolSize;
+
+    @Value("${fern.datasource.min-idle:1}")
+    private int minIdle;
+
     @Bean
     ObjectMapper objectMapper() {
         return new ObjectMapper().findAndRegisterModules();
@@ -40,7 +47,7 @@ public class FinanceBeans {
     @Bean
     @Primary
     DataSource dataSource(@Qualifier("operationalDataSourceProperties") DataSourceProperties operationalDataSourceProperties) {
-        return operationalDataSourceProperties.initializeDataSourceBuilder().build();
+        return tunePool(operationalDataSourceProperties.initializeDataSourceBuilder().build());
     }
 
     @Bean
@@ -57,7 +64,7 @@ public class FinanceBeans {
 
     @Bean
     DataSource projectionDataSource(@Qualifier("projectionDataSourceProperties") DataSourceProperties projectionDataSourceProperties) {
-        return projectionDataSourceProperties.initializeDataSourceBuilder().build();
+        return tunePool(projectionDataSourceProperties.initializeDataSourceBuilder().build());
     }
 
     @Bean
@@ -88,5 +95,13 @@ public class FinanceBeans {
                 .defaultSchema("finance_projection")
                 .locations("classpath:db/migration/postgresql/master_projection")
                 .load();
+    }
+
+    private DataSource tunePool(DataSource dataSource) {
+        if (dataSource instanceof HikariDataSource hikariDataSource) {
+            hikariDataSource.setMaximumPoolSize(maxPoolSize);
+            hikariDataSource.setMinimumIdle(Math.min(minIdle, maxPoolSize));
+        }
+        return dataSource;
     }
 }
