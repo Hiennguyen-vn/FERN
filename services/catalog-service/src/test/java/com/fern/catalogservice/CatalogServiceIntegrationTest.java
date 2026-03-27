@@ -351,6 +351,209 @@ class CatalogServiceIntegrationTest {
                 .andExpect(jsonPath("$.ingredients[0].qty").value(12.0000));
     }
 
+    @Test
+    void shouldRejectDuplicateIngredientLinesWithBadRequest() throws Exception {
+        seedReferenceData();
+        Long ingredientId = createIngredient("ING-DUP", "Duplicate Ingredient", "ING", "GRAM", "ACTIVE");
+        Long productId = createProduct("PROD-DUP", "Duplicate Drink", "BEV", "ACTIVE");
+        Long recipeId = createRecipe(productId, "RCP-DUP");
+
+        mockMvc.perform(post("/recipe-versions")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "recipeId": %d,
+                                  "versionNo": "v1",
+                                  "yieldQty": 1.0000,
+                                  "yieldUomCode": "CUP",
+                                  "status": "DRAFT",
+                                  "effectiveFrom": "2026-03-01",
+                                  "ingredients": [
+                                    {
+                                      "ingredientId": %d,
+                                      "uomCode": "GRAM",
+                                      "qty": 5.0000,
+                                      "sortOrder": 1
+                                    },
+                                    {
+                                      "ingredientId": %d,
+                                      "uomCode": "GRAM",
+                                      "qty": 6.0000,
+                                      "sortOrder": 2
+                                    }
+                                  ]
+                                }
+                                """.formatted(recipeId, ingredientId, ingredientId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Duplicate ingredient lines are not allowed for the same recipe version"));
+
+        Long versionId = createRecipeVersion(recipeId, "v2", LocalDate.of(2026, 3, 1), null, ingredientId, "GRAM", "5.0000", "DRAFT");
+
+        mockMvc.perform(put("/recipe-versions/%d".formatted(versionId))
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "recipeId": %d,
+                                  "versionNo": "v2",
+                                  "yieldQty": 1.0000,
+                                  "yieldUomCode": "CUP",
+                                  "status": "DRAFT",
+                                  "effectiveFrom": "2026-03-01",
+                                  "ingredients": [
+                                    {
+                                      "ingredientId": %d,
+                                      "uomCode": "GRAM",
+                                      "qty": 5.0000,
+                                      "sortOrder": 1
+                                    },
+                                    {
+                                      "ingredientId": %d,
+                                      "uomCode": "GRAM",
+                                      "qty": 6.0000,
+                                      "sortOrder": 2
+                                    }
+                                  ]
+                                }
+                                """.formatted(recipeId, ingredientId, ingredientId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Duplicate ingredient lines are not allowed for the same recipe version"));
+    }
+
+    @Test
+    void shouldCreateReferenceDataViaPost() throws Exception {
+        mockMvc.perform(post("/product-categories")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":"HOT","name":"Hot Drinks","description":"Hot beverage menu","active":true}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("HOT"))
+                .andExpect(jsonPath("$.name").value("Hot Drinks"))
+                .andExpect(jsonPath("$.description").value("Hot beverage menu"))
+                .andExpect(jsonPath("$.active").value(true));
+
+        mockMvc.perform(post("/ingredient-categories")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":"DRY","name":"Dry Goods","description":"Shelf stable ingredients","active":true}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("DRY"))
+                .andExpect(jsonPath("$.name").value("Dry Goods"))
+                .andExpect(jsonPath("$.description").value("Shelf stable ingredients"))
+                .andExpect(jsonPath("$.active").value(true));
+
+        mockMvc.perform(post("/units-of-measure")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":"LITER","name":"Liter","symbol":"L"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("LITER"))
+                .andExpect(jsonPath("$.name").value("Liter"))
+                .andExpect(jsonPath("$.symbol").value("L"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT name FROM catalog.product_category WHERE code = 'HOT'", String.class))
+                .isEqualTo("Hot Drinks");
+        assertThat(jdbcTemplate.queryForObject("SELECT name FROM catalog.ingredient_category WHERE code = 'DRY'", String.class))
+                .isEqualTo("Dry Goods");
+        assertThat(jdbcTemplate.queryForObject("SELECT symbol FROM catalog.unit_of_measure WHERE code = 'LITER'", String.class))
+                .isEqualTo("L");
+    }
+
+    @Test
+    void shouldRejectDuplicateReferenceCreatesWithoutMutatingExistingData() throws Exception {
+        seedReferenceData();
+
+        mockMvc.perform(post("/product-categories")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":"BEV","name":"Changed Beverages","description":"Mutated","active":false}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Product category already exists"));
+
+        mockMvc.perform(post("/ingredient-categories")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":"ING","name":"Changed Ingredients","description":"Mutated","active":false}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Ingredient category already exists"));
+
+        mockMvc.perform(post("/units-of-measure")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code":"GRAM","name":"Changed Gram","symbol":"kg"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Unit of measure already exists"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT name FROM catalog.product_category WHERE code = 'BEV'", String.class))
+                .isEqualTo("Beverages");
+        assertThat(jdbcTemplate.queryForObject("SELECT is_active FROM catalog.product_category WHERE code = 'BEV'", Boolean.class))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject("SELECT name FROM catalog.ingredient_category WHERE code = 'ING'", String.class))
+                .isEqualTo("Ingredients");
+        assertThat(jdbcTemplate.queryForObject("SELECT name FROM catalog.unit_of_measure WHERE code = 'GRAM'", String.class))
+                .isEqualTo("Gram");
+    }
+
+    @Test
+    void shouldRejectInvalidCatalogInputWithBadRequest() throws Exception {
+        seedReferenceData();
+
+        mockMvc.perform(post("/uom-conversions")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"fromUomCode":"GRAM","toUomCode":"GRAM","conversionFactor":1.00000000}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("UOM conversion fromUomCode and toUomCode must be different"));
+
+        mockMvc.perform(post("/ingredients")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code":"ING-NEG",
+                                  "name":"Negative Stock",
+                                  "categoryCode":"ING",
+                                  "baseUomCode":"GRAM",
+                                  "minStockLevel": -1.0000,
+                                  "status":"ACTIVE"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Ingredient minStockLevel must be greater than or equal to 0"));
+
+        mockMvc.perform(post("/ingredients")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code":"ING-RANGE",
+                                  "name":"Invalid Range",
+                                  "categoryCode":"ING",
+                                  "baseUomCode":"GRAM",
+                                  "minStockLevel": 10.0000,
+                                  "maxStockLevel": 5.0000,
+                                  "status":"ACTIVE"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Ingredient maxStockLevel must be greater than or equal to minStockLevel"));
+    }
+
     private void seedReferenceData() throws Exception {
         mockMvc.perform(post("/ingredient-categories")
                         .header("Authorization", bearer())

@@ -8,19 +8,17 @@ DEFAULT_ENV_FILE="${ROOT_DIR}/.env.migrations"
 TARGET="all"
 ACTION="migrate"
 DRY_RUN="0"
-SKIP_SNOWFLAKE_BOOTSTRAP="0"
 ENV_FILE=""
 
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/migrate-platform.sh [all|master|operational|snowflake] [options]
+  ./scripts/migrate-platform.sh [all|master|operational] [options]
 
 Options:
   --action <migrate|validate|info|repair>   Flyway action to execute (default: migrate)
   --env-file <path>                         Load migration environment variables from file
   --dry-run                                 Print the Flyway commands without executing them
-  --skip-snowflake-bootstrap                Skip Snowflake database/warehouse bootstrap step
   -h, --help                                Show this help
 
 Environment defaults:
@@ -28,17 +26,10 @@ Environment defaults:
   FERN_DB_PASSWORD=fern
   FERN_MASTER_JDBC_URL=jdbc:postgresql://127.0.0.1:55432/fern_master
   FERN_OPERATIONAL_JDBC_URL=jdbc:postgresql://127.0.0.1:55432/fern_operational
-  FERN_SNOWFLAKE_DATABASE=FERN_REPORTING
-  FERN_SNOWFLAKE_BOOTSTRAP_DATABASE=SNOWFLAKE
-  FERN_SNOWFLAKE_WAREHOUSE=FERN_INGEST_WH
-  FERN_SNOWFLAKE_BI_WAREHOUSE=FERN_BI_WH
-  FERN_SNOWFLAKE_ROLE=SYSADMIN
-  FERN_SNOWFLAKE_JDBC_OPTIONS=&JDBC_QUERY_RESULT_FORMAT=JSON
 
 Examples:
   ./scripts/migrate-platform.sh all
   ./scripts/migrate-platform.sh master --action validate
-  ./scripts/migrate-platform.sh snowflake --env-file .env.migrations
 EOF
 }
 
@@ -96,60 +87,6 @@ run_cmd() {
   "$@"
 }
 
-build_snowflake_url() {
-  local database="$1"
-  local schema="$2"
-  local url
-  url="jdbc:snowflake://${FERN_SNOWFLAKE_ACCOUNT}.snowflakecomputing.com/?db=${database}&warehouse=${FERN_SNOWFLAKE_WAREHOUSE}&role=${FERN_SNOWFLAKE_ROLE}"
-  if [[ -n "${schema}" ]]; then
-    url="${url}&schema=${schema}"
-  fi
-  if [[ -n "${FERN_SNOWFLAKE_AUTHENTICATOR:-}" ]]; then
-    url="${url}&authenticator=${FERN_SNOWFLAKE_AUTHENTICATOR}"
-  fi
-  url="${url}${FERN_SNOWFLAKE_JDBC_OPTIONS}"
-  printf '%s' "${url}"
-}
-
-require_snowflake_env() {
-  [[ -n "${FERN_SNOWFLAKE_ACCOUNT:-}" ]] || fail "FERN_SNOWFLAKE_ACCOUNT is required for Snowflake migrations"
-  [[ -n "${FERN_SNOWFLAKE_USER:-}" ]] || fail "FERN_SNOWFLAKE_USER is required for Snowflake migrations"
-}
-
-run_snowflake_bootstrap() {
-  local sql_file="${ROOT_DIR}/infrastructure/snowflake/reporting/bootstrap/V1__bootstrap_reporting_database.sql"
-  require_file "${sql_file}"
-
-  local -a cmd=(
-    "${ROOT_DIR}/mvnw"
-    "-B"
-    "-f" "${ROOT_DIR}/services/report-service/pom.xml"
-    "-DskipTests"
-    "-Dexec.mainClass=com.fern.reportservice.tools.SnowflakeBootstrapCommand"
-    "-Dexec.args=${sql_file}"
-    "compile"
-    "org.codehaus.mojo:exec-maven-plugin:3.5.0:java"
-  )
-
-  log "snowflake/bootstrap: bootstrap"
-  if [[ "${DRY_RUN}" == "1" ]]; then
-    quote_cmd env \
-      "FERN_SNOWFLAKE_ACCOUNT=${FERN_SNOWFLAKE_ACCOUNT}" \
-      "FERN_SNOWFLAKE_USER=${FERN_SNOWFLAKE_USER}" \
-      "FERN_SNOWFLAKE_PASSWORD=***" \
-      "FERN_SNOWFLAKE_ROLE=${FERN_SNOWFLAKE_ROLE}" \
-      "FERN_SNOWFLAKE_WAREHOUSE=${FERN_SNOWFLAKE_WAREHOUSE}" \
-      "FERN_SNOWFLAKE_JDBC_OPTIONS=${FERN_SNOWFLAKE_JDBC_OPTIONS}" \
-      "FERN_SNOWFLAKE_AUTHENTICATOR=${FERN_SNOWFLAKE_AUTHENTICATOR:-}" \
-      "FERN_SNOWFLAKE_DATABASE=${FERN_SNOWFLAKE_DATABASE}" \
-      "FERN_SNOWFLAKE_BI_WAREHOUSE=${FERN_SNOWFLAKE_BI_WAREHOUSE}" \
-      "${cmd[@]}"
-    return 0
-  fi
-
-  "${cmd[@]}"
-}
-
 run_flyway() {
   local module="$1"
   local label="$2"
@@ -161,10 +98,6 @@ run_flyway() {
   local schemas="$8"
   shift 8
   local connect_retries="${FERN_FLYWAY_CONNECT_RETRIES:-5}"
-
-  if [[ "${url}" == jdbc:snowflake:* ]]; then
-    connect_retries="${FERN_SNOWFLAKE_CONNECT_RETRIES:-0}"
-  fi
 
   local -a cmd=(
     "${ROOT_DIR}/mvnw"
@@ -230,6 +163,14 @@ migrate_master() {
     "services/hr-service/src/main/resources/db/migration/postgresql/master" "hr_master" "hr_master"
   run_flyway "services/finance-service" "master/config" "${FERN_MASTER_JDBC_URL}" "${FERN_DB_USERNAME}" "${FERN_DB_PASSWORD}" \
     "services/finance-service/src/main/resources/db/migration/postgresql/master" "config" "config"
+  run_flyway "services/finance-service" "master/finance_projection" "${FERN_MASTER_JDBC_URL}" "${FERN_DB_USERNAME}" "${FERN_DB_PASSWORD}" \
+    "services/finance-service/src/main/resources/db/migration/postgresql/master_projection" "finance_projection" "finance_projection"
+  run_flyway "services/report-service" "master/reporting" "${FERN_MASTER_JDBC_URL}" "${FERN_DB_USERNAME}" "${FERN_DB_PASSWORD}" \
+    "services/report-service/src/main/resources/db/migration/postgresql/master" "raw_events" "raw_events,report"
+  run_flyway "services/audit-service" "master/audit" "${FERN_MASTER_JDBC_URL}" "${FERN_DB_USERNAME}" "${FERN_DB_PASSWORD}" \
+    "services/audit-service/src/main/resources/db/migration/postgresql/master" "audit" "audit"
+  run_flyway "services/notification-service" "master/notification" "${FERN_MASTER_JDBC_URL}" "${FERN_DB_USERNAME}" "${FERN_DB_PASSWORD}" \
+    "services/notification-service/src/main/resources/db/migration/postgresql/master" "notification" "notification"
 }
 
 migrate_operational() {
@@ -245,34 +186,9 @@ migrate_operational() {
     "services/finance-service/src/main/resources/db/migration/postgresql/operational" "finance" "finance"
 }
 
-migrate_snowflake() {
-  require_snowflake_env
-
-  if [[ "${SKIP_SNOWFLAKE_BOOTSTRAP}" != "1" ]]; then
-    run_snowflake_bootstrap
-  fi
-
-  run_flyway "services/report-service" "snowflake/report" \
-    "$(build_snowflake_url "${FERN_SNOWFLAKE_DATABASE}" "RAW_EVENTS")" \
-    "${FERN_SNOWFLAKE_USER}" "${FERN_SNOWFLAKE_PASSWORD}" \
-    "services/report-service/src/main/resources/db/migration/snowflake" "RAW_EVENTS" "RAW_EVENTS,REPORT"
-  run_flyway "services/finance-service" "snowflake/finance_projection" \
-    "$(build_snowflake_url "${FERN_SNOWFLAKE_DATABASE}" "FINANCE_PROJECTION")" \
-    "${FERN_SNOWFLAKE_USER}" "${FERN_SNOWFLAKE_PASSWORD}" \
-    "services/finance-service/src/main/resources/db/migration/snowflake" "FINANCE_PROJECTION" "FINANCE_PROJECTION"
-  run_flyway "services/audit-service" "snowflake/audit" \
-    "$(build_snowflake_url "${FERN_SNOWFLAKE_DATABASE}" "AUDIT")" \
-    "${FERN_SNOWFLAKE_USER}" "${FERN_SNOWFLAKE_PASSWORD}" \
-    "services/audit-service/src/main/resources/db/migration/snowflake" "AUDIT" "AUDIT"
-  run_flyway "services/notification-service" "snowflake/notification" \
-    "$(build_snowflake_url "${FERN_SNOWFLAKE_DATABASE}" "NOTIFICATION")" \
-    "${FERN_SNOWFLAKE_USER}" "${FERN_SNOWFLAKE_PASSWORD}" \
-    "services/notification-service/src/main/resources/db/migration/snowflake" "NOTIFICATION" "NOTIFICATION"
-}
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    all|master|operational|snowflake)
+    all|master|operational)
       TARGET="$1"
       shift
       ;;
@@ -288,10 +204,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --dry-run)
       DRY_RUN="1"
-      shift
-      ;;
-    --skip-snowflake-bootstrap)
-      SKIP_SNOWFLAKE_BOOTSTRAP="1"
       shift
       ;;
     -h|--help)
@@ -325,13 +237,6 @@ FERN_DB_USERNAME="${FERN_DB_USERNAME:-fern}"
 FERN_DB_PASSWORD="${FERN_DB_PASSWORD:-fern}"
 FERN_MASTER_JDBC_URL="${FERN_MASTER_JDBC_URL:-jdbc:postgresql://127.0.0.1:55432/fern_master}"
 FERN_OPERATIONAL_JDBC_URL="${FERN_OPERATIONAL_JDBC_URL:-jdbc:postgresql://127.0.0.1:55432/fern_operational}"
-FERN_SNOWFLAKE_DATABASE="${FERN_SNOWFLAKE_DATABASE:-FERN_REPORTING}"
-FERN_SNOWFLAKE_BOOTSTRAP_DATABASE="${FERN_SNOWFLAKE_BOOTSTRAP_DATABASE:-SNOWFLAKE}"
-FERN_SNOWFLAKE_WAREHOUSE="${FERN_SNOWFLAKE_WAREHOUSE:-FERN_INGEST_WH}"
-FERN_SNOWFLAKE_BI_WAREHOUSE="${FERN_SNOWFLAKE_BI_WAREHOUSE:-FERN_BI_WH}"
-FERN_SNOWFLAKE_ROLE="${FERN_SNOWFLAKE_ROLE:-SYSADMIN}"
-FERN_SNOWFLAKE_PASSWORD="${FERN_SNOWFLAKE_PASSWORD:-}"
-FERN_SNOWFLAKE_JDBC_OPTIONS="${FERN_SNOWFLAKE_JDBC_OPTIONS:-&JDBC_QUERY_RESULT_FORMAT=JSON}"
 
 log "Target=${TARGET} action=${ACTION}"
 
@@ -339,16 +244,12 @@ case "${TARGET}" in
   all)
     migrate_master
     migrate_operational
-    migrate_snowflake
     ;;
   master)
     migrate_master
     ;;
   operational)
     migrate_operational
-    ;;
-  snowflake)
-    migrate_snowflake
     ;;
   *)
     fail "Unsupported target: ${TARGET}"

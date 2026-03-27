@@ -107,6 +107,21 @@ public class IamAuditService {
         );
     }
 
+    public void userUpdated(FernPrincipal principal, UserAccountEntity user, Object oldValue, Object newValue) {
+        publishAuditEvent(
+                "iam.user.changed",
+                principal,
+                user.getId(),
+                "UPDATE_USER",
+                "user_account",
+                String.valueOf(user.getId()),
+                "SUCCESS",
+                oldValue,
+                newValue,
+                Map.of("username", user.getUsername())
+        );
+    }
+
     public void userAccessChanged(FernPrincipal principal, Long userId, String action, Object newValue) {
         publishAuditEvent(
                 "iam.user.access_changed",

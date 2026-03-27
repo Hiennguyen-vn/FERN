@@ -1,6 +1,7 @@
 package com.fern.iamservice.controller;
 
 import com.fern.platform.common.ApiErrorResponse;
+import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
@@ -44,8 +45,13 @@ public class GlobalExceptionHandler {
                         error -> error.getField(),
                         error -> error.getDefaultMessage(),
                         (left, right) -> left
-                ));
+        ));
         return build(HttpStatus.BAD_REQUEST, "validation_error", "Request validation failed", request, details);
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    ResponseEntity<ApiErrorResponse> handleBadRequest(BadRequestException exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "bad_request", exception.getMessage(), request, Map.of());
     }
 
     @ExceptionHandler(Exception.class)

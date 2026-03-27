@@ -82,7 +82,7 @@ public class RecipeService {
         applyRecipe(entity, principal, request);
         entity = recipeRepository.save(entity);
         RecipeResponse response = toRecipeResponse(entity);
-        catalogAuditService.publish("catalog.recipe.changed", principal, "CREATE_RECIPE", "recipe", String.valueOf(entity.getId()), null, response, Map.of("recipeCode", entity.getRecipeCode()));
+        catalogAuditService.publish("catalog.recipe.changed", principal, null, null, "CREATE_RECIPE", "recipe", String.valueOf(entity.getId()), null, response, Map.of("recipeCode", entity.getRecipeCode()));
         return response;
     }
 
@@ -100,7 +100,7 @@ public class RecipeService {
         applyRecipe(entity, principal, request);
         entity = recipeRepository.save(entity);
         RecipeResponse response = toRecipeResponse(entity);
-        catalogAuditService.publish("catalog.recipe.changed", principal, "UPDATE_RECIPE", "recipe", String.valueOf(entity.getId()), before, response, Map.of("recipeCode", entity.getRecipeCode()));
+        catalogAuditService.publish("catalog.recipe.changed", principal, null, null, "UPDATE_RECIPE", "recipe", String.valueOf(entity.getId()), before, response, Map.of("recipeCode", entity.getRecipeCode()));
         return response;
     }
 
@@ -128,7 +128,7 @@ public class RecipeService {
         replaceIngredientLines(entity, request.ingredients(), ingredients);
 
         RecipeVersionResponse response = toRecipeVersionResponse(entity);
-        catalogAuditService.publish("catalog.recipe.version.changed", principal, "CREATE_RECIPE_VERSION", "recipe_version", String.valueOf(entity.getId()), null, response, Map.of("recipeId", recipe.getId()));
+        catalogAuditService.publish("catalog.recipe.version.changed", principal, null, null, "CREATE_RECIPE_VERSION", "recipe_version", String.valueOf(entity.getId()), null, response, Map.of("recipeId", recipe.getId()));
         if (entity.getStatus() == RecipeVersionStatus.ACTIVE) {
             publishVersionActivated(principal, entity, response);
         }
@@ -149,7 +149,7 @@ public class RecipeService {
         replaceIngredientLines(entity, request.ingredients(), ingredients);
 
         RecipeVersionResponse response = toRecipeVersionResponse(entity);
-        catalogAuditService.publish("catalog.recipe.version.changed", principal, "UPDATE_RECIPE_VERSION", "recipe_version", String.valueOf(entity.getId()), before, response, Map.of("recipeId", recipe.getId()));
+        catalogAuditService.publish("catalog.recipe.version.changed", principal, null, null, "UPDATE_RECIPE_VERSION", "recipe_version", String.valueOf(entity.getId()), before, response, Map.of("recipeId", recipe.getId()));
         if (entity.getStatus() == RecipeVersionStatus.ACTIVE) {
             publishVersionActivated(principal, entity, response);
         }
@@ -167,7 +167,7 @@ public class RecipeService {
         entity.setStatus(RecipeVersionStatus.ACTIVE);
         entity = recipeVersionRepository.save(entity);
         RecipeVersionResponse response = toRecipeVersionResponse(entity);
-        catalogAuditService.publish("catalog.recipe.version.activated", principal, "ACTIVATE_RECIPE_VERSION", "recipe_version", String.valueOf(entity.getId()), before, response, Map.of("recipeId", entity.getRecipe().getId()));
+        catalogAuditService.publish("catalog.recipe.version.activated", principal, null, null, "ACTIVATE_RECIPE_VERSION", "recipe_version", String.valueOf(entity.getId()), before, response, Map.of("recipeId", entity.getRecipe().getId()));
         publishVersionActivated(principal, entity, response);
         return response;
     }
@@ -179,7 +179,7 @@ public class RecipeService {
         entity.setStatus(RecipeVersionStatus.ARCHIVED);
         entity = recipeVersionRepository.save(entity);
         RecipeVersionResponse response = toRecipeVersionResponse(entity);
-        catalogAuditService.publish("catalog.recipe.version.changed", principal, "ARCHIVE_RECIPE_VERSION", "recipe_version", String.valueOf(entity.getId()), before, response, Map.of("recipeId", entity.getRecipe().getId()));
+        catalogAuditService.publish("catalog.recipe.version.changed", principal, null, null, "ARCHIVE_RECIPE_VERSION", "recipe_version", String.valueOf(entity.getId()), before, response, Map.of("recipeId", entity.getRecipe().getId()));
         return response;
     }
 

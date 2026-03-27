@@ -81,6 +81,7 @@ class AuditControllerTest {
                         .param("limit", "25")
                         .with(authentication(new UsernamePasswordAuthenticationToken(principal, null))))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id").value("1"))
                 .andExpect(jsonPath("$.items[0].sourceService").value("catalog-service"));
 
         ArgumentCaptor<com.fern.auditservice.repository.AuditEventFilter> captor =
@@ -122,6 +123,7 @@ class AuditControllerTest {
         mockMvc.perform(get("/audit/events/1")
                         .with(authentication(new UsernamePasswordAuthenticationToken(principal, null))))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("1"))
                 .andExpect(jsonPath("$.detailMasked").value(true));
 
         verify(auditQueryService).getAuditEvent(1L, false);

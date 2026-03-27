@@ -18,6 +18,7 @@ import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ScopeType;
 import com.fern.platform.security.FernPasswordHasher;
 import java.time.Clock;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -105,24 +106,39 @@ public class UserService {
     public UserResponse update(FernPrincipal principal, Long id, UpdateUserRequest request) {
         UserAccountEntity user = userViewService.findUser(id);
         UserResponse before = userViewService.toResponse(user);
-        if (request.fullName() != null) {
+
+        boolean fullNameChanged = request.fullName() != null && !Objects.equals(request.fullName(), user.getFullName());
+        boolean emailChanged = request.email() != null && !Objects.equals(request.email(), user.getEmail());
+        boolean phoneChanged = request.phone() != null && !Objects.equals(request.phone(), user.getPhone());
+        boolean statusChanged = request.status() != null && request.status() != user.getStatus();
+        boolean profileChanged = fullNameChanged || emailChanged || phoneChanged;
+        if (!profileChanged && !statusChanged) {
+            return before;
+        }
+
+        if (fullNameChanged) {
             user.setFullName(request.fullName());
         }
-        if (request.email() != null) {
+        if (emailChanged) {
             user.setEmail(request.email());
         }
-        if (request.phone() != null) {
+        if (phoneChanged) {
             user.setPhone(request.phone());
         }
-        if (request.status() != null) {
+        if (statusChanged) {
             user.setStatus(request.status());
             policyVersionService.bump();
         }
         user.setUpdatedAt(clock.instant());
 
         UserResponse response = userViewService.toResponse(user);
-        outboxService.enqueue("user", user.getId().toString(), "iam.user.status-changed", user.getId().toString(), response);
-        iamAuditService.userStatusChanged(principal, user, before, response);
+        if (statusChanged) {
+            outboxService.enqueue("user", user.getId().toString(), "iam.user.status-changed", user.getId().toString(), response);
+            iamAuditService.userStatusChanged(principal, user, before, response);
+        } else {
+            outboxService.enqueue("user", user.getId().toString(), "iam.user.changed", user.getId().toString(), response);
+            iamAuditService.userUpdated(principal, user, before, response);
+        }
         return response;
     }
 

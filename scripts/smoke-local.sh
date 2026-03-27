@@ -29,6 +29,7 @@ SKIP_INFRA_BOOTSTRAP="${SKIP_INFRA_BOOTSTRAP:-0}"
 IAM_PID=""
 ORG_PID=""
 CATALOG_PID=""
+AUDIT_PID=""
 GATEWAY_PID=""
 
 log() {
@@ -170,6 +171,10 @@ cleanup() {
     kill "${CATALOG_PID}" >/dev/null 2>&1 || true
     wait "${CATALOG_PID}" 2>/dev/null || true
   fi
+  if [[ -n "${AUDIT_PID}" ]] && kill -0 "${AUDIT_PID}" >/dev/null 2>&1; then
+    kill "${AUDIT_PID}" >/dev/null 2>&1 || true
+    wait "${AUDIT_PID}" 2>/dev/null || true
+  fi
   if [[ -n "${IAM_PID}" ]] && kill -0 "${IAM_PID}" >/dev/null 2>&1; then
     kill "${IAM_PID}" >/dev/null 2>&1 || true
     wait "${IAM_PID}" 2>/dev/null || true
@@ -201,7 +206,7 @@ wait_for_container_health fern-kafka 90
 log "Building runnable modules for smoke flow"
 (
   cd "${ROOT_DIR}" &&
-  ./mvnw -q -pl services/iam-service,services/org-service,services/catalog-service,services/api-gateway -am install -DskipTests >"${LOG_DIR}/build.log" 2>&1
+  ./mvnw -q -pl services/iam-service,services/org-service,services/catalog-service,services/audit-service,services/api-gateway -am install -DskipTests >"${LOG_DIR}/build.log" 2>&1
 )
 
 log "Starting iam-service"
@@ -227,6 +232,14 @@ log "Starting catalog-service"
 ) &
 CATALOG_PID=$!
 wait_for_http "catalog-service" "http://localhost:8085/actuator/health"
+
+log "Starting audit-service"
+(
+  cd "${ROOT_DIR}" &&
+  ./mvnw -q -f services/audit-service/pom.xml spring-boot:run >"${LOG_DIR}/audit-service.log" 2>&1
+) &
+AUDIT_PID=$!
+wait_for_http "audit-service" "http://localhost:8084/actuator/health"
 
 log "Starting api-gateway"
 (

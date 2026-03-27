@@ -13,8 +13,7 @@ cp infrastructure/migration.env.example .env.migrations
 ./scripts/migrate-platform.sh all
 ```
 
-`all` expects both PostgreSQL endpoints and Snowflake credentials to be available in `.env.migrations`.
-For local PostgreSQL-only work, run `master` and `operational` separately until Snowflake access is configured.
+`all` now applies every owned PostgreSQL schema, including reporting, audit, notification, and finance projection schemas in `fern_master`.
 The Docker PostgreSQL service is exposed on host port `55432` by default to avoid collisions with a developer's local PostgreSQL on `5432`.
 
 Useful variants:
@@ -22,9 +21,7 @@ Useful variants:
 ```bash
 ./scripts/migrate-platform.sh master
 ./scripts/migrate-platform.sh operational
-./scripts/migrate-platform.sh snowflake
 ./scripts/migrate-platform.sh master --action validate
-./scripts/migrate-platform.sh snowflake --skip-snowflake-bootstrap
 ```
 
 For one-command local bootstrap with Docker, PostgreSQL migrations, and the gateway/IAM/Org smoke flow:
@@ -59,22 +56,19 @@ Operational databases contain transactional data for daily operations:
 2. Set up replication for read scalability
 3. Configure backup and recovery
 
-### 1.3 Reporting Database (Snowflake)
+### 1.3 Reporting And Projection Schemas (PostgreSQL Master)
 
-The Reporting database contains aggregated data for analytics:
+The PostgreSQL master database also contains aggregated and projection data for analytics and operational observability:
 - Sales reports
 - Performance metrics
 - Business intelligence data
 - Audit and notification projections
 
 #### Setup Steps:
-1. Create Snowflake database `FERN_REPORTING`
-2. Create ingest and BI warehouses
-3. Create reporting schemas and projection tables
-4. Configure Kafka-based projection consumers
-5. Configure retention and cost controls
-
-The unified migration script bootstraps Snowflake warehouses and the `FERN_REPORTING` database by default before running service-owned reporting migrations.
+1. Create PostgreSQL master database `fern_master`
+2. Run master migrations to create `raw_events`, `report`, `finance_projection`, `audit`, and `notification`
+3. Configure Kafka-based projection consumers
+4. Configure retention, vacuum, and backup policy
 
 ## 2. Messaging Infrastructure (Kafka)
 
@@ -159,11 +153,7 @@ Each service requires the following environment variables:
 - REDIS_HOST - Redis server hostname
 - JWT_SECRET_KEY - JWT secret key
 - SERVICE_DISCOVERY_URL - Service discovery endpoint
-- FERN_SNOWFLAKE_ACCOUNT - Snowflake account identifier
-- FERN_SNOWFLAKE_USER - Snowflake username
-- FERN_SNOWFLAKE_PASSWORD - Snowflake password or key-based auth secret
-- FERN_SNOWFLAKE_WAREHOUSE - Snowflake warehouse name
-- FERN_SNOWFLAKE_BI_WAREHOUSE - Snowflake BI/export warehouse name
+- FERN_ID_GENERATOR_NODE_ID - Snowflake ID generator node identifier for reporting/projection writes
 
 ## 6. Monitoring and Logging
 

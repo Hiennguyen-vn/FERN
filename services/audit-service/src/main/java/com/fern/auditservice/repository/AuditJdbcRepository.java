@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.audit.AuditEvent;
 import com.fern.platform.audit.RequestTraceEvent;
 import com.fern.platform.audit.SecurityEvent;
+import com.fern.platform.common.SnowflakeIdGenerator;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -20,25 +21,32 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class AuditJdbcRepository {
-    private static final String AUDIT_EVENT_TABLE = "FERN_REPORTING.AUDIT.AUDIT_EVENT";
-    private static final String SECURITY_EVENT_TABLE = "FERN_REPORTING.AUDIT.SECURITY_EVENT";
-    private static final String REQUEST_TRACE_TABLE = "FERN_REPORTING.AUDIT.REQUEST_TRACE";
+    private static final String AUDIT_EVENT_TABLE = "audit.audit_event";
+    private static final String SECURITY_EVENT_TABLE = "audit.security_event";
+    private static final String REQUEST_TRACE_TABLE = "audit.request_trace";
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final SnowflakeIdGenerator idGenerator;
 
-    public AuditJdbcRepository(NamedParameterJdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+    public AuditJdbcRepository(
+            NamedParameterJdbcTemplate jdbcTemplate,
+            ObjectMapper objectMapper,
+            SnowflakeIdGenerator idGenerator
+    ) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
+        this.idGenerator = idGenerator;
     }
 
     public void insertAuditEvent(AuditEvent event) {
         MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("auditEventId", idGenerator.nextId())
                 .addValue("sourceEventId", event.eventId())
                 .addValue("sourceService", event.sourceService())
                 .addValue("module", moduleFromPayload(event.payload(), event.sourceService()))
                 .addValue("eventType", event.eventType())
-                .addValue("occurredAt", event.occurredAt())
+                .addValue("occurredAt", timestamp(event.occurredAt()))
                 .addValue("idempotencyKey", fallbackIdempotency(event.idempotencyKey(), event.eventId()))
                 .addValue("correlationId", event.correlationId())
                 .addValue("regionId", event.regionId())
@@ -54,25 +62,26 @@ public class AuditJdbcRepository {
 
         jdbcTemplate.update("""
                 INSERT INTO %s (
-                    SOURCE_EVENT_ID,
-                    SOURCE_SERVICE,
-                    MODULE,
-                    EVENT_TYPE,
-                    OCCURRED_AT,
-                    IDEMPOTENCY_KEY,
-                    CORRELATION_ID,
-                    REGION_ID,
-                    OUTLET_ID,
-                    USER_ID,
-                    ACTION,
-                    RESOURCE_TYPE,
-                    RESOURCE_ID,
-                    OUTCOME,
-                    OLD_VALUE,
-                    NEW_VALUE,
-                    PAYLOAD
-                )
-                SELECT
+                    audit_event_id,
+                    source_event_id,
+                    source_service,
+                    module,
+                    event_type,
+                    occurred_at,
+                    idempotency_key,
+                    correlation_id,
+                    region_id,
+                    outlet_id,
+                    user_id,
+                    action,
+                    resource_type,
+                    resource_id,
+                    outcome,
+                    old_value,
+                    new_value,
+                    payload
+                ) VALUES (
+                    :auditEventId,
                     :sourceEventId,
                     :sourceService,
                     :module,
@@ -87,25 +96,22 @@ public class AuditJdbcRepository {
                     :resourceType,
                     :resourceId,
                     :outcome,
-                    IFF(:oldValueJson IS NULL, NULL, PARSE_JSON(:oldValueJson)),
-                    IFF(:newValueJson IS NULL, NULL, PARSE_JSON(:newValueJson)),
-                    IFF(:payloadJson IS NULL, NULL, PARSE_JSON(:payloadJson))
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM %s
-                    WHERE SOURCE_EVENT_ID = :sourceEventId
-                       OR IDEMPOTENCY_KEY = :idempotencyKey
+                    CAST(:oldValueJson AS jsonb),
+                    CAST(:newValueJson AS jsonb),
+                    CAST(:payloadJson AS jsonb)
                 )
-                """.formatted(AUDIT_EVENT_TABLE, AUDIT_EVENT_TABLE), params);
+                ON CONFLICT DO NOTHING
+                """.formatted(AUDIT_EVENT_TABLE), params);
     }
 
     public void insertSecurityEvent(SecurityEvent event) {
         MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("securityEventId", idGenerator.nextId())
                 .addValue("sourceEventId", event.eventId())
                 .addValue("sourceService", event.sourceService())
                 .addValue("module", moduleFromPayload(event.payload(), event.sourceService()))
                 .addValue("eventType", event.eventType())
-                .addValue("occurredAt", event.occurredAt())
+                .addValue("occurredAt", timestamp(event.occurredAt()))
                 .addValue("idempotencyKey", fallbackIdempotency(event.idempotencyKey(), event.eventId()))
                 .addValue("correlationId", event.correlationId())
                 .addValue("userId", event.userId())
@@ -117,21 +123,22 @@ public class AuditJdbcRepository {
 
         jdbcTemplate.update("""
                 INSERT INTO %s (
-                    SOURCE_EVENT_ID,
-                    SOURCE_SERVICE,
-                    MODULE,
-                    EVENT_TYPE,
-                    OCCURRED_AT,
-                    IDEMPOTENCY_KEY,
-                    CORRELATION_ID,
-                    USER_ID,
-                    OUTCOME,
-                    FAILURE_REASON,
-                    IP_ADDRESS,
-                    USER_AGENT,
-                    PAYLOAD
-                )
-                SELECT
+                    security_event_id,
+                    source_event_id,
+                    source_service,
+                    module,
+                    event_type,
+                    occurred_at,
+                    idempotency_key,
+                    correlation_id,
+                    user_id,
+                    outcome,
+                    failure_reason,
+                    ip_address,
+                    user_agent,
+                    payload
+                ) VALUES (
+                    :securityEventId,
                     :sourceEventId,
                     :sourceService,
                     :module,
@@ -144,23 +151,20 @@ public class AuditJdbcRepository {
                     :failureReason,
                     :ipAddress,
                     :userAgent,
-                    IFF(:payloadJson IS NULL, NULL, PARSE_JSON(:payloadJson))
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM %s
-                    WHERE SOURCE_EVENT_ID = :sourceEventId
-                       OR IDEMPOTENCY_KEY = :idempotencyKey
+                    CAST(:payloadJson AS jsonb)
                 )
-                """.formatted(SECURITY_EVENT_TABLE, SECURITY_EVENT_TABLE), params);
+                ON CONFLICT DO NOTHING
+                """.formatted(SECURITY_EVENT_TABLE), params);
     }
 
     public void insertRequestTrace(RequestTraceEvent event) {
         MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("requestTraceId", idGenerator.nextId())
                 .addValue("sourceEventId", event.eventId())
                 .addValue("sourceService", event.sourceService())
                 .addValue("module", moduleFromPayload(event.payload(), event.sourceService()))
                 .addValue("eventType", event.eventType())
-                .addValue("occurredAt", event.occurredAt())
+                .addValue("occurredAt", timestamp(event.occurredAt()))
                 .addValue("idempotencyKey", fallbackIdempotency(event.idempotencyKey(), event.eventId()))
                 .addValue("correlationId", event.correlationId())
                 .addValue("requestId", event.requestId())
@@ -175,24 +179,25 @@ public class AuditJdbcRepository {
 
         jdbcTemplate.update("""
                 INSERT INTO %s (
-                    SOURCE_EVENT_ID,
-                    SOURCE_SERVICE,
-                    MODULE,
-                    EVENT_TYPE,
-                    OCCURRED_AT,
-                    IDEMPOTENCY_KEY,
-                    CORRELATION_ID,
-                    REQUEST_ID,
-                    ENDPOINT,
-                    METHOD,
-                    STATUS_CODE,
-                    DURATION_MS,
-                    REGION_ID,
-                    OUTLET_ID,
-                    USER_ID,
-                    PAYLOAD
-                )
-                SELECT
+                    request_trace_id,
+                    source_event_id,
+                    source_service,
+                    module,
+                    event_type,
+                    occurred_at,
+                    idempotency_key,
+                    correlation_id,
+                    request_id,
+                    endpoint,
+                    method,
+                    status_code,
+                    duration_ms,
+                    region_id,
+                    outlet_id,
+                    user_id,
+                    payload
+                ) VALUES (
+                    :requestTraceId,
                     :sourceEventId,
                     :sourceService,
                     :module,
@@ -208,14 +213,10 @@ public class AuditJdbcRepository {
                     :regionId,
                     :outletId,
                     :userId,
-                    IFF(:payloadJson IS NULL, NULL, PARSE_JSON(:payloadJson))
-                WHERE NOT EXISTS (
-                    SELECT 1
-                    FROM %s
-                    WHERE SOURCE_EVENT_ID = :sourceEventId
-                       OR IDEMPOTENCY_KEY = :idempotencyKey
+                    CAST(:payloadJson AS jsonb)
                 )
-                """.formatted(REQUEST_TRACE_TABLE, REQUEST_TRACE_TABLE), params);
+                ON CONFLICT DO NOTHING
+                """.formatted(REQUEST_TRACE_TABLE), params);
     }
 
     public List<AuditEventRow> findAuditEvents(AuditEventFilter filter) {
@@ -226,27 +227,27 @@ public class AuditJdbcRepository {
     public Optional<AuditEventRow> findAuditEventById(Long id) {
         return queryOptional("""
                 SELECT
-                    AUDIT_EVENT_ID,
-                    SOURCE_EVENT_ID,
-                    SOURCE_SERVICE,
-                    COALESCE(MODULE, SOURCE_SERVICE) AS MODULE,
-                    EVENT_TYPE,
-                    OCCURRED_AT,
-                    INGESTED_AT,
-                    IDEMPOTENCY_KEY,
-                    CORRELATION_ID,
-                    REGION_ID,
-                    OUTLET_ID,
-                    USER_ID,
-                    ACTION,
-                    RESOURCE_TYPE,
-                    RESOURCE_ID,
-                    OUTCOME,
-                    TO_JSON(OLD_VALUE) AS OLD_VALUE_JSON,
-                    TO_JSON(NEW_VALUE) AS NEW_VALUE_JSON,
-                    TO_JSON(PAYLOAD) AS PAYLOAD_JSON
+                    audit_event_id AS AUDIT_EVENT_ID,
+                    source_event_id AS SOURCE_EVENT_ID,
+                    source_service AS SOURCE_SERVICE,
+                    COALESCE(module, source_service) AS MODULE,
+                    event_type AS EVENT_TYPE,
+                    occurred_at AS OCCURRED_AT,
+                    ingested_at AS INGESTED_AT,
+                    idempotency_key AS IDEMPOTENCY_KEY,
+                    correlation_id AS CORRELATION_ID,
+                    region_id AS REGION_ID,
+                    outlet_id AS OUTLET_ID,
+                    user_id AS USER_ID,
+                    action AS ACTION,
+                    resource_type AS RESOURCE_TYPE,
+                    resource_id AS RESOURCE_ID,
+                    outcome AS OUTCOME,
+                    CAST(old_value AS text) AS OLD_VALUE_JSON,
+                    CAST(new_value AS text) AS NEW_VALUE_JSON,
+                    CAST(payload AS text) AS PAYLOAD_JSON
                 FROM %s
-                WHERE AUDIT_EVENT_ID = :id
+                WHERE audit_event_id = :id
                 """.formatted(AUDIT_EVENT_TABLE), new MapSqlParameterSource("id", id), this::mapAuditEvent);
     }
 
@@ -258,23 +259,23 @@ public class AuditJdbcRepository {
     public Optional<SecurityEventRow> findSecurityEventById(Long id) {
         return queryOptional("""
                 SELECT
-                    SECURITY_EVENT_ID,
-                    SOURCE_EVENT_ID,
-                    SOURCE_SERVICE,
-                    COALESCE(MODULE, SOURCE_SERVICE) AS MODULE,
-                    EVENT_TYPE,
-                    OCCURRED_AT,
-                    INGESTED_AT,
-                    IDEMPOTENCY_KEY,
-                    CORRELATION_ID,
-                    USER_ID,
-                    OUTCOME,
-                    FAILURE_REASON,
-                    IP_ADDRESS,
-                    USER_AGENT,
-                    TO_JSON(PAYLOAD) AS PAYLOAD_JSON
+                    security_event_id AS SECURITY_EVENT_ID,
+                    source_event_id AS SOURCE_EVENT_ID,
+                    source_service AS SOURCE_SERVICE,
+                    COALESCE(module, source_service) AS MODULE,
+                    event_type AS EVENT_TYPE,
+                    occurred_at AS OCCURRED_AT,
+                    ingested_at AS INGESTED_AT,
+                    idempotency_key AS IDEMPOTENCY_KEY,
+                    correlation_id AS CORRELATION_ID,
+                    user_id AS USER_ID,
+                    outcome AS OUTCOME,
+                    failure_reason AS FAILURE_REASON,
+                    ip_address AS IP_ADDRESS,
+                    user_agent AS USER_AGENT,
+                    CAST(payload AS text) AS PAYLOAD_JSON
                 FROM %s
-                WHERE SECURITY_EVENT_ID = :id
+                WHERE security_event_id = :id
                 """.formatted(SECURITY_EVENT_TABLE), new MapSqlParameterSource("id", id), this::mapSecurityEvent);
     }
 
@@ -286,74 +287,85 @@ public class AuditJdbcRepository {
     public Optional<RequestTraceRow> findRequestTraceById(Long id) {
         return queryOptional("""
                 SELECT
-                    REQUEST_TRACE_ID,
-                    SOURCE_EVENT_ID,
-                    SOURCE_SERVICE,
-                    COALESCE(MODULE, SOURCE_SERVICE) AS MODULE,
-                    EVENT_TYPE,
-                    OCCURRED_AT,
-                    INGESTED_AT,
-                    IDEMPOTENCY_KEY,
-                    CORRELATION_ID,
-                    REQUEST_ID,
-                    ENDPOINT,
-                    METHOD,
-                    STATUS_CODE,
-                    DURATION_MS,
-                    REGION_ID,
-                    OUTLET_ID,
-                    USER_ID,
-                    TO_JSON(PAYLOAD) AS PAYLOAD_JSON
+                    request_trace_id AS REQUEST_TRACE_ID,
+                    source_event_id AS SOURCE_EVENT_ID,
+                    source_service AS SOURCE_SERVICE,
+                    COALESCE(module, source_service) AS MODULE,
+                    event_type AS EVENT_TYPE,
+                    occurred_at AS OCCURRED_AT,
+                    ingested_at AS INGESTED_AT,
+                    idempotency_key AS IDEMPOTENCY_KEY,
+                    correlation_id AS CORRELATION_ID,
+                    request_id AS REQUEST_ID,
+                    endpoint AS ENDPOINT,
+                    method AS METHOD,
+                    status_code AS STATUS_CODE,
+                    duration_ms AS DURATION_MS,
+                    region_id AS REGION_ID,
+                    outlet_id AS OUTLET_ID,
+                    user_id AS USER_ID,
+                    CAST(payload AS text) AS PAYLOAD_JSON
                 FROM %s
-                WHERE REQUEST_TRACE_ID = :id
+                WHERE request_trace_id = :id
                 """.formatted(REQUEST_TRACE_TABLE), new MapSqlParameterSource("id", id), this::mapRequestTrace);
     }
 
     private QueryParts auditEventQuery(AuditEventFilter filter) {
         List<String> conditions = new ArrayList<>();
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("limit", sanitizeLimit(filter.limit()));
-        addCommonConditions(conditions, params, filter.userId(), filter.sourceService(), filter.module(), filter.occurredFrom(), filter.occurredTo(), filter.regionId(), filter.outletId(), filter.correlationId());
+        addCommonConditions(
+                conditions,
+                params,
+                filter.userId(),
+                filter.sourceService(),
+                filter.module(),
+                filter.occurredFrom(),
+                filter.occurredTo(),
+                filter.regionId(),
+                filter.outletId(),
+                filter.correlationId()
+        );
         if (hasText(filter.action())) {
-            conditions.add("ACTION = :action");
+            conditions.add("action = :action");
             params.addValue("action", filter.action());
         }
         if (hasText(filter.resourceType())) {
-            conditions.add("RESOURCE_TYPE = :resourceType");
+            conditions.add("resource_type = :resourceType");
             params.addValue("resourceType", filter.resourceType());
         }
         if (hasText(filter.resourceId())) {
-            conditions.add("RESOURCE_ID = :resourceId");
+            conditions.add("resource_id = :resourceId");
             params.addValue("resourceId", filter.resourceId());
         }
         if (hasText(filter.outcome())) {
-            conditions.add("OUTCOME = :outcome");
+            conditions.add("outcome = :outcome");
             params.addValue("outcome", filter.outcome());
         }
 
         return new QueryParts("""
                 SELECT
-                    AUDIT_EVENT_ID,
-                    SOURCE_EVENT_ID,
-                    SOURCE_SERVICE,
-                    COALESCE(MODULE, SOURCE_SERVICE) AS MODULE,
-                    EVENT_TYPE,
-                    OCCURRED_AT,
-                    INGESTED_AT,
-                    IDEMPOTENCY_KEY,
-                    CORRELATION_ID,
-                    REGION_ID,
-                    OUTLET_ID,
-                    USER_ID,
-                    ACTION,
-                    RESOURCE_TYPE,
-                    RESOURCE_ID,
-                    OUTCOME,
-                    TO_JSON(OLD_VALUE) AS OLD_VALUE_JSON,
-                    TO_JSON(NEW_VALUE) AS NEW_VALUE_JSON,
-                    TO_JSON(PAYLOAD) AS PAYLOAD_JSON
+                    audit_event_id AS AUDIT_EVENT_ID,
+                    source_event_id AS SOURCE_EVENT_ID,
+                    source_service AS SOURCE_SERVICE,
+                    COALESCE(module, source_service) AS MODULE,
+                    event_type AS EVENT_TYPE,
+                    occurred_at AS OCCURRED_AT,
+                    ingested_at AS INGESTED_AT,
+                    idempotency_key AS IDEMPOTENCY_KEY,
+                    correlation_id AS CORRELATION_ID,
+                    region_id AS REGION_ID,
+                    outlet_id AS OUTLET_ID,
+                    user_id AS USER_ID,
+                    action AS ACTION,
+                    resource_type AS RESOURCE_TYPE,
+                    resource_id AS RESOURCE_ID,
+                    outcome AS OUTCOME,
+                    CAST(old_value AS text) AS OLD_VALUE_JSON,
+                    CAST(new_value AS text) AS NEW_VALUE_JSON,
+                    CAST(payload AS text) AS PAYLOAD_JSON
                 FROM %s
                 %s
-                ORDER BY OCCURRED_AT DESC, AUDIT_EVENT_ID DESC
+                ORDER BY occurred_at DESC, audit_event_id DESC
                 LIMIT :limit
                 """.formatted(AUDIT_EVENT_TABLE, whereClause(conditions)), params);
     }
@@ -361,36 +373,47 @@ public class AuditJdbcRepository {
     private QueryParts securityEventQuery(SecurityEventFilter filter) {
         List<String> conditions = new ArrayList<>();
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("limit", sanitizeLimit(filter.limit()));
-        addCommonConditions(conditions, params, filter.userId(), filter.sourceService(), filter.module(), filter.occurredFrom(), filter.occurredTo(), null, null, filter.correlationId());
+        addCommonConditions(
+                conditions,
+                params,
+                filter.userId(),
+                filter.sourceService(),
+                filter.module(),
+                filter.occurredFrom(),
+                filter.occurredTo(),
+                null,
+                null,
+                filter.correlationId()
+        );
         if (hasText(filter.eventType())) {
-            conditions.add("EVENT_TYPE = :eventType");
+            conditions.add("event_type = :eventType");
             params.addValue("eventType", filter.eventType());
         }
         if (hasText(filter.outcome())) {
-            conditions.add("OUTCOME = :outcome");
+            conditions.add("outcome = :outcome");
             params.addValue("outcome", filter.outcome());
         }
 
         return new QueryParts("""
                 SELECT
-                    SECURITY_EVENT_ID,
-                    SOURCE_EVENT_ID,
-                    SOURCE_SERVICE,
-                    COALESCE(MODULE, SOURCE_SERVICE) AS MODULE,
-                    EVENT_TYPE,
-                    OCCURRED_AT,
-                    INGESTED_AT,
-                    IDEMPOTENCY_KEY,
-                    CORRELATION_ID,
-                    USER_ID,
-                    OUTCOME,
-                    FAILURE_REASON,
-                    IP_ADDRESS,
-                    USER_AGENT,
-                    TO_JSON(PAYLOAD) AS PAYLOAD_JSON
+                    security_event_id AS SECURITY_EVENT_ID,
+                    source_event_id AS SOURCE_EVENT_ID,
+                    source_service AS SOURCE_SERVICE,
+                    COALESCE(module, source_service) AS MODULE,
+                    event_type AS EVENT_TYPE,
+                    occurred_at AS OCCURRED_AT,
+                    ingested_at AS INGESTED_AT,
+                    idempotency_key AS IDEMPOTENCY_KEY,
+                    correlation_id AS CORRELATION_ID,
+                    user_id AS USER_ID,
+                    outcome AS OUTCOME,
+                    failure_reason AS FAILURE_REASON,
+                    ip_address AS IP_ADDRESS,
+                    user_agent AS USER_AGENT,
+                    CAST(payload AS text) AS PAYLOAD_JSON
                 FROM %s
                 %s
-                ORDER BY OCCURRED_AT DESC, SECURITY_EVENT_ID DESC
+                ORDER BY occurred_at DESC, security_event_id DESC
                 LIMIT :limit
                 """.formatted(SECURITY_EVENT_TABLE, whereClause(conditions)), params);
     }
@@ -398,43 +421,54 @@ public class AuditJdbcRepository {
     private QueryParts requestTraceQuery(RequestTraceFilter filter) {
         List<String> conditions = new ArrayList<>();
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("limit", sanitizeLimit(filter.limit()));
-        addCommonConditions(conditions, params, filter.userId(), filter.sourceService(), filter.module(), filter.occurredFrom(), filter.occurredTo(), filter.regionId(), filter.outletId(), filter.correlationId());
+        addCommonConditions(
+                conditions,
+                params,
+                filter.userId(),
+                filter.sourceService(),
+                filter.module(),
+                filter.occurredFrom(),
+                filter.occurredTo(),
+                filter.regionId(),
+                filter.outletId(),
+                filter.correlationId()
+        );
         if (hasText(filter.endpoint())) {
-            conditions.add("ENDPOINT = :endpoint");
+            conditions.add("endpoint = :endpoint");
             params.addValue("endpoint", filter.endpoint());
         }
         if (hasText(filter.method())) {
-            conditions.add("METHOD = :method");
+            conditions.add("method = :method");
             params.addValue("method", filter.method());
         }
         if (filter.statusCode() != null) {
-            conditions.add("STATUS_CODE = :statusCode");
+            conditions.add("status_code = :statusCode");
             params.addValue("statusCode", filter.statusCode());
         }
 
         return new QueryParts("""
                 SELECT
-                    REQUEST_TRACE_ID,
-                    SOURCE_EVENT_ID,
-                    SOURCE_SERVICE,
-                    COALESCE(MODULE, SOURCE_SERVICE) AS MODULE,
-                    EVENT_TYPE,
-                    OCCURRED_AT,
-                    INGESTED_AT,
-                    IDEMPOTENCY_KEY,
-                    CORRELATION_ID,
-                    REQUEST_ID,
-                    ENDPOINT,
-                    METHOD,
-                    STATUS_CODE,
-                    DURATION_MS,
-                    REGION_ID,
-                    OUTLET_ID,
-                    USER_ID,
-                    TO_JSON(PAYLOAD) AS PAYLOAD_JSON
+                    request_trace_id AS REQUEST_TRACE_ID,
+                    source_event_id AS SOURCE_EVENT_ID,
+                    source_service AS SOURCE_SERVICE,
+                    COALESCE(module, source_service) AS MODULE,
+                    event_type AS EVENT_TYPE,
+                    occurred_at AS OCCURRED_AT,
+                    ingested_at AS INGESTED_AT,
+                    idempotency_key AS IDEMPOTENCY_KEY,
+                    correlation_id AS CORRELATION_ID,
+                    request_id AS REQUEST_ID,
+                    endpoint AS ENDPOINT,
+                    method AS METHOD,
+                    status_code AS STATUS_CODE,
+                    duration_ms AS DURATION_MS,
+                    region_id AS REGION_ID,
+                    outlet_id AS OUTLET_ID,
+                    user_id AS USER_ID,
+                    CAST(payload AS text) AS PAYLOAD_JSON
                 FROM %s
                 %s
-                ORDER BY OCCURRED_AT DESC, REQUEST_TRACE_ID DESC
+                ORDER BY occurred_at DESC, request_trace_id DESC
                 LIMIT :limit
                 """.formatted(REQUEST_TRACE_TABLE, whereClause(conditions)), params);
     }
@@ -452,35 +486,35 @@ public class AuditJdbcRepository {
             String correlationId
     ) {
         if (userId != null) {
-            conditions.add("USER_ID = :userId");
+            conditions.add("user_id = :userId");
             params.addValue("userId", userId);
         }
         if (hasText(sourceService)) {
-            conditions.add("SOURCE_SERVICE = :sourceService");
+            conditions.add("source_service = :sourceService");
             params.addValue("sourceService", sourceService);
         }
         if (hasText(module)) {
-            conditions.add("COALESCE(MODULE, SOURCE_SERVICE) = :module");
+            conditions.add("COALESCE(module, source_service) = :module");
             params.addValue("module", module);
         }
         if (occurredFrom != null) {
-            conditions.add("OCCURRED_AT >= :occurredFrom");
-            params.addValue("occurredFrom", occurredFrom);
+            conditions.add("occurred_at >= :occurredFrom");
+            params.addValue("occurredFrom", timestamp(occurredFrom));
         }
         if (occurredTo != null) {
-            conditions.add("OCCURRED_AT <= :occurredTo");
-            params.addValue("occurredTo", occurredTo);
+            conditions.add("occurred_at <= :occurredTo");
+            params.addValue("occurredTo", timestamp(occurredTo));
         }
         if (regionId != null) {
-            conditions.add("REGION_ID = :regionId");
+            conditions.add("region_id = :regionId");
             params.addValue("regionId", regionId);
         }
         if (outletId != null) {
-            conditions.add("OUTLET_ID = :outletId");
+            conditions.add("outlet_id = :outletId");
             params.addValue("outletId", outletId);
         }
         if (hasText(correlationId)) {
-            conditions.add("CORRELATION_ID = :correlationId");
+            conditions.add("correlation_id = :correlationId");
             params.addValue("correlationId", correlationId);
         }
     }
@@ -582,6 +616,10 @@ public class AuditJdbcRepository {
     private Long nullableLong(ResultSet resultSet, String columnName) throws SQLException {
         long value = resultSet.getLong(columnName);
         return resultSet.wasNull() ? null : value;
+    }
+
+    private Timestamp timestamp(Instant instant) {
+        return instant == null ? null : Timestamp.from(instant);
     }
 
     private String fallbackIdempotency(String idempotencyKey, String fallback) {

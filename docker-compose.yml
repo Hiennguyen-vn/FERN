@@ -52,6 +52,5 @@ services:
       timeout: 10s
       retries: 15
 
-# Reporting uses Snowflake instead of a local PostgreSQL reporting database.
-# Configure Snowflake credentials in the service environment when running
-# report/audit/notification/finance projection consumers.
+# Reporting, audit, notification, and projection schemas now live in
+# PostgreSQL `fern_master`; no separate local reporting warehouse is required.

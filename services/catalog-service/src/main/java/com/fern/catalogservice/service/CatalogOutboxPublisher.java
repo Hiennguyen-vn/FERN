@@ -36,11 +36,21 @@ public class CatalogOutboxPublisher {
             try {
                 kafkaTemplate.send(event.getEventType(), event.getPartitionKey(), event.getPayload()).join();
             } catch (RuntimeException exception) {
-                log.warn("catalog_outbox_publish_failed eventId={} eventType={}", event.getId(), event.getEventType(), exception);
+                log.warn(
+                        "catalog_outbox_publish_failed eventId={} eventType={} reason={}",
+                        event.getId(),
+                        event.getEventType(),
+                        failureReason(exception)
+                );
                 throw exception;
             }
             event.setStatus("PUBLISHED");
             event.setPublishedAt(clock.instant());
         }
+    }
+
+    private String failureReason(RuntimeException exception) {
+        Throwable cause = exception.getCause();
+        return cause == null ? exception.toString() : cause.toString();
     }
 }

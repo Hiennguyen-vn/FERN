@@ -49,7 +49,7 @@ public class IngredientService {
         apply(entity, principal, request, true);
         entity = ingredientRepository.save(entity);
         IngredientResponse response = toResponse(entity);
-        catalogAuditService.publish("catalog.ingredient.changed", principal, "CREATE_INGREDIENT", "ingredient", String.valueOf(entity.getId()), null, response, Map.of("code", entity.getCode()));
+        catalogAuditService.publish("catalog.ingredient.changed", principal, null, null, "CREATE_INGREDIENT", "ingredient", String.valueOf(entity.getId()), null, response, Map.of("code", entity.getCode()));
         return response;
     }
 
@@ -63,7 +63,7 @@ public class IngredientService {
         apply(entity, principal, request, false);
         entity = ingredientRepository.save(entity);
         IngredientResponse response = toResponse(entity);
-        catalogAuditService.publish("catalog.ingredient.changed", principal, "UPDATE_INGREDIENT", "ingredient", String.valueOf(entity.getId()), before, response, Map.of("code", entity.getCode()));
+        catalogAuditService.publish("catalog.ingredient.changed", principal, null, null, "UPDATE_INGREDIENT", "ingredient", String.valueOf(entity.getId()), before, response, Map.of("code", entity.getCode()));
         return response;
     }
 

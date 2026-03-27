@@ -64,7 +64,7 @@ public class CatalogPricingService {
         applyTaxRate(entity, request);
         entity = taxRateRepository.save(entity);
         TaxRateResponse response = toTaxRateResponse(entity);
-        catalogAuditService.publish("catalog.tax.changed", principal, "PUBLISH_TAX_RATE", "tax_rate", String.valueOf(entity.getId()), null, response, Map.of("productId", request.productId()));
+        catalogAuditService.publish("catalog.tax.changed", principal, null, null, "PUBLISH_TAX_RATE", "tax_rate", String.valueOf(entity.getId()), null, response, Map.of("productId", request.productId()));
         return response;
     }
 
@@ -76,7 +76,7 @@ public class CatalogPricingService {
         applyTaxRate(entity, request);
         entity = taxRateRepository.save(entity);
         TaxRateResponse response = toTaxRateResponse(entity);
-        catalogAuditService.publish("catalog.tax.changed", principal, "UPDATE_TAX_RATE", "tax_rate", String.valueOf(entity.getId()), before, response, Map.of("productId", request.productId()));
+        catalogAuditService.publish("catalog.tax.changed", principal, null, null, "UPDATE_TAX_RATE", "tax_rate", String.valueOf(entity.getId()), before, response, Map.of("productId", request.productId()));
         return response;
     }
 
@@ -132,7 +132,18 @@ public class CatalogPricingService {
         entity.setAvailable(request.available());
         entity = productOutletAvailabilityRepository.save(entity);
         ProductAvailabilityResponse response = toAvailabilityResponse(entity);
-        catalogAuditService.publish("catalog.availability.changed", principal, "SET_PRODUCT_AVAILABILITY", "product_outlet_availability", request.productId() + ":" + request.outletId(), before, response, Map.of("outletId", request.outletId()));
+        catalogAuditService.publish(
+                "catalog.availability.changed",
+                principal,
+                null,
+                request.outletId(),
+                "SET_PRODUCT_AVAILABILITY",
+                "product_outlet_availability",
+                request.productId() + ":" + request.outletId(),
+                before,
+                response,
+                Map.of("outletId", request.outletId())
+        );
         catalogOutboxService.enqueue("product_availability", request.productId() + ":" + request.outletId(), "catalog.availability.changed", String.valueOf(request.productId()), response);
         return response;
     }
@@ -206,8 +217,27 @@ public class CatalogPricingService {
     }
 
     private void publishPrice(FernPrincipal principal, ProductPriceEntity entity, ProductPriceResponse before, ProductPriceResponse after) {
-        catalogAuditService.publish("catalog.price.published", principal, before == null ? "PUBLISH_PRICE" : "UPDATE_PRICE", "product_price", String.valueOf(entity.getId()), before, after, Map.of("productId", entity.getProduct().getId()));
+        catalogAuditService.publish(
+                "catalog.price.published",
+                principal,
+                priceRegionId(entity),
+                priceOutletId(entity),
+                before == null ? "PUBLISH_PRICE" : "UPDATE_PRICE",
+                "product_price",
+                String.valueOf(entity.getId()),
+                before,
+                after,
+                Map.of("productId", entity.getProduct().getId())
+        );
         catalogOutboxService.enqueue("product_price", String.valueOf(entity.getId()), "catalog.price.published", String.valueOf(entity.getProduct().getId()), after);
+    }
+
+    private Long priceRegionId(ProductPriceEntity entity) {
+        return entity.getScopeType() == PriceScopeType.REGION ? entity.getScopeId() : null;
+    }
+
+    private Long priceOutletId(ProductPriceEntity entity) {
+        return entity.getScopeType() == PriceScopeType.OUTLET ? entity.getScopeId() : null;
     }
 
     private TaxRateResponse toTaxRateResponse(TaxRateEntity entity) {

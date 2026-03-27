@@ -26,6 +26,8 @@ public class CatalogAuditService {
     public void publish(
             String eventType,
             FernPrincipal principal,
+            Long regionId,
+            Long outletId,
             String action,
             String resourceType,
             String resourceId,
@@ -40,8 +42,8 @@ public class CatalogAuditService {
                 "catalog-service",
                 correlationId(),
                 principal == null ? null : principal.userId(),
-                firstRegionId(principal),
-                firstOutletId(principal),
+                regionId,
+                outletId,
                 action,
                 resourceType,
                 resourceId,
@@ -65,13 +67,5 @@ public class CatalogAuditService {
             return null;
         }
         return attributes.getRequest().getHeader(CorrelationId.HEADER);
-    }
-
-    private Long firstRegionId(FernPrincipal principal) {
-        return principal == null || principal.scopeRoots().regions().isEmpty() ? null : principal.scopeRoots().regions().getFirst();
-    }
-
-    private Long firstOutletId(FernPrincipal principal) {
-        return principal == null || principal.scopeRoots().outlets().isEmpty() ? null : principal.scopeRoots().outlets().getFirst();
     }
 }

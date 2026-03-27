@@ -2,14 +2,15 @@ spring:
   application:
     name: audit-service
   datasource:
-    url: ${FERN_AUDIT_JDBC_URL:jdbc:snowflake://${FERN_SNOWFLAKE_ACCOUNT:local}.snowflakecomputing.com/?db=${FERN_SNOWFLAKE_DATABASE:FERN_REPORTING}&schema=AUDIT&warehouse=${FERN_SNOWFLAKE_WAREHOUSE:FERN_INGEST_WH}&role=${FERN_SNOWFLAKE_ROLE:SYSADMIN}${FERN_SNOWFLAKE_JDBC_OPTIONS:&JDBC_QUERY_RESULT_FORMAT=JSON}}
-    username: ${FERN_SNOWFLAKE_USER:fern}
-    password: ${FERN_SNOWFLAKE_PASSWORD:fern}
+    url: ${FERN_AUDIT_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=audit}
+    username: ${FERN_DB_USERNAME:fern}
+    password: ${FERN_DB_PASSWORD:fern}
   flyway:
     enabled: true
-    schemas: AUDIT
-    default-schema: AUDIT
-    locations: classpath:db/migration/snowflake
+    create-schemas: true
+    schemas: audit
+    default-schema: audit
+    locations: classpath:db/migration/postgresql/master
   kafka:
     bootstrap-servers: ${FERN_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -17,6 +18,8 @@ spring:
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      auto-startup: ${FERN_AUDIT_KAFKA_AUTO_STARTUP:true}
 server:
   port: ${PORT:8084}
 
@@ -27,6 +30,10 @@ management:
         include: health,info,metrics
 
 fern:
+  id-generator:
+    node-id: ${FERN_ID_GENERATOR_NODE_ID:4}
+    epoch-millis: ${FERN_ID_GENERATOR_EPOCH_MILLIS:1767225600000}
+    max-clock-rollback-millis: ${FERN_ID_GENERATOR_MAX_CLOCK_ROLLBACK_MILLIS:5}
   security:
     jwt:
       secret: ${FERN_JWT_SECRET:XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv}

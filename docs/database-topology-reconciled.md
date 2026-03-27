@@ -2,17 +2,16 @@
 
 ## Overview
 
-The system uses PostgreSQL for source-of-truth OLTP data and Snowflake for reporting and projection workloads.
+The system uses PostgreSQL for both source-of-truth OLTP data and reporting/projection workloads.
 
 ### Canonical Topology
 
 | Layer | Platform | Database | Schemas |
 | --- | --- | --- | --- |
-| Master | PostgreSQL | `fern_master` | `iam`, `org`, `catalog`, `procurement_master`, `hr_master`, `config` |
+| Master | PostgreSQL | `fern_master` | `iam`, `org`, `catalog`, `procurement_master`, `hr_master`, `config`, `raw_events`, `report`, `finance_projection`, `audit`, `notification` |
 | Operational | PostgreSQL | `fern_operational` | `pos`, `inventory`, `procurement`, `hr`, `finance` |
-| Reporting | Snowflake | `FERN_REPORTING` | `RAW_EVENTS`, `REPORT`, `FINANCE_PROJECTION`, `AUDIT`, `NOTIFICATION` |
 
-This replaces the older all-PostgreSQL reporting assumption. Reporting, projection, audit, and notification persistence now live in Snowflake.
+Reporting, projection, audit, and notification persistence now live in PostgreSQL master. Reporting-side tables use Snowflake ID strategy as `BIGINT` primary keys, and APIs serialize those IDs as strings.
 
 ## Schema Ownership
 
@@ -37,15 +36,15 @@ This replaces the older all-PostgreSQL reporting assumption. Reporting, projecti
 | `hr` | `hr-service` | Assignment, schedule, attendance event and approval | `services/hr-service/src/main/resources/db/migration/postgresql/operational` |
 | `finance` | `finance-service` | Payroll run and expense source-of-truth | `services/finance-service/src/main/resources/db/migration/postgresql/operational` |
 
-### Snowflake Reporting
+### PostgreSQL Reporting And Projection
 
 | Schema | Owning Service | Purpose | Migration Location |
 | --- | --- | --- | --- |
-| `RAW_EVENTS` | `report-service` | Append-only landing zone for projected Kafka events | `services/report-service/src/main/resources/db/migration/snowflake` |
-| `REPORT` | `report-service` | Fact tables, daily summaries, export jobs | `services/report-service/src/main/resources/db/migration/snowflake` |
-| `FINANCE_PROJECTION` | `finance-service` | Accounting and reconciliation projections | `services/finance-service/src/main/resources/db/migration/snowflake` |
-| `AUDIT` | `audit-service` | Audit, security, and trace projections | `services/audit-service/src/main/resources/db/migration/snowflake` |
-| `NOTIFICATION` | `notification-service` | Notification jobs, delivery attempts, webhook logs | `services/notification-service/src/main/resources/db/migration/snowflake` |
+| `raw_events` | `report-service` | Append-only landing zone for projected Kafka events | `services/report-service/src/main/resources/db/migration/postgresql/master` |
+| `report` | `report-service` | Fact tables, daily summaries, export jobs | `services/report-service/src/main/resources/db/migration/postgresql/master` |
+| `finance_projection` | `finance-service` | Accounting and reconciliation projections | `services/finance-service/src/main/resources/db/migration/postgresql/master_projection` |
+| `audit` | `audit-service` | Audit, security, and trace projections | `services/audit-service/src/main/resources/db/migration/postgresql/master` |
+| `notification` | `notification-service` | Notification jobs, delivery attempts, webhook logs | `services/notification-service/src/main/resources/db/migration/postgresql/master` |
 
 ## Canonical Domain Mapping
 
@@ -153,42 +152,43 @@ This replaces the older all-PostgreSQL reporting assumption. Reporting, projecti
 
 ### Reporting And Projection Data
 
-- `RAW_EVENTS`
-  - `EVENT_LANDING`
-- `REPORT`
-  - `SALES_FACT`
-  - `PAYMENT_FACT`
-  - `INVENTORY_MOVEMENT_FACT`
-  - `PROCUREMENT_FACT`
-  - `ATTENDANCE_FACT`
-  - `PAYROLL_FACT`
-  - `EXPENSE_FACT`
-  - `REGION_DAILY_SUMMARY`
-  - `COMPANY_DAILY_SUMMARY`
-  - `EXPORT_JOB`
-- `FINANCE_PROJECTION`
-  - `ACCOUNTING_POSTING_PROJECTION`
-  - `RECONCILIATION_SNAPSHOT`
-- `AUDIT`
-  - `AUDIT_EVENT`
-  - `SECURITY_EVENT`
-  - `REQUEST_TRACE`
-- `NOTIFICATION`
-  - `ALERT_RULE`
-  - `WEBHOOK_ENDPOINT`
-  - `NOTIFICATION_JOB`
-  - `DELIVERY_ATTEMPT`
-  - `WEBHOOK_DELIVERY_LOG`
+- `raw_events`
+  - `event_landing`
+- `report`
+  - `sales_fact`
+  - `payment_fact`
+  - `inventory_movement_fact`
+  - `procurement_fact`
+  - `attendance_fact`
+  - `payroll_fact`
+  - `expense_fact`
+  - `region_daily_summary`
+  - `company_daily_summary`
+  - `export_job`
+- `finance_projection`
+  - `accounting_posting_projection`
+  - `reconciliation_snapshot`
+- `audit`
+  - `audit_event`
+  - `security_event`
+  - `request_trace`
+- `notification`
+  - `alert_rule`
+  - `webhook_endpoint`
+  - `notification_job`
+  - `delivery_attempt`
+  - `webhook_delivery_log`
 
 ## Data Rules
 
 - PostgreSQL master and operational data remain the only mutation path for business transactions.
-- Snowflake is projection-only. No synchronous write path depends on Snowflake availability.
+- Reporting and projection schemas are projection-only. No synchronous business write path depends on reporting availability.
 - Cross-service hard foreign keys are not used. Services reference external entities by scalar IDs and indexed business keys.
 - Domain statuses are modeled with `VARCHAR` plus `CHECK` constraints instead of PostgreSQL enum types.
 - Every event-producing schema includes `outbox_event`.
 - Async consumers or derived stores use `inbox_event` or projection checkpoint patterns for idempotency.
-- Snowflake fact and projection tables carry `source_event_id`, `source_service`, `event_type`, `occurred_at`, `ingested_at`, and `idempotency_key`.
+- Reporting and projection tables carry `source_event_id`, `source_service`, `event_type`, `occurred_at`, `ingested_at`, and `idempotency_key`.
+- Reporting and projection primary keys use Snowflake ID strategy stored as PostgreSQL `BIGINT`.
 
 ## Migration Workflow
 
@@ -205,14 +205,6 @@ Config templates:
 - `infrastructure/migration.env.example`
 - `scripts/migrate-platform.sh`
 
-### Snowflake Bootstrap
-
-1. Create `FERN_REPORTING` and required warehouses with `infrastructure/snowflake/reporting/01-bootstrap-reporting.sql`
-2. Run Flyway migrations from the Snowflake-owning service modules
-
-Config template:
-- `infrastructure/snowflake/reporting/flyway.conf.example`
-
 Preferred repo entrypoint:
 - `./scripts/migrate-platform.sh all`
 
@@ -220,7 +212,7 @@ Preferred repo entrypoint:
 
 1. Source service writes to PostgreSQL and appends to `outbox_event`
 2. Outbox publisher emits Kafka event
-3. Projection consumers land the event into `FERN_REPORTING.RAW_EVENTS.EVENT_LANDING`
-4. Projection processors upsert into `REPORT`, `FINANCE_PROJECTION`, `AUDIT`, or `NOTIFICATION`
+3. Projection consumers land the event into `fern_master.raw_events.event_landing`
+4. Projection processors upsert into `report`, `finance_projection`, `audit`, or `notification`
 
 This document is the canonical reconcile point between the architecture docs and the database coverage derived from the original ERP schema inventory.

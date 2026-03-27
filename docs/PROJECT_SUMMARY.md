@@ -79,8 +79,6 @@ The F&B ERP System is a comprehensive microservices-based enterprise resource pl
 │   ├── postgres/
 │   │   ├── master/
 │   │   └── operational/
-│   ├── snowflake/
-│   │   └── reporting/
 │   └── redis/
 ├── deployment/
 │   ├── DEPLOYMENT.md
@@ -91,11 +89,11 @@ The F&B ERP System is a comprehensive microservices-based enterprise resource pl
 
 ## Architecture Highlights
 
-### Three-Layer Data Topology
+### Data Topology
 
 1. **Master Data Layer**
    - Central PostgreSQL cluster
-   - Contains: IAM, Org, Catalog, Procurement Master, HR Master, Configuration
+   - Contains: IAM, Org, Catalog, Procurement Master, HR Master, Configuration, Reporting, Audit, Notification, Finance Projection
    - Used for: System-wide reference data
 
 2. **Operational Data Layer**
@@ -103,10 +101,10 @@ The F&B ERP System is a comprehensive microservices-based enterprise resource pl
    - Contains: Orders, Inventory, Procurement, Attendance, Payroll source-of-truth
    - Used for: Daily operational transactions
 
-3. **Reporting Data Layer**
-   - Snowflake warehouse
+3. **Reporting / Projection Layer**
+   - PostgreSQL master schemas using Snowflake ID strategy for PKs
    - Contains: Raw events, facts, summaries, finance projections, audit, notifications
-   - Used for: BI, Dashboards, Export
+   - Used for: BI, dashboards, exports, audit, and operational observability
 
 ### Key Services (12 Microservices)
 

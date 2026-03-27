@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,8 +16,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.iamservice.repository.AuthSessionRepository;
+import com.fern.platform.audit.AuditEvent;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.testsupport.FernIntegrationContainers;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -259,6 +262,136 @@ class IamServiceIntegrationTest {
                                     """))
                     .andExpect(status().isUnauthorized());
         }
+    }
+
+    @Test
+    void shouldRejectDuplicatePermissionOverridesBeforeMutation() throws Exception {
+        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        Long userId = createUser(adminToken, "override-user", "Override123!").get("id").asLong();
+
+        mockMvc.perform(put("/users/%d/permission-overrides".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "overrides": [
+                                    {
+                                      "permissionCode": "org.region.read",
+                                      "overrideMode": "DENY",
+                                      "reason": "Keep the existing override"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        reset(auditEventPublisher);
+
+        mockMvc.perform(put("/users/%d/permission-overrides".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "overrides": [
+                                    {
+                                      "permissionCode": "audit.read",
+                                      "overrideMode": "GRANT",
+                                      "reason": "First duplicate"
+                                    },
+                                    {
+                                      "permissionCode": "audit.read",
+                                      "overrideMode": "DENY",
+                                      "reason": "Second duplicate"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("bad_request"))
+                .andExpect(jsonPath("$.message").value("Duplicate permissionCode in request: audit.read"));
+
+        verifyNoInteractions(auditEventPublisher);
+
+        mockMvc.perform(get("/users/%d/permission-overrides".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.overrides.length()").value(1))
+                .andExpect(jsonPath("$.overrides[0].permissionCode").value("org.region.read"))
+                .andExpect(jsonPath("$.overrides[0].overrideMode").value("DENY"));
+    }
+
+    @Test
+    void shouldDifferentiateProfileStatusAndNoopUserUpdates() throws Exception {
+        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        Long userId = createUser(adminToken, "patch-user", "Patch123!").get("id").asLong();
+
+        jdbcTemplate.update("DELETE FROM iam.outbox_event");
+        redisTemplate.delete("fern:versions:policy");
+        reset(auditEventPublisher);
+
+        mockMvc.perform(patch("/users/%d".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fullName": "Updated Patch User",
+                                  "email": "patch-user@example.com",
+                                  "phone": "0900000001"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Updated Patch User"))
+                .andExpect(jsonPath("$.email").value("patch-user@example.com"))
+                .andExpect(jsonPath("$.phone").value("0900000001"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        assertThat(jdbcTemplate.queryForList("SELECT event_type FROM iam.outbox_event ORDER BY created_at", String.class))
+                .containsExactly("iam.user.changed");
+        assertThat(redisTemplate.hasKey("fern:versions:policy")).isFalse();
+
+        ArgumentCaptor<AuditEvent> profileAuditCaptor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditEventPublisher).publishAuditEvent(profileAuditCaptor.capture());
+        assertThat(profileAuditCaptor.getValue().eventType()).isEqualTo("iam.user.changed");
+        assertThat(profileAuditCaptor.getValue().action()).isEqualTo("UPDATE_USER");
+
+        jdbcTemplate.update("DELETE FROM iam.outbox_event");
+        redisTemplate.delete("fern:versions:policy");
+        reset(auditEventPublisher);
+
+        mockMvc.perform(patch("/users/%d".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"status":"SUSPENDED"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUSPENDED"));
+
+        assertThat(jdbcTemplate.queryForList("SELECT event_type FROM iam.outbox_event ORDER BY created_at", String.class))
+                .containsExactly("iam.user.status-changed");
+        assertThat(redisTemplate.hasKey("fern:versions:policy")).isTrue();
+
+        ArgumentCaptor<AuditEvent> statusAuditCaptor = ArgumentCaptor.forClass(AuditEvent.class);
+        verify(auditEventPublisher).publishAuditEvent(statusAuditCaptor.capture());
+        assertThat(statusAuditCaptor.getValue().eventType()).isEqualTo("iam.user.status_changed");
+        assertThat(statusAuditCaptor.getValue().action()).isEqualTo("UPDATE_USER_STATUS");
+
+        jdbcTemplate.update("DELETE FROM iam.outbox_event");
+        redisTemplate.delete("fern:versions:policy");
+        reset(auditEventPublisher);
+
+        mockMvc.perform(patch("/users/%d".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"status":"SUSPENDED"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUSPENDED"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM iam.outbox_event", Long.class)).isZero();
+        assertThat(redisTemplate.hasKey("fern:versions:policy")).isFalse();
+        verifyNoInteractions(auditEventPublisher);
     }
 
     private JsonNode loginAsBootstrapAdmin() throws Exception {

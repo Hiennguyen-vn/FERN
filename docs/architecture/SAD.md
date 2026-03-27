@@ -413,8 +413,8 @@ Characteristics:
 - Not mutation source
 
 DB placement:
-- Snowflake reporting database for projection writes from consumer/jobs
-- Separate Snowflake warehouses for ingest and BI/export workloads
+- PostgreSQL master reporting schemas for projection writes from consumers/jobs
+- Snowflake ID strategy for reporting/projection primary keys, serialized as string IDs over APIs
 
 ### 8.2 Why not "every service shares 1 cluster" as final architecture
 

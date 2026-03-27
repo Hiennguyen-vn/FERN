@@ -89,7 +89,7 @@ public class ProductService {
     }
 
     private void publishProductChanged(FernPrincipal principal, ProductEntity entity, ProductResponse before, ProductResponse after) {
-        catalogAuditService.publish("catalog.product.changed", principal, before == null ? "CREATE_PRODUCT" : "UPDATE_PRODUCT", "product", String.valueOf(entity.getId()), before, after, Map.of("code", entity.getCode()));
+        catalogAuditService.publish("catalog.product.changed", principal, null, null, before == null ? "CREATE_PRODUCT" : "UPDATE_PRODUCT", "product", String.valueOf(entity.getId()), before, after, Map.of("code", entity.getCode()));
         catalogOutboxService.enqueue("product", String.valueOf(entity.getId()), "catalog.product.changed", String.valueOf(entity.getId()), after);
     }
 

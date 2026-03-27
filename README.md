@@ -4,7 +4,7 @@ Microservices Architecture for 300 Outlet Chain
 
 ## Overview
 
-This is a comprehensive enterprise resource planning (ERP) system designed for a large F&B chain with approximately 300 outlets and 10,000 employees. The system implements an online-only POS architecture with microservices, event-driven design, and a three-layer data topology.
+This is a comprehensive enterprise resource planning (ERP) system designed for a large F&B chain with approximately 300 outlets and 10,000 employees. The system implements an online-only POS architecture with microservices, event-driven design, and a PostgreSQL-centered data topology.
 
 ## Key Features
 
@@ -12,7 +12,7 @@ This is a comprehensive enterprise resource planning (ERP) system designed for a
 - **Online-only POS**: Low-latency point of sale system optimized for high transaction volume
 - **Microservices Architecture**: 12 bounded-context services with clear data ownership
 - **Event-Driven Design**: Kafka-based event backbone for async communication
-- **Three-Layer Data Topology**: PostgreSQL Master, PostgreSQL Operational (shard-ready), and Snowflake Reporting
+- **Data Topology**: PostgreSQL Master for master/projection/reporting schemas and PostgreSQL Operational for shard-ready transactional workloads
 - **Scope-Based Authorization**: JWT stateless tokens with Redis blacklist
 - **Comprehensive ERP Coverage**: POS, Inventory, Procurement, HR, Finance, Reporting
 
@@ -37,7 +37,6 @@ This is a comprehensive enterprise resource planning (ERP) system designed for a
 ├── infrastructure/          # Infrastructure configuration
 │   ├── kafka/
 │   ├── postgres/
-│   ├── snowflake/
 │   └── redis/
 ├── deployment/              # Kubernetes and deployment configs
 └── shared-libraries/        # Common configurations and libraries
@@ -45,11 +44,11 @@ This is a comprehensive enterprise resource planning (ERP) system designed for a
 
 ## Architecture Highlights
 
-### Three-Layer Data Topology
+### Data Topology
 
-1. **Master Data Layer**: Central PostgreSQL for IAM, Org, Catalog, Procurement Master, HR Master, Configuration
+1. **Master Data Layer**: Central PostgreSQL for IAM, Org, Catalog, Procurement Master, HR Master, Configuration, audit, notification, and reporting projections
 2. **Operational Data Layer**: PostgreSQL transactional schemas with region/outlet routing keys and shard-ready design
-3. **Reporting Data Layer**: Snowflake warehouse for BI, projection, audit, and notification workloads
+3. **Identifier Strategy**: Reporting/projection tables use Snowflake ID strategy as `BIGINT` primary keys while APIs serialize them as strings
 
 ### Core Services
 
@@ -72,7 +71,7 @@ This is a comprehensive enterprise resource planning (ERP) system designed for a
 
 - **Language**: Java 21
 - **Framework**: Spring Boot
-- **Database**: PostgreSQL (Master/Operational) + Snowflake (Reporting)
+- **Database**: PostgreSQL (Master/Operational)
 - **Messaging**: Apache Kafka
 - **Cache**: Redis
 - **Deployment**: Docker, Kubernetes
@@ -127,13 +126,8 @@ Comprehensive documentation is available in the `docs/` directory:
    # Prepare database migration settings
    cp infrastructure/migration.env.example .env.migrations
 
-   # Run all PostgreSQL and Snowflake migrations
-   # Fill Snowflake values in .env.migrations before using all
+   # Run all PostgreSQL migrations
    ./scripts/migrate-platform.sh all
-
-   # Local PostgreSQL-only bootstrap
-   ./scripts/migrate-platform.sh master
-   ./scripts/migrate-platform.sh operational
 
    # One-command local bootstrap + smoke flow
    ./scripts/bootstrap-local.sh
