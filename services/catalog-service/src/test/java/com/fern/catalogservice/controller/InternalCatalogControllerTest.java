@@ -7,10 +7,12 @@ import static org.mockito.Mockito.when;
 import com.fern.catalogservice.domain.PriceScopeType;
 import com.fern.catalogservice.domain.PriceType;
 import com.fern.catalogservice.dto.MenuResponse;
+import com.fern.catalogservice.dto.PromotionResponse;
 import com.fern.catalogservice.dto.RecipeResolutionResponse;
 import com.fern.catalogservice.dto.ResolvedPriceResponse;
 import com.fern.catalogservice.service.CatalogAuthorizer;
 import com.fern.catalogservice.service.CatalogResolutionService;
+import com.fern.catalogservice.service.PromotionService;
 import com.fern.platform.common.PermissionCodes;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -18,6 +20,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -30,6 +33,9 @@ class InternalCatalogControllerTest {
     @Mock
     private CatalogResolutionService catalogResolutionService;
 
+    @Mock
+    private PromotionService promotionService;
+
     private InternalCatalogController internalCatalogController;
 
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-27T23:30:00Z"), ZoneOffset.UTC);
@@ -37,7 +43,7 @@ class InternalCatalogControllerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        internalCatalogController = new InternalCatalogController(catalogAuthorizer, catalogResolutionService, clock);
+        internalCatalogController = new InternalCatalogController(catalogAuthorizer, catalogResolutionService, promotionService, clock);
     }
 
     @Test
@@ -85,5 +91,69 @@ class InternalCatalogControllerTest {
 
         assertThat(actual).isSameAs(response);
         verify(catalogResolutionService).resolveRecipe(10L, LocalDate.of(2026, 3, 27));
+    }
+
+    @Test
+    void shouldUseInjectedClockForPromotionResolutionWhenDateIsMissing() {
+        PromotionResponse response = new PromotionResponse(
+                99L,
+                "SAVE10",
+                "Spring Save",
+                "Spring campaign",
+                "ORDER",
+                BigDecimal.TEN,
+                null,
+                "OUTLET",
+                101L,
+                BigDecimal.valueOf(100_000),
+                500,
+                LocalDate.of(2026, 3, 1),
+                null,
+                "ACTIVE",
+                1L,
+                1L,
+                Instant.parse("2026-03-01T00:00:00Z"),
+                Instant.parse("2026-03-01T00:00:00Z")
+        );
+        when(promotionService.resolveApplicablePromotion("SAVE10", 101L, 202L, BigDecimal.valueOf(150_000), LocalDate.of(2026, 3, 27)))
+                .thenReturn(Optional.of(response));
+
+        PromotionResponse actual = internalCatalogController.resolvePromotion(null, "SAVE10", 101L, 202L, BigDecimal.valueOf(150_000), null);
+
+        assertThat(actual).isSameAs(response);
+        verify(catalogAuthorizer).requireInternalPermission(null, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
+        verify(promotionService).resolveApplicablePromotion("SAVE10", 101L, 202L, BigDecimal.valueOf(150_000), LocalDate.of(2026, 3, 27));
+    }
+
+    @Test
+    void shouldPreferExplicitDateForPromotionResolution() {
+        LocalDate explicitDate = LocalDate.of(2026, 4, 15);
+        PromotionResponse response = new PromotionResponse(
+                100L,
+                "SAVE20",
+                "April Save",
+                "April campaign",
+                "ORDER",
+                null,
+                BigDecimal.valueOf(20_000),
+                "GLOBAL",
+                null,
+                null,
+                null,
+                LocalDate.of(2026, 4, 1),
+                null,
+                "ACTIVE",
+                1L,
+                1L,
+                Instant.parse("2026-04-01T00:00:00Z"),
+                Instant.parse("2026-04-01T00:00:00Z")
+        );
+        when(promotionService.resolveApplicablePromotion("SAVE20", 101L, null, BigDecimal.valueOf(200_000), explicitDate))
+                .thenReturn(Optional.of(response));
+
+        PromotionResponse actual = internalCatalogController.resolvePromotion(null, "SAVE20", 101L, null, BigDecimal.valueOf(200_000), explicitDate);
+
+        assertThat(actual).isSameAs(response);
+        verify(promotionService).resolveApplicablePromotion("SAVE20", 101L, null, BigDecimal.valueOf(200_000), explicitDate);
     }
 }

@@ -92,28 +92,39 @@ public class InventoryService {
             String sourceId
     ) {
         inventoryAuthorizer.requireOutletAccess(principal, outletId, PermissionCodes.INVENTORY_LEDGER_READ);
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
                 SELECT id, region_id, outlet_id, ingredient_id, qty_change, business_date, txn_time, txn_type,
                        unit_cost, source_reference_type, source_reference_id, created_by_user_id
                 FROM inventory.inventory_transaction
                 WHERE outlet_id = :outletId
-                  AND (:ingredientId IS NULL OR ingredient_id = :ingredientId)
-                  AND (:txnType IS NULL OR txn_type = :txnType)
-                  AND (:fromDate IS NULL OR business_date >= :fromDate)
-                  AND (:toDate IS NULL OR business_date <= :toDate)
-                  AND (:sourceType IS NULL OR source_reference_type = :sourceType)
-                  AND (:sourceId IS NULL OR source_reference_id = :sourceId)
-                ORDER BY txn_time DESC, id DESC
-                """;
-        return jdbcTemplate.query(sql, params(
-                "outletId", outletId,
-                "ingredientId", ingredientId,
-                "txnType", txnType,
-                "fromDate", from,
-                "toDate", to,
-                "sourceType", sourceType,
-                "sourceId", sourceId
-        ), transactionMapper());
+                """);
+        MapSqlParameterSource parameters = params("outletId", outletId);
+        if (ingredientId != null) {
+            sql.append("\n  AND ingredient_id = :ingredientId");
+            parameters.addValue("ingredientId", ingredientId);
+        }
+        if (txnType != null) {
+            sql.append("\n  AND txn_type = :txnType");
+            parameters.addValue("txnType", txnType);
+        }
+        if (from != null) {
+            sql.append("\n  AND business_date >= :fromDate");
+            parameters.addValue("fromDate", from);
+        }
+        if (to != null) {
+            sql.append("\n  AND business_date <= :toDate");
+            parameters.addValue("toDate", to);
+        }
+        if (sourceType != null) {
+            sql.append("\n  AND source_reference_type = :sourceType");
+            parameters.addValue("sourceType", sourceType);
+        }
+        if (sourceId != null) {
+            sql.append("\n  AND source_reference_id = :sourceId");
+            parameters.addValue("sourceId", sourceId);
+        }
+        sql.append("\nORDER BY txn_time DESC, id DESC");
+        return jdbcTemplate.query(sql.toString(), parameters, transactionMapper());
     }
 
     @Transactional
@@ -694,11 +705,12 @@ public class InventoryService {
     }
 
     private void ensureNonNegative(Long outletId, Long ingredientId, BigDecimal delta) {
-        BigDecimal projected = jdbcTemplate.queryForObject("""
-                SELECT COALESCE(qty_on_hand, 0) + :delta
+        BigDecimal projected = jdbcTemplate.query("""
+                SELECT COALESCE(qty_on_hand, 0) + :delta AS projected_qty
                 FROM inventory.stock_balance
                 WHERE outlet_id = :outletId AND ingredient_id = :ingredientId
-                """, params("delta", delta, "outletId", outletId, "ingredientId", ingredientId), BigDecimal.class);
+                """, params("delta", delta, "outletId", outletId, "ingredientId", ingredientId),
+                rs -> rs.next() ? rs.getBigDecimal("projected_qty") : null);
         BigDecimal effectiveProjected = projected == null ? delta : projected;
         if (effectiveProjected.compareTo(BigDecimal.ZERO) < 0) {
             throw new ConflictException("Inventory would become negative for ingredient " + ingredientId);

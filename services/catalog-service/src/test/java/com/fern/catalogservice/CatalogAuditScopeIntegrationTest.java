@@ -20,6 +20,7 @@ import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,6 +71,7 @@ class CatalogAuditScopeIntegrationTest {
                     catalog.recipe_version_ingredient,
                     catalog.recipe_version,
                     catalog.recipe,
+                    catalog.promotion,
                     catalog.product_outlet_availability,
                     catalog.product_price,
                     catalog.tax_rate,
@@ -100,7 +102,9 @@ class CatalogAuditScopeIntegrationTest {
                         "catalog.recipe.read",
                         "catalog.recipe.write",
                         "catalog.price.read",
-                        "catalog.price.write"
+                        "catalog.price.write",
+                        "catalog.promotion.read",
+                        "catalog.promotion.write"
                 ),
                 new ScopeRoots(true, List.of(9L, 10L), List.of(44L, 45L)),
                 1L,
@@ -239,6 +243,30 @@ class CatalogAuditScopeIntegrationTest {
         assertThat(availabilityEvent.outletId()).isEqualTo(101L);
     }
 
+    @Test
+    void shouldPublishPromotionScopeFromAffectedPromotion() throws Exception {
+        resetAuditPublisher();
+        createPromotion("PROMO-GLOBAL", "Global Promotion", "GLOBAL", null, LocalDate.of(2026, 3, 1));
+        AuditEvent globalPromotionEvent = captureAuditEvent();
+        assertThat(globalPromotionEvent.eventType()).isEqualTo("catalog.promotion.changed");
+        assertThat(globalPromotionEvent.regionId()).isNull();
+        assertThat(globalPromotionEvent.outletId()).isNull();
+
+        resetAuditPublisher();
+        createPromotion("PROMO-REGION", "Region Promotion", "REGION", 202L, LocalDate.of(2026, 3, 1));
+        AuditEvent regionPromotionEvent = captureAuditEvent();
+        assertThat(regionPromotionEvent.eventType()).isEqualTo("catalog.promotion.changed");
+        assertThat(regionPromotionEvent.regionId()).isEqualTo(202L);
+        assertThat(regionPromotionEvent.outletId()).isNull();
+
+        resetAuditPublisher();
+        createPromotion("PROMO-OUTLET", "Outlet Promotion", "OUTLET", 303L, LocalDate.of(2026, 3, 1));
+        AuditEvent outletPromotionEvent = captureAuditEvent();
+        assertThat(outletPromotionEvent.eventType()).isEqualTo("catalog.promotion.changed");
+        assertThat(outletPromotionEvent.regionId()).isNull();
+        assertThat(outletPromotionEvent.outletId()).isEqualTo(303L);
+    }
+
     private void seedReferenceData() throws Exception {
         mockMvc.perform(post("/ingredient-categories")
                         .header("Authorization", bearer())
@@ -319,6 +347,31 @@ class CatalogAuditScopeIntegrationTest {
                                   "description": "Recipe"
                                 }
                                 """.formatted(productId, recipeCode)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return readId(result);
+    }
+
+    private Long createPromotion(String code, String name, String scopeType, Long scopeId, LocalDate effectiveFrom) throws Exception {
+        MvcResult result = mockMvc.perform(post("/catalog/promotions")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "%s",
+                                  "name": "%s",
+                                  "description": "%s",
+                                  "promotionType": "ORDER",
+                                  "discountPercent": 10.00,
+                                  "discountAmount": null,
+                                  "scopeType": "%s",
+                                  "scopeId": %s,
+                                  "minOrderAmount": null,
+                                  "maxUsageTotal": null,
+                                  "effectiveFrom": "%s",
+                                  "effectiveTo": null
+                                }
+                                """.formatted(code, name, name, scopeType, scopeId == null ? "null" : scopeId, effectiveFrom)))
                 .andExpect(status().isOk())
                 .andReturn();
         return readId(result);

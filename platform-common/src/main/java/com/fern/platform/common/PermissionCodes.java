@@ -26,6 +26,8 @@ public final class PermissionCodes {
     public static final String CATALOG_RECIPE_WRITE = "catalog.recipe.write";
     public static final String CATALOG_PRICE_READ = "catalog.price.read";
     public static final String CATALOG_PRICE_WRITE = "catalog.price.write";
+    public static final String CATALOG_PROMOTION_READ = "catalog.promotion.read";
+    public static final String CATALOG_PROMOTION_WRITE = "catalog.promotion.write";
     public static final String CATALOG_INTERNAL_RESOLVE = "catalog.internal.resolve";
     public static final String POS_SESSION_READ = "pos.session.read";
     public static final String POS_SESSION_OPEN = "pos.session.open";

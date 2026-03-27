@@ -1,6 +1,7 @@
 package com.fern.inventoryservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -200,7 +201,7 @@ class InventoryServiceIntegrationTest {
     }
 
     @Test
-    void shouldConsumeSaleAndGoodsReceiptEventsIdempotently() {
+    void shouldConsumeSaleAndGoodsReceiptEventsIdempotently() throws Exception {
         inventoryService.reserveSale(new com.fern.platform.common.FernPrincipal(
                 1L,
                 "inventory-tester",
@@ -279,6 +280,18 @@ class InventoryServiceIntegrationTest {
         assertThat(saleUsageCount).isEqualTo(1);
         assertThat(purchaseInCount).isEqualTo(1);
         assertThat(qtyOnHand).isEqualByComparingTo("23.0000");
+
+        mockMvc.perform(get("/inventory-transactions")
+                        .header("Authorization", bearer())
+                        .param("outletId", "101")
+                        .param("ingredientId", "200")
+                        .param("txnType", "SALE_USAGE")
+                        .param("sourceType", "SALE_ORDER")
+                        .param("sourceId", "5001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].txnType").value("SALE_USAGE"))
+                .andExpect(jsonPath("$[0].sourceReferenceId").value("5001"));
     }
 
     private String bearer() {

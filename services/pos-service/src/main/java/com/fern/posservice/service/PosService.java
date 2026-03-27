@@ -1,5 +1,6 @@
 package com.fern.posservice.service;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -974,9 +975,15 @@ public class PosService {
     ) {
     }
 
-    private record MenuResponse(List<MenuItem> items) {
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record MenuResponse(
+            Long outletId,
+            LocalDate businessDate,
+            List<MenuItem> items
+    ) {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record MenuItem(
             Long productId,
             String productCode,
@@ -988,6 +995,7 @@ public class PosService {
     ) {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record RecipeSnapshot(
             Long productId,
             Long recipeId,
@@ -1000,6 +1008,7 @@ public class PosService {
     ) {
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private record RecipeIngredient(
             Long ingredientId,
             String ingredientCode,

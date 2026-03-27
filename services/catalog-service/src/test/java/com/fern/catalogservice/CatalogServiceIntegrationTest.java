@@ -78,6 +78,7 @@ class CatalogServiceIntegrationTest {
                     catalog.recipe_version_ingredient,
                     catalog.recipe_version,
                     catalog.recipe,
+                    catalog.promotion,
                     catalog.product_outlet_availability,
                     catalog.product_price,
                     catalog.tax_rate,
@@ -108,7 +109,9 @@ class CatalogServiceIntegrationTest {
                         "catalog.recipe.read",
                         "catalog.recipe.write",
                         "catalog.price.read",
-                        "catalog.price.write"
+                        "catalog.price.write",
+                        "catalog.promotion.read",
+                        "catalog.promotion.write"
                 ),
                 new ScopeRoots(true, List.of(1L), List.of()),
                 1L,
@@ -272,6 +275,298 @@ class CatalogServiceIntegrationTest {
                                 }
                                 """.formatted(productId)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldManagePromotionsViaCrudEndpoints() throws Exception {
+        Long promotionId = createPromotion(
+                "PROMO-CRUD",
+                "Launch Promo",
+                "GLOBAL",
+                null,
+                "10.00",
+                null,
+                "100000.00",
+                500,
+                LocalDate.of(2026, 3, 1),
+                null
+        );
+
+        mockMvc.perform(get("/catalog/promotions")
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(promotionId))
+                .andExpect(jsonPath("$[0].code").value("PROMO-CRUD"))
+                .andExpect(jsonPath("$[0].status").value("ACTIVE"));
+
+        mockMvc.perform(put("/catalog/promotions/{id}", promotionId)
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "PROMO-CRUD",
+                                  "name": "Launch Promo Updated",
+                                  "description": "Updated launch campaign",
+                                  "promotionType": "ORDER",
+                                  "discountPercent": null,
+                                  "discountAmount": 15000.00,
+                                  "scopeType": "GLOBAL",
+                                  "scopeId": null,
+                                  "minOrderAmount": 120000.00,
+                                  "maxUsageTotal": 600,
+                                  "effectiveFrom": "2026-03-01",
+                                  "effectiveTo": null
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Launch Promo Updated"))
+                .andExpect(jsonPath("$.discountAmount").value(15000.00))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+
+        mockMvc.perform(post("/catalog/promotions/{id}/deactivate", promotionId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
+
+        mockMvc.perform(get("/catalog/promotions")
+                        .header("Authorization", bearer())
+                        .param("scopeType", "GLOBAL"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].status").value("INACTIVE"));
+    }
+
+    @Test
+    void shouldListPromotionsByScopeAndResolveMostSpecificMatch() throws Exception {
+        createPromotion(
+                "SAVE10",
+                "Global Save 10",
+                "GLOBAL",
+                null,
+                "10.00",
+                null,
+                "50000.00",
+                null,
+                LocalDate.of(2026, 3, 1),
+                null
+        );
+        createPromotion(
+                "SAVE10",
+                "Region Save 10",
+                "REGION",
+                202L,
+                null,
+                "12000.00",
+                "50000.00",
+                null,
+                LocalDate.of(2026, 3, 2),
+                null
+        );
+        createPromotion(
+                "SAVE10",
+                "Outlet Save 10",
+                "OUTLET",
+                101L,
+                null,
+                "15000.00",
+                "50000.00",
+                null,
+                LocalDate.of(2026, 3, 3),
+                null
+        );
+
+        mockMvc.perform(get("/catalog/promotions")
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[0].scopeType").value("OUTLET"))
+                .andExpect(jsonPath("$[1].scopeType").value("REGION"))
+                .andExpect(jsonPath("$[2].scopeType").value("GLOBAL"));
+
+        mockMvc.perform(get("/catalog/promotions")
+                        .header("Authorization", bearer())
+                        .param("scopeType", "REGION")
+                        .param("scopeId", "202"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].code").value("SAVE10"))
+                .andExpect(jsonPath("$[0].scopeType").value("REGION"));
+
+        mockMvc.perform(get("/internal/catalog/promotion-resolution")
+                        .header("Authorization", serviceBearer())
+                        .param("code", "SAVE10")
+                        .param("outletId", "101")
+                        .param("regionId", "202")
+                        .param("orderTotal", "100000.00")
+                        .param("at", "2026-03-15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeType").value("OUTLET"))
+                .andExpect(jsonPath("$.scopeId").value(101));
+
+        mockMvc.perform(get("/internal/catalog/promotion-resolution")
+                        .header("Authorization", serviceBearer())
+                        .param("code", "SAVE10")
+                        .param("outletId", "999")
+                        .param("regionId", "202")
+                        .param("orderTotal", "100000.00")
+                        .param("at", "2026-03-15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeType").value("REGION"))
+                .andExpect(jsonPath("$.scopeId").value(202));
+
+        mockMvc.perform(get("/internal/catalog/promotion-resolution")
+                        .header("Authorization", serviceBearer())
+                        .param("code", "SAVE10")
+                        .param("outletId", "999")
+                        .param("regionId", "999")
+                        .param("orderTotal", "100000.00")
+                        .param("at", "2026-03-15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeType").value("GLOBAL"));
+    }
+
+    @Test
+    void shouldRejectInvalidOrConflictingPromotionRequests() throws Exception {
+        createPromotion(
+                "PROMO-CONFLICT",
+                "Original Promotion",
+                "GLOBAL",
+                null,
+                "10.00",
+                null,
+                null,
+                null,
+                LocalDate.of(2026, 3, 1),
+                null
+        );
+
+        mockMvc.perform(post("/catalog/promotions")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "PROMO-CONFLICT",
+                                  "name": "Overlapping Promotion",
+                                  "description": "Should conflict",
+                                  "promotionType": "ORDER",
+                                  "discountPercent": 15.00,
+                                  "discountAmount": null,
+                                  "scopeType": "GLOBAL",
+                                  "scopeId": null,
+                                  "minOrderAmount": null,
+                                  "maxUsageTotal": null,
+                                  "effectiveFrom": "2026-03-10",
+                                  "effectiveTo": null
+                                }
+                                """))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(post("/catalog/promotions")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "PROMO-DATE",
+                                  "name": "Invalid Date Promotion",
+                                  "description": "Should fail date validation",
+                                  "promotionType": "ORDER",
+                                  "discountPercent": 10.00,
+                                  "discountAmount": null,
+                                  "scopeType": "GLOBAL",
+                                  "scopeId": null,
+                                  "minOrderAmount": null,
+                                  "maxUsageTotal": null,
+                                  "effectiveFrom": "2026-03-20",
+                                  "effectiveTo": "2026-03-10"
+                                }
+                                """))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(post("/catalog/promotions")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "PROMO-DISCOUNT",
+                                  "name": "Invalid Discount Promotion",
+                                  "description": "Should fail discount validation",
+                                  "promotionType": "ORDER",
+                                  "discountPercent": 10.00,
+                                  "discountAmount": 5000.00,
+                                  "scopeType": "GLOBAL",
+                                  "scopeId": null,
+                                  "minOrderAmount": null,
+                                  "maxUsageTotal": null,
+                                  "effectiveFrom": "2026-03-01",
+                                  "effectiveTo": null
+                                }
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenPromotionResolutionHasNoApplicableMatch() throws Exception {
+        createPromotion(
+                "PROMO-NOPE",
+                "Below Minimum",
+                "GLOBAL",
+                null,
+                "10.00",
+                null,
+                "500000.00",
+                null,
+                LocalDate.of(2026, 3, 1),
+                null
+        );
+        createPromotion(
+                "PROMO-NOPE",
+                "Future Region Promotion",
+                "REGION",
+                202L,
+                null,
+                "12000.00",
+                null,
+                null,
+                LocalDate.of(2026, 4, 1),
+                null
+        );
+        createPromotion(
+                "PROMO-NOPE",
+                "Wrong Outlet Promotion",
+                "OUTLET",
+                303L,
+                null,
+                "15000.00",
+                null,
+                null,
+                LocalDate.of(2026, 3, 1),
+                null
+        );
+        Long inactivePromotionId = createPromotion(
+                "PROMO-NOPE",
+                "Inactive Outlet Promotion",
+                "OUTLET",
+                101L,
+                null,
+                "18000.00",
+                null,
+                null,
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2026, 3, 31)
+        );
+        mockMvc.perform(post("/catalog/promotions/{id}/deactivate", inactivePromotionId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/internal/catalog/promotion-resolution")
+                        .header("Authorization", serviceBearer())
+                        .param("code", "PROMO-NOPE")
+                        .param("outletId", "101")
+                        .param("regionId", "202")
+                        .param("orderTotal", "100000.00")
+                        .param("at", "2026-03-15"))
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -695,6 +990,54 @@ class CatalogServiceIntegrationTest {
         return readId(result);
     }
 
+    private Long createPromotion(
+            String code,
+            String name,
+            String scopeType,
+            Long scopeId,
+            String discountPercent,
+            String discountAmount,
+            String minOrderAmount,
+            Integer maxUsageTotal,
+            LocalDate effectiveFrom,
+            LocalDate effectiveTo
+    ) throws Exception {
+        MvcResult result = mockMvc.perform(post("/catalog/promotions")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "%s",
+                                  "name": "%s",
+                                  "description": "%s",
+                                  "promotionType": "ORDER",
+                                  "discountPercent": %s,
+                                  "discountAmount": %s,
+                                  "scopeType": "%s",
+                                  "scopeId": %s,
+                                  "minOrderAmount": %s,
+                                  "maxUsageTotal": %s,
+                                  "effectiveFrom": %s,
+                                  "effectiveTo": %s
+                                }
+                                """.formatted(
+                                code,
+                                name,
+                                name,
+                                jsonNumber(discountPercent),
+                                jsonNumber(discountAmount),
+                                scopeType,
+                                jsonLong(scopeId),
+                                jsonNumber(minOrderAmount),
+                                jsonInteger(maxUsageTotal),
+                                jsonDate(effectiveFrom),
+                                jsonDate(effectiveTo)
+                        )))
+                .andExpect(status().isOk())
+                .andReturn();
+        return readId(result);
+    }
+
     private Long createRecipeVersion(
             Long recipeId,
             String versionNo,
@@ -739,6 +1082,22 @@ class CatalogServiceIntegrationTest {
     private Long readId(MvcResult result) throws Exception {
         JsonNode jsonNode = objectMapper.readTree(result.getResponse().getContentAsString());
         return jsonNode.get("id").asLong();
+    }
+
+    private String jsonNumber(String value) {
+        return value == null ? "null" : value;
+    }
+
+    private String jsonLong(Long value) {
+        return value == null ? "null" : value.toString();
+    }
+
+    private String jsonInteger(Integer value) {
+        return value == null ? "null" : value.toString();
+    }
+
+    private String jsonDate(LocalDate value) {
+        return value == null ? "null" : "\"%s\"".formatted(value);
     }
 
     private String bearer() {
