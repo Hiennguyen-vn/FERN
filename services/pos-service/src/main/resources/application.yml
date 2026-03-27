@@ -33,6 +33,23 @@ fern:
   outbox:
     enabled: ${FERN_OUTBOX_ENABLED:true}
     publish-delay-ms: 5000
+    max-attempts: 5
   clients:
-    catalog-base-url: ${FERN_CATALOG_BASE_URL:http://localhost:8085}
-    inventory-base-url: ${FERN_INVENTORY_BASE_URL:http://localhost:8087}
+    catalog:
+      base-url: ${FERN_CATALOG_BASE_URL:http://localhost:8085}
+      connect-timeout: 2s
+      read-timeout: 5s
+      circuit-breaker:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 4
+        sliding-window-size: 8
+        wait-duration-in-open-state: 15s
+    inventory:
+      base-url: ${FERN_INVENTORY_BASE_URL:http://localhost:8087}
+      connect-timeout: 2s
+      read-timeout: 5s
+      circuit-breaker:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 4
+        sliding-window-size: 8
+        wait-duration-in-open-state: 15s

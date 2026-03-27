@@ -252,12 +252,18 @@ log "Building runnable modules for smoke flow"
   ./mvnw -q -pl services/iam-service,services/org-service,services/catalog-service,services/pos-service,services/inventory-service,services/procurement-service,services/finance-service,services/audit-service,services/api-gateway -am install -DskipTests >"${LOG_DIR}/build.log" 2>&1
 )
 
+log "Applying database migrations for smoke flow"
+(
+  cd "${ROOT_DIR}" &&
+  ./scripts/migrate-platform.sh all >"${LOG_DIR}/migrate.log" 2>&1
+)
+
 log "Starting iam-service"
 (
   cd "${ROOT_DIR}" &&
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
   SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
-  ./mvnw -q -f services/iam-service/pom.xml spring-boot:run >"${LOG_DIR}/iam-service.log" 2>&1
+  ./mvnw -q -f services/iam-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/iam-service.log" 2>&1
 ) &
 IAM_PID=$!
 wait_for_http "iam-service" "http://localhost:8081/actuator/health"
@@ -267,7 +273,7 @@ log "Starting org-service"
   cd "${ROOT_DIR}" &&
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
   SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
-  ./mvnw -q -f services/org-service/pom.xml spring-boot:run >"${LOG_DIR}/org-service.log" 2>&1
+  ./mvnw -q -f services/org-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/org-service.log" 2>&1
 ) &
 ORG_PID=$!
 wait_for_http "org-service" "http://localhost:8082/actuator/health"
@@ -277,7 +283,7 @@ log "Starting catalog-service"
   cd "${ROOT_DIR}" &&
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
   SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
-  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/catalog-service/pom.xml spring-boot:run >"${LOG_DIR}/catalog-service.log" 2>&1
+  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/catalog-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/catalog-service.log" 2>&1
 ) &
 CATALOG_PID=$!
 wait_for_http "catalog-service" "http://localhost:8085/actuator/health"
@@ -287,7 +293,7 @@ log "Starting inventory-service"
   cd "${ROOT_DIR}" &&
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
   SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
-  ./mvnw -q -f services/inventory-service/pom.xml spring-boot:run >"${LOG_DIR}/inventory-service.log" 2>&1
+  ./mvnw -q -f services/inventory-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/inventory-service.log" 2>&1
 ) &
 INVENTORY_PID=$!
 wait_for_http "inventory-service" "http://localhost:8087/actuator/health"
@@ -297,7 +303,7 @@ log "Starting pos-service"
   cd "${ROOT_DIR}" &&
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
   SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
-  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/pos-service/pom.xml spring-boot:run >"${LOG_DIR}/pos-service.log" 2>&1
+  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/pos-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/pos-service.log" 2>&1
 ) &
 POS_PID=$!
 wait_for_http "pos-service" "http://localhost:8086/actuator/health"
@@ -309,7 +315,7 @@ log "Starting procurement-service"
   SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
   FERN_DATASOURCE_MAX_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
   FERN_DATASOURCE_MIN_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
-  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/procurement-service/pom.xml spring-boot:run >"${LOG_DIR}/procurement-service.log" 2>&1
+  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/procurement-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/procurement-service.log" 2>&1
 ) &
 PROCUREMENT_PID=$!
 wait_for_http "procurement-service" "http://localhost:8088/actuator/health"
@@ -321,7 +327,7 @@ log "Starting finance-service"
   SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
   FERN_DATASOURCE_MAX_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
   FERN_DATASOURCE_MIN_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
-  ./mvnw -q -f services/finance-service/pom.xml spring-boot:run >"${LOG_DIR}/finance-service.log" 2>&1
+  ./mvnw -q -f services/finance-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/finance-service.log" 2>&1
 ) &
 FINANCE_PID=$!
 wait_for_http "finance-service" "http://localhost:8091/actuator/health"
@@ -331,7 +337,7 @@ log "Starting audit-service"
   cd "${ROOT_DIR}" &&
   SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
   SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
-  ./mvnw -q -f services/audit-service/pom.xml spring-boot:run >"${LOG_DIR}/audit-service.log" 2>&1
+  ./mvnw -q -f services/audit-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/audit-service.log" 2>&1
 ) &
 AUDIT_PID=$!
 wait_for_http "audit-service" "http://localhost:8084/actuator/health"
@@ -339,7 +345,7 @@ wait_for_http "audit-service" "http://localhost:8084/actuator/health"
 log "Starting api-gateway"
 (
   cd "${ROOT_DIR}" &&
-  ./mvnw -q -f services/api-gateway/pom.xml spring-boot:run >"${LOG_DIR}/api-gateway.log" 2>&1
+  ./mvnw -q -f services/api-gateway/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/api-gateway.log" 2>&1
 ) &
 GATEWAY_PID=$!
 wait_for_http "api-gateway" "http://localhost:8080/actuator/health"

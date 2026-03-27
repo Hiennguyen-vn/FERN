@@ -4,7 +4,7 @@ import com.fern.platform.common.FernPrincipal;
 import com.fern.posservice.dto.PosCommands.OpenSessionRequest;
 import com.fern.posservice.dto.PosCommands.ReconcileSessionRequest;
 import com.fern.posservice.dto.PosResponses.PosSessionResponse;
-import com.fern.posservice.service.PosService;
+import com.fern.posservice.service.PosSessionService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/pos-sessions")
 public class PosSessionController {
-    private final PosService posService;
+    private final PosSessionService posSessionService;
 
-    public PosSessionController(PosService posService) {
-        this.posService = posService;
+    public PosSessionController(PosSessionService posSessionService) {
+        this.posSessionService = posSessionService;
     }
 
     @PostMapping
@@ -31,7 +31,7 @@ public class PosSessionController {
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody OpenSessionRequest request
     ) {
-        return posService.openSession(principal, request);
+        return posSessionService.openSession(principal, request);
     }
 
     @GetMapping("/{id}")
@@ -39,17 +39,18 @@ public class PosSessionController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return posService.getSession(principal, id);
+        return posSessionService.getSession(principal, id);
     }
 
     @GetMapping
     public List<PosSessionResponse> listSessions(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam Long outletId,
+            @RequestParam(required = false) String terminalId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) LocalDate businessDate
     ) {
-        return posService.listSessions(principal, outletId, status, businessDate);
+        return posSessionService.listSessions(principal, outletId, terminalId, status, businessDate);
     }
 
     @PostMapping("/{id}/close")
@@ -57,7 +58,7 @@ public class PosSessionController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return posService.closeSession(principal, id);
+        return posSessionService.closeSession(principal, id);
     }
 
     @PostMapping("/{id}/reconcile")
@@ -66,6 +67,6 @@ public class PosSessionController {
             @PathVariable Long id,
             @Valid @RequestBody ReconcileSessionRequest request
     ) {
-        return posService.reconcileSession(principal, id, request);
+        return posSessionService.reconcileSession(principal, id, request);
     }
 }

@@ -6,13 +6,19 @@ import com.fern.platform.audit.KafkaAuditEventPublisher;
 import com.fern.platform.audit.NoopAuditEventPublisher;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import java.time.Clock;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 @Configuration
 public class PosBeans {
@@ -44,13 +50,60 @@ public class PosBeans {
     }
 
     @Bean
-    RestClient restClient(RestClient.Builder builder) {
-        return builder.build();
+    @Qualifier("catalogRestClient")
+    RestClient catalogRestClient(PosClientProperties properties) {
+        return buildRestClient(properties.getCatalog());
+    }
+
+    @Bean
+    @Qualifier("inventoryRestClient")
+    RestClient inventoryRestClient(PosClientProperties properties) {
+        return buildRestClient(properties.getInventory());
     }
 
     @Bean
     @ConfigurationProperties(prefix = "fern.clients")
     PosClientProperties posClientProperties() {
         return new PosClientProperties();
+    }
+
+    @Bean
+    CircuitBreaker catalogCircuitBreaker(PosClientProperties properties) {
+        return CircuitBreaker.of("catalog-client", toCircuitBreakerConfig(properties.getCatalog().getCircuitBreaker()));
+    }
+
+    @Bean
+    CircuitBreaker inventoryCircuitBreaker(PosClientProperties properties) {
+        return CircuitBreaker.of("inventory-client", toCircuitBreakerConfig(properties.getInventory().getCircuitBreaker()));
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "fern.outbox")
+    PosOutboxProperties posOutboxProperties() {
+        return new PosOutboxProperties();
+    }
+
+    @Bean
+    TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
+        return new TransactionTemplate(transactionManager);
+    }
+
+    private RestClient buildRestClient(PosClientProperties.ClientProperties properties) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(properties.getConnectTimeout());
+        requestFactory.setReadTimeout(properties.getReadTimeout());
+        return RestClient.builder()
+                .baseUrl(properties.getBaseUrl())
+                .requestFactory(requestFactory)
+                .build();
+    }
+
+    private CircuitBreakerConfig toCircuitBreakerConfig(PosClientProperties.CircuitBreakerProperties properties) {
+        return CircuitBreakerConfig.custom()
+                .failureRateThreshold(properties.getFailureRateThreshold())
+                .minimumNumberOfCalls(properties.getMinimumNumberOfCalls())
+                .slidingWindowSize(properties.getSlidingWindowSize())
+                .waitDurationInOpenState(properties.getWaitDurationInOpenState())
+                .build();
     }
 }

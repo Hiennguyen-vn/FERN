@@ -94,6 +94,20 @@ class InternalCatalogControllerTest {
     }
 
     @Test
+    void shouldUseInjectedClockForBatchRecipeResolutionWhenDateIsMissing() {
+        List<RecipeResolutionResponse> response = List.of(
+                new RecipeResolutionResponse(10L, 11L, 12L, "RCP-1", "v1", LocalDate.of(2026, 3, 27), null, List.of()),
+                new RecipeResolutionResponse(20L, 21L, 22L, "RCP-2", "v3", LocalDate.of(2026, 3, 27), null, List.of())
+        );
+        when(catalogResolutionService.resolveRecipes(List.of(10L, 20L), LocalDate.of(2026, 3, 27))).thenReturn(response);
+
+        List<RecipeResolutionResponse> actual = internalCatalogController.resolveRecipes(null, List.of(10L, 20L), null);
+
+        assertThat(actual).isSameAs(response);
+        verify(catalogResolutionService).resolveRecipes(List.of(10L, 20L), LocalDate.of(2026, 3, 27));
+    }
+
+    @Test
     void shouldUseInjectedClockForPromotionResolutionWhenDateIsMissing() {
         PromotionResponse response = new PromotionResponse(
                 99L,

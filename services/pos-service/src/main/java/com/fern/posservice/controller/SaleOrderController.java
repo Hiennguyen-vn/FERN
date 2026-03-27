@@ -5,7 +5,7 @@ import com.fern.posservice.dto.PosCommands.AddPaymentRequest;
 import com.fern.posservice.dto.PosCommands.CreateSaleOrderRequest;
 import com.fern.posservice.dto.PosCommands.UpdateSaleOrderRequest;
 import com.fern.posservice.dto.PosResponses.SaleOrderResponse;
-import com.fern.posservice.service.PosService;
+import com.fern.posservice.service.PosOrderService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/sale-orders")
 public class SaleOrderController {
-    private final PosService posService;
+    private final PosOrderService posOrderService;
 
-    public SaleOrderController(PosService posService) {
-        this.posService = posService;
+    public SaleOrderController(PosOrderService posOrderService) {
+        this.posOrderService = posOrderService;
     }
 
     @PostMapping
@@ -31,7 +31,7 @@ public class SaleOrderController {
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody CreateSaleOrderRequest request
     ) {
-        return posService.createOrder(principal, request);
+        return posOrderService.createOrder(principal, request);
     }
 
     @GetMapping("/{id}")
@@ -39,7 +39,7 @@ public class SaleOrderController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return posService.getOrder(principal, id);
+        return posOrderService.getOrder(principal, id);
     }
 
     @PatchMapping("/{id}")
@@ -48,7 +48,7 @@ public class SaleOrderController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateSaleOrderRequest request
     ) {
-        return posService.updateOrder(principal, id, request);
+        return posOrderService.updateOrder(principal, id, request);
     }
 
     @PostMapping("/{id}/payments")
@@ -58,7 +58,7 @@ public class SaleOrderController {
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody AddPaymentRequest request
     ) {
-        return posService.addPayment(principal, id, idempotencyKey, request);
+        return posOrderService.addPayment(principal, id, idempotencyKey, request);
     }
 
     @PostMapping("/{id}/complete")
@@ -66,7 +66,7 @@ public class SaleOrderController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return posService.completeOrder(principal, id);
+        return posOrderService.completeOrder(principal, id);
     }
 
     @PostMapping("/{id}/cancel")
@@ -74,6 +74,6 @@ public class SaleOrderController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return posService.cancelOrder(principal, id);
+        return posOrderService.cancelOrder(principal, id);
     }
 }

@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -118,33 +119,68 @@ public class CatalogResolutionService {
 
     @Transactional(readOnly = true)
     public RecipeResolutionResponse resolveRecipe(Long productId, LocalDate businessDate) {
-        productService.requireProduct(productId);
-        RecipeEntity recipe = recipeRepository.findByProduct_Id(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found for product"));
-        RecipeVersionEntity version = recipeVersionRepository.findEffectiveVersions(List.of(productId), RecipeVersionStatus.ACTIVE, businessDate).stream()
-                .filter(candidate -> candidate.getRecipe().getProduct().getId().equals(productId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Active recipe version not found"));
-        List<RecipeVersionIngredientResponse> ingredients = recipeVersionIngredientRepository.findByRecipeVersion_IdOrderBySortOrderAsc(version.getId()).stream()
-                .map(line -> new RecipeVersionIngredientResponse(
-                        line.getIngredient().getId(),
-                        line.getIngredient().getCode(),
-                        line.getIngredient().getName(),
-                        line.getUomCode(),
-                        line.getQty(),
-                        line.getSortOrder()
-                ))
+        return resolveRecipes(List.of(productId), businessDate).getFirst();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecipeResolutionResponse> resolveRecipes(List<Long> productIds, LocalDate businessDate) {
+        LinkedHashSet<Long> distinctProductIds = new LinkedHashSet<>(productIds);
+        if (distinctProductIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, RecipeEntity> recipesByProductId = recipeRepository.findAllByProduct_IdIn(distinctProductIds).stream()
+                .collect(java.util.stream.Collectors.toMap(recipe -> recipe.getProduct().getId(), recipe -> recipe));
+        for (Long productId : distinctProductIds) {
+            if (!recipesByProductId.containsKey(productId)) {
+                productService.requireProduct(productId);
+                throw new ResourceNotFoundException("Recipe not found for product");
+            }
+        }
+
+        Map<Long, RecipeVersionEntity> effectiveVersionByProductId = new HashMap<>();
+        for (RecipeVersionEntity candidate : recipeVersionRepository.findEffectiveVersions(distinctProductIds, RecipeVersionStatus.ACTIVE, businessDate)) {
+            effectiveVersionByProductId.putIfAbsent(candidate.getRecipe().getProduct().getId(), candidate);
+        }
+
+        List<Long> versionIds = distinctProductIds.stream()
+                .map(productId -> {
+                    RecipeVersionEntity version = effectiveVersionByProductId.get(productId);
+                    if (version == null) {
+                        throw new ResourceNotFoundException("Active recipe version not found");
+                    }
+                    return version.getId();
+                })
                 .toList();
-        return new RecipeResolutionResponse(
-                productId,
-                recipe.getId(),
-                version.getId(),
-                recipe.getRecipeCode(),
-                version.getVersionNo(),
-                version.getEffectiveFrom(),
-                version.getEffectiveTo(),
-                ingredients
-        );
+        Map<Long, List<RecipeVersionIngredientResponse>> ingredientsByVersionId = new HashMap<>();
+        for (RecipeVersionIngredientEntity ingredient : recipeVersionIngredientRepository
+                .findByRecipeVersion_IdInOrderByRecipeVersion_IdAscSortOrderAsc(versionIds)) {
+            ingredientsByVersionId.computeIfAbsent(ingredient.getRecipeVersion().getId(), ignored -> new ArrayList<>())
+                    .add(new RecipeVersionIngredientResponse(
+                            ingredient.getIngredient().getId(),
+                            ingredient.getIngredient().getCode(),
+                            ingredient.getIngredient().getName(),
+                            ingredient.getUomCode(),
+                            ingredient.getQty(),
+                            ingredient.getSortOrder()
+                    ));
+        }
+
+        List<RecipeResolutionResponse> resolved = new ArrayList<>();
+        for (Long productId : distinctProductIds) {
+            RecipeEntity recipe = recipesByProductId.get(productId);
+            RecipeVersionEntity version = effectiveVersionByProductId.get(productId);
+            resolved.add(new RecipeResolutionResponse(
+                    productId,
+                    recipe.getId(),
+                    version.getId(),
+                    recipe.getRecipeCode(),
+                    version.getVersionNo(),
+                    version.getEffectiveFrom(),
+                    version.getEffectiveTo(),
+                    ingredientsByVersionId.getOrDefault(version.getId(), List.of())
+            ));
+        }
+        return resolved;
     }
 
     private Map<Long, ProductPriceEntity> resolvePrices(

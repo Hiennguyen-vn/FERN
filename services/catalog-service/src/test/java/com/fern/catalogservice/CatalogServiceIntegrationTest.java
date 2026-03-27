@@ -213,6 +213,16 @@ class CatalogServiceIntegrationTest {
                 .andExpect(jsonPath("$.recipeVersionId").value(versionId))
                 .andExpect(jsonPath("$.ingredients[0].ingredientId").value(ingredientId));
 
+        mockMvc.perform(get("/internal/catalog/recipe-resolutions")
+                        .header("Authorization", serviceBearer())
+                        .param("productIds", String.valueOf(productId))
+                        .param("productIds", String.valueOf(productId))
+                        .param("at", "2026-03-15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].recipeVersionId").value(versionId))
+                .andExpect(jsonPath("$[0].ingredients[0].ingredientId").value(ingredientId))
+                .andExpect(jsonPath("$.length()").value(1));
+
         List<String> eventTypes = jdbcTemplate.queryForList("SELECT event_type FROM catalog.outbox_event ORDER BY created_at", String.class);
         assertThat(eventTypes).contains("catalog.product.changed", "catalog.recipe.version.activated", "catalog.price.published", "catalog.availability.changed");
     }
@@ -700,6 +710,16 @@ class CatalogServiceIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.versionNo").value("v2"))
                 .andExpect(jsonPath("$.ingredients[0].qty").value(12.0000));
+
+        mockMvc.perform(get("/internal/catalog/recipe-resolutions")
+                        .header("Authorization", serviceBearer())
+                        .param("productIds", String.valueOf(productId))
+                        .param("productIds", String.valueOf(productId))
+                        .param("at", "2026-04-15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].versionNo").value("v2"))
+                .andExpect(jsonPath("$[0].ingredients[0].qty").value(12.0000))
+                .andExpect(jsonPath("$.length()").value(1));
     }
 
     @Test

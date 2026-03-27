@@ -80,6 +80,17 @@ public class InternalCatalogController {
         return catalogResolutionService.resolveRecipe(productId, businessDate);
     }
 
+    @GetMapping("/recipe-resolutions")
+    public java.util.List<RecipeResolutionResponse> resolveRecipes(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam java.util.List<Long> productIds,
+            @RequestParam(required = false) LocalDate at
+    ) {
+        catalogAuthorizer.requireInternalPermission(principal, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
+        LocalDate businessDate = at == null ? LocalDate.now(clock) : at;
+        return catalogResolutionService.resolveRecipes(productIds, businessDate);
+    }
+
     @GetMapping("/promotion-resolution")
     public PromotionResponse resolvePromotion(
             @AuthenticationPrincipal FernPrincipal principal,

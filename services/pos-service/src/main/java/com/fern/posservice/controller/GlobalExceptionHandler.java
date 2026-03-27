@@ -6,6 +6,7 @@ import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.observability.CorrelationId;
+import com.fern.posservice.service.DownstreamServiceUnavailableException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Map;
@@ -47,6 +48,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestException.class)
     ResponseEntity<ApiErrorResponse> handleBadRequest(BadRequestException exception, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "bad_request", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(DownstreamServiceUnavailableException.class)
+    ResponseEntity<ApiErrorResponse> handleDownstreamUnavailable(DownstreamServiceUnavailableException exception, HttpServletRequest request) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, "downstream_unavailable", exception.getMessage(), request, Map.of());
     }
 
     @ExceptionHandler(Exception.class)
