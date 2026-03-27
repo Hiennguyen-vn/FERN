@@ -49,7 +49,7 @@ class InternalCatalogControllerTest {
         MenuResponse actual = internalCatalogController.resolveMenu(null, 101L, null, null, PriceType.RETAIL, null);
 
         assertThat(actual).isSameAs(response);
-        verify(catalogAuthorizer).requirePermission(null, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
+        verify(catalogAuthorizer).requireInternalPermission(null, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
         verify(catalogResolutionService).resolveMenu(101L, LocalDate.of(2026, 3, 27), PriceType.RETAIL, null, null);
     }
 

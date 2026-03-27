@@ -30,19 +30,19 @@ public class IngredientController {
 
     @GetMapping
     public List<IngredientResponse> list(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
         return ingredientService.list();
     }
 
     @GetMapping("/{id}")
     public IngredientResponse get(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
         return ingredientService.get(id);
     }
 
     @PostMapping
     public IngredientResponse create(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody IngredientUpsertRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
         return ingredientService.create(principal, request);
     }
 
@@ -52,7 +52,7 @@ public class IngredientController {
             @PathVariable Long id,
             @Valid @RequestBody IngredientUpsertRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
         return ingredientService.update(principal, id, request);
     }
 }

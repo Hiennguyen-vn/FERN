@@ -54,7 +54,7 @@ public class AuditController {
             @RequestParam(defaultValue = "100") @Min(1) @Max(500) int limit
     ) {
         auditAuthorizer.requireRead(principal);
-        return new AuditListResponse<>(auditQueryService.listAuditEvents(new AuditEventFilter(
+        return new AuditListResponse<>(auditQueryService.listAuditEvents(principal, new AuditEventFilter(
                 userId,
                 sourceService,
                 module,
@@ -74,7 +74,7 @@ public class AuditController {
     @GetMapping("/events/{id}")
     public AuditEventDetailResponse getAuditEvent(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         auditAuthorizer.requireRead(principal);
-        return auditQueryService.getAuditEvent(id, auditAuthorizer.canReadDetails(principal));
+        return auditQueryService.getAuditEvent(principal, id, auditAuthorizer.canReadDetails(principal));
     }
 
     @GetMapping("/security-events")
@@ -91,7 +91,7 @@ public class AuditController {
             @RequestParam(defaultValue = "100") @Min(1) @Max(500) int limit
     ) {
         auditAuthorizer.requireRead(principal);
-        return new AuditListResponse<>(auditQueryService.listSecurityEvents(new SecurityEventFilter(
+        return new AuditListResponse<>(auditQueryService.listSecurityEvents(principal, new SecurityEventFilter(
                 userId,
                 sourceService,
                 module,
@@ -107,7 +107,7 @@ public class AuditController {
     @GetMapping("/security-events/{id}")
     public SecurityEventDetailResponse getSecurityEvent(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         auditAuthorizer.requireRead(principal);
-        return auditQueryService.getSecurityEvent(id, auditAuthorizer.canReadDetails(principal));
+        return auditQueryService.getSecurityEvent(principal, id, auditAuthorizer.canReadDetails(principal));
     }
 
     @GetMapping("/request-traces")
@@ -127,7 +127,7 @@ public class AuditController {
             @RequestParam(defaultValue = "100") @Min(1) @Max(500) int limit
     ) {
         auditAuthorizer.requireRead(principal);
-        return new AuditListResponse<>(auditQueryService.listRequestTraces(new RequestTraceFilter(
+        return new AuditListResponse<>(auditQueryService.listRequestTraces(principal, new RequestTraceFilter(
                 userId,
                 sourceService,
                 module,
@@ -146,6 +146,6 @@ public class AuditController {
     @GetMapping("/request-traces/{id}")
     public RequestTraceDetailResponse getRequestTrace(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         auditAuthorizer.requireRead(principal);
-        return auditQueryService.getRequestTrace(id, auditAuthorizer.canReadDetails(principal));
+        return auditQueryService.getRequestTrace(principal, id, auditAuthorizer.canReadDetails(principal));
     }
 }

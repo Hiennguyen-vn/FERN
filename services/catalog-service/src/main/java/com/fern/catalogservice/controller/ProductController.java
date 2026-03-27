@@ -30,19 +30,19 @@ public class ProductController {
 
     @GetMapping
     public List<ProductResponse> list(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRODUCT_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_READ);
         return productService.list();
     }
 
     @GetMapping("/{id}")
     public ProductResponse get(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRODUCT_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_READ);
         return productService.get(id);
     }
 
     @PostMapping
     public ProductResponse create(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody ProductUpsertRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
         return productService.create(principal, request);
     }
 
@@ -52,7 +52,7 @@ public class ProductController {
             @PathVariable Long id,
             @Valid @RequestBody ProductUpsertRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
         return productService.update(principal, id, request);
     }
 }

@@ -33,19 +33,19 @@ public class RecipeController {
 
     @GetMapping("/recipes")
     public List<RecipeResponse> listRecipes(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
         return recipeService.listRecipes();
     }
 
     @GetMapping("/recipes/{id}")
     public RecipeResponse getRecipe(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
         return recipeService.getRecipe(id);
     }
 
     @PostMapping("/recipes")
     public RecipeResponse createRecipe(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody RecipeUpsertRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
         return recipeService.createRecipe(principal, request);
     }
 
@@ -55,7 +55,7 @@ public class RecipeController {
             @PathVariable Long id,
             @Valid @RequestBody RecipeUpsertRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
         return recipeService.updateRecipe(principal, id, request);
     }
 
@@ -64,19 +64,19 @@ public class RecipeController {
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam Long recipeId
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
         return recipeService.listRecipeVersions(recipeId);
     }
 
     @GetMapping("/recipe-versions/{id}")
     public RecipeVersionResponse getRecipeVersion(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
         return recipeService.getRecipeVersion(id);
     }
 
     @PostMapping("/recipe-versions")
     public RecipeVersionResponse createRecipeVersion(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody RecipeVersionUpsertRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
         return recipeService.createRecipeVersion(principal, request);
     }
 
@@ -86,19 +86,19 @@ public class RecipeController {
             @PathVariable Long id,
             @Valid @RequestBody RecipeVersionUpsertRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
         return recipeService.updateRecipeVersion(principal, id, request);
     }
 
     @PostMapping("/recipe-versions/{id}/activate")
     public RecipeVersionResponse activateRecipeVersion(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
         return recipeService.activateRecipeVersion(principal, id);
     }
 
     @PostMapping("/recipe-versions/{id}/archive")
     public RecipeVersionResponse archiveRecipeVersion(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
         return recipeService.archiveRecipeVersion(principal, id);
     }
 }

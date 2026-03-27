@@ -1,10 +1,11 @@
 package com.fern.auditservice.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -53,7 +54,8 @@ class AuditControllerTest {
     @Test
     void shouldBindAuditEventFiltersFromQueryString() throws Exception {
         doNothing().when(auditAuthorizer).requireRead(principal);
-        when(auditQueryService.listAuditEvents(any())).thenReturn(List.of(new AuditEventSummaryResponse(
+        when(auditQueryService.listAuditEvents(eq(principal), any(com.fern.auditservice.repository.AuditEventFilter.class)))
+                .thenReturn(List.of(new AuditEventSummaryResponse(
                 1L,
                 "evt-1",
                 "catalog-service",
@@ -86,7 +88,7 @@ class AuditControllerTest {
 
         ArgumentCaptor<com.fern.auditservice.repository.AuditEventFilter> captor =
                 ArgumentCaptor.forClass(com.fern.auditservice.repository.AuditEventFilter.class);
-        verify(auditQueryService).listAuditEvents(captor.capture());
+        verify(auditQueryService).listAuditEvents(eq(principal), captor.capture());
         assertThat(captor.getValue().limit()).isEqualTo(25);
         assertThat(captor.getValue().sourceService()).isEqualTo("catalog-service");
         assertThat(captor.getValue().action()).isEqualTo("UPDATE");
@@ -96,7 +98,7 @@ class AuditControllerTest {
     void shouldUseDetailPermissionFlagForDetailEndpoint() throws Exception {
         doNothing().when(auditAuthorizer).requireRead(principal);
         when(auditAuthorizer.canReadDetails(principal)).thenReturn(false);
-        when(auditQueryService.getAuditEvent(1L, false)).thenReturn(new AuditEventDetailResponse(
+        when(auditQueryService.getAuditEvent(principal, 1L, false)).thenReturn(new AuditEventDetailResponse(
                 1L,
                 "evt-1",
                 "iam-service",
@@ -126,6 +128,6 @@ class AuditControllerTest {
                 .andExpect(jsonPath("$.id").value("1"))
                 .andExpect(jsonPath("$.detailMasked").value(true));
 
-        verify(auditQueryService).getAuditEvent(1L, false);
+        verify(auditQueryService).getAuditEvent(principal, 1L, false);
     }
 }

@@ -44,6 +44,9 @@ class ApiGatewayIntegrationTest {
     private static HttpServer orgServer;
     private static HttpServer catalogServer;
     private static HttpServer auditServer;
+    private static HttpServer posServer;
+    private static HttpServer inventoryServer;
+    private static HttpServer procurementServer;
 
     @LocalServerPort
     private int port;
@@ -68,10 +71,14 @@ class ApiGatewayIntegrationTest {
         registry.add("fern.routes.org", () -> "http://localhost:" + orgServer.getAddress().getPort());
         registry.add("fern.routes.catalog", () -> "http://localhost:" + catalogServer.getAddress().getPort());
         registry.add("fern.routes.audit", () -> "http://localhost:" + auditServer.getAddress().getPort());
+        registry.add("fern.routes.pos", () -> "http://localhost:" + posServer.getAddress().getPort());
+        registry.add("fern.routes.inventory", () -> "http://localhost:" + inventoryServer.getAddress().getPort());
+        registry.add("fern.routes.procurement", () -> "http://localhost:" + procurementServer.getAddress().getPort());
     }
 
     private static void ensureServersStarted() {
-        if (iamServer != null && orgServer != null && catalogServer != null && auditServer != null) {
+        if (iamServer != null && orgServer != null && catalogServer != null && auditServer != null
+                && posServer != null && inventoryServer != null && procurementServer != null) {
             return;
         }
         try {
@@ -124,6 +131,36 @@ class ApiGatewayIntegrationTest {
             }
         });
         auditServer.start();
+
+        posServer = HttpServer.create(new InetSocketAddress(0), 0);
+        posServer.createContext("/pos-sessions/1", exchange -> {
+            byte[] bytes = "{\"id\":1,\"status\":\"OPEN\"}".getBytes();
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(bytes);
+            }
+        });
+        posServer.start();
+
+        inventoryServer = HttpServer.create(new InetSocketAddress(0), 0);
+        inventoryServer.createContext("/stock-balances", exchange -> {
+            byte[] bytes = "[{\"outletId\":101,\"ingredientId\":200}]".getBytes();
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(bytes);
+            }
+        });
+        inventoryServer.start();
+
+        procurementServer = HttpServer.create(new InetSocketAddress(0), 0);
+        procurementServer.createContext("/suppliers", exchange -> {
+            byte[] bytes = "[{\"id\":1,\"supplierCode\":\"SUP-001\"}]".getBytes();
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(bytes);
+            }
+        });
+        procurementServer.start();
     }
 
     @AfterAll
@@ -139,6 +176,15 @@ class ApiGatewayIntegrationTest {
         }
         if (auditServer != null) {
             auditServer.stop(0);
+        }
+        if (posServer != null) {
+            posServer.stop(0);
+        }
+        if (inventoryServer != null) {
+            inventoryServer.stop(0);
+        }
+        if (procurementServer != null) {
+            procurementServer.stop(0);
         }
     }
 
@@ -232,11 +278,31 @@ class ApiGatewayIntegrationTest {
     }
 
     @Test
-    void shouldRouteCatalogAndEmitRequestTrace() {
+    void shouldHideInternalCatalogRoutesFromPublicGateway() {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        String token = jwtService.encode(new FernJwtClaims(
+                1L,
+                "bootstrap-admin",
+                Set.of("bootstrap_admin"),
+                Set.of("catalog.internal.resolve"),
+                new ScopeRoots(true, java.util.List.of(), java.util.List.of()),
+                1L,
+                1L,
+                "internal-route-jti",
+                Instant.now(),
+                Instant.now().plusSeconds(900)
+        ), jwtService.accessTokenTtl());
+
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
         webTestClient.get()
                 .uri("/internal/catalog/menu?outletId=1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchange()
-                .expectStatus().isUnauthorized();
+                .expectStatus().isNotFound();
 
         verify(kafkaTemplate, timeout(1000)).send(org.mockito.ArgumentMatchers.eq("request.trace"), anyString(), anyString());
     }
@@ -272,5 +338,51 @@ class ApiGatewayIntegrationTest {
                 .getResponseBody();
 
         assertThat(body).contains("\"items\"");
+    }
+
+    @Test
+    void shouldRoutePosInventoryAndProcurementRequests() {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        String token = jwtService.encode(new FernJwtClaims(
+                1L,
+                "bootstrap-admin",
+                Set.of("bootstrap_admin"),
+                Set.of("pos.session.read", "inventory.balance.read", "procurement.supplier.read"),
+                new ScopeRoots(java.util.List.of(1L), java.util.List.of(101L)),
+                1L,
+                1L,
+                "phase3-routes-jti",
+                Instant.now(),
+                Instant.now().plusSeconds(900)
+        ), jwtService.accessTokenTtl());
+
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        webTestClient.get()
+                .uri("/pos-sessions/1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("\"status\":\"OPEN\""));
+
+        webTestClient.get()
+                .uri("/stock-balances?outletId=101")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("\"ingredientId\":200"));
+
+        webTestClient.get()
+                .uri("/suppliers")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("\"supplierCode\":\"SUP-001\""));
     }
 }

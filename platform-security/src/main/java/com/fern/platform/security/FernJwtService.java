@@ -1,5 +1,6 @@
 package com.fern.platform.security;
 
+import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.common.ScopeRoots;
 import java.time.Clock;
 import java.time.Duration;
@@ -39,6 +40,7 @@ public class FernJwtService {
         Instant expiresAt = now.plus(ttl);
 
         Map<String, Object> scopeRoots = new HashMap<>();
+        scopeRoots.put("system", claims.scopeRoots().system());
         scopeRoots.put("regions", claims.scopeRoots().regions());
         scopeRoots.put("outlets", claims.scopeRoots().outlets());
 
@@ -47,13 +49,17 @@ public class FernJwtService {
                 .id(claims.jti())
                 .issuedAt(now)
                 .expiresAt(expiresAt)
-                .claim("user_id", claims.userId())
                 .claim("roles", claims.roles())
                 .claim("permissions", claims.permissions())
                 .claim("scope_roots", scopeRoots)
                 .claim("policy_version", claims.policyVersion())
                 .claim("scope_version", claims.scopeVersion())
-                .claim("auth_time", claims.authTime().getEpochSecond());
+                .claim("auth_time", claims.authTime().getEpochSecond())
+                .claim("principal_type", claims.principalType().name());
+
+        if (claims.userId() != null) {
+            builder.claim("user_id", claims.userId());
+        }
 
         return encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), builder.build())).getTokenValue();
     }
@@ -69,5 +75,9 @@ public class FernJwtService {
 
     public Duration refreshTokenTtl() {
         return Duration.ofSeconds(properties.getRefreshTokenTtlSeconds());
+    }
+
+    public Duration serviceTokenTtl() {
+        return Duration.ofSeconds(properties.getServiceTokenTtlSeconds());
     }
 }

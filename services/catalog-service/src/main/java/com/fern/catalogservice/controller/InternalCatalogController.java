@@ -42,7 +42,7 @@ public class InternalCatalogController {
             @RequestParam(defaultValue = "RETAIL") PriceType priceType,
             @RequestParam(required = false) LocalDate at
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
+        catalogAuthorizer.requireInternalPermission(principal, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
         LocalDate businessDate = at == null ? LocalDate.now(clock) : at;
         return catalogResolutionService.resolveMenu(outletId, businessDate, priceType, regionId, countryId);
     }
@@ -57,7 +57,7 @@ public class InternalCatalogController {
             @RequestParam(defaultValue = "RETAIL") PriceType priceType,
             @RequestParam(required = false) LocalDate at
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
+        catalogAuthorizer.requireInternalPermission(principal, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
         LocalDate businessDate = at == null ? LocalDate.now(clock) : at;
         return catalogResolutionService.resolvePrice(productId, outletId, businessDate, priceType, regionId, countryId);
     }
@@ -68,7 +68,7 @@ public class InternalCatalogController {
             @RequestParam Long productId,
             @RequestParam(required = false) LocalDate at
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
+        catalogAuthorizer.requireInternalPermission(principal, PermissionCodes.CATALOG_INTERNAL_RESOLVE);
         LocalDate businessDate = at == null ? LocalDate.now(clock) : at;
         return catalogResolutionService.resolveRecipe(productId, businessDate);
     }

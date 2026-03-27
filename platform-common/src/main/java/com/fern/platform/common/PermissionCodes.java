@@ -27,6 +27,41 @@ public final class PermissionCodes {
     public static final String CATALOG_PRICE_READ = "catalog.price.read";
     public static final String CATALOG_PRICE_WRITE = "catalog.price.write";
     public static final String CATALOG_INTERNAL_RESOLVE = "catalog.internal.resolve";
+    public static final String POS_SESSION_READ = "pos.session.read";
+    public static final String POS_SESSION_OPEN = "pos.session.open";
+    public static final String POS_SESSION_CLOSE = "pos.session.close";
+    public static final String POS_SESSION_RECONCILE = "pos.session.reconcile";
+    public static final String POS_ORDER_READ = "pos.order.read";
+    public static final String POS_ORDER_CREATE = "pos.order.create";
+    public static final String POS_ORDER_UPDATE = "pos.order.update";
+    public static final String POS_ORDER_CANCEL = "pos.order.cancel";
+    public static final String POS_ORDER_COMPLETE = "pos.order.complete";
+    public static final String INVENTORY_BALANCE_READ = "inventory.balance.read";
+    public static final String INVENTORY_LEDGER_READ = "inventory.ledger.read";
+    public static final String INVENTORY_ADJUSTMENT_WRITE = "inventory.adjustment.write";
+    public static final String INVENTORY_WASTE_WRITE = "inventory.waste.write";
+    public static final String INVENTORY_STOCK_COUNT_WRITE = "inventory.stock_count.write";
+    public static final String INVENTORY_STOCK_COUNT_POST = "inventory.stock_count.post";
+    public static final String INVENTORY_INTERNAL_RESERVE = "inventory.internal.reserve";
+    public static final String PROCUREMENT_SUPPLIER_READ = "procurement.supplier.read";
+    public static final String PROCUREMENT_SUPPLIER_WRITE = "procurement.supplier.write";
+    public static final String PROCUREMENT_PO_READ = "procurement.po.read";
+    public static final String PROCUREMENT_PO_CREATE = "procurement.po.create";
+    public static final String PROCUREMENT_PO_UPDATE = "procurement.po.update";
+    public static final String PROCUREMENT_PO_SUBMIT = "procurement.po.submit";
+    public static final String PROCUREMENT_PO_APPROVE = "procurement.po.approve";
+    public static final String PROCUREMENT_PO_ISSUE = "procurement.po.issue";
+    public static final String PROCUREMENT_PO_CANCEL = "procurement.po.cancel";
+    public static final String PROCUREMENT_GR_READ = "procurement.gr.read";
+    public static final String PROCUREMENT_GR_CREATE = "procurement.gr.create";
+    public static final String PROCUREMENT_GR_POST = "procurement.gr.post";
+    public static final String PROCUREMENT_GR_CANCEL = "procurement.gr.cancel";
+    public static final String PROCUREMENT_INVOICE_READ = "procurement.invoice.read";
+    public static final String PROCUREMENT_INVOICE_REVIEW = "procurement.invoice.review";
+    public static final String PROCUREMENT_INVOICE_APPROVE = "procurement.invoice.approve";
+    public static final String PROCUREMENT_INVOICE_DISPUTE = "procurement.invoice.dispute";
+    public static final String PROCUREMENT_PAYMENT_READ = "procurement.payment.read";
+    public static final String PROCUREMENT_PAYMENT_RECORD = "procurement.payment.record";
 
     private PermissionCodes() {
     }

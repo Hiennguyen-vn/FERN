@@ -3,8 +3,12 @@ package com.fern.auditservice.config;
 import com.fern.platform.observability.ServletCorrelationIdFilter;
 import com.fern.platform.security.FernJwtAuthenticationFilter;
 import com.fern.platform.security.FernJwtService;
+import com.fern.platform.security.FernTokenAcceptanceValidator;
+import com.fern.platform.security.RedisFernTokenAcceptanceValidator;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -15,7 +19,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, FernJwtService jwtService) throws Exception {
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            FernJwtService jwtService,
+            ObjectProvider<StringRedisTemplate> redisTemplateProvider
+    ) throws Exception {
+        StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
+        FernTokenAcceptanceValidator validator = redisTemplate == null
+                ? FernTokenAcceptanceValidator.noop()
+                : new RedisFernTokenAcceptanceValidator(redisTemplate);
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -27,7 +39,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new ServletCorrelationIdFilter(), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new FernJwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new FernJwtAuthenticationFilter(jwtService, validator), UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }

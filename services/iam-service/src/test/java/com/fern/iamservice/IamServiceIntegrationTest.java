@@ -394,6 +394,98 @@ class IamServiceIntegrationTest {
         verifyNoInteractions(auditEventPublisher);
     }
 
+    @Test
+    void shouldAssignSystemScopeAndExposeItInEffectiveAccess() throws Exception {
+        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        Long userId = createUser(adminToken, "system-scope-user", "Scope123!").get("id").asLong();
+
+        mockMvc.perform(post("/users/%d/scopes".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "system": true,
+                                  "regionIds": [1],
+                                  "outletIds": [101]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeRoots.system").value(true))
+                .andExpect(jsonPath("$.scopeRoots.regions[0]").value(1))
+                .andExpect(jsonPath("$.scopeRoots.outlets[0]").value(101));
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeRoots.system").value(true));
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM iam.user_scope_assignment
+                WHERE user_id = ? AND scope_type = 'SYSTEM' AND scope_id IS NULL
+                """, Long.class, userId)).isEqualTo(1L);
+    }
+
+    @Test
+    void shouldBumpPolicyVersionWhenPermissionOverridesChange() throws Exception {
+        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        Long userId = createUser(adminToken, "policy-override-user", "Override123!").get("id").asLong();
+        redisTemplate.delete("fern:versions:policy");
+
+        mockMvc.perform(put("/users/%d/permission-overrides".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "overrides": [
+                                    {
+                                      "permissionCode": "audit.read",
+                                      "overrideMode": "GRANT",
+                                      "reason": "Temporary audit access"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        assertThat(redisTemplate.hasKey("fern:versions:policy")).isTrue();
+    }
+
+    @Test
+    void shouldRevokeRefreshSessionsWhenUserIsDisabled() throws Exception {
+        String adminToken = loginAsBootstrapAdmin().get("accessToken").asText();
+        createUser(adminToken, "refresh-user", "Refresh123!");
+
+        MvcResult loginResult = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"refresh-user","password":"Refresh123!"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode loginJson = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+        Long userId = loginJson.get("user").get("id").asLong();
+        String refreshToken = loginJson.get("refreshToken").asText();
+
+        mockMvc.perform(patch("/users/%d".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"status":"SUSPENDED"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUSPENDED"));
+
+        mockMvc.perform(post("/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"%s"}
+                                """.formatted(refreshToken)))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(authSessionRepository.findAllByUserIdAndRevokedAtIsNull(userId)).isEmpty();
+    }
+
     private JsonNode loginAsBootstrapAdmin() throws Exception {
         MvcResult loginResult = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

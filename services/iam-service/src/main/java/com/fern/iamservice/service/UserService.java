@@ -1,6 +1,7 @@
 package com.fern.iamservice.service;
 
 import com.fern.iamservice.domain.UserAccountEntity;
+import com.fern.iamservice.domain.RoleStatus;
 import com.fern.iamservice.domain.UserRoleAssignmentEntity;
 import com.fern.iamservice.domain.UserScopeAssignmentEntity;
 import com.fern.iamservice.domain.UserStatus;
@@ -34,6 +35,7 @@ public class UserService {
     private final ScopeVersionBridgeService scopeVersionBridgeService;
     private final IamOutboxService outboxService;
     private final IamAuditService iamAuditService;
+    private final RefreshTokenService refreshTokenService;
     private final Clock clock;
 
     public UserService(
@@ -47,6 +49,7 @@ public class UserService {
             ScopeVersionBridgeService scopeVersionBridgeService,
             IamOutboxService outboxService,
             IamAuditService iamAuditService,
+            RefreshTokenService refreshTokenService,
             Clock clock
     ) {
         this.userAccountRepository = userAccountRepository;
@@ -59,6 +62,7 @@ public class UserService {
         this.scopeVersionBridgeService = scopeVersionBridgeService;
         this.outboxService = outboxService;
         this.iamAuditService = iamAuditService;
+        this.refreshTokenService = refreshTokenService;
         this.clock = clock;
     }
 
@@ -128,6 +132,7 @@ public class UserService {
         if (statusChanged) {
             user.setStatus(request.status());
             policyVersionService.bump();
+            refreshTokenService.revokeAllByUserId(id);
         }
         user.setUpdatedAt(clock.instant());
 
@@ -148,6 +153,9 @@ public class UserService {
         var roles = roleRepository.findAllByCodeIn(request.roleCodes());
         if (roles.size() != request.roleCodes().size()) {
             throw new ConflictException("One or more role codes do not exist");
+        }
+        if (roles.stream().anyMatch(role -> role.getStatus() != RoleStatus.ACTIVE)) {
+            throw new ConflictException("One or more role codes are inactive");
         }
 
         userRoleAssignmentRepository.deleteByUserId(id);
@@ -170,6 +178,9 @@ public class UserService {
     public UserResponse assignScopes(FernPrincipal principal, Long id, AssignUserScopesRequest request) {
         UserAccountEntity user = userViewService.findUser(id);
         userScopeAssignmentRepository.deleteByUserId(id);
+        if (Boolean.TRUE.equals(request.system())) {
+            saveScopeAssignment(user.getId(), ScopeType.SYSTEM, null);
+        }
         if (request.regionIds() != null) {
             request.regionIds().stream().distinct().forEach(regionId -> saveScopeAssignment(user.getId(), ScopeType.REGION, regionId));
         }

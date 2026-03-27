@@ -18,8 +18,18 @@ public class OrgAuthorizer {
         }
     }
 
+    public void requireServicePermission(FernPrincipal principal, String permission) {
+        requirePermission(principal, permission);
+        if (!principal.isService()) {
+            throw new ForbiddenException("Service principal is required");
+        }
+    }
+
     public void requireRegionAccess(FernPrincipal principal, Long regionId, String permission) {
         requirePermission(principal, permission);
+        if (principal.scopeRoots().system()) {
+            return;
+        }
         var expanded = scopeExpansionService.expand(principal.scopeRoots().regions(), principal.scopeRoots().outlets());
         if (!expanded.regionIds().contains(regionId)) {
             throw new ForbiddenException("Region is outside the current scope");
@@ -28,6 +38,9 @@ public class OrgAuthorizer {
 
     public void requireOutletAccess(FernPrincipal principal, Long outletId, String permission) {
         requirePermission(principal, permission);
+        if (principal.scopeRoots().system()) {
+            return;
+        }
         var expanded = scopeExpansionService.expand(principal.scopeRoots().regions(), principal.scopeRoots().outlets());
         if (!expanded.outletIds().contains(outletId)) {
             throw new ForbiddenException("Outlet is outside the current scope");

@@ -58,6 +58,8 @@ class CatalogAuditScopeIntegrationTest {
         registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("catalog"));
         registry.add("spring.datasource.username", FernIntegrationContainers::jdbcUsername);
         registry.add("spring.datasource.password", FernIntegrationContainers::jdbcPassword);
+        registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
+        registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
         registry.add("fern.outbox.enabled", () -> false);
     }
 
@@ -98,10 +100,9 @@ class CatalogAuditScopeIntegrationTest {
                         "catalog.recipe.read",
                         "catalog.recipe.write",
                         "catalog.price.read",
-                        "catalog.price.write",
-                        "catalog.internal.resolve"
+                        "catalog.price.write"
                 ),
-                new ScopeRoots(List.of(9L, 10L), List.of(44L, 45L)),
+                new ScopeRoots(true, List.of(9L, 10L), List.of(44L, 45L)),
                 1L,
                 1L,
                 "catalog-audit-scope-jti",

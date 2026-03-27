@@ -35,19 +35,19 @@ public class CatalogPricingController {
 
     @GetMapping("/tax-rates")
     public List<TaxRateResponse> listTaxRates(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.listTaxRates();
     }
 
     @GetMapping("/tax-rates/{id}")
     public TaxRateResponse getTaxRate(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.getTaxRate(id);
     }
 
     @PostMapping("/tax-rates")
     public TaxRateResponse createTaxRate(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody TaxRateUpsertRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
         return catalogPricingService.createTaxRate(principal, request);
     }
 
@@ -57,25 +57,25 @@ public class CatalogPricingController {
             @PathVariable Long id,
             @Valid @RequestBody TaxRateUpsertRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
         return catalogPricingService.updateTaxRate(principal, id, request);
     }
 
     @GetMapping("/product-prices")
     public List<ProductPriceResponse> listProductPrices(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.listProductPrices();
     }
 
     @GetMapping("/product-prices/{id}")
     public ProductPriceResponse getProductPrice(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.getProductPrice(id);
     }
 
     @PostMapping("/product-prices")
     public ProductPriceResponse createProductPrice(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody ProductPriceUpsertRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
         return catalogPricingService.createProductPrice(principal, request);
     }
 
@@ -85,7 +85,7 @@ public class CatalogPricingController {
             @PathVariable Long id,
             @Valid @RequestBody ProductPriceUpsertRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
         return catalogPricingService.updateProductPrice(principal, id, request);
     }
 
@@ -95,7 +95,7 @@ public class CatalogPricingController {
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) Long outletId
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.listAvailability(productId, outletId);
     }
 
@@ -104,7 +104,7 @@ public class CatalogPricingController {
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody ProductAvailabilityUpsertRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_WRITE);
         return catalogPricingService.upsertAvailability(principal, request);
     }
 }

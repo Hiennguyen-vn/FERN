@@ -34,13 +34,13 @@ public class CatalogReferenceController {
 
     @GetMapping("/product-categories")
     public List<CategoryResponse> listProductCategories(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRODUCT_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_READ);
         return catalogReferenceService.listProductCategories();
     }
 
     @PostMapping("/product-categories")
     public CategoryResponse createProductCategory(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody CategoryRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
         return catalogReferenceService.createProductCategory(request);
     }
 
@@ -50,19 +50,19 @@ public class CatalogReferenceController {
             @PathVariable String code,
             @Valid @RequestBody CategoryRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
         return catalogReferenceService.upsertProductCategory(code, request);
     }
 
     @GetMapping("/ingredient-categories")
     public List<CategoryResponse> listIngredientCategories(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
         return catalogReferenceService.listIngredientCategories();
     }
 
     @PostMapping("/ingredient-categories")
     public CategoryResponse createIngredientCategory(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody CategoryRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
         return catalogReferenceService.createIngredientCategory(request);
     }
 
@@ -72,19 +72,19 @@ public class CatalogReferenceController {
             @PathVariable String code,
             @Valid @RequestBody CategoryRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
         return catalogReferenceService.upsertIngredientCategory(code, request);
     }
 
     @GetMapping("/units-of-measure")
     public List<UnitOfMeasureResponse> listUnitsOfMeasure(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
         return catalogReferenceService.listUnitsOfMeasure();
     }
 
     @PostMapping("/units-of-measure")
     public UnitOfMeasureResponse createUnitOfMeasure(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody UnitOfMeasureRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
         return catalogReferenceService.createUnitOfMeasure(request);
     }
 
@@ -94,25 +94,25 @@ public class CatalogReferenceController {
             @PathVariable String code,
             @Valid @RequestBody UnitOfMeasureRequest request
     ) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
         return catalogReferenceService.upsertUnitOfMeasure(code, request);
     }
 
     @GetMapping("/uom-conversions")
     public List<UomConversionResponse> listUomConversions(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
         return catalogReferenceService.listUomConversions();
     }
 
     @PostMapping("/uom-conversions")
     public UomConversionResponse createUomConversion(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody UomConversionRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
         return catalogReferenceService.upsertUomConversion(request);
     }
 
     @PutMapping("/uom-conversions")
     public UomConversionResponse updateUomConversion(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody UomConversionRequest request) {
-        catalogAuthorizer.requirePermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_WRITE);
         return catalogReferenceService.upsertUomConversion(request);
     }
 }

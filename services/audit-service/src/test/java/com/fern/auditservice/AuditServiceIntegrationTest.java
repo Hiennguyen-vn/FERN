@@ -1,6 +1,7 @@
 package com.fern.auditservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -14,6 +15,8 @@ import com.fern.auditservice.service.AuditIngestionService;
 import com.fern.auditservice.service.AuditQueryService;
 import com.fern.platform.audit.AuditEvent;
 import com.fern.platform.audit.RequestTraceEvent;
+import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.testsupport.FernIntegrationContainers;
 import java.time.Instant;
 import java.util.Map;
@@ -23,6 +26,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -59,10 +63,21 @@ class AuditServiceIntegrationTest {
     @MockBean
     private AuditAuthorizer auditAuthorizer;
 
+    private final FernPrincipal systemPrincipal = new FernPrincipal(
+            1L,
+            "bootstrap-admin",
+            java.util.Set.of("system_admin"),
+            java.util.Set.of("audit.read", "audit.detail.read"),
+            new ScopeRoots(true, java.util.List.of(), java.util.List.of()),
+            1L,
+            1L,
+            "audit-int-jti"
+    );
+
     @Test
     void shouldBootOnPostgresAndSerializeAuditIdsAsStrings() throws Exception {
-        doNothing().when(auditAuthorizer).requireRead(null);
-        when(auditAuthorizer.canReadDetails(null)).thenReturn(true);
+        doNothing().when(auditAuthorizer).requireRead(systemPrincipal);
+        when(auditAuthorizer.canReadDetails(systemPrincipal)).thenReturn(true);
 
         AuditEvent event = new AuditEvent(
                 "audit-int-1",
@@ -104,6 +119,7 @@ class AuditServiceIntegrationTest {
         assertThat(serialized).contains("\"id\":\"" + summary.id() + "\"");
 
         mockMvc.perform(get("/audit/events/{id}", summary.id()))
+                .with(authentication(new UsernamePasswordAuthenticationToken(systemPrincipal, null)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(summary.id().toString()))
                 .andExpect(jsonPath("$.payload.module").value("catalog"));

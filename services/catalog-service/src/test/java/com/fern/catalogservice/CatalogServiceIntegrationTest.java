@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.audit.AuditEventPublisher;
+import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
@@ -27,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -46,16 +48,22 @@ class CatalogServiceIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
     @MockBean
     private AuditEventPublisher auditEventPublisher;
 
-    private String token;
+    private String userToken;
+    private String serviceToken;
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("catalog"));
         registry.add("spring.datasource.username", FernIntegrationContainers::jdbcUsername);
         registry.add("spring.datasource.password", FernIntegrationContainers::jdbcPassword);
+        registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
+        registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
         registry.add("fern.outbox.enabled", () -> false);
     }
 
@@ -82,11 +90,13 @@ class CatalogServiceIntegrationTest {
                     catalog.outbox_event
                 RESTART IDENTITY CASCADE
                 """);
+        redisTemplate.delete("fern:versions:policy");
+        redisTemplate.delete("fern:versions:scope");
 
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
-        token = jwtService.encode(new FernJwtClaims(
+        userToken = jwtService.encode(new FernJwtClaims(
                 1L,
                 "bootstrap-admin",
                 Set.of("bootstrap_admin"),
@@ -98,16 +108,28 @@ class CatalogServiceIntegrationTest {
                         "catalog.recipe.read",
                         "catalog.recipe.write",
                         "catalog.price.read",
-                        "catalog.price.write",
-                        "catalog.internal.resolve"
+                        "catalog.price.write"
                 ),
-                new ScopeRoots(List.of(1L), List.of()),
+                new ScopeRoots(true, List.of(1L), List.of()),
                 1L,
                 1L,
                 "catalog-test-jti",
                 Instant.now(),
                 Instant.now().plusSeconds(900)
         ), jwtService.accessTokenTtl());
+        serviceToken = jwtService.encode(new FernJwtClaims(
+                null,
+                "pos-service",
+                Set.of(),
+                Set.of("catalog.internal.resolve"),
+                new ScopeRoots(true, List.of(), List.of()),
+                0L,
+                0L,
+                "catalog-service-test-jti",
+                Instant.now(),
+                Instant.now().plusSeconds(300),
+                FernPrincipalType.SERVICE
+        ), jwtService.serviceTokenTtl());
     }
 
     @Test
@@ -162,7 +184,7 @@ class CatalogServiceIntegrationTest {
                 .andExpect(jsonPath("$.outletId").value(101));
 
         mockMvc.perform(get("/internal/catalog/menu")
-                        .header("Authorization", bearer())
+                        .header("Authorization", serviceBearer())
                         .param("outletId", "101")
                         .param("at", "2026-03-15"))
                 .andExpect(status().isOk())
@@ -171,7 +193,7 @@ class CatalogServiceIntegrationTest {
                 .andExpect(jsonPath("$.items[0].taxPercent").value(10.00));
 
         mockMvc.perform(get("/internal/catalog/price-resolution")
-                        .header("Authorization", bearer())
+                        .header("Authorization", serviceBearer())
                         .param("productId", String.valueOf(productId))
                         .param("outletId", "101")
                         .param("at", "2026-03-15"))
@@ -181,7 +203,7 @@ class CatalogServiceIntegrationTest {
                 .andExpect(jsonPath("$.taxPercent").value(10.00));
 
         mockMvc.perform(get("/internal/catalog/recipe-resolution")
-                        .header("Authorization", bearer())
+                        .header("Authorization", serviceBearer())
                         .param("productId", String.valueOf(productId))
                         .param("at", "2026-03-15"))
                 .andExpect(status().isOk())
@@ -250,6 +272,15 @@ class CatalogServiceIntegrationTest {
                                 }
                                 """.formatted(productId)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldRejectStaleTokenAtServiceBoundary() throws Exception {
+        redisTemplate.opsForValue().set("fern:versions:policy", "2");
+
+        mockMvc.perform(get("/products")
+                        .header("Authorization", bearer()))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -686,6 +717,10 @@ class CatalogServiceIntegrationTest {
     }
 
     private String bearer() {
-        return "Bearer " + token;
+        return "Bearer " + userToken;
+    }
+
+    private String serviceBearer() {
+        return "Bearer " + serviceToken;
     }
 }

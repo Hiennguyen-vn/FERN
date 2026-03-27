@@ -40,7 +40,7 @@ class OrgServiceIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private static String token;
+    private String token;
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
@@ -54,22 +54,8 @@ class OrgServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        FernJwtProperties properties = new FernJwtProperties();
-        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
-        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
-        token = jwtService.encode(new FernJwtClaims(
-                1L,
-                "bootstrap-admin",
-                Set.of("bootstrap_admin"),
-                Set.of("org.region.read", "org.region.write", "org.outlet.read", "org.outlet.write", "org.scope.resolve"),
-                new com.fern.platform.common.ScopeRoots(List.of(1L), List.of()),
-                1L,
-                1L,
-                "org-test-jti",
-                Instant.now(),
-                Instant.now().plusSeconds(900)
-        ), jwtService.accessTokenTtl());
         redisTemplate.delete("fern:versions:scope");
+        token = issueToken(1L);
     }
 
     @Test
@@ -90,6 +76,7 @@ class OrgServiceIntegrationTest {
                 .andExpect(jsonPath("$.code").value("REGION-1"));
 
         Long regionId = jdbcTemplate.queryForObject("SELECT id FROM org.region WHERE code = 'REGION-1'", Long.class);
+        token = issueToken(currentScopeVersion());
 
         mockMvc.perform(post("/outlets")
                         .header("Authorization", "Bearer " + token)
@@ -105,8 +92,10 @@ class OrgServiceIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("OUTLET-1"));
 
+        String serviceToken = issueServiceToken(currentScopeVersion());
+
         mockMvc.perform(post("/internal/scopes/expand")
-                        .header("Authorization", "Bearer " + token)
+                        .header("Authorization", "Bearer " + serviceToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"regionIds":[1],"outletIds":[]}
@@ -117,5 +106,40 @@ class OrgServiceIntegrationTest {
 
         String version = redisTemplate.opsForValue().get("fern:versions:scope");
         assertThat(version).isNotBlank();
+    }
+
+    private String issueToken(long scopeVersion) {
+        return issueToken(scopeVersion, com.fern.platform.common.FernPrincipalType.USER, false);
+    }
+
+    private String issueServiceToken(long scopeVersion) {
+        return issueToken(scopeVersion, com.fern.platform.common.FernPrincipalType.SERVICE, true);
+    }
+
+    private String issueToken(
+            long scopeVersion,
+            com.fern.platform.common.FernPrincipalType principalType,
+            boolean systemScoped
+    ) {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        return jwtService.encode(new FernJwtClaims(
+                1L,
+                principalType == com.fern.platform.common.FernPrincipalType.SERVICE ? "org-internal" : "bootstrap-admin",
+                principalType == com.fern.platform.common.FernPrincipalType.SERVICE ? Set.of("org-service") : Set.of("bootstrap_admin"),
+                Set.of("org.region.read", "org.region.write", "org.outlet.read", "org.outlet.write", "org.scope.resolve"),
+                new com.fern.platform.common.ScopeRoots(systemScoped, List.of(1L), List.of()),
+                1L,
+                scopeVersion,
+                "org-test-jti-" + principalType.name().toLowerCase() + "-" + scopeVersion,
+                Instant.now(),
+                Instant.now().plusSeconds(900),
+                principalType
+        ), jwtService.accessTokenTtl());
+    }
+
+    private long currentScopeVersion() {
+        return jdbcTemplate.queryForObject("SELECT version FROM org.scope_version_state WHERE id = 1", Long.class);
     }
 }

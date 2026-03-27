@@ -4,6 +4,7 @@ import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.observability.CorrelationId;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtService;
+import com.fern.platform.security.FernTokenAcceptanceRules;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -19,9 +20,6 @@ import reactor.core.publisher.Mono;
 @Component
 public class GatewaySecurityFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = List.of("/auth/login", "/auth/refresh", "/actuator/health");
-    private static final String POLICY_VERSION_KEY = "fern:versions:policy";
-    private static final String SCOPE_VERSION_KEY = "fern:versions:scope";
-    private static final String BLACKLIST_PREFIX = "fern:iam:blacklist:";
 
     private final FernJwtService jwtService;
     private final ReactiveStringRedisTemplate redisTemplate;
@@ -80,22 +78,22 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
 
     private Mono<Boolean> isTokenAccepted(FernJwtClaims claims) {
         Mono<Boolean> blacklisted = redisTemplate.opsForValue()
-                .get(BLACKLIST_PREFIX + claims.jti())
+                .get(FernTokenAcceptanceRules.BLACKLIST_PREFIX + claims.jti())
                 .map(value -> true)
                 .defaultIfEmpty(false);
 
         Mono<Long> currentPolicyVersion = redisTemplate.opsForValue()
-                .get(POLICY_VERSION_KEY)
+                .get(FernTokenAcceptanceRules.POLICY_VERSION_KEY)
                 .map(Long::parseLong)
                 .defaultIfEmpty(claims.policyVersion());
 
         Mono<Long> currentScopeVersion = redisTemplate.opsForValue()
-                .get(SCOPE_VERSION_KEY)
+                .get(FernTokenAcceptanceRules.SCOPE_VERSION_KEY)
                 .map(Long::parseLong)
                 .defaultIfEmpty(claims.scopeVersion());
 
         return Mono.zip(blacklisted, currentPolicyVersion, currentScopeVersion)
-                .map(tuple -> !tuple.getT1() && tuple.getT2() <= claims.policyVersion() && tuple.getT3() <= claims.scopeVersion());
+                .map(tuple -> FernTokenAcceptanceRules.isAccepted(claims, tuple.getT1(), tuple.getT2(), tuple.getT3()));
     }
 
     private Mono<Boolean> checkRateLimit(String key, long limit) {

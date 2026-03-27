@@ -14,7 +14,7 @@ public class RouteConfig {
         return builder.routes()
                 .route("iam-auth", r -> r.path("/auth/**").uri(properties.getIam()))
                 .route("iam-admin", r -> r.path("/users/**", "/roles/**", "/permissions/**").uri(properties.getIam()))
-                .route("org-core", r -> r.path("/regions/**", "/outlets/**", "/internal/scopes/**").uri(properties.getOrg()))
+                .route("org-core", r -> r.path("/regions/**", "/outlets/**").uri(properties.getOrg()))
                 .route("catalog-core", r -> r.path(
                         "/ingredients/**",
                         "/ingredient-categories/**",
@@ -26,10 +26,24 @@ public class RouteConfig {
                         "/recipe-versions/**",
                         "/tax-rates/**",
                         "/product-prices/**",
-                        "/product-availability/**",
-                        "/internal/catalog/**"
+                        "/product-availability/**"
                 ).uri(properties.getCatalog()))
                 .route("audit-core", r -> r.path("/audit/**").uri(properties.getAudit()))
+                .route("pos-core", r -> r.path("/pos-sessions/**", "/sale-orders/**").uri(properties.getPos()))
+                .route("inventory-core", r -> r.path(
+                        "/stock-balances/**",
+                        "/inventory-transactions/**",
+                        "/stock-adjustments/**",
+                        "/waste-records/**",
+                        "/stock-count-sessions/**"
+                ).uri(properties.getInventory()))
+                .route("procurement-core", r -> r.path(
+                        "/suppliers/**",
+                        "/purchase-orders/**",
+                        "/goods-receipts/**",
+                        "/supplier-invoices/**",
+                        "/supplier-payments/**"
+                ).uri(properties.getProcurement()))
                 .build();
     }
 }

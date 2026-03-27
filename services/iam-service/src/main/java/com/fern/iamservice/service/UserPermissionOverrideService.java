@@ -24,6 +24,7 @@ public class UserPermissionOverrideService {
     private final UserViewService userViewService;
     private final PermissionRepository permissionRepository;
     private final UserPermissionOverrideRepository overrideRepository;
+    private final PolicyVersionService policyVersionService;
     private final IamAuditService iamAuditService;
     private final Clock clock;
 
@@ -31,12 +32,14 @@ public class UserPermissionOverrideService {
             UserViewService userViewService,
             PermissionRepository permissionRepository,
             UserPermissionOverrideRepository overrideRepository,
+            PolicyVersionService policyVersionService,
             IamAuditService iamAuditService,
             Clock clock
     ) {
         this.userViewService = userViewService;
         this.permissionRepository = permissionRepository;
         this.overrideRepository = overrideRepository;
+        this.policyVersionService = policyVersionService;
         this.iamAuditService = iamAuditService;
         this.clock = clock;
     }
@@ -78,6 +81,7 @@ public class UserPermissionOverrideService {
             overrideRepository.save(entity);
         }
 
+        policyVersionService.bump();
         UserPermissionOverridesResponse response = get(userId);
         iamAuditService.permissionOverridesChanged(principal, userId, response);
         return response;

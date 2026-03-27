@@ -72,6 +72,14 @@ public class RefreshTokenService {
         });
     }
 
+    @Transactional
+    public void revokeAllByUserId(Long userId) {
+        authSessionRepository.findAllByUserIdAndRevokedAtIsNull(userId).forEach(session -> {
+            session.setRevokedAt(clock.instant());
+            session.setUpdatedAt(clock.instant());
+        });
+    }
+
     public void blacklistJti(String jti, Instant expiresAt) {
         Duration ttl = Duration.between(clock.instant(), expiresAt);
         if (!ttl.isNegative() && !ttl.isZero()) {

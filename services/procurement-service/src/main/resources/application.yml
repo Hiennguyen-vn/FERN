@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: procurement-service
+  datasource:
+    url: ${FERN_PROCUREMENT_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_operational?currentSchema=procurement}
+    username: ${FERN_DB_USERNAME:fern}
+    password: ${FERN_DB_PASSWORD:fern}
+  flyway:
+    enabled: true
+    schemas: procurement
+    default-schema: procurement
+    locations: classpath:db/migration/postgresql/operational
+  kafka:
+    bootstrap-servers: ${FERN_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+server:
+  port: ${PORT:8088}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+fern:
+  security:
+    jwt:
+      secret: ${FERN_JWT_SECRET:XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv}
+      access-token-ttl-seconds: 900
+      refresh-token-ttl-seconds: 604800
+  outbox:
+    enabled: ${FERN_OUTBOX_ENABLED:true}
+    publish-delay-ms: 5000
+  master-datasource:
+    url: ${FERN_PROCUREMENT_MASTER_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=procurement_master}
+    username: ${FERN_DB_USERNAME:fern}
+    password: ${FERN_DB_PASSWORD:fern}

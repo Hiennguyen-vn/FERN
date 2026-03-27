@@ -14,6 +14,7 @@ import com.fern.auditservice.repository.RequestTraceRow;
 import com.fern.auditservice.repository.SecurityEventFilter;
 import com.fern.auditservice.repository.SecurityEventRow;
 import com.fern.platform.audit.SensitiveDataMasker;
+import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ResourceNotFoundException;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -26,10 +27,25 @@ public class AuditQueryService {
         this.auditJdbcRepository = auditJdbcRepository;
     }
 
+    public List<AuditEventSummaryResponse> listAuditEvents(FernPrincipal principal, AuditEventFilter filter) {
+        return listAuditEvents(filter).stream()
+                .filter(item -> canAccess(principal, item.regionId(), item.outletId()))
+                .toList();
+    }
+
     public List<AuditEventSummaryResponse> listAuditEvents(AuditEventFilter filter) {
         return auditJdbcRepository.findAuditEvents(filter).stream()
                 .map(this::toAuditSummary)
                 .toList();
+    }
+
+    public AuditEventDetailResponse getAuditEvent(FernPrincipal principal, Long id, boolean includeDetails) {
+        AuditEventRow row = auditJdbcRepository.findAuditEventById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Audit event not found"));
+        if (!canAccess(principal, row.regionId(), row.outletId())) {
+            throw new ResourceNotFoundException("Audit event not found");
+        }
+        return toAuditDetail(row, includeDetails);
     }
 
     public AuditEventDetailResponse getAuditEvent(Long id, boolean includeDetails) {
@@ -38,10 +54,25 @@ public class AuditQueryService {
         return toAuditDetail(row, includeDetails);
     }
 
+    public List<SecurityEventSummaryResponse> listSecurityEvents(FernPrincipal principal, SecurityEventFilter filter) {
+        return listSecurityEvents(filter).stream()
+                .filter(item -> canAccessGlobal(principal))
+                .toList();
+    }
+
     public List<SecurityEventSummaryResponse> listSecurityEvents(SecurityEventFilter filter) {
         return auditJdbcRepository.findSecurityEvents(filter).stream()
                 .map(this::toSecuritySummary)
                 .toList();
+    }
+
+    public SecurityEventDetailResponse getSecurityEvent(FernPrincipal principal, Long id, boolean includeDetails) {
+        SecurityEventRow row = auditJdbcRepository.findSecurityEventById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Security event not found"));
+        if (!canAccessGlobal(principal)) {
+            throw new ResourceNotFoundException("Security event not found");
+        }
+        return toSecurityDetail(row, includeDetails);
     }
 
     public SecurityEventDetailResponse getSecurityEvent(Long id, boolean includeDetails) {
@@ -50,10 +81,25 @@ public class AuditQueryService {
         return toSecurityDetail(row, includeDetails);
     }
 
+    public List<RequestTraceSummaryResponse> listRequestTraces(FernPrincipal principal, RequestTraceFilter filter) {
+        return listRequestTraces(filter).stream()
+                .filter(item -> canAccess(principal, item.regionId(), item.outletId()))
+                .toList();
+    }
+
     public List<RequestTraceSummaryResponse> listRequestTraces(RequestTraceFilter filter) {
         return auditJdbcRepository.findRequestTraces(filter).stream()
                 .map(this::toRequestTraceSummary)
                 .toList();
+    }
+
+    public RequestTraceDetailResponse getRequestTrace(FernPrincipal principal, Long id, boolean includeDetails) {
+        RequestTraceRow row = auditJdbcRepository.findRequestTraceById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Request trace not found"));
+        if (!canAccess(principal, row.regionId(), row.outletId())) {
+            throw new ResourceNotFoundException("Request trace not found");
+        }
+        return toRequestTraceDetail(row, includeDetails);
     }
 
     public RequestTraceDetailResponse getRequestTrace(Long id, boolean includeDetails) {
@@ -220,5 +266,22 @@ public class AuditQueryService {
                 .filter(value -> value != null && !value.isBlank())
                 .reduce((left, right) -> left + " | " + right)
                 .orElse("");
+    }
+
+    private boolean canAccess(FernPrincipal principal, Long regionId, Long outletId) {
+        if (principal == null || principal.scopeRoots() == null) {
+            return false;
+        }
+        if (principal.scopeRoots().system()) {
+            return true;
+        }
+        if (outletId != null && principal.scopeRoots().outlets().contains(outletId)) {
+            return true;
+        }
+        return regionId != null && principal.scopeRoots().regions().contains(regionId);
+    }
+
+    private boolean canAccessGlobal(FernPrincipal principal) {
+        return principal != null && principal.scopeRoots() != null && principal.scopeRoots().system();
     }
 }

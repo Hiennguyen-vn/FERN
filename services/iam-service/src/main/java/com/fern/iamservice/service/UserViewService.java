@@ -2,6 +2,8 @@ package com.fern.iamservice.service;
 
 import com.fern.iamservice.domain.PermissionEntity;
 import com.fern.iamservice.domain.PermissionOverrideMode;
+import com.fern.iamservice.domain.RoleEntity;
+import com.fern.iamservice.domain.RoleStatus;
 import com.fern.iamservice.domain.UserPermissionOverrideEntity;
 import com.fern.iamservice.dto.EffectiveAccessResponse;
 import com.fern.iamservice.domain.UserAccountEntity;
@@ -66,7 +68,7 @@ public class UserViewService {
     @Transactional(readOnly = true)
     public Set<String> roleCodes(Long userId) {
         var roleIds = userRoleAssignmentRepository.findAllByUserId(userId).stream().map(assignment -> assignment.getRoleId()).toList();
-        return new LinkedHashSet<>(roleRepository.findAllById(roleIds).stream().map(role -> role.getCode()).toList());
+        return new LinkedHashSet<>(activeRolesById(roleIds).values().stream().map(RoleEntity::getCode).toList());
     }
 
     @Transactional(readOnly = true)
@@ -76,19 +78,21 @@ public class UserViewService {
 
     @Transactional(readOnly = true)
     public ScopeRoots scopeRoots(Long userId) {
-        List<Long> regions = userScopeAssignmentRepository.findAllByUserId(userId).stream()
+        var assignments = userScopeAssignmentRepository.findAllByUserId(userId);
+        boolean system = assignments.stream().anyMatch(assignment -> assignment.getScopeType() == ScopeType.SYSTEM);
+        List<Long> regions = assignments.stream()
                 .filter(assignment -> assignment.getScopeType() == ScopeType.REGION)
                 .map(assignment -> assignment.getScopeId())
                 .distinct()
                 .sorted()
                 .toList();
-        List<Long> outlets = userScopeAssignmentRepository.findAllByUserId(userId).stream()
+        List<Long> outlets = assignments.stream()
                 .filter(assignment -> assignment.getScopeType() == ScopeType.OUTLET)
                 .map(assignment -> assignment.getScopeId())
                 .distinct()
                 .sorted()
                 .toList();
-        return new ScopeRoots(regions, outlets);
+        return new ScopeRoots(system, regions, outlets);
     }
 
     @Transactional(readOnly = true)
@@ -112,26 +116,26 @@ public class UserViewService {
         Map<String, LinkedHashSet<String>> sources = new LinkedHashMap<>();
 
         var roleAssignments = userRoleAssignmentRepository.findAllByUserId(userId);
-        Map<Long, String> roleCodeById = roleRepository.findAllById(roleAssignments.stream()
-                        .map(assignment -> assignment.getRoleId())
-                        .toList()).stream()
-                .collect(Collectors.toMap(role -> role.getId(), role -> role.getCode()));
+        Map<Long, RoleEntity> activeRolesById = activeRolesById(roleAssignments.stream()
+                .map(assignment -> assignment.getRoleId())
+                .toList());
+        Map<Long, String> roleCodeById = activeRolesById.values().stream()
+                .collect(Collectors.toMap(RoleEntity::getId, RoleEntity::getCode));
 
         Set<String> rolePermissionCodes = new LinkedHashSet<>();
-        if (!roleAssignments.isEmpty()) {
-            var rolePermissionAssignments = rolePermissionRepository.findAllByRoleIdIn(roleAssignments.stream()
-                    .map(assignment -> assignment.getRoleId())
-                    .toList());
+        if (!activeRolesById.isEmpty()) {
+            var rolePermissionAssignments = rolePermissionRepository.findAllByRoleIdIn(activeRolesById.keySet());
             Map<Long, String> permissionCodeById = permissionRepository.findAllById(rolePermissionAssignments.stream()
                             .map(assignment -> assignment.getPermissionId())
                             .collect(Collectors.toSet())).stream()
                     .collect(Collectors.toMap(PermissionEntity::getId, PermissionEntity::getCode));
             rolePermissionAssignments.forEach(assignment -> {
+                String roleCode = roleCodeById.get(assignment.getRoleId());
                 String permissionCode = permissionCodeById.get(assignment.getPermissionId());
-                if (permissionCode != null) {
+                if (roleCode != null && permissionCode != null) {
                     rolePermissionCodes.add(permissionCode);
                     sources.computeIfAbsent(permissionCode, ignored -> new LinkedHashSet<>())
-                            .add("ROLE:" + roleCodeById.get(assignment.getRoleId()));
+                            .add("ROLE:" + roleCode);
                 }
             });
         }
@@ -188,5 +192,14 @@ public class UserViewService {
         return userPermissionOverrideRepository.findAllByUserId(userId).stream()
                 .filter(override -> override.getExpiresAt() == null || override.getExpiresAt().isAfter(clock.instant()))
                 .toList();
+    }
+
+    private Map<Long, RoleEntity> activeRolesById(List<Long> roleIds) {
+        if (roleIds.isEmpty()) {
+            return Map.of();
+        }
+        return roleRepository.findAllById(roleIds).stream()
+                .filter(role -> role.getStatus() == RoleStatus.ACTIVE)
+                .collect(Collectors.toMap(RoleEntity::getId, role -> role));
     }
 }

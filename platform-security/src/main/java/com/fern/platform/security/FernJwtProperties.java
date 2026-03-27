@@ -7,6 +7,7 @@ public class FernJwtProperties {
     private String secret;
     private long accessTokenTtlSeconds = 900;
     private long refreshTokenTtlSeconds = 604800;
+    private long serviceTokenTtlSeconds = 300;
 
     public String getSecret() {
         return secret;
@@ -30,5 +31,13 @@ public class FernJwtProperties {
 
     public void setRefreshTokenTtlSeconds(long refreshTokenTtlSeconds) {
         this.refreshTokenTtlSeconds = refreshTokenTtlSeconds;
+    }
+
+    public long getServiceTokenTtlSeconds() {
+        return serviceTokenTtlSeconds;
+    }
+
+    public void setServiceTokenTtlSeconds(long serviceTokenTtlSeconds) {
+        this.serviceTokenTtlSeconds = serviceTokenTtlSeconds;
     }
 }

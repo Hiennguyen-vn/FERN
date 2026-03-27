@@ -10,6 +10,27 @@ public record FernPrincipal(
         ScopeRoots scopeRoots,
         long policyVersion,
         long scopeVersion,
-        String jti
+        String jti,
+        FernPrincipalType principalType
 ) {
+    public FernPrincipal(
+            Long userId,
+            String username,
+            Set<String> roles,
+            Set<String> permissions,
+            ScopeRoots scopeRoots,
+            long policyVersion,
+            long scopeVersion,
+            String jti
+    ) {
+        this(userId, username, roles, permissions, scopeRoots, policyVersion, scopeVersion, jti, FernPrincipalType.USER);
+    }
+
+    public boolean isService() {
+        return principalType == FernPrincipalType.SERVICE;
+    }
+
+    public boolean isSystemScoped() {
+        return scopeRoots != null && scopeRoots.system();
+    }
 }

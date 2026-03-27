@@ -28,7 +28,7 @@ public class OrgScopeController {
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody ScopeExpansionRequest request
     ) {
-        orgAuthorizer.requirePermission(principal, "org.scope.resolve");
+        orgAuthorizer.requireServicePermission(principal, "org.scope.resolve");
         return scopeExpansionService.expand(request.regionIds(), request.outletIds());
     }
 }

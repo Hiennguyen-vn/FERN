@@ -25,7 +25,7 @@ public class UserScopeAssignmentEntity {
     @Column(nullable = false)
     private ScopeType scopeType;
 
-    @Column(nullable = false)
+    @Column
     private Long scopeId;
 
     @Column(nullable = false)
