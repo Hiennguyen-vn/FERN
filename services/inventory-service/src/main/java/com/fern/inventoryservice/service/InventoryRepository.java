@@ -3,6 +3,7 @@ package com.fern.inventoryservice.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.ConflictException;
+import com.fern.platform.common.ExceptionSummaries;
 import java.math.BigDecimal;
 import java.sql.Types;
 import java.time.Clock;
@@ -157,7 +158,7 @@ public class InventoryRepository {
                 UPDATE inventory.inbox_event
                 SET status = 'FAILED', error_message = :errorMessage
                 WHERE source_event_id = :sourceEventId
-                """, params("sourceEventId", sourceEventId, "errorMessage", exception.getMessage()));
+                """, params("sourceEventId", sourceEventId, "errorMessage", ExceptionSummaries.safeSummary(exception)));
     }
 
     Long findIdempotentResourceId(String operation, String idempotencyKey) {

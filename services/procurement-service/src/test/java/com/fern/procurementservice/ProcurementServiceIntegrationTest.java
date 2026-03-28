@@ -18,10 +18,16 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -334,7 +340,8 @@ class ProcurementServiceIntegrationTest {
                                   ]
                                 }
                                 """.formatted(supplierId)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Region does not match the outlet route"));
     }
 
     @Test
@@ -659,6 +666,207 @@ class ProcurementServiceIntegrationTest {
         assertThat(postedEventCount).isEqualTo(1);
     }
 
+    @Test
+    void shouldRejectCreatingGoodsReceiptFromApprovedPurchaseOrder() throws Exception {
+        Long supplierId = createActiveSupplier("SUP-007", "Approved Only Supplier");
+
+        String poJson = mockMvc.perform(post("/purchase-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "supplierId": %d,
+                                  "orderDate": "2026-03-27",
+                                  "expectedDeliveryDate": "2026-03-29",
+                                  "lines": [
+                                    {
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyOrdered": 5.0000,
+                                      "expectedUnitPrice": 12.50,
+                                      "taxPercent": 10.00
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long purchaseOrderId = readId(poJson);
+        Long poLineId = objectMapper.readTree(poJson).get("lines").get(0).get("id").asLong();
+
+        mockMvc.perform(post("/purchase-orders/{id}/submit", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/purchase-orders/{id}/approve", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+
+        mockMvc.perform(post("/goods-receipts")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "purchaseOrderId": %d,
+                                  "receiptTime": "2026-03-27T10:00:00Z",
+                                  "businessDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "purchaseOrderLineId": %d,
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyReceived": 3.0000,
+                                      "unitCost": 12.50
+                                    }
+                                  ]
+                                }
+                                """.formatted(purchaseOrderId, poLineId)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Goods receipts can only be created from ordered or partially received purchase orders"));
+    }
+
+    @Test
+    void shouldSerializeConcurrentSupplierPaymentsAgainstSameInvoice() throws Exception {
+        Long supplierId = createActiveSupplier("SUP-009", "Concurrent Payment Supplier");
+
+        String poJson = mockMvc.perform(post("/purchase-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "supplierId": %d,
+                                  "orderDate": "2026-03-27",
+                                  "expectedDeliveryDate": "2026-03-29",
+                                  "lines": [
+                                    {
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyOrdered": 5.0000,
+                                      "expectedUnitPrice": 12.50,
+                                      "taxPercent": 10.00
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long purchaseOrderId = readId(poJson);
+
+        mockMvc.perform(post("/purchase-orders/{id}/submit", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/purchase-orders/{id}/approve", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        String issuedPoJson = mockMvc.perform(post("/purchase-orders/{id}/issue", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long poLineId = objectMapper.readTree(issuedPoJson).get("lines").get(0).get("id").asLong();
+
+        String receiptJson = mockMvc.perform(post("/goods-receipts")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "purchaseOrderId": %d,
+                                  "receiptTime": "2026-03-27T10:00:00Z",
+                                  "businessDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "purchaseOrderLineId": %d,
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyReceived": 3.0000,
+                                      "unitCost": 12.50
+                                    }
+                                  ]
+                                }
+                                """.formatted(purchaseOrderId, poLineId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long goodsReceiptId = readId(receiptJson);
+
+        mockMvc.perform(post("/goods-receipts/{id}/receive", goodsReceiptId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        String postedReceiptJson = mockMvc.perform(post("/goods-receipts/{id}/post", goodsReceiptId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "gr-post-concurrency"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long goodsReceiptLineId = objectMapper.readTree(postedReceiptJson).get("lines").get(0).get("id").asLong();
+
+        String invoiceJson = mockMvc.perform(post("/supplier-invoices")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "supplierId": %d,
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "invoiceNumber": "INV-009",
+                                  "invoiceDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "lineType": "STOCK",
+                                      "goodsReceiptLineId": %d,
+                                      "description": "Milk delivery",
+                                      "qtyInvoiced": 3.0000,
+                                      "unitPrice": 12.50,
+                                      "taxPercent": 10.00,
+                                      "taxAmount": 3.75,
+                                      "lineTotal": 41.25
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId, goodsReceiptLineId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long supplierInvoiceId = readId(invoiceJson);
+
+        mockMvc.perform(post("/supplier-invoices/{id}/approve", supplierInvoiceId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Integer> first = executor.submit(() -> concurrentPaymentStatus(start, ready, supplierId, supplierInvoiceId, "supplier-pay-race-1"));
+            Future<Integer> second = executor.submit(() -> concurrentPaymentStatus(start, ready, supplierId, supplierInvoiceId, "supplier-pay-race-2"));
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            int firstStatus = first.get(10, TimeUnit.SECONDS);
+            int secondStatus = second.get(10, TimeUnit.SECONDS);
+
+            assertThat(List.of(firstStatus, secondStatus)).containsExactlyInAnyOrder(200, 409);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer paymentCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.supplier_payment
+                WHERE supplier_id = ?
+                """, Integer.class, supplierId);
+        BigDecimal allocatedTotal = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(allocated_amount), 0)
+                FROM procurement.supplier_payment_allocation
+                WHERE supplier_invoice_id = ?
+                """, BigDecimal.class, supplierInvoiceId);
+
+        assertThat(paymentCount).isEqualTo(1);
+        assertThat(allocatedTotal).isEqualByComparingTo("30.00");
+    }
+
     private Long createActiveSupplier(String supplierCode, String name) throws Exception {
         String supplierJson = mockMvc.perform(post("/suppliers")
                         .header("Authorization", bearer())
@@ -679,6 +887,39 @@ class ProcurementServiceIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
         return supplierId;
+    }
+
+    private Integer concurrentPaymentStatus(
+            CountDownLatch start,
+            CountDownLatch ready,
+            Long supplierId,
+            Long supplierInvoiceId,
+            String idempotencyKey
+    ) throws Exception {
+        ready.countDown();
+        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+        return mockMvc.perform(post("/supplier-payments")
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", idempotencyKey)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "supplierId": %d,
+                                  "currencyCode": "VND",
+                                  "paymentMethod": "BANK_TRANSFER",
+                                  "amount": 30.00,
+                                  "paymentTime": "2026-03-27T12:00:00Z",
+                                  "invoiceAllocations": [
+                                    {
+                                      "supplierInvoiceId": %d,
+                                      "allocatedAmount": 30.00
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId, supplierInvoiceId)))
+                .andReturn()
+                .getResponse()
+                .getStatus();
     }
 
     private static void ensureOrgServerStarted() {

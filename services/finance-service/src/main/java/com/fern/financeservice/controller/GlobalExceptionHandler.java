@@ -4,6 +4,7 @@ import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.ApiErrorResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
+import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.observability.CorrelationId;
@@ -65,7 +66,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiErrorResponse> handleOther(Exception exception, HttpServletRequest request) {
-        log.error("finance_unhandled_exception path={} message={}", request.getRequestURI(), exception.getMessage(), exception);
+        String sanitizedError = ExceptionSummaries.safeSummary(exception);
+        log.error(
+                "finance_unhandled_exception correlationId={} path={} exceptionType={}",
+                request.getHeader(CorrelationId.HEADER),
+                request.getRequestURI(),
+                exception.getClass().getName(),
+                exception
+        );
         if (request.getRequestURI() != null && request.getRequestURI().contains("/payroll-runs/")) {
             payrollRunFailureCounter.increment();
             operationalAlertPublisher.publish(
@@ -77,10 +85,10 @@ public class GlobalExceptionHandler {
                     null,
                     "HTTP_REQUEST",
                     request.getRequestURI(),
-                    Map.of("errorMessage", exception.getMessage(), "path", request.getRequestURI())
+                    Map.of("errorMessage", sanitizedError, "path", request.getRequestURI())
             );
         }
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", exception.getMessage(), request, Map.of());
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", ExceptionSummaries.unexpectedErrorMessage(), request, Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> build(

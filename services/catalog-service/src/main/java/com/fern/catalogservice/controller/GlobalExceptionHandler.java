@@ -3,6 +3,7 @@ package com.fern.catalogservice.controller;
 import com.fern.platform.common.ApiErrorResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
+import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.observability.CorrelationId;
@@ -10,6 +11,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -18,6 +21,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(ResourceNotFoundException.class)
     ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException exception, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, "resource_not_found", exception.getMessage(), request, Map.of());
@@ -51,7 +56,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiErrorResponse> handleOther(Exception exception, HttpServletRequest request) {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", exception.getMessage(), request, Map.of());
+        log.error(
+                "catalog_unhandled_exception correlationId={} path={} exceptionType={}",
+                request.getHeader(CorrelationId.HEADER),
+                request.getRequestURI(),
+                exception.getClass().getName(),
+                exception
+        );
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", ExceptionSummaries.unexpectedErrorMessage(), request, Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> build(

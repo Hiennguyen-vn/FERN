@@ -2,6 +2,7 @@ package com.fern.reportservice.controller;
 
 import com.fern.platform.common.ApiErrorResponse;
 import com.fern.platform.common.BadRequestException;
+import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.observability.CorrelationId;
@@ -49,8 +50,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiErrorResponse> handleOther(Exception exception, HttpServletRequest request) {
-        log.error("report_unhandled_exception path={} message={}", request.getRequestURI(), exception.getMessage(), exception);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", exception.getMessage(), request, Map.of());
+        log.error(
+                "report_unhandled_exception correlationId={} path={} exceptionType={}",
+                request.getHeader(CorrelationId.HEADER),
+                request.getRequestURI(),
+                exception.getClass().getName(),
+                exception
+        );
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", ExceptionSummaries.unexpectedErrorMessage(), request, Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> build(

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fern.platform.alerts.NoopOperationalAlertPublisher;
+import com.fern.platform.outbox.JdbcOutboxPublisherSupport;
 import com.fern.posservice.config.PosOutboxProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
@@ -51,8 +52,10 @@ class PosOutboxPublisherTest {
 
     @Test
     void shouldMarkEventPublishedAfterKafkaAck() {
-        PosOutboxPublisher.PendingEvent event = new PosOutboxPublisher.PendingEvent(
+        JdbcOutboxPublisherSupport.ClaimedOutboxEvent event = new JdbcOutboxPublisherSupport.ClaimedOutboxEvent(
                 UUID.randomUUID().toString(),
+                "SALE_ORDER",
+                "10",
                 PosEventTypes.SALE_COMPLETED,
                 "101",
                 "{\"id\":10}",
@@ -67,13 +70,15 @@ class PosOutboxPublisherTest {
 
         ArgumentCaptor<MapSqlParameterSource> parameters = ArgumentCaptor.forClass(MapSqlParameterSource.class);
         verify(jdbcTemplate).update(anyString(), parameters.capture());
-        assertThat(parameters.getValue().getValue("status")).isEqualTo(PosOutboxStatus.PUBLISHED.name());
+        assertThat(parameters.getValue().getValue("publishedStatus")).isEqualTo(PosOutboxStatus.PUBLISHED.name());
     }
 
     @Test
     void shouldMarkEventFailedAfterMaxAttempts() {
-        PosOutboxPublisher.PendingEvent event = new PosOutboxPublisher.PendingEvent(
+        JdbcOutboxPublisherSupport.ClaimedOutboxEvent event = new JdbcOutboxPublisherSupport.ClaimedOutboxEvent(
                 UUID.randomUUID().toString(),
+                "SALE_ORDER",
+                "10",
                 PosEventTypes.SALE_COMPLETED,
                 "101",
                 "{\"id\":10}",

@@ -1,12 +1,15 @@
 package com.fern.orgservice.service;
 
-import com.fern.orgservice.repository.OrgOutboxRepository;
+import com.fern.platform.common.ExceptionSummaries;
+import com.fern.platform.outbox.JdbcOutboxPublisherSupport;
+import java.time.Duration;
 import java.time.Clock;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,38 +18,58 @@ import org.slf4j.LoggerFactory;
 public class OrgOutboxPublisher {
     private static final Logger log = LoggerFactory.getLogger(OrgOutboxPublisher.class);
 
-    private final OrgOutboxRepository outboxRepository;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final Clock clock;
+    private final int maxAttempts;
+    private final Duration reclaimAfter;
 
-    public OrgOutboxPublisher(OrgOutboxRepository outboxRepository, KafkaTemplate<String, String> kafkaTemplate, Clock clock) {
-        this.outboxRepository = outboxRepository;
+    public OrgOutboxPublisher(
+            NamedParameterJdbcTemplate jdbcTemplate,
+            KafkaTemplate<String, String> kafkaTemplate,
+            Clock clock,
+            @Value("${fern.outbox.max-attempts:5}") int maxAttempts,
+            @Value("${fern.outbox.reclaim-after:PT1M}") Duration reclaimAfter
+    ) {
+        this.jdbcTemplate = jdbcTemplate;
         this.kafkaTemplate = kafkaTemplate;
         this.clock = clock;
+        this.maxAttempts = maxAttempts;
+        this.reclaimAfter = reclaimAfter;
     }
 
     @Scheduled(fixedDelayString = "${fern.outbox.publish-delay-ms:5000}")
-    @Transactional
     public void publishPending() {
-        for (var event : outboxRepository.findTop20ByStatusOrderByCreatedAtAsc("PENDING")) {
+        for (JdbcOutboxPublisherSupport.ClaimedOutboxEvent event : JdbcOutboxPublisherSupport.claimBatch(
+                jdbcTemplate,
+                "org.outbox_event",
+                clock.instant(),
+                reclaimAfter,
+                maxAttempts
+        )) {
             try {
-                kafkaTemplate.send(event.getEventType(), event.getPartitionKey(), event.getPayload()).join();
+                kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()).join();
+                JdbcOutboxPublisherSupport.markPublished(jdbcTemplate, "org.outbox_event", event.id(), clock.instant());
             } catch (RuntimeException exception) {
-                log.warn(
-                        "org_outbox_publish_failed eventId={} eventType={} reason={}",
-                        event.getId(),
-                        event.getEventType(),
-                        failureReason(exception)
+                String failureReason = ExceptionSummaries.safeSummary(exception);
+                JdbcOutboxPublisherSupport.FailureOutcome outcome = JdbcOutboxPublisherSupport.markFailed(
+                        jdbcTemplate,
+                        "org.outbox_event",
+                        event,
+                        clock.instant(),
+                        maxAttempts,
+                        failureReason
                 );
-                throw exception;
+                log.warn(
+                        "org_outbox_publish_failed eventId={} eventType={} retryCount={} terminal={} reason={}",
+                        event.id(),
+                        event.eventType(),
+                        outcome.retryCount(),
+                        outcome.terminalFailure(),
+                        outcome.failureReason(),
+                        exception
+                );
             }
-            event.setStatus("PUBLISHED");
-            event.setPublishedAt(clock.instant());
         }
-    }
-
-    private String failureReason(RuntimeException exception) {
-        Throwable cause = exception.getCause();
-        return cause == null ? exception.toString() : cause.toString();
     }
 }

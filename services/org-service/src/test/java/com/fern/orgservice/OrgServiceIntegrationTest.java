@@ -1,15 +1,29 @@
 package com.fern.orgservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
+import com.fern.orgservice.service.OrgOutboxPublisher;
+import java.time.Duration;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +32,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -55,6 +71,7 @@ class OrgServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.execute("DELETE FROM org.outbox_event");
         redisTemplate.delete("fern:versions:scope");
         token = issueToken(1L);
     }
@@ -107,6 +124,62 @@ class OrgServiceIntegrationTest {
 
         String version = redisTemplate.opsForValue().get("fern:versions:scope");
         assertThat(version).isNotBlank();
+    }
+
+    @Test
+    void shouldNotClaimSameOutboxEventAcrossConcurrentPublishers() throws Exception {
+        String eventId = UUID.randomUUID().toString();
+        jdbcTemplate.update("""
+                INSERT INTO org.outbox_event (
+                    id, aggregate_type, aggregate_id, event_type, partition_key, payload, status, created_at
+                ) VALUES (
+                    CAST(? AS uuid), 'region', '10', 'org.region.changed', '10', ?, 'PENDING', CURRENT_TIMESTAMP
+                )
+                """, eventId, "{\"id\":10}");
+
+        KafkaTemplate<String, String> kafkaTemplate = mock(KafkaTemplate.class);
+        CompletableFuture<Object> firstSend = new CompletableFuture<>();
+        CountDownLatch sendStarted = new CountDownLatch(1);
+        when(kafkaTemplate.send(anyString(), anyString(), anyString())).thenAnswer(invocation -> {
+            sendStarted.countDown();
+            return firstSend;
+        });
+
+        OrgOutboxPublisher firstPublisher = new OrgOutboxPublisher(
+                new NamedParameterJdbcTemplate(jdbcTemplate),
+                kafkaTemplate,
+                Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC),
+                3,
+                Duration.ofMinutes(1)
+        );
+        OrgOutboxPublisher secondPublisher = new OrgOutboxPublisher(
+                new NamedParameterJdbcTemplate(jdbcTemplate),
+                kafkaTemplate,
+                Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC),
+                3,
+                Duration.ofMinutes(1)
+        );
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> firstRun = executor.submit(firstPublisher::publishPending);
+            assertThat(sendStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+            secondPublisher.publishPending();
+            verify(kafkaTemplate, times(1)).send(anyString(), anyString(), anyString());
+
+            firstSend.complete(null);
+            firstRun.get(5, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        String status = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM org.outbox_event
+                WHERE id = CAST(? AS uuid)
+                """, String.class, eventId);
+        assertThat(status).isEqualTo("PUBLISHED");
     }
 
     private String issueToken(long scopeVersion) {

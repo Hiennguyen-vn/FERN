@@ -1,6 +1,7 @@
 package com.fern.inventoryservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -625,6 +626,40 @@ class InventoryServiceIntegrationTest {
                 .andExpect(jsonPath("$.hasMore").value(false))
                 .andExpect(jsonPath("$.items[0].txnType").value("SALE_USAGE"))
                 .andExpect(jsonPath("$.items[0].sourceReferenceId").value("5001"));
+    }
+
+    @Test
+    void shouldSanitizeInboxFailureMessage() {
+        PosSaleCompletedEvent invalidEvent = new PosSaleCompletedEvent(
+                "sale-event-failed",
+                "pos.sale.completed",
+                Instant.parse("2026-03-27T10:30:00Z"),
+                "pos-service",
+                "corr-sale-failed",
+                "idem-sale-failed",
+                5002L,
+                7002L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 27),
+                Instant.parse("2026-03-27T10:30:00Z"),
+                1L,
+                null,
+                List.of(),
+                java.util.Map.of(),
+                List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("1.0000")))
+        );
+
+        assertThatThrownBy(() -> inventoryEventConsumerService.consumeSaleCompleted(invalidEvent))
+                .isInstanceOf(com.fern.platform.common.BadRequestException.class)
+                .hasMessage("Missing reservationId on pos.sale.completed");
+
+        String errorMessage = jdbcTemplate.queryForObject("""
+                SELECT error_message
+                FROM inventory.inbox_event
+                WHERE source_event_id = 'sale-event-failed'
+                """, String.class);
+        assertThat(errorMessage).isEqualTo("BadRequestException");
     }
 
     @Test

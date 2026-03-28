@@ -1,9 +1,10 @@
 package com.fern.procurementservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.observability.CorrelationId;
 import com.fern.procurementservice.dto.ProcurementCommands.CreateGoodsReceiptRequest;
 import com.fern.procurementservice.dto.ProcurementResponses.GoodsReceiptResponse;
-import com.fern.procurementservice.service.ProcurementService;
+import com.fern.procurementservice.service.PurchaseFlowService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,10 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/goods-receipts")
 public class GoodsReceiptController {
-    private final ProcurementService procurementService;
+    private final PurchaseFlowService purchaseFlowService;
 
-    public GoodsReceiptController(ProcurementService procurementService) {
-        this.procurementService = procurementService;
+    public GoodsReceiptController(PurchaseFlowService purchaseFlowService) {
+        this.purchaseFlowService = purchaseFlowService;
     }
 
     @PostMapping
@@ -28,7 +29,7 @@ public class GoodsReceiptController {
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody CreateGoodsReceiptRequest request
     ) {
-        return procurementService.createGoodsReceipt(principal, request);
+        return purchaseFlowService.createGoodsReceipt(principal, request);
     }
 
     @GetMapping("/{id}")
@@ -36,7 +37,7 @@ public class GoodsReceiptController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return procurementService.getGoodsReceipt(principal, id);
+        return purchaseFlowService.getGoodsReceipt(principal, id);
     }
 
     @PostMapping("/{id}/receive")
@@ -44,16 +45,17 @@ public class GoodsReceiptController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return procurementService.receiveGoodsReceipt(principal, id);
+        return purchaseFlowService.receiveGoodsReceipt(principal, id);
     }
 
     @PostMapping("/{id}/post")
     public GoodsReceiptResponse postGoodsReceipt(
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id,
-            @RequestHeader("Idempotency-Key") String idempotencyKey
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId
     ) {
-        return procurementService.postGoodsReceipt(principal, id, idempotencyKey);
+        return purchaseFlowService.postGoodsReceipt(principal, id, idempotencyKey, correlationId);
     }
 
     @PostMapping("/{id}/cancel")
@@ -61,6 +63,6 @@ public class GoodsReceiptController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return procurementService.cancelGoodsReceipt(principal, id);
+        return purchaseFlowService.cancelGoodsReceipt(principal, id);
     }
 }

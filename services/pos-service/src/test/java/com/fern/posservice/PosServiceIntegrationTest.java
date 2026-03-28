@@ -2,11 +2,15 @@ package com.fern.posservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.common.FernPrincipalType;
@@ -22,16 +27,27 @@ import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
+import com.fern.posservice.config.PosOutboxProperties;
+import com.fern.posservice.service.PosOutboxPublisher;
 import com.fern.posservice.service.PosStore;
 import com.sun.net.httpserver.HttpServer;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +59,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -912,6 +930,69 @@ class PosServiceIntegrationTest {
                 eq(orderId.toString()),
                 anyMap()
         );
+    }
+
+    @Test
+    void shouldNotClaimSameOutboxEventAcrossConcurrentPublishers() throws Exception {
+        String eventId = UUID.randomUUID().toString();
+        jdbcTemplate.update("""
+                INSERT INTO pos.outbox_event (
+                    id, aggregate_type, aggregate_id, event_type, partition_key, payload, status, created_at
+                ) VALUES (
+                    CAST(? AS uuid), 'SALE_ORDER', '10', 'pos.sale.completed', '10', CAST(? AS jsonb), 'PENDING', CURRENT_TIMESTAMP
+                )
+                """, eventId, "{\"id\":10}");
+
+        KafkaTemplate<String, String> kafkaTemplate = mock(KafkaTemplate.class);
+        CompletableFuture<Object> firstSend = new CompletableFuture<>();
+        CountDownLatch sendStarted = new CountDownLatch(1);
+        when(kafkaTemplate.send(anyString(), anyString(), anyString())).thenAnswer(invocation -> {
+            sendStarted.countDown();
+            return firstSend;
+        });
+
+        PosOutboxProperties properties = new PosOutboxProperties();
+        properties.setMaxAttempts(3);
+        properties.setReclaimAfter(Duration.ofMinutes(1));
+        NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+        Clock fixedClock = Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC);
+        PosOutboxPublisher firstPublisher = new PosOutboxPublisher(
+                namedJdbcTemplate,
+                kafkaTemplate,
+                properties,
+                fixedClock,
+                new NoopOperationalAlertPublisher(),
+                new SimpleMeterRegistry()
+        );
+        PosOutboxPublisher secondPublisher = new PosOutboxPublisher(
+                namedJdbcTemplate,
+                kafkaTemplate,
+                properties,
+                fixedClock,
+                new NoopOperationalAlertPublisher(),
+                new SimpleMeterRegistry()
+        );
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<?> firstRun = executor.submit(firstPublisher::publishPending);
+            assertThat(sendStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+            secondPublisher.publishPending();
+            verify(kafkaTemplate, times(1)).send(anyString(), anyString(), anyString());
+
+            firstSend.complete(null);
+            firstRun.get(5, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        String status = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM pos.outbox_event
+                WHERE id = CAST(? AS uuid)
+                """, String.class, eventId);
+        assertThat(status).isEqualTo("PUBLISHED");
     }
 
     private Long readId(String json) throws Exception {

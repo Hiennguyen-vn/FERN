@@ -3,7 +3,7 @@ package com.fern.procurementservice.controller;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.procurementservice.dto.ProcurementCommands.SupplierUpsertRequest;
 import com.fern.procurementservice.dto.ProcurementResponses.SupplierResponse;
-import com.fern.procurementservice.service.ProcurementService;
+import com.fern.procurementservice.service.SupplierService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,15 +18,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/suppliers")
 public class SupplierController {
-    private final ProcurementService procurementService;
+    private final SupplierService supplierService;
 
-    public SupplierController(ProcurementService procurementService) {
-        this.procurementService = procurementService;
+    public SupplierController(SupplierService supplierService) {
+        this.supplierService = supplierService;
     }
 
     @GetMapping
     public List<SupplierResponse> listSuppliers(@AuthenticationPrincipal FernPrincipal principal) {
-        return procurementService.listSuppliers(principal);
+        return supplierService.listSuppliers(principal);
     }
 
     @PostMapping
@@ -34,7 +34,7 @@ public class SupplierController {
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody SupplierUpsertRequest request
     ) {
-        return procurementService.createSupplier(principal, request);
+        return supplierService.createSupplier(principal, request);
     }
 
     @PatchMapping("/{id}")
@@ -43,7 +43,7 @@ public class SupplierController {
             @PathVariable Long id,
             @Valid @RequestBody SupplierUpsertRequest request
     ) {
-        return procurementService.updateSupplier(principal, id, request);
+        return supplierService.updateSupplier(principal, id, request);
     }
 
     @PostMapping("/{id}/activate")
@@ -51,6 +51,6 @@ public class SupplierController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return procurementService.activateSupplier(principal, id);
+        return supplierService.activateSupplier(principal, id);
     }
 }

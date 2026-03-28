@@ -3,6 +3,7 @@ package com.fern.inventoryservice.controller;
 import com.fern.platform.common.ApiErrorResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
+import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.observability.CorrelationId;
@@ -62,13 +63,19 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiErrorResponse> handleOther(Exception exception, HttpServletRequest request) {
-        log.error("inventory_unhandled_exception path={} message={}", request.getRequestURI(), exception.getMessage(), exception);
+        log.error(
+                "inventory_unhandled_exception correlationId={} path={} exceptionType={}",
+                request.getHeader(CorrelationId.HEADER),
+                request.getRequestURI(),
+                exception.getClass().getName(),
+                exception
+        );
         if (request.getRequestURI() != null
                 && request.getRequestURI().contains("/stock-adjustments/")
                 && request.getRequestURI().endsWith("/post")) {
             inventoryAdjustmentFailureCounter.increment();
         }
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", exception.getMessage(), request, Map.of());
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", ExceptionSummaries.unexpectedErrorMessage(), request, Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> build(
