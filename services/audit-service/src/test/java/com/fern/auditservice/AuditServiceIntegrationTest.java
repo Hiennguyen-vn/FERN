@@ -167,4 +167,103 @@ class AuditServiceIntegrationTest {
                 .orElseThrow();
         assertThat(trace.id()).isNotNull();
     }
+
+    @Test
+    void shouldRestrictAuditListsByPrincipalScope() {
+        auditIngestionService.ingestAuditEvent(new AuditEvent(
+                "audit-scope-1",
+                "inventory.adjustment.posted",
+                Instant.parse("2026-03-27T11:00:00Z"),
+                "inventory-service",
+                "corr-scope-1",
+                10L,
+                1L,
+                11L,
+                "POST",
+                "STOCK_ADJUSTMENT",
+                "1001",
+                "SUCCESS",
+                null,
+                null,
+                "idem-audit-scope-1",
+                Map.of("module", "inventory")
+        ));
+        auditIngestionService.ingestAuditEvent(new AuditEvent(
+                "audit-scope-2",
+                "inventory.adjustment.posted",
+                Instant.parse("2026-03-27T11:01:00Z"),
+                "inventory-service",
+                "corr-scope-2",
+                10L,
+                2L,
+                22L,
+                "POST",
+                "STOCK_ADJUSTMENT",
+                "1002",
+                "SUCCESS",
+                null,
+                null,
+                "idem-audit-scope-2",
+                Map.of("module", "inventory")
+        ));
+        auditIngestionService.ingestRequestTrace(new RequestTraceEvent(
+                "trace-scope-1",
+                "request.trace.recorded",
+                Instant.parse("2026-03-27T11:02:00Z"),
+                "api-gateway",
+                "corr-trace-scope-1",
+                "req-scope-1",
+                "/inventory/stock-adjustments",
+                "POST",
+                201,
+                18L,
+                77L,
+                1L,
+                11L,
+                "idem-trace-scope-1",
+                Map.of("module", "gateway")
+        ));
+        auditIngestionService.ingestRequestTrace(new RequestTraceEvent(
+                "trace-scope-2",
+                "request.trace.recorded",
+                Instant.parse("2026-03-27T11:03:00Z"),
+                "api-gateway",
+                "corr-trace-scope-2",
+                "req-scope-2",
+                "/inventory/stock-adjustments",
+                "POST",
+                201,
+                19L,
+                88L,
+                2L,
+                22L,
+                "idem-trace-scope-2",
+                Map.of("module", "gateway")
+        ));
+
+        FernPrincipal regionOnePrincipal = new FernPrincipal(
+                99L,
+                "region-one-auditor",
+                java.util.Set.of("regional_auditor"),
+                java.util.Set.of("audit.read"),
+                new ScopeRoots(java.util.List.of(1L), java.util.List.of()),
+                1L,
+                1L,
+                "audit-scope-jti"
+        );
+
+        var auditEvents = auditQueryService.listAuditEvents(regionOnePrincipal, new AuditEventFilter(
+                null, null, null, null, null, null, null, null, null, null, null, null, 50
+        ));
+        var requestTraces = auditQueryService.listRequestTraces(regionOnePrincipal, new com.fern.auditservice.repository.RequestTraceFilter(
+                null, null, null, null, null, null, null, null, null, null, null, 50
+        ));
+
+        assertThat(auditEvents).extracting(item -> item.sourceEventId())
+                .contains("audit-scope-1")
+                .doesNotContain("audit-scope-2");
+        assertThat(requestTraces).extracting(item -> item.sourceEventId())
+                .contains("trace-scope-1")
+                .doesNotContain("trace-scope-2");
+    }
 }

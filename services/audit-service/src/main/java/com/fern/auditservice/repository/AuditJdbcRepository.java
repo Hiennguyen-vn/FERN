@@ -220,7 +220,11 @@ public class AuditJdbcRepository {
     }
 
     public List<AuditEventRow> findAuditEvents(AuditEventFilter filter) {
-        QueryParts query = auditEventQuery(filter);
+        return findAuditEvents(filter, AuditAccessScope.unrestricted());
+    }
+
+    public List<AuditEventRow> findAuditEvents(AuditEventFilter filter, AuditAccessScope accessScope) {
+        QueryParts query = auditEventQuery(filter, accessScope);
         return jdbcTemplate.query(query.sql(), query.params(), (resultSet, rowNum) -> mapAuditEvent(resultSet));
     }
 
@@ -280,7 +284,11 @@ public class AuditJdbcRepository {
     }
 
     public List<RequestTraceRow> findRequestTraces(RequestTraceFilter filter) {
-        QueryParts query = requestTraceQuery(filter);
+        return findRequestTraces(filter, AuditAccessScope.unrestricted());
+    }
+
+    public List<RequestTraceRow> findRequestTraces(RequestTraceFilter filter, AuditAccessScope accessScope) {
+        QueryParts query = requestTraceQuery(filter, accessScope);
         return jdbcTemplate.query(query.sql(), query.params(), (resultSet, rowNum) -> mapRequestTrace(resultSet));
     }
 
@@ -310,7 +318,7 @@ public class AuditJdbcRepository {
                 """.formatted(REQUEST_TRACE_TABLE), new MapSqlParameterSource("id", id), this::mapRequestTrace);
     }
 
-    private QueryParts auditEventQuery(AuditEventFilter filter) {
+    private QueryParts auditEventQuery(AuditEventFilter filter, AuditAccessScope accessScope) {
         List<String> conditions = new ArrayList<>();
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("limit", sanitizeLimit(filter.limit()));
         addCommonConditions(
@@ -325,6 +333,7 @@ public class AuditJdbcRepository {
                 filter.outletId(),
                 filter.correlationId()
         );
+        addAccessScopeConditions(conditions, params, accessScope, "region_id", "outlet_id");
         if (hasText(filter.action())) {
             conditions.add("action = :action");
             params.addValue("action", filter.action());
@@ -418,7 +427,7 @@ public class AuditJdbcRepository {
                 """.formatted(SECURITY_EVENT_TABLE, whereClause(conditions)), params);
     }
 
-    private QueryParts requestTraceQuery(RequestTraceFilter filter) {
+    private QueryParts requestTraceQuery(RequestTraceFilter filter, AuditAccessScope accessScope) {
         List<String> conditions = new ArrayList<>();
         MapSqlParameterSource params = new MapSqlParameterSource().addValue("limit", sanitizeLimit(filter.limit()));
         addCommonConditions(
@@ -433,6 +442,7 @@ public class AuditJdbcRepository {
                 filter.outletId(),
                 filter.correlationId()
         );
+        addAccessScopeConditions(conditions, params, accessScope, "region_id", "outlet_id");
         if (hasText(filter.endpoint())) {
             conditions.add("endpoint = :endpoint");
             params.addValue("endpoint", filter.endpoint());
@@ -517,6 +527,37 @@ public class AuditJdbcRepository {
             conditions.add("correlation_id = :correlationId");
             params.addValue("correlationId", correlationId);
         }
+    }
+
+    private void addAccessScopeConditions(
+            List<String> conditions,
+            MapSqlParameterSource params,
+            AuditAccessScope accessScope,
+            String regionColumn,
+            String outletColumn
+    ) {
+        if (accessScope == null || accessScope.system()) {
+            return;
+        }
+        boolean hasRegions = !accessScope.regions().isEmpty();
+        boolean hasOutlets = !accessScope.outlets().isEmpty();
+        if (!hasRegions && !hasOutlets) {
+            conditions.add("1 = 0");
+            return;
+        }
+        if (hasRegions && hasOutlets) {
+            conditions.add("(" + outletColumn + " IN (:scopeOutlets) OR " + regionColumn + " IN (:scopeRegions))");
+            params.addValue("scopeOutlets", accessScope.outlets());
+            params.addValue("scopeRegions", accessScope.regions());
+            return;
+        }
+        if (hasOutlets) {
+            conditions.add(outletColumn + " IN (:scopeOutlets)");
+            params.addValue("scopeOutlets", accessScope.outlets());
+            return;
+        }
+        conditions.add(regionColumn + " IN (:scopeRegions)");
+        params.addValue("scopeRegions", accessScope.regions());
     }
 
     private String whereClause(List<String> conditions) {

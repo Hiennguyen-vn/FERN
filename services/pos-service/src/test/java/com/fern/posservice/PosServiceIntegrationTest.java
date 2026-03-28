@@ -533,6 +533,67 @@ class PosServiceIntegrationTest {
     }
 
     @Test
+    void shouldCompleteOrderUsingStoredPricingWhenCatalogMenuTimesOut() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "TAKEAWAY",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalAmount").value(55.00))
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-complete-stored-pricing")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 55.00
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+
+        delayCatalogMenuResponse = true;
+        try {
+            mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
+                            .header("Authorization", bearer()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("COMPLETED"))
+                    .andExpect(jsonPath("$.totalAmount").value(55.00));
+        } finally {
+            delayCatalogMenuResponse = false;
+        }
+
+        assertThat(recipeBatchRequestCount).isEqualTo(1);
+    }
+
+    @Test
     void shouldReturnExistingOpenSessionForSecondOpenRequest() throws Exception {
         String firstResponse = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())

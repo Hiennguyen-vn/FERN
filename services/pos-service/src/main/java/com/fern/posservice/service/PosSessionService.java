@@ -13,6 +13,7 @@ import java.util.List;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class PosSessionService {
@@ -22,6 +23,7 @@ public class PosSessionService {
     private final PosOrgClient posOrgClient;
     private final PosReferenceCodeGenerator codeGenerator;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     public PosSessionService(
             NamedParameterJdbcTemplate jdbcTemplate,
@@ -29,7 +31,8 @@ public class PosSessionService {
             PosStore store,
             PosOrgClient posOrgClient,
             PosReferenceCodeGenerator codeGenerator,
-            Clock clock
+            Clock clock,
+            TransactionTemplate transactionTemplate
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.posAuthorizer = posAuthorizer;
@@ -37,15 +40,23 @@ public class PosSessionService {
         this.posOrgClient = posOrgClient;
         this.codeGenerator = codeGenerator;
         this.clock = clock;
+        this.transactionTemplate = transactionTemplate;
     }
 
-    @Transactional
     public PosSessionResponse openSession(FernPrincipal principal, OpenSessionRequest request) {
         posAuthorizer.requireRoutePermission(principal, request.regionId(), request.outletId(), PermissionCodes.POS_SESSION_OPEN);
         PosOrgClient.OutletRoute outlet = posOrgClient.requireOutlet(request.outletId());
         if (!outlet.regionId().equals(request.regionId())) {
             throw new ConflictException("Outlet route does not match requested region");
         }
+        return transactionTemplate.execute(status -> openSessionTx(principal, request, outlet));
+    }
+
+    private PosSessionResponse openSessionTx(
+            FernPrincipal principal,
+            OpenSessionRequest request,
+            PosOrgClient.OutletRoute outlet
+    ) {
         lockOpenSessionScope(request.outletId());
         Long existingOpenSessionId = findOpenSessionId(request.outletId(), request.terminalId());
         if (existingOpenSessionId != null) {

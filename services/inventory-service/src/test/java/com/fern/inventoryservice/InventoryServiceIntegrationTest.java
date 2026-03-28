@@ -32,6 +32,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -733,8 +738,100 @@ class InventoryServiceIntegrationTest {
         assertThat(reservation.expiresAt()).isBeforeOrEqualTo(after.plusSeconds(60));
     }
 
+    @Test
+    void shouldRejectReserveSaleFromUserPrincipalEvenWithPermission() {
+        FernPrincipal userPrincipal = new FernPrincipal(
+                1L,
+                "inventory-user",
+                Set.of("outlet_manager"),
+                Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE),
+                new ScopeRoots(List.of(1L), List.of(101L)),
+                1L,
+                1L,
+                "inventory-user-jti",
+                FernPrincipalType.USER
+        );
+
+        assertThatThrownBy(() -> stockReservationService.reserveSale(
+                userPrincipal,
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        101L,
+                        LocalDate.of(2026, 3, 27),
+                        5101L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("1.0000")))
+                )
+        ))
+                .isInstanceOf(com.fern.platform.common.ForbiddenException.class)
+                .hasMessage("Service principal is required");
+    }
+
+    @Test
+    void shouldPreventConcurrentReservationsFromOversellingStock() throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<String> first = executor.submit(() -> concurrentReservationOutcome(start, ready, 5201L));
+            Future<String> second = executor.submit(() -> concurrentReservationOutcome(start, ready, 5202L));
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            String firstOutcome = first.get(10, TimeUnit.SECONDS);
+            String secondOutcome = second.get(10, TimeUnit.SECONDS);
+
+            assertThat(List.of(firstOutcome, secondOutcome)).containsExactlyInAnyOrder("RESERVED", "CONFLICT");
+        } finally {
+            executor.shutdownNow();
+        }
+
+        BigDecimal qtyReserved = jdbcTemplate.queryForObject("""
+                SELECT qty_reserved
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        BigDecimal qtyAvailable = jdbcTemplate.queryForObject("""
+                SELECT qty_available
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        Integer reservationCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.stock_reservation
+                WHERE source_order_id IN (5201, 5202)
+                """, Integer.class);
+
+        assertThat(qtyReserved).isEqualByComparingTo("15.0000");
+        assertThat(qtyAvailable).isEqualByComparingTo("5.0000");
+        assertThat(reservationCount).isEqualTo(1);
+    }
+
     private String bearer() {
         return "Bearer " + token;
+    }
+
+    private String concurrentReservationOutcome(
+            CountDownLatch start,
+            CountDownLatch ready,
+            Long sourceOrderId
+    ) throws Exception {
+        ready.countDown();
+        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+        try {
+            stockReservationService.reserveSale(
+                    servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                    new com.fern.platform.contracts.SaleReservationRequest(
+                            101L,
+                            LocalDate.of(2026, 3, 27),
+                            sourceOrderId,
+                            List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("15.0000")))
+                    )
+            );
+            return "RESERVED";
+        } catch (com.fern.platform.common.ConflictException exception) {
+            assertThat(exception.getMessage()).isEqualTo("Insufficient available stock for ingredient 200");
+            return "CONFLICT";
+        }
     }
 
     private FernPrincipal servicePrincipal(Set<String> permissions) {

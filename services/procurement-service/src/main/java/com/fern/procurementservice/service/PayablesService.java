@@ -50,19 +50,18 @@ public class PayablesService {
 
     public SupplierInvoiceResponse createSupplierInvoice(FernPrincipal principal, CreateSupplierInvoiceRequest request) {
         procurementAuthorizer.requireRegionPermission(principal, request.regionId(), PermissionCodes.PROCUREMENT_INVOICE_REVIEW);
-        SupplierRecord supplier = requireActiveApprovedSupplier(request.supplierId());
         ProcurementOrgClient.OutletRoute outlet = procurementOrgClient.requireOutlet(request.outletId());
         if (!outlet.regionId().equals(request.regionId())) {
             throw new ConflictException("Outlet route does not match requested region");
         }
-        return transactionTemplate.execute(status -> createSupplierInvoiceTx(principal, request, supplier));
+        return transactionTemplate.execute(status -> createSupplierInvoiceTx(principal, request));
     }
 
     private SupplierInvoiceResponse createSupplierInvoiceTx(
             FernPrincipal principal,
-            CreateSupplierInvoiceRequest request,
-            SupplierRecord supplier
+            CreateSupplierInvoiceRequest request
     ) {
+        SupplierRecord supplier = requireActiveApprovedSupplier(request.supplierId());
         BigDecimal subtotal = request.lines().stream()
                 .map(line -> line.lineTotal().subtract(line.taxAmount() == null ? BigDecimal.ZERO : line.taxAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

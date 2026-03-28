@@ -13,7 +13,6 @@ import com.fern.platform.contracts.SalePaymentSnapshot;
 import com.fern.platform.contracts.SaleReservationResponse;
 import com.fern.posservice.dto.PosCommands.AddPaymentRequest;
 import com.fern.posservice.dto.PosCommands.CreateSaleOrderRequest;
-import com.fern.posservice.dto.PosCommands.OrderLineInput;
 import com.fern.posservice.dto.PosCommands.UpdateSaleOrderRequest;
 import com.fern.posservice.dto.PosResponses.SaleOrderLineResponse;
 import com.fern.posservice.dto.PosResponses.SaleOrderResponse;
@@ -250,12 +249,8 @@ public class PosOrderService {
             throw new ConflictException("Order cannot be completed until payment covers the full total");
         }
         SessionRecord session = store.requireSession(order.posSessionId());
-        PricingSnapshot pricingSnapshot = pricingService.resolvePricingSnapshot(
-                principal,
-                order.outletId(),
-                session.businessDate(),
-                toOrderLineInputs(store.queryOrderLines(id))
-        );
+        List<SaleOrderLineResponse> orderLines = store.queryOrderLines(id);
+        PricingSnapshot pricingSnapshot = pricingSnapshotFromStoredOrder(order, orderLines);
         List<RecipeSnapshot> recipeSnapshots = pricingService.resolveRecipeSnapshots(principal, pricingSnapshot.lines(), session.businessDate());
         List<RecipeUsageItem> usageItems = pricingService.flattenUsage(pricingSnapshot.lines(), recipeSnapshots);
         SaleReservationResponse reservation = inventoryClient.reserveInventory(
@@ -276,7 +271,6 @@ public class PosOrderService {
                     throw new ConflictException("Order cannot be completed until payment covers the full total");
                 }
                 SessionRecord currentSession = store.requireSession(currentOrder.posSessionId());
-                store.replaceOrderLines(id, pricingSnapshot.lines());
                 jdbcTemplate.update("""
                         INSERT INTO pos.sale_snapshot (sale_order_id, order_snapshot, created_at)
                         VALUES (:saleOrderId, CAST(:orderSnapshot AS jsonb), CURRENT_TIMESTAMP)
@@ -413,9 +407,29 @@ public class PosOrderService {
         ));
     }
 
-    private List<OrderLineInput> toOrderLineInputs(List<SaleOrderLineResponse> lines) {
+    private PricingSnapshot pricingSnapshotFromStoredOrder(OrderRecord order, List<SaleOrderLineResponse> lines) {
+        return new PricingSnapshot(
+                toPricedLines(lines),
+                order.subtotal(),
+                order.taxAmount(),
+                order.totalAmount()
+        );
+    }
+
+    private List<PricedLine> toPricedLines(List<SaleOrderLineResponse> lines) {
         return lines.stream()
-                .map(line -> new OrderLineInput(line.productId(), line.qty(), line.note()))
+                .map(line -> new PricedLine(
+                        line.lineNumber(),
+                        line.productId(),
+                        line.productCode(),
+                        line.productNameSnapshot(),
+                        line.unitPrice(),
+                        line.qty(),
+                        line.discountAmount(),
+                        line.taxAmount(),
+                        line.lineTotal(),
+                        line.note()
+                ))
                 .toList();
     }
 

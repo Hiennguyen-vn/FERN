@@ -2,12 +2,8 @@ package com.fern.financeservice.controller;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -16,20 +12,25 @@ import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.observability.CorrelationId;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 class GlobalExceptionHandlerTest {
-    private OperationalAlertPublisher operationalAlertPublisher;
+    private RecordingAlertPublisher operationalAlertPublisher;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        operationalAlertPublisher = mock(OperationalAlertPublisher.class);
+        operationalAlertPublisher = new RecordingAlertPublisher();
         mockMvc = MockMvcBuilders.standaloneSetup(new ThrowingController())
                 .setControllerAdvice(new GlobalExceptionHandler(new SimpleMeterRegistry(), operationalAlertPublisher))
                 .build();
@@ -51,20 +52,36 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.message").value(ExceptionSummaries.unexpectedErrorMessage()));
 
-        verify(operationalAlertPublisher).publish(
-                eq("PAYROLL_RUN_FAILED"),
-                eq("HIGH"),
-                eq("Payroll run operation failed"),
-                eq("corr-payroll"),
-                isNull(),
-                isNull(),
-                eq("HTTP_REQUEST"),
-                eq("/payroll-runs/1"),
-                argThat(details -> details != null
-                        && "RuntimeException".equals(details.get("errorMessage"))
-                        && "/payroll-runs/1".equals(details.get("path"))
-                        && !details.toString().contains("secret payroll detail"))
-        );
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.alertType).isEqualTo("PAYROLL_RUN_FAILED");
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.severity).isEqualTo("HIGH");
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.summary).isEqualTo("Payroll run operation failed");
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.correlationId).isEqualTo("corr-payroll");
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.regionId).isNull();
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.outletId).isNull();
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.entityType).isEqualTo("HTTP_REQUEST");
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.entityId).isEqualTo("/payroll-runs/1");
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.details)
+                .containsEntry("errorMessage", "RuntimeException")
+                .containsEntry("path", "/payroll-runs/1");
+        org.assertj.core.api.Assertions.assertThat(operationalAlertPublisher.details.toString())
+                .doesNotContain("secret payroll detail");
+    }
+
+    @Test
+    void shouldReturnValidationErrorForInvalidRequest() throws Exception {
+        mockMvc.perform(post("/validate")
+                        .header(CorrelationId.HEADER, "corr-finance-valid")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "name": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_error"))
+                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.correlationId").value("corr-finance-valid"))
+                .andExpect(jsonPath("$.details.name").value("must not be blank"));
     }
 
     @RestController
@@ -77,6 +94,49 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/payroll-runs/1")
         String payrollRun() {
             throw new RuntimeException("secret payroll detail");
+        }
+
+        @PostMapping("/validate")
+        String validate(@Valid @RequestBody ValidationRequest request) {
+            return request.name();
+        }
+    }
+
+    record ValidationRequest(@NotBlank String name) {
+    }
+
+    static final class RecordingAlertPublisher implements OperationalAlertPublisher {
+        private String alertType;
+        private String severity;
+        private String summary;
+        private String correlationId;
+        private Long regionId;
+        private Long outletId;
+        private String entityType;
+        private String entityId;
+        private Map<String, Object> details;
+
+        @Override
+        public void publish(
+                String alertType,
+                String severity,
+                String summary,
+                String correlationId,
+                Long regionId,
+                Long outletId,
+                String entityType,
+                String entityId,
+                Map<String, Object> details
+        ) {
+            this.alertType = alertType;
+            this.severity = severity;
+            this.summary = summary;
+            this.correlationId = correlationId;
+            this.regionId = regionId;
+            this.outletId = outletId;
+            this.entityType = entityType;
+            this.entityId = entityId;
+            this.details = details;
         }
     }
 }

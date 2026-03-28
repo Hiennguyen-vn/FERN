@@ -6,6 +6,7 @@ import com.fern.auditservice.dto.RequestTraceDetailResponse;
 import com.fern.auditservice.dto.RequestTraceSummaryResponse;
 import com.fern.auditservice.dto.SecurityEventDetailResponse;
 import com.fern.auditservice.dto.SecurityEventSummaryResponse;
+import com.fern.auditservice.repository.AuditAccessScope;
 import com.fern.auditservice.repository.AuditEventFilter;
 import com.fern.auditservice.repository.AuditEventRow;
 import com.fern.auditservice.repository.AuditJdbcRepository;
@@ -28,8 +29,8 @@ public class AuditQueryService {
     }
 
     public List<AuditEventSummaryResponse> listAuditEvents(FernPrincipal principal, AuditEventFilter filter) {
-        return listAuditEvents(filter).stream()
-                .filter(item -> canAccess(principal, item.regionId(), item.outletId()))
+        return auditJdbcRepository.findAuditEvents(filter, accessScope(principal)).stream()
+                .map(this::toAuditSummary)
                 .toList();
     }
 
@@ -55,9 +56,10 @@ public class AuditQueryService {
     }
 
     public List<SecurityEventSummaryResponse> listSecurityEvents(FernPrincipal principal, SecurityEventFilter filter) {
-        return listSecurityEvents(filter).stream()
-                .filter(item -> canAccessGlobal(principal))
-                .toList();
+        if (!canAccessGlobal(principal)) {
+            return List.of();
+        }
+        return listSecurityEvents(filter);
     }
 
     public List<SecurityEventSummaryResponse> listSecurityEvents(SecurityEventFilter filter) {
@@ -82,8 +84,8 @@ public class AuditQueryService {
     }
 
     public List<RequestTraceSummaryResponse> listRequestTraces(FernPrincipal principal, RequestTraceFilter filter) {
-        return listRequestTraces(filter).stream()
-                .filter(item -> canAccess(principal, item.regionId(), item.outletId()))
+        return auditJdbcRepository.findRequestTraces(filter, accessScope(principal)).stream()
+                .map(this::toRequestTraceSummary)
                 .toList();
     }
 
@@ -283,5 +285,15 @@ public class AuditQueryService {
 
     private boolean canAccessGlobal(FernPrincipal principal) {
         return principal != null && principal.scopeRoots() != null && principal.scopeRoots().system();
+    }
+
+    private AuditAccessScope accessScope(FernPrincipal principal) {
+        if (principal == null || principal.scopeRoots() == null) {
+            return new AuditAccessScope(false, List.of(), List.of());
+        }
+        if (principal.scopeRoots().system()) {
+            return AuditAccessScope.unrestricted();
+        }
+        return new AuditAccessScope(false, principal.scopeRoots().regions(), principal.scopeRoots().outlets());
     }
 }

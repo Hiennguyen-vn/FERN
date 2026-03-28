@@ -123,4 +123,18 @@ class AuditJdbcRepositoryTest {
         assertThat(sqlStatements).anyMatch(sql -> sql.contains("INSERT INTO audit.request_trace"));
         assertThat(sqlStatements).anyMatch(sql -> sql.contains("FROM audit.request_trace"));
     }
+
+    @Test
+    void shouldPushAccessScopePredicatesIntoAuditAndTraceQueries() {
+        auditJdbcRepository.findAuditEvents(
+                new AuditEventFilter(null, null, null, null, null, null, null, null, null, null, null, null, 100),
+                new AuditAccessScope(false, List.of(10L), List.of(20L))
+        );
+        auditJdbcRepository.findRequestTraces(
+                new RequestTraceFilter(null, null, null, null, null, null, null, null, null, null, null, 100),
+                new AuditAccessScope(false, List.of(10L), List.of(20L))
+        );
+
+        assertThat(sqlStatements).anyMatch(sql -> sql.contains("(outlet_id IN (:scopeOutlets) OR region_id IN (:scopeRegions))"));
+    }
 }
