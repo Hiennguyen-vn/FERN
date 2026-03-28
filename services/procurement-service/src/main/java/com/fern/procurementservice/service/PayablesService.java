@@ -1,6 +1,6 @@
 package com.fern.procurementservice.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
@@ -17,30 +17,37 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
-public class PayablesService extends ProcurementDomainSupport {
+public class PayablesService {
+    private final ProcurementJdbcRepository procurementJdbcRepository;
+    private final ProcurementEventPublisher procurementEventPublisher;
     private final ProcurementAuthorizer procurementAuthorizer;
     private final ProcurementOrgClient procurementOrgClient;
+    private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     public PayablesService(
-            @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
-            @Qualifier("masterJdbcTemplate") NamedParameterJdbcTemplate masterJdbcTemplate,
+            ProcurementJdbcRepository procurementJdbcRepository,
+            ProcurementEventPublisher procurementEventPublisher,
             ProcurementAuthorizer procurementAuthorizer,
             ProcurementOrgClient procurementOrgClient,
-            ObjectMapper objectMapper,
-            Clock clock
+            Clock clock,
+            TransactionTemplate transactionTemplate
     ) {
-        super(jdbcTemplate, masterJdbcTemplate, objectMapper, clock);
+        this.procurementJdbcRepository = procurementJdbcRepository;
+        this.procurementEventPublisher = procurementEventPublisher;
         this.procurementAuthorizer = procurementAuthorizer;
         this.procurementOrgClient = procurementOrgClient;
+        this.clock = clock;
+        this.transactionTemplate = transactionTemplate;
     }
 
-    @Transactional
     public SupplierInvoiceResponse createSupplierInvoice(FernPrincipal principal, CreateSupplierInvoiceRequest request) {
         procurementAuthorizer.requireRegionPermission(principal, request.regionId(), PermissionCodes.PROCUREMENT_INVOICE_REVIEW);
         SupplierRecord supplier = requireActiveApprovedSupplier(request.supplierId());
@@ -48,6 +55,14 @@ public class PayablesService extends ProcurementDomainSupport {
         if (!outlet.regionId().equals(request.regionId())) {
             throw new ConflictException("Outlet route does not match requested region");
         }
+        return transactionTemplate.execute(status -> createSupplierInvoiceTx(principal, request, supplier));
+    }
+
+    private SupplierInvoiceResponse createSupplierInvoiceTx(
+            FernPrincipal principal,
+            CreateSupplierInvoiceRequest request,
+            SupplierRecord supplier
+    ) {
         BigDecimal subtotal = request.lines().stream()
                 .map(line -> line.lineTotal().subtract(line.taxAmount() == null ? BigDecimal.ZERO : line.taxAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -55,7 +70,7 @@ public class PayablesService extends ProcurementDomainSupport {
                 .map(line -> line.taxAmount() == null ? BigDecimal.ZERO : line.taxAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal totalAmount = request.lines().stream().map(SupplierInvoiceLineInput::lineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-        Long id = insertForId(jdbcTemplate, """
+        Long id = insertForId(jdbcTemplate(), """
                 INSERT INTO procurement.supplier_invoice (
                     invoice_number, supplier_id, region_id, outlet_id, currency_code, invoice_date, due_date, subtotal, tax_amount,
                     total_amount, status, note, created_by_user_id, created_at, updated_at
@@ -95,7 +110,7 @@ public class PayablesService extends ProcurementDomainSupport {
         if (!List.of("DRAFT", "RECEIVED", "MATCHED").contains(record.status())) {
             throw new ConflictException("Only received or matched supplier invoices can be approved");
         }
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.supplier_invoice
                 SET status = 'APPROVED', approved_by_user_id = :approvedByUserId, approved_at = :approvedAt, updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
@@ -114,7 +129,7 @@ public class PayablesService extends ProcurementDomainSupport {
         if ("CANCELLED".equals(record.status())) {
             throw new ConflictException("Cancelled invoices cannot be disputed");
         }
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.supplier_invoice
                 SET status = 'DISPUTED',
                     disputed_by_user_id = :disputedByUserId,
@@ -142,7 +157,7 @@ public class PayablesService extends ProcurementDomainSupport {
     ) {
         requireIdempotencyKey(idempotencyKey);
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_PAYMENT_RECORD);
-        Long existingPaymentId = jdbcTemplate.query("""
+        Long existingPaymentId = jdbcTemplate().query("""
                 SELECT id FROM procurement.supplier_payment WHERE idempotency_key = :idempotencyKey
                 """, params("idempotencyKey", idempotencyKey), rs -> rs.next() ? rs.getLong("id") : null);
         if (existingPaymentId != null) {
@@ -182,7 +197,7 @@ public class PayablesService extends ProcurementDomainSupport {
                 throw new ConflictException("Allocated amount exceeds the supplier invoice open amount");
             }
         }
-        Long id = insertForId(jdbcTemplate, """
+        Long id = insertForId(jdbcTemplate(), """
                 INSERT INTO procurement.supplier_payment (
                     payment_number, supplier_id, currency_code, payment_method, amount, payment_time, transaction_ref,
                     note, created_by_user_id, created_at, updated_at, idempotency_key
@@ -203,7 +218,7 @@ public class PayablesService extends ProcurementDomainSupport {
                 "idempotencyKey", idempotencyKey
         ));
         for (PaymentAllocationInput allocation : request.invoiceAllocations()) {
-            jdbcTemplate.update("""
+            jdbcTemplate().update("""
                     INSERT INTO procurement.supplier_payment_allocation (
                         supplier_payment_id, supplier_invoice_id, allocated_amount, note, created_at, updated_at
                     ) VALUES (
@@ -216,7 +231,53 @@ public class PayablesService extends ProcurementDomainSupport {
                     "note", allocation.note()
             ));
         }
-        enqueueSupplierPaymentRecordedEvent(id, principal, correlationId);
+        procurementEventPublisher.enqueueSupplierPaymentRecordedEvent(id, principal, correlationId);
         return getSupplierPayment(id);
+    }
+
+    private void requireIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new BadRequestException("Idempotency-Key header is required");
+        }
+    }
+
+    private NamedParameterJdbcTemplate jdbcTemplate() {
+        return procurementJdbcRepository.jdbcTemplate();
+    }
+
+    private MapSqlParameterSource params(Object... values) {
+        return procurementJdbcRepository.params(values);
+    }
+
+    private Long insertForId(NamedParameterJdbcTemplate template, String sql, MapSqlParameterSource parameters) {
+        return procurementJdbcRepository.insertForId(template, sql, parameters);
+    }
+
+    private SupplierRecord requireActiveApprovedSupplier(Long id) {
+        return procurementJdbcRepository.requireActiveApprovedSupplier(id);
+    }
+
+    private void insertInvoiceLines(Long supplierInvoiceId, List<SupplierInvoiceLineInput> lines) {
+        procurementJdbcRepository.insertInvoiceLines(supplierInvoiceId, lines);
+    }
+
+    private SupplierInvoiceRecord requireSupplierInvoice(Long id) {
+        return procurementJdbcRepository.requireSupplierInvoice(id);
+    }
+
+    private SupplierInvoiceResponse mapSupplierInvoice(SupplierInvoiceRecord record) {
+        return procurementJdbcRepository.mapSupplierInvoice(record);
+    }
+
+    private SupplierInvoiceRecord requireSupplierInvoiceForUpdate(Long id) {
+        return procurementJdbcRepository.requireSupplierInvoiceForUpdate(id);
+    }
+
+    private SupplierPaymentResponse getSupplierPayment(Long id) {
+        return procurementJdbcRepository.getSupplierPayment(id);
+    }
+
+    private BigDecimal invoiceAllocatedAmount(Long supplierInvoiceId) {
+        return procurementJdbcRepository.invoiceAllocatedAmount(supplierInvoiceId);
     }
 }

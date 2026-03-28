@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,6 +22,10 @@ public final class ProcurementCommands {
             String phone,
             String address,
             Long defaultRegionId,
+            @Pattern(
+                    regexp = "ACTIVE|INACTIVE|SUSPENDED",
+                    message = "must be one of ACTIVE, INACTIVE, or SUSPENDED"
+            )
             String status
     ) {
     }
@@ -76,7 +81,12 @@ public final class ProcurementCommands {
     }
 
     public record SupplierInvoiceLineInput(
-            @NotNull String lineType,
+            @NotNull
+            @Pattern(
+                    regexp = "STOCK|PARTIAL_MATCH|NON_PO_RECEIPT|NON_STOCK",
+                    message = "must be one of STOCK, PARTIAL_MATCH, NON_PO_RECEIPT, or NON_STOCK"
+            )
+            String lineType,
             Long goodsReceiptLineId,
             String description,
             BigDecimal qtyInvoiced,
@@ -111,7 +121,12 @@ public final class ProcurementCommands {
     public record CreateSupplierPaymentRequest(
             @NotNull Long supplierId,
             @NotNull String currencyCode,
-            @NotNull String paymentMethod,
+            @NotNull
+            @Pattern(
+                    regexp = "CASH|CARD|EWALLET|BANK_TRANSFER|CHEQUE|VOUCHER",
+                    message = "must be one of CASH, CARD, EWALLET, BANK_TRANSFER, CHEQUE, or VOUCHER"
+            )
+            String paymentMethod,
             @NotNull @DecimalMin(value = "0.01") BigDecimal amount,
             @NotNull Instant paymentTime,
             String transactionRef,

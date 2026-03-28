@@ -164,6 +164,79 @@ class ProcurementServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectSupplierWithInvalidStatus() throws Exception {
+        mockMvc.perform(post("/suppliers")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "supplierCode": "SUP-BAD-STATUS",
+                                  "name": "Invalid Supplier",
+                                  "status": "ARCHIVED"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_error"))
+                .andExpect(jsonPath("$.details.status").value("must be one of ACTIVE, INACTIVE, or SUSPENDED"));
+    }
+
+    @Test
+    void shouldRejectSupplierInvoiceWithInvalidLineType() throws Exception {
+        mockMvc.perform(post("/supplier-invoices")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "supplierId": 1,
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "invoiceNumber": "INV-BAD-LINE-TYPE",
+                                  "invoiceDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "lineType": "BROKEN",
+                                      "lineTotal": 10.00
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_error"))
+                .andExpect(jsonPath("$.details['lines[0].lineType']").value(
+                        "must be one of STOCK, PARTIAL_MATCH, NON_PO_RECEIPT, or NON_STOCK"
+                ));
+    }
+
+    @Test
+    void shouldRejectSupplierPaymentWithInvalidPaymentMethod() throws Exception {
+        mockMvc.perform(post("/supplier-payments")
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "supplier-pay-invalid-method")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "supplierId": 1,
+                                  "currencyCode": "VND",
+                                  "paymentMethod": "WIRE",
+                                  "amount": 30.00,
+                                  "paymentTime": "2026-03-27T12:00:00Z",
+                                  "invoiceAllocations": [
+                                    {
+                                      "supplierInvoiceId": 1,
+                                      "allocatedAmount": 30.00
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_error"))
+                .andExpect(jsonPath("$.details.paymentMethod").value(
+                        "must be one of CASH, CARD, EWALLET, BANK_TRANSFER, CHEQUE, or VOUCHER"
+                ));
+    }
+
+    @Test
     void shouldRunSupplierPoGrInvoicePaymentFlow() throws Exception {
         Long supplierId = createActiveSupplier("SUP-001", "Acme Supplier");
 
@@ -438,7 +511,7 @@ class ProcurementServiceIntegrationTest {
                                   "invoiceDate": "2026-03-27",
                                   "lines": [
                                     {
-                                      "lineType": "MANUAL",
+                                      "lineType": "NON_STOCK",
                                       "description": "Route check",
                                       "lineTotal": 100.00
                                     }

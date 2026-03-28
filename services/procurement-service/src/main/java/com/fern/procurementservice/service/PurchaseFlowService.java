@@ -1,52 +1,69 @@
 package com.fern.procurementservice.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.procurementservice.dto.ProcurementCommands.CreateGoodsReceiptRequest;
 import com.fern.procurementservice.dto.ProcurementCommands.CreatePurchaseOrderRequest;
+import com.fern.procurementservice.dto.ProcurementCommands.GoodsReceiptLineInput;
+import com.fern.procurementservice.dto.ProcurementCommands.PurchaseOrderLineInput;
 import com.fern.procurementservice.dto.ProcurementCommands.UpdatePurchaseOrderRequest;
 import com.fern.procurementservice.dto.ProcurementResponses.GoodsReceiptResponse;
 import com.fern.procurementservice.dto.ProcurementResponses.PurchaseOrderResponse;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
-public class PurchaseFlowService extends ProcurementDomainSupport {
+public class PurchaseFlowService {
+    private final ProcurementJdbcRepository procurementJdbcRepository;
+    private final ProcurementEventPublisher procurementEventPublisher;
     private final ProcurementAuthorizer procurementAuthorizer;
     private final ProcurementOrgClient procurementOrgClient;
+    private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     public PurchaseFlowService(
-            @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
-            @Qualifier("masterJdbcTemplate") NamedParameterJdbcTemplate masterJdbcTemplate,
+            ProcurementJdbcRepository procurementJdbcRepository,
+            ProcurementEventPublisher procurementEventPublisher,
             ProcurementAuthorizer procurementAuthorizer,
             ProcurementOrgClient procurementOrgClient,
-            ObjectMapper objectMapper,
-            Clock clock
+            Clock clock,
+            TransactionTemplate transactionTemplate
     ) {
-        super(jdbcTemplate, masterJdbcTemplate, objectMapper, clock);
+        this.procurementJdbcRepository = procurementJdbcRepository;
+        this.procurementEventPublisher = procurementEventPublisher;
         this.procurementAuthorizer = procurementAuthorizer;
         this.procurementOrgClient = procurementOrgClient;
+        this.clock = clock;
+        this.transactionTemplate = transactionTemplate;
     }
 
-    @Transactional
     public PurchaseOrderResponse createPurchaseOrder(FernPrincipal principal, CreatePurchaseOrderRequest request) {
         procurementAuthorizer.requireOutletPermission(principal, request.outletId(), PermissionCodes.PROCUREMENT_PO_CREATE);
         ProcurementOrgClient.OutletRoute outlet = procurementOrgClient.requireOutlet(request.outletId());
         if (!outlet.regionId().equals(request.regionId())) {
             throw new BadRequestException("Region does not match the outlet route");
         }
+        return transactionTemplate.execute(status -> createPurchaseOrderTx(principal, request, outlet));
+    }
+
+    private PurchaseOrderResponse createPurchaseOrderTx(
+            FernPrincipal principal,
+            CreatePurchaseOrderRequest request,
+            ProcurementOrgClient.OutletRoute outlet
+    ) {
         SupplierRecord supplier = requireActiveApprovedSupplier(request.supplierId());
         PurchaseOrderTotals totals = calculatePurchaseOrderTotals(request.lines());
-        Long id = insertForId(jdbcTemplate, """
+        Long id = insertForId(jdbcTemplate(), """
                 INSERT INTO procurement.purchase_order (
                     po_number, region_id, outlet_id, supplier_id, order_date, expected_delivery_date, status,
                     subtotal_amount, tax_amount, total_amount, note, created_by_user_id, created_at, updated_at
@@ -86,7 +103,7 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
             throw new ConflictException("Only draft purchase orders can be updated");
         }
         PurchaseOrderTotals totals = calculatePurchaseOrderTotals(request.lines());
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.purchase_order
                 SET expected_delivery_date = :expectedDeliveryDate,
                     subtotal_amount = :subtotalAmount,
@@ -119,7 +136,7 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_PO_SUBMIT);
         ensureStatus(record.status(), "DRAFT", "Only draft purchase orders can be submitted");
         requireActiveApprovedSupplier(record.supplierId());
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.purchase_order
                 SET status = 'SUBMITTED', updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
@@ -136,7 +153,7 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
         PurchaseOrderRecord record = requirePurchaseOrderForUpdate(id);
         procurementAuthorizer.requireRegionPermission(principal, record.regionId(), PermissionCodes.PROCUREMENT_PO_APPROVE);
         ensureStatus(record.status(), "SUBMITTED", "Only submitted purchase orders can be approved");
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.purchase_order
                 SET status = 'APPROVED', approved_by_user_id = :approvedByUserId, approved_at = :approvedAt, updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
@@ -153,7 +170,7 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
         PurchaseOrderRecord record = requirePurchaseOrderForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_PO_ISSUE);
         ensureStatus(record.status(), "APPROVED", "Only approved purchase orders can be issued");
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.purchase_order
                 SET status = 'ORDERED',
                     issued_by_user_id = :issuedByUserId,
@@ -181,7 +198,7 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
         if (List.of("PARTIALLY_RECEIVED", "COMPLETED", "CLOSED", "CANCELLED").contains(record.status())) {
             throw new ConflictException("This purchase order can no longer be cancelled");
         }
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.purchase_order
                 SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
@@ -201,7 +218,7 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
             throw new ConflictException("Goods receipts can only be created from ordered or partially received purchase orders");
         }
         BigDecimal totalAmount = calculateGoodsReceiptTotal(request.lines());
-        Long id = insertForId(jdbcTemplate, """
+        Long id = insertForId(jdbcTemplate(), """
                 INSERT INTO procurement.goods_receipt (
                     receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date, status,
                     total_amount, supplier_lot_number, note, created_by_user_id, created_at, updated_at
@@ -238,7 +255,7 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
         GoodsReceiptRecord record = requireGoodsReceiptForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_GR_CREATE);
         ensureStatus(record.status(), "DRAFT", "Only draft goods receipts can be received");
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.goods_receipt
                 SET status = 'RECEIVED', received_by_user_id = :receivedByUserId, received_at = :receivedAt, updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
@@ -255,14 +272,14 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
         requireIdempotencyKey(idempotencyKey);
         GoodsReceiptRecord record = requireGoodsReceiptForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_GR_POST);
-        Long duplicateId = jdbcTemplate.query("""
+        Long duplicateId = jdbcTemplate().query("""
                 SELECT id FROM procurement.goods_receipt WHERE posted_idempotency_key = :idempotencyKey
                 """, params("idempotencyKey", idempotencyKey), rs -> rs.next() ? rs.getLong("id") : null);
         if (duplicateId != null) {
             return getGoodsReceipt(principal, duplicateId);
         }
         ensureStatus(record.status(), "RECEIVED", "Only received goods receipts can be posted");
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.goods_receipt
                 SET status = 'POSTED',
                     posted_by_user_id = :postedByUserId,
@@ -281,7 +298,7 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
             throw new ConflictException("Only received goods receipts can be posted");
         }
         updatePurchaseOrderReceiptProgress(record.purchaseOrderId(), id);
-        enqueueGoodsReceiptPostedEvent(record, principal, correlationId);
+        procurementEventPublisher.enqueueGoodsReceiptPostedEvent(record, principal, correlationId);
         return getGoodsReceipt(principal, id);
     }
 
@@ -292,7 +309,7 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
         if (!List.of("DRAFT", "RECEIVED").contains(record.status())) {
             throw new ConflictException("Only draft or received goods receipts can be cancelled");
         }
-        int updated = jdbcTemplate.update("""
+        int updated = jdbcTemplate().update("""
                 UPDATE procurement.goods_receipt
                 SET status = 'CANCELLED',
                     cancelled_by_user_id = :cancelledByUserId,
@@ -310,5 +327,94 @@ public class PurchaseFlowService extends ProcurementDomainSupport {
             throw new ConflictException("Only draft or received goods receipts can be cancelled");
         }
         return getGoodsReceipt(principal, id);
+    }
+
+    private PurchaseOrderTotals calculatePurchaseOrderTotals(List<PurchaseOrderLineInput> lines) {
+        BigDecimal subtotal = BigDecimal.ZERO;
+        BigDecimal taxAmount = BigDecimal.ZERO;
+        for (PurchaseOrderLineInput line : lines) {
+            BigDecimal unitPrice = line.expectedUnitPrice() == null ? BigDecimal.ZERO : line.expectedUnitPrice();
+            BigDecimal lineSubtotal = unitPrice.multiply(line.qtyOrdered()).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal lineTax = line.taxPercent() == null
+                    ? BigDecimal.ZERO
+                    : lineSubtotal.multiply(line.taxPercent().divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP);
+            subtotal = subtotal.add(lineSubtotal);
+            taxAmount = taxAmount.add(lineTax);
+        }
+        return new PurchaseOrderTotals(subtotal, taxAmount, subtotal.add(taxAmount));
+    }
+
+    private BigDecimal calculateGoodsReceiptTotal(List<GoodsReceiptLineInput> lines) {
+        return lines.stream()
+                .map(line -> line.qtyReceived().multiply(line.unitCost()).setScale(2, RoundingMode.HALF_UP))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void ensureStatus(String actual, String expected, String message) {
+        if (!expected.equals(actual)) {
+            throw new ConflictException(message);
+        }
+    }
+
+    private void requireIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new BadRequestException("Idempotency-Key header is required");
+        }
+    }
+
+    private NamedParameterJdbcTemplate jdbcTemplate() {
+        return procurementJdbcRepository.jdbcTemplate();
+    }
+
+    private MapSqlParameterSource params(Object... values) {
+        return procurementJdbcRepository.params(values);
+    }
+
+    private Long insertForId(NamedParameterJdbcTemplate template, String sql, MapSqlParameterSource parameters) {
+        return procurementJdbcRepository.insertForId(template, sql, parameters);
+    }
+
+    private String toJson(Object payload) {
+        return procurementJdbcRepository.toJson(payload);
+    }
+
+    private SupplierRecord requireActiveApprovedSupplier(Long id) {
+        return procurementJdbcRepository.requireActiveApprovedSupplier(id);
+    }
+
+    private PurchaseOrderRecord requirePurchaseOrder(Long id) {
+        return procurementJdbcRepository.requirePurchaseOrder(id);
+    }
+
+    private PurchaseOrderRecord requirePurchaseOrderForUpdate(Long id) {
+        return procurementJdbcRepository.requirePurchaseOrderForUpdate(id);
+    }
+
+    private PurchaseOrderResponse mapPurchaseOrder(PurchaseOrderRecord record) {
+        return procurementJdbcRepository.mapPurchaseOrder(record);
+    }
+
+    private void replacePurchaseOrderLines(Long purchaseOrderId, List<PurchaseOrderLineInput> lines) {
+        procurementJdbcRepository.replacePurchaseOrderLines(purchaseOrderId, lines);
+    }
+
+    private GoodsReceiptRecord requireGoodsReceipt(Long id) {
+        return procurementJdbcRepository.requireGoodsReceipt(id);
+    }
+
+    private GoodsReceiptRecord requireGoodsReceiptForUpdate(Long id) {
+        return procurementJdbcRepository.requireGoodsReceiptForUpdate(id);
+    }
+
+    private GoodsReceiptResponse mapGoodsReceipt(GoodsReceiptRecord record) {
+        return procurementJdbcRepository.mapGoodsReceipt(record);
+    }
+
+    private void insertGoodsReceiptLines(Long goodsReceiptId, List<GoodsReceiptLineInput> lines) {
+        procurementJdbcRepository.insertGoodsReceiptLines(goodsReceiptId, lines);
+    }
+
+    private void updatePurchaseOrderReceiptProgress(Long purchaseOrderId, Long goodsReceiptId) {
+        procurementJdbcRepository.updatePurchaseOrderReceiptProgress(purchaseOrderId, goodsReceiptId);
     }
 }

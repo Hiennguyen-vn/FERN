@@ -162,6 +162,13 @@ class NotificationServiceIntegrationTest {
                 "SELECT delivery_status FROM notification.webhook_delivery_log WHERE source_event_id = 'inventory.dlq:1:42'",
                 String.class
         )).isEqualTo("FAILED");
+        assertThat(jdbcTemplate.queryForList(
+                "SELECT error_message FROM notification.delivery_attempt ORDER BY attempt_number",
+                String.class
+        )).allSatisfy(errorMessage -> assertThat(errorMessage)
+                .matches("^[A-Za-z0-9$.]+( -> [A-Za-z0-9$.]+){0,3}$")
+                .doesNotContain("localhost")
+                .doesNotContain("failed"));
         assertThat(webhookRequestCount.get()).isEqualTo(2);
         assertThat(webhookBodies.get(0)).contains("\"topic\":\"inventory.dlq\"");
         assertThat(jdbcTemplate.queryForObject(

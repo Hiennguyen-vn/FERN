@@ -1,6 +1,5 @@
 package com.fern.procurementservice.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.procurementservice.dto.ProcurementCommands.SupplierUpsertRequest;
@@ -8,30 +7,31 @@ import com.fern.procurementservice.dto.ProcurementResponses.SupplierResponse;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class SupplierService extends ProcurementDomainSupport {
+public class SupplierService {
+    private final ProcurementJdbcRepository procurementJdbcRepository;
     private final ProcurementAuthorizer procurementAuthorizer;
+    private final Clock clock;
 
     public SupplierService(
-            @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
-            @Qualifier("masterJdbcTemplate") NamedParameterJdbcTemplate masterJdbcTemplate,
+            ProcurementJdbcRepository procurementJdbcRepository,
             ProcurementAuthorizer procurementAuthorizer,
-            ObjectMapper objectMapper,
             Clock clock
     ) {
-        super(jdbcTemplate, masterJdbcTemplate, objectMapper, clock);
+        this.procurementJdbcRepository = procurementJdbcRepository;
         this.procurementAuthorizer = procurementAuthorizer;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true, transactionManager = "masterTransactionManager")
     public List<SupplierResponse> listSuppliers(FernPrincipal principal) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_SUPPLIER_READ);
-        return masterJdbcTemplate.query("""
+        return masterJdbcTemplate().query("""
                 SELECT id, supplier_code, name, tax_code, email, phone, address, default_region_id, status, approved_at
                 FROM procurement_master.supplier
                 WHERE deleted_at IS NULL
@@ -53,7 +53,7 @@ public class SupplierService extends ProcurementDomainSupport {
     @Transactional(transactionManager = "masterTransactionManager")
     public SupplierResponse createSupplier(FernPrincipal principal, SupplierUpsertRequest request) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_SUPPLIER_WRITE);
-        Long id = insertForId(masterJdbcTemplate, """
+        Long id = insertForId(masterJdbcTemplate(), """
                 INSERT INTO procurement_master.supplier (
                     supplier_code, name, tax_code, email, phone, address, default_region_id, status, deleted_at, created_at, updated_at
                 ) VALUES (
@@ -76,7 +76,7 @@ public class SupplierService extends ProcurementDomainSupport {
     public SupplierResponse updateSupplier(FernPrincipal principal, Long id, SupplierUpsertRequest request) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_SUPPLIER_WRITE);
         requireSupplier(id);
-        masterJdbcTemplate.update("""
+        masterJdbcTemplate().update("""
                 UPDATE procurement_master.supplier
                 SET supplier_code = :supplierCode,
                     name = :name,
@@ -106,7 +106,7 @@ public class SupplierService extends ProcurementDomainSupport {
     public SupplierResponse activateSupplier(FernPrincipal principal, Long id) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_SUPPLIER_WRITE);
         requireSupplier(id);
-        masterJdbcTemplate.update("""
+        masterJdbcTemplate().update("""
                 UPDATE procurement_master.supplier
                 SET status = 'ACTIVE',
                     approved_by_user_id = :approvedByUserId,
@@ -123,5 +123,29 @@ public class SupplierService extends ProcurementDomainSupport {
                 "id", id
         ));
         return getSupplier(id);
+    }
+
+    private NamedParameterJdbcTemplate masterJdbcTemplate() {
+        return procurementJdbcRepository.masterJdbcTemplate();
+    }
+
+    private MapSqlParameterSource params(Object... values) {
+        return procurementJdbcRepository.params(values);
+    }
+
+    private Long insertForId(NamedParameterJdbcTemplate template, String sql, MapSqlParameterSource parameters) {
+        return procurementJdbcRepository.insertForId(template, sql, parameters);
+    }
+
+    private SupplierResponse getSupplier(Long id) {
+        return procurementJdbcRepository.getSupplier(id);
+    }
+
+    private SupplierRecord requireSupplier(Long id) {
+        return procurementJdbcRepository.requireSupplier(id);
+    }
+
+    private Instant instant(java.sql.ResultSet resultSet, String column) throws java.sql.SQLException {
+        return procurementJdbcRepository.instant(resultSet, column);
     }
 }

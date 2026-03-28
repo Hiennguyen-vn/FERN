@@ -47,37 +47,9 @@ public class PosSessionService {
             throw new ConflictException("Outlet route does not match requested region");
         }
         lockOpenSessionScope(request.outletId());
-        boolean openExists;
-        if (request.terminalId() != null) {
-            openExists = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
-                    SELECT EXISTS (
-                        SELECT 1
-                        FROM pos.pos_session
-                        WHERE outlet_id = :outletId
-                          AND terminal_id = :terminalId
-                          AND status = :status
-                    )
-                    """, PosSql.params(
-                    "outletId", request.outletId(),
-                    "terminalId", request.terminalId(),
-                    "status", PosSessionStatus.OPEN.name()
-            ), Boolean.class));
-        } else {
-            openExists = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
-                    SELECT EXISTS (
-                        SELECT 1
-                        FROM pos.pos_session
-                        WHERE outlet_id = :outletId
-                          AND status = :status
-                          AND terminal_id IS NULL
-                    )
-                    """, PosSql.params(
-                    "outletId", request.outletId(),
-                    "status", PosSessionStatus.OPEN.name()
-            ), Boolean.class));
-        }
-        if (openExists) {
-            throw new ConflictException("The outlet already has an open POS session");
+        Long existingOpenSessionId = findOpenSessionId(request.outletId(), request.terminalId());
+        if (existingOpenSessionId != null) {
+            return getSession(principal, existingOpenSessionId);
         }
         Long id = PosSql.insertForId(jdbcTemplate, """
                 INSERT INTO pos.pos_session (
@@ -238,6 +210,25 @@ public class PosSessionService {
         if (!expected.name().equals(session.status())) {
             throw new ConflictException(message);
         }
+    }
+
+    private Long findOpenSessionId(Long outletId, String terminalId) {
+        return jdbcTemplate.query("""
+                SELECT id
+                FROM pos.pos_session
+                WHERE outlet_id = :outletId
+                  AND status = :status
+                  AND (
+                        (CAST(:terminalId AS VARCHAR) IS NULL AND terminal_id IS NULL)
+                     OR terminal_id = CAST(:terminalId AS VARCHAR)
+                  )
+                ORDER BY opened_at DESC, id DESC
+                LIMIT 1
+                """, PosSql.params(
+                "outletId", outletId,
+                "terminalId", terminalId,
+                "status", PosSessionStatus.OPEN.name()
+        ), rs -> rs.next() ? rs.getLong("id") : null);
     }
 
     private void lockOpenSessionScope(Long outletId) {

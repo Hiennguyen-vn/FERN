@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.BadRequestException;
+import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
@@ -651,6 +652,7 @@ public class ReportService {
 
     private void failExportJob(Long jobId, RuntimeException exception) {
         exportFailureCounter.increment();
+        String errorSummary = ExceptionSummaries.safeSummary(exception);
         jdbcTemplate.update("""
                 UPDATE report.export_job
                 SET status = 'FAILED',
@@ -660,7 +662,7 @@ public class ReportService {
                   AND status = 'RUNNING'
                 """, params(
                 "failedAt", clock.instant(),
-                "errorMessage", exception.getMessage(),
+                "errorMessage", errorSummary,
                 "jobId", jobId
         ));
         operationalAlertPublisher.publish(
@@ -672,7 +674,7 @@ public class ReportService {
                 null,
                 "EXPORT_JOB",
                 String.valueOf(jobId),
-                Map.of("errorMessage", exception.getMessage())
+                Map.of("errorMessage", errorSummary)
         );
     }
 

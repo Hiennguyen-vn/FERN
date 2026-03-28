@@ -23,8 +23,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -178,17 +180,8 @@ public class PosOrderService {
             if (existingPaymentId != null) {
                 return;
             }
-            String paymentStatus = request.status() == null || request.status().isBlank()
-                    ? SalePaymentStatus.SUCCESS.name()
-                    : request.status();
-            if (!List.of(
-                    SalePaymentStatus.SUCCESS.name(),
-                    SalePaymentStatus.FAILED.name(),
-                    SalePaymentStatus.CANCELLED.name()
-            ).contains(paymentStatus)) {
-                throw new BadRequestException("Unsupported payment status");
-            }
-            if (SalePaymentStatus.SUCCESS.name().equals(paymentStatus)) {
+            SalePaymentStatus paymentStatus = resolvePaymentStatus(request.status());
+            if (paymentStatus == SalePaymentStatus.SUCCESS) {
                 BigDecimal currentSuccessAmount = store.successfulPaymentTotal(id);
                 if (currentSuccessAmount.add(request.amount()).compareTo(currentOrder.totalAmount()) > 0) {
                     throw new ConflictException("Successful payments cannot exceed order total");
@@ -205,13 +198,13 @@ public class PosOrderService {
                     "sessionId", currentOrder.posSessionId(),
                     "paymentMethod", request.paymentMethod(),
                     "amount", request.amount(),
-                    "status", paymentStatus,
+                    "status", paymentStatus.name(),
                     "paymentTime", request.paymentTime() == null ? clock.instant() : request.paymentTime(),
                     "transactionRef", request.transactionRef(),
                     "note", request.note(),
                     "idempotencyKey", idempotencyKey
             ));
-            if (SalePaymentStatus.FAILED.name().equals(paymentStatus)) {
+            if (paymentStatus == SalePaymentStatus.FAILED) {
                 paymentFailureCounter.increment();
                 operationalAlertPublisher.publish(
                         "PAYMENT_FAILED",
@@ -232,6 +225,21 @@ public class PosOrderService {
             store.refreshPaymentStatus(id);
         });
         return getOrder(principal, id);
+    }
+
+    private SalePaymentStatus resolvePaymentStatus(String rawStatus) {
+        String normalized = rawStatus == null || rawStatus.isBlank()
+                ? SalePaymentStatus.SUCCESS.name()
+                : rawStatus.trim().toUpperCase(Locale.ROOT);
+        try {
+            SalePaymentStatus paymentStatus = SalePaymentStatus.valueOf(normalized);
+            if (!EnumSet.of(SalePaymentStatus.SUCCESS, SalePaymentStatus.FAILED, SalePaymentStatus.CANCELLED).contains(paymentStatus)) {
+                throw new IllegalArgumentException("Unsupported payment status");
+            }
+            return paymentStatus;
+        } catch (IllegalArgumentException exception) {
+            throw new BadRequestException("Unsupported payment status");
+        }
     }
 
     public SaleOrderResponse completeOrder(FernPrincipal principal, Long id, String correlationId) {

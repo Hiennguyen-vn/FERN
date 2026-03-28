@@ -47,6 +47,7 @@ class ReportServiceIntegrationTest {
         registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("report"));
         registry.add("spring.datasource.username", FernIntegrationContainers::jdbcUsername);
         registry.add("spring.datasource.password", FernIntegrationContainers::jdbcPassword);
+        registry.add("spring.autoconfigure.exclude", () -> "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration");
         registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
         registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
         registry.add("spring.kafka.listener.auto-startup", () -> "false");
@@ -236,6 +237,45 @@ class ReportServiceIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.dataset").value("PAYROLL_SUMMARY"))
                 .andExpect(jsonPath("$.status").value("QUEUED"));
+    }
+
+    @Test
+    void shouldSanitizeExportFailureErrorMessage() {
+        jdbcTemplate.update("""
+                INSERT INTO report.export_job (
+                    export_job_id, idempotency_key, report_type, format, status, requested_by, requested_at, payload
+                ) VALUES (
+                    ?, ?, ?, ?, 'QUEUED', ?, CURRENT_TIMESTAMP, CAST(? AS jsonb)
+                )
+                """,
+                90001L,
+                "export-failure-sanitize",
+                "PRIVATE_DATASET",
+                "CSV",
+                "system",
+                """
+                        {
+                          "dataset": "EXPENSE_FACT",
+                          "format": "CSV",
+                          "regionId": 1,
+                          "fromDate": "2026-03-27",
+                          "toDate": "2026-03-27"
+                        }
+                        """
+        );
+
+        reportService.processQueuedExports();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM report.export_job WHERE export_job_id = ?",
+                String.class,
+                90001L
+        )).isEqualTo("FAILED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT error_message FROM report.export_job WHERE export_job_id = ?",
+                String.class,
+                90001L
+        )).isEqualTo("BadRequestException");
     }
 
     private ExpensePostedEvent expenseEvent(String eventId, String idempotencyKey, Long expenseRecordId, BigDecimal amount) {

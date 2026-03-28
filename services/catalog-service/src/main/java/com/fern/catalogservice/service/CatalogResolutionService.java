@@ -3,7 +3,6 @@ package com.fern.catalogservice.service;
 import com.fern.catalogservice.domain.PriceScopeType;
 import com.fern.catalogservice.domain.PriceType;
 import com.fern.catalogservice.domain.ProductEntity;
-import com.fern.catalogservice.domain.ProductOutletAvailabilityEntity;
 import com.fern.catalogservice.domain.ProductPriceEntity;
 import com.fern.catalogservice.domain.ProductStatus;
 import com.fern.catalogservice.domain.RecipeEntity;
@@ -18,6 +17,7 @@ import com.fern.catalogservice.dto.RecipeVersionIngredientResponse;
 import com.fern.catalogservice.dto.ResolvedPriceResponse;
 import com.fern.catalogservice.repository.ProductOutletAvailabilityRepository;
 import com.fern.catalogservice.repository.ProductPriceRepository;
+import com.fern.catalogservice.repository.ProductRepository;
 import com.fern.catalogservice.repository.RecipeRepository;
 import com.fern.catalogservice.repository.RecipeVersionIngredientRepository;
 import com.fern.catalogservice.repository.RecipeVersionRepository;
@@ -27,8 +27,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,6 +43,7 @@ public class CatalogResolutionService {
     private final RecipeRepository recipeRepository;
     private final RecipeVersionRepository recipeVersionRepository;
     private final RecipeVersionIngredientRepository recipeVersionIngredientRepository;
+    private final ProductRepository productRepository;
     private final ProductService productService;
 
     public CatalogResolutionService(
@@ -52,6 +53,7 @@ public class CatalogResolutionService {
             RecipeRepository recipeRepository,
             RecipeVersionRepository recipeVersionRepository,
             RecipeVersionIngredientRepository recipeVersionIngredientRepository,
+            ProductRepository productRepository,
             ProductService productService
     ) {
         this.productOutletAvailabilityRepository = productOutletAvailabilityRepository;
@@ -60,16 +62,13 @@ public class CatalogResolutionService {
         this.recipeRepository = recipeRepository;
         this.recipeVersionRepository = recipeVersionRepository;
         this.recipeVersionIngredientRepository = recipeVersionIngredientRepository;
+        this.productRepository = productRepository;
         this.productService = productService;
     }
 
     @Transactional(readOnly = true)
     public MenuResponse resolveMenu(Long outletId, LocalDate businessDate, PriceType priceType, Long regionId, Long countryId) {
-        List<ProductOutletAvailabilityEntity> availability = productOutletAvailabilityRepository.findByIdOutletIdAndIsAvailableTrue(outletId);
-        List<ProductEntity> products = availability.stream()
-                .map(ProductOutletAvailabilityEntity::getProduct)
-                .filter(product -> product.getDeletedAt() == null)
-                .filter(product -> product.getStatus() == ProductStatus.ACTIVE)
+        List<ProductEntity> products = productOutletAvailabilityRepository.findAvailableProducts(outletId, ProductStatus.ACTIVE).stream()
                 .sorted(Comparator.comparing(ProductEntity::getCode))
                 .toList();
         List<Long> productIds = products.stream().map(ProductEntity::getId).toList();
@@ -124,15 +123,24 @@ public class CatalogResolutionService {
 
     @Transactional(readOnly = true)
     public List<RecipeResolutionResponse> resolveRecipes(List<Long> productIds, LocalDate businessDate) {
-        LinkedHashSet<Long> distinctProductIds = new LinkedHashSet<>(productIds);
+        List<Long> distinctProductIds = new ArrayList<>(new LinkedHashSet<>(productIds));
         if (distinctProductIds.isEmpty()) {
             return List.of();
         }
+
+        LinkedHashSet<Long> existingProductIds = productRepository.findByIdInAndDeletedAtIsNull(distinctProductIds).stream()
+                .map(ProductEntity::getId)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        for (Long productId : distinctProductIds) {
+            if (!existingProductIds.contains(productId)) {
+                throw new ResourceNotFoundException("Product not found");
+            }
+        }
+
         Map<Long, RecipeEntity> recipesByProductId = recipeRepository.findAllByProduct_IdIn(distinctProductIds).stream()
                 .collect(java.util.stream.Collectors.toMap(recipe -> recipe.getProduct().getId(), recipe -> recipe));
         for (Long productId : distinctProductIds) {
             if (!recipesByProductId.containsKey(productId)) {
-                productService.requireProduct(productId);
                 throw new ResourceNotFoundException("Recipe not found for product");
             }
         }

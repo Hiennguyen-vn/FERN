@@ -2,14 +2,8 @@ package com.fern.procurementservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
-import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ResourceNotFoundException;
-import com.fern.platform.contracts.GoodsReceiptPostedLine;
-import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
-import com.fern.platform.contracts.SupplierPaymentAllocation;
-import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import com.fern.procurementservice.dto.ProcurementCommands.GoodsReceiptLineInput;
 import com.fern.procurementservice.dto.ProcurementCommands.PurchaseOrderLineInput;
 import com.fern.procurementservice.dto.ProcurementCommands.SupplierInvoiceLineInput;
@@ -27,38 +21,43 @@ import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.UUID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.stereotype.Repository;
 
-abstract class ProcurementDomainSupport {
-    protected final NamedParameterJdbcTemplate jdbcTemplate;
-    protected final NamedParameterJdbcTemplate masterJdbcTemplate;
-    protected final ObjectMapper objectMapper;
-    protected final Clock clock;
+@Repository
+class ProcurementJdbcRepository {
+    private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate masterJdbcTemplate;
+    private final ObjectMapper objectMapper;
 
-    protected ProcurementDomainSupport(
+    ProcurementJdbcRepository(
             @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
             @Qualifier("masterJdbcTemplate") NamedParameterJdbcTemplate masterJdbcTemplate,
-            ObjectMapper objectMapper,
-            Clock clock
+            ObjectMapper objectMapper
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.masterJdbcTemplate = masterJdbcTemplate;
         this.objectMapper = objectMapper;
-        this.clock = clock;
     }
 
-    protected SupplierResponse getSupplier(Long id) {
+    NamedParameterJdbcTemplate jdbcTemplate() {
+        return jdbcTemplate;
+    }
+
+    NamedParameterJdbcTemplate masterJdbcTemplate() {
+        return masterJdbcTemplate;
+    }
+
+    SupplierResponse getSupplier(Long id) {
         SupplierResponse response = masterJdbcTemplate.query("""
                 SELECT id, supplier_code, name, tax_code, email, phone, address, default_region_id, status, approved_at
                 FROM procurement_master.supplier
@@ -81,12 +80,12 @@ abstract class ProcurementDomainSupport {
         return response;
     }
 
-    protected SupplierRecord requireSupplier(Long id) {
+    SupplierRecord requireSupplier(Long id) {
         SupplierResponse response = getSupplier(id);
         return new SupplierRecord(response.id(), response.status(), response.approvedAt());
     }
 
-    protected SupplierRecord requireActiveApprovedSupplier(Long id) {
+    SupplierRecord requireActiveApprovedSupplier(Long id) {
         SupplierRecord supplier = requireSupplier(id);
         if (!"ACTIVE".equals(supplier.status()) || supplier.approvedAt() == null) {
             throw new ConflictException("Supplier must be active and approved before it can be referenced");
@@ -94,7 +93,7 @@ abstract class ProcurementDomainSupport {
         return supplier;
     }
 
-    protected PurchaseOrderRecord requirePurchaseOrder(Long id) {
+    PurchaseOrderRecord requirePurchaseOrder(Long id) {
         PurchaseOrderRecord record = jdbcTemplate.query("""
                 SELECT id, po_number, region_id, outlet_id, supplier_id, order_date, expected_delivery_date, status, subtotal_amount, tax_amount, total_amount, note, approved_at, issued_at
                 FROM procurement.purchase_order
@@ -121,7 +120,7 @@ abstract class ProcurementDomainSupport {
         return record;
     }
 
-    protected PurchaseOrderRecord requirePurchaseOrderForUpdate(Long id) {
+    PurchaseOrderRecord requirePurchaseOrderForUpdate(Long id) {
         PurchaseOrderRecord record = jdbcTemplate.query("""
                 SELECT id, po_number, region_id, outlet_id, supplier_id, order_date, expected_delivery_date, status, subtotal_amount, tax_amount, total_amount, note, approved_at, issued_at
                 FROM procurement.purchase_order
@@ -149,7 +148,7 @@ abstract class ProcurementDomainSupport {
         return record;
     }
 
-    protected GoodsReceiptRecord requireGoodsReceipt(Long id) {
+    GoodsReceiptRecord requireGoodsReceipt(Long id) {
         GoodsReceiptRecord record = jdbcTemplate.query("""
                 SELECT id, receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date,
                        status, total_amount, supplier_lot_number, note, received_at, posted_at
@@ -177,7 +176,7 @@ abstract class ProcurementDomainSupport {
         return record;
     }
 
-    protected GoodsReceiptRecord requireGoodsReceiptForUpdate(Long id) {
+    GoodsReceiptRecord requireGoodsReceiptForUpdate(Long id) {
         GoodsReceiptRecord record = jdbcTemplate.query("""
                 SELECT id, receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date,
                        status, total_amount, supplier_lot_number, note, received_at, posted_at
@@ -206,7 +205,7 @@ abstract class ProcurementDomainSupport {
         return record;
     }
 
-    protected SupplierInvoiceRecord requireSupplierInvoice(Long id) {
+    SupplierInvoiceRecord requireSupplierInvoice(Long id) {
         SupplierInvoiceRecord record = jdbcTemplate.query("""
                 SELECT id, supplier_id, region_id, outlet_id, currency_code, invoice_number, invoice_date, due_date,
                        subtotal, tax_amount, total_amount, status, note, approved_at
@@ -234,7 +233,7 @@ abstract class ProcurementDomainSupport {
         return record;
     }
 
-    protected SupplierInvoiceRecord requireSupplierInvoiceForUpdate(Long id) {
+    SupplierInvoiceRecord requireSupplierInvoiceForUpdate(Long id) {
         SupplierInvoiceRecord record = jdbcTemplate.query("""
                 SELECT id, supplier_id, region_id, outlet_id, currency_code, invoice_number, invoice_date, due_date,
                        subtotal, tax_amount, total_amount, status, note, approved_at
@@ -263,7 +262,7 @@ abstract class ProcurementDomainSupport {
         return record;
     }
 
-    protected BigDecimal invoiceAllocatedAmount(Long supplierInvoiceId) {
+    BigDecimal invoiceAllocatedAmount(Long supplierInvoiceId) {
         return jdbcTemplate.queryForObject("""
                 SELECT COALESCE(SUM(allocated_amount), 0)
                 FROM procurement.supplier_payment_allocation
@@ -271,7 +270,7 @@ abstract class ProcurementDomainSupport {
                 """, params("supplierInvoiceId", supplierInvoiceId), BigDecimal.class);
     }
 
-    protected PurchaseOrderResponse mapPurchaseOrder(PurchaseOrderRecord record) {
+    PurchaseOrderResponse mapPurchaseOrder(PurchaseOrderRecord record) {
         List<PurchaseOrderLineResponse> lines = jdbcTemplate.query("""
                 SELECT id, line_number, ingredient_id, uom_code, qty_ordered, qty_received, expected_unit_price, tax_percent, status, note
                 FROM procurement.purchase_order_line
@@ -308,7 +307,7 @@ abstract class ProcurementDomainSupport {
         );
     }
 
-    protected GoodsReceiptResponse mapGoodsReceipt(GoodsReceiptRecord record) {
+    GoodsReceiptResponse mapGoodsReceipt(GoodsReceiptRecord record) {
         List<GoodsReceiptLineResponse> lines = jdbcTemplate.query("""
                 SELECT id, purchase_order_line_id, ingredient_id, uom_code, qty_received, unit_cost, line_total, note
                 FROM procurement.goods_receipt_line
@@ -343,7 +342,7 @@ abstract class ProcurementDomainSupport {
         );
     }
 
-    protected SupplierInvoiceResponse mapSupplierInvoice(SupplierInvoiceRecord record) {
+    SupplierInvoiceResponse mapSupplierInvoice(SupplierInvoiceRecord record) {
         List<SupplierInvoiceLineResponse> lines = jdbcTemplate.query("""
                 SELECT id, line_number, line_type, goods_receipt_line_id, description, qty_invoiced, unit_price, tax_percent, tax_amount, line_total, note
                 FROM procurement.supplier_invoice_line
@@ -381,7 +380,7 @@ abstract class ProcurementDomainSupport {
         );
     }
 
-    protected SupplierPaymentResponse getSupplierPayment(Long id) {
+    SupplierPaymentResponse getSupplierPayment(Long id) {
         SupplierPaymentResponse response = jdbcTemplate.query("""
                 SELECT id, payment_number, supplier_id, currency_code, payment_method, amount, payment_time, transaction_ref, note
                 FROM procurement.supplier_payment
@@ -413,7 +412,7 @@ abstract class ProcurementDomainSupport {
         return response;
     }
 
-    protected void replacePurchaseOrderLines(Long purchaseOrderId, List<PurchaseOrderLineInput> lines) {
+    void replacePurchaseOrderLines(Long purchaseOrderId, List<PurchaseOrderLineInput> lines) {
         jdbcTemplate.update("DELETE FROM procurement.purchase_order_line WHERE purchase_order_id = :purchaseOrderId", params("purchaseOrderId", purchaseOrderId));
         int lineNumber = 1;
         for (PurchaseOrderLineInput line : lines) {
@@ -438,7 +437,7 @@ abstract class ProcurementDomainSupport {
         }
     }
 
-    protected void insertGoodsReceiptLines(Long goodsReceiptId, List<GoodsReceiptLineInput> lines) {
+    void insertGoodsReceiptLines(Long goodsReceiptId, List<GoodsReceiptLineInput> lines) {
         for (GoodsReceiptLineInput line : lines) {
             BigDecimal lineTotal = line.qtyReceived().multiply(line.unitCost()).setScale(2, RoundingMode.HALF_UP);
             jdbcTemplate.update("""
@@ -464,7 +463,7 @@ abstract class ProcurementDomainSupport {
         }
     }
 
-    protected void insertInvoiceLines(Long supplierInvoiceId, List<SupplierInvoiceLineInput> lines) {
+    void insertInvoiceLines(Long supplierInvoiceId, List<SupplierInvoiceLineInput> lines) {
         int lineNumber = 1;
         for (SupplierInvoiceLineInput line : lines) {
             jdbcTemplate.update("""
@@ -491,28 +490,7 @@ abstract class ProcurementDomainSupport {
         }
     }
 
-    protected PurchaseOrderTotals calculatePurchaseOrderTotals(List<PurchaseOrderLineInput> lines) {
-        BigDecimal subtotal = BigDecimal.ZERO;
-        BigDecimal taxAmount = BigDecimal.ZERO;
-        for (PurchaseOrderLineInput line : lines) {
-            BigDecimal unitPrice = line.expectedUnitPrice() == null ? BigDecimal.ZERO : line.expectedUnitPrice();
-            BigDecimal lineSubtotal = unitPrice.multiply(line.qtyOrdered()).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal lineTax = line.taxPercent() == null
-                    ? BigDecimal.ZERO
-                    : lineSubtotal.multiply(line.taxPercent().divide(new BigDecimal("100"), 6, RoundingMode.HALF_UP)).setScale(2, RoundingMode.HALF_UP);
-            subtotal = subtotal.add(lineSubtotal);
-            taxAmount = taxAmount.add(lineTax);
-        }
-        return new PurchaseOrderTotals(subtotal, taxAmount, subtotal.add(taxAmount));
-    }
-
-    protected BigDecimal calculateGoodsReceiptTotal(List<GoodsReceiptLineInput> lines) {
-        return lines.stream()
-                .map(line -> line.qtyReceived().multiply(line.unitCost()).setScale(2, RoundingMode.HALF_UP))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    protected void updatePurchaseOrderReceiptProgress(Long purchaseOrderId, Long goodsReceiptId) {
+    void updatePurchaseOrderReceiptProgress(Long purchaseOrderId, Long goodsReceiptId) {
         List<GoodsReceiptLineResponse> receiptLines = mapGoodsReceipt(requireGoodsReceipt(goodsReceiptId)).lines();
         for (GoodsReceiptLineResponse receiptLine : receiptLines) {
             if (receiptLine.purchaseOrderLineId() == null) {
@@ -545,64 +523,7 @@ abstract class ProcurementDomainSupport {
                 """, params("status", headerStatus, "id", purchaseOrderId));
     }
 
-    protected void enqueueGoodsReceiptPostedEvent(GoodsReceiptRecord record, FernPrincipal principal, String correlationId) {
-        List<GoodsReceiptPostedLine> lines = mapGoodsReceipt(record).lines().stream()
-                .map(line -> new GoodsReceiptPostedLine(line.ingredientId(), line.qtyReceived(), line.unitCost(), line.id()))
-                .toList();
-        ProcurementGoodsReceiptPostedEvent event = new ProcurementGoodsReceiptPostedEvent(
-                UUID.randomUUID().toString(),
-                "procurement.goods_receipt.posted",
-                Instant.now(clock),
-                "procurement-service",
-                correlationId,
-                UUID.randomUUID().toString(),
-                record.id(),
-                record.purchaseOrderId(),
-                record.regionId(),
-                record.outletId(),
-                record.businessDate(),
-                Instant.now(clock),
-                principal.userId(),
-                lines
-        );
-        enqueueOutbox("GOODS_RECEIPT", record.id().toString(), "procurement.goods_receipt.posted", record.outletId().toString(), event);
-    }
-
-    protected void enqueueSupplierPaymentRecordedEvent(Long supplierPaymentId, FernPrincipal principal, String correlationId) {
-        SupplierPaymentResponse payment = getSupplierPayment(supplierPaymentId);
-        SupplierPaymentRecordedEvent event = new SupplierPaymentRecordedEvent(
-                UUID.randomUUID().toString(),
-                "procurement.supplier.payment.recorded",
-                Instant.now(clock),
-                "procurement-service",
-                correlationId,
-                UUID.randomUUID().toString(),
-                payment.id(),
-                payment.supplierId(),
-                payment.paymentTime(),
-                payment.amount(),
-                payment.currencyCode(),
-                payment.invoiceAllocations().stream()
-                        .map(allocation -> new SupplierPaymentAllocation(allocation.supplierInvoiceId(), allocation.allocatedAmount()))
-                        .toList(),
-                principal.userId()
-        );
-        enqueueOutbox("SUPPLIER_PAYMENT", payment.id().toString(), "procurement.supplier.payment.recorded", payment.supplierId().toString(), event);
-    }
-
-    protected void ensureStatus(String actual, String expected, String message) {
-        if (!expected.equals(actual)) {
-            throw new ConflictException(message);
-        }
-    }
-
-    protected void requireIdempotencyKey(String idempotencyKey) {
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            throw new BadRequestException("Idempotency-Key header is required");
-        }
-    }
-
-    protected Long insertForId(NamedParameterJdbcTemplate template, String sql, MapSqlParameterSource parameters) {
+    Long insertForId(NamedParameterJdbcTemplate template, String sql, MapSqlParameterSource parameters) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         template.update(sql, parameters, keyHolder, new String[]{"id"});
         Number key = keyHolder.getKey();
@@ -612,7 +533,7 @@ abstract class ProcurementDomainSupport {
         return key.longValue();
     }
 
-    protected MapSqlParameterSource params(Object... values) {
+    MapSqlParameterSource params(Object... values) {
         MapSqlParameterSource parameters = new MapSqlParameterSource();
         for (int index = 0; index < values.length; index += 2) {
             Object value = values[index + 1];
@@ -627,7 +548,7 @@ abstract class ProcurementDomainSupport {
         return parameters;
     }
 
-    protected String toJson(Object payload) {
+    String toJson(Object payload) {
         try {
             return objectMapper.writeValueAsString(payload);
         } catch (JsonProcessingException exception) {
@@ -635,85 +556,8 @@ abstract class ProcurementDomainSupport {
         }
     }
 
-    protected Instant instant(ResultSet resultSet, String column) throws SQLException {
+    Instant instant(ResultSet resultSet, String column) throws SQLException {
         OffsetDateTime value = resultSet.getObject(column, OffsetDateTime.class);
         return value == null ? null : value.toInstant();
-    }
-
-    private void enqueueOutbox(String aggregateType, String aggregateId, String eventType, String partitionKey, Object payload) {
-        jdbcTemplate.update("""
-                INSERT INTO procurement.outbox_event (
-                    id, aggregate_type, aggregate_id, event_type, partition_key, payload, status, created_at
-                ) VALUES (
-                    CAST(:id AS uuid), :aggregateType, :aggregateId, :eventType, :partitionKey, CAST(:payload AS jsonb), 'PENDING', CURRENT_TIMESTAMP
-                )
-                """, params(
-                "id", UUID.randomUUID().toString(),
-                "aggregateType", aggregateType,
-                "aggregateId", aggregateId,
-                "eventType", eventType,
-                "partitionKey", partitionKey,
-                "payload", toJson(payload)
-        ));
-    }
-
-    protected record SupplierRecord(Long id, String status, Instant approvedAt) {
-    }
-
-    protected record PurchaseOrderRecord(
-            Long id,
-            String poNumber,
-            Long regionId,
-            Long outletId,
-            Long supplierId,
-            LocalDate orderDate,
-            LocalDate expectedDeliveryDate,
-            String status,
-            BigDecimal subtotalAmount,
-            BigDecimal taxAmount,
-            BigDecimal totalAmount,
-            String note,
-            Instant approvedAt,
-            Instant issuedAt
-    ) {
-    }
-
-    protected record GoodsReceiptRecord(
-            Long id,
-            String receiptNumber,
-            Long purchaseOrderId,
-            Long regionId,
-            Long outletId,
-            Long supplierId,
-            Instant receiptTime,
-            LocalDate businessDate,
-            String status,
-            BigDecimal totalAmount,
-            String supplierLotNumber,
-            String note,
-            Instant receivedAt,
-            Instant postedAt
-    ) {
-    }
-
-    protected record SupplierInvoiceRecord(
-            Long id,
-            Long supplierId,
-            Long regionId,
-            Long outletId,
-            String currencyCode,
-            String invoiceNumber,
-            LocalDate invoiceDate,
-            LocalDate dueDate,
-            BigDecimal subtotal,
-            BigDecimal taxAmount,
-            BigDecimal totalAmount,
-            String status,
-            String note,
-            Instant approvedAt
-    ) {
-    }
-
-    protected record PurchaseOrderTotals(BigDecimal subtotal, BigDecimal taxAmount, BigDecimal totalAmount) {
     }
 }

@@ -3,6 +3,7 @@ package com.fern.notificationservice.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.notificationservice.config.NotificationProperties;
+import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.platform.contracts.OperationalAlertEvent;
 import io.micrometer.core.instrument.Counter;
@@ -179,7 +180,7 @@ public class NotificationService {
             upsertWebhookLog(sourceEventId, sourceService, eventType, idempotencyKey, "DELIVERED", attemptNumber, body);
         } catch (RuntimeException exception) {
             webhookFailureCounter.increment();
-            recordAttempt(notificationJobId, attemptNumber, "FAILED", exception.getMessage(), null);
+            recordAttempt(notificationJobId, attemptNumber, "FAILED", ExceptionSummaries.safeSummary(exception), null);
             boolean terminalFailure = attemptNumber >= properties.getRetry().getMaxAttempts();
             jdbcTemplate.update("""
                     UPDATE notification.notification_job

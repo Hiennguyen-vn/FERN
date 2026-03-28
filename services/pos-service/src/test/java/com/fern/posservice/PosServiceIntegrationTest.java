@@ -478,8 +478,8 @@ class PosServiceIntegrationTest {
     }
 
     @Test
-    void shouldRejectSecondOpenSessionForSameOutlet() throws Exception {
-        mockMvc.perform(post("/pos-sessions")
+    void shouldRejectUnsupportedPaymentStatus() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())
                         .contentType("application/json")
                         .content("""
@@ -490,9 +490,51 @@ class PosServiceIntegrationTest {
                                   "businessDate": "2026-03-27"
                                 }
                                 """))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
 
-        mockMvc.perform(post("/pos-sessions")
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "TAKEAWAY",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-invalid-status")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CARD",
+                                  "amount": 25.00,
+                                  "status": "SUCCESSFUL"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("bad_request"))
+                .andExpect(jsonPath("$.message").value("Unsupported payment status"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM pos.sale_payment WHERE sale_order_id = ?",
+                Integer.class,
+                orderId
+        )).isZero();
+    }
+
+    @Test
+    void shouldReturnExistingOpenSessionForSecondOpenRequest() throws Exception {
+        String firstResponse = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())
                         .contentType("application/json")
                         .content("""
@@ -503,7 +545,27 @@ class PosServiceIntegrationTest {
                                   "businessDate": "2026-03-27"
                                 }
                                 """))
-                .andExpect(status().isConflict());
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long firstSessionId = readId(firstResponse);
+
+        String secondResponse = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OPEN"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(readId(secondResponse)).isEqualTo(firstSessionId);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pos.pos_session", Integer.class)).isEqualTo(1);
     }
 
     @Test

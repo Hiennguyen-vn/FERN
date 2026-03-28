@@ -16,5 +16,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
 
     List<ProductEntity> findAllByDeletedAtIsNullOrderByCodeAsc();
 
+    List<ProductEntity> findByIdInAndDeletedAtIsNull(Collection<Long> ids);
+
     List<ProductEntity> findByIdInAndStatusAndDeletedAtIsNull(Collection<Long> ids, ProductStatus status);
 }
