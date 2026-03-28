@@ -4,6 +4,8 @@ import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.RequestTraceEvent;
 import com.fern.platform.audit.SensitiveDataMasker;
 import com.fern.platform.observability.CorrelationId;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -17,14 +19,20 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Component
 public class GatewayLoggingFilter implements WebFilter, Ordered {
     private static final Logger LOGGER = LoggerFactory.getLogger(GatewayLoggingFilter.class);
     private final AuditEventPublisher auditEventPublisher;
+    private final Counter outboxEnqueueFailureCounter;
 
-    public GatewayLoggingFilter(AuditEventPublisher auditEventPublisher) {
+    public GatewayLoggingFilter(AuditEventPublisher auditEventPublisher, MeterRegistry meterRegistry) {
         this.auditEventPublisher = auditEventPublisher;
+        this.outboxEnqueueFailureCounter = Counter.builder("fern_outbox_enqueue_failures_total")
+                .tag("source", "api-gateway")
+                .tag("event_type", "request.trace")
+                .register(meterRegistry);
     }
 
     @Override
@@ -51,8 +59,7 @@ public class GatewayLoggingFilter implements WebFilter, Ordered {
                 ? null
                 : exchange.getRequest().getRemoteAddress().toString());
         payload.put("userAgent", exchange.getRequest().getHeaders().getFirst("User-Agent"));
-
-        auditEventPublisher.publishRequestTrace(new RequestTraceEvent(
+        RequestTraceEvent event = new RequestTraceEvent(
                 UUID.randomUUID().toString(),
                 "request.trace.recorded",
                 startedAt,
@@ -68,7 +75,15 @@ public class GatewayLoggingFilter implements WebFilter, Ordered {
                 null,
                 exchange.getRequest().getId(),
                 castToMap(SensitiveDataMasker.mask(payload))
-        ));
+        );
+        Mono.fromRunnable(() -> auditEventPublisher.publishRequestTrace(event))
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(exception -> {
+                    outboxEnqueueFailureCounter.increment();
+                    LOGGER.warn("gateway_request_trace_enqueue_failed requestId={}", event.requestId(), exception);
+                })
+                .onErrorResume(exception -> Mono.empty())
+                .subscribe();
     }
 
     private String correlationId(ServerWebExchange exchange) {

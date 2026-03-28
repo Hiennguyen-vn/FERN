@@ -3,7 +3,10 @@ package com.fern.hrservice;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fern.hrservice.controller.HrReadController;
+import com.fern.hrservice.controller.InternalHrController;
 import com.fern.hrservice.dto.HrCommands.CreateAssignmentRequest;
+import com.fern.hrservice.dto.HrCommands.CreateContractRequest;
 import com.fern.hrservice.dto.HrCommands.CreateEmployeeRequest;
 import com.fern.hrservice.dto.HrCommands.CreateShiftAssignmentRequest;
 import com.fern.hrservice.dto.HrCommands.CreateShiftScheduleRequest;
@@ -12,6 +15,7 @@ import com.fern.hrservice.service.HrService;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ScopeRoots;
@@ -64,6 +68,12 @@ class HrServiceIntegrationTest {
 
     @Autowired
     private HrService hrService;
+
+    @Autowired
+    private HrReadController hrReadController;
+
+    @Autowired
+    private InternalHrController internalHrController;
 
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
@@ -324,6 +334,80 @@ class HrServiceIntegrationTest {
         assertThat(approvalStatus).isEqualTo("APPROVED");
     }
 
+    @Test
+    void shouldMaskContractDetailWithoutDetailPermission() {
+        long employeeId = seedEmployeeWithContract();
+        FernPrincipal principal = new FernPrincipal(
+                10L,
+                "hr-reader",
+                Set.of("hr"),
+                Set.of(PermissionCodes.HR_CONTRACT_READ),
+                new ScopeRoots(false, List.of(1L), List.of()),
+                1L,
+                1L,
+                UUID.randomUUID().toString()
+        );
+
+        var responses = hrReadController.listContracts(principal, employeeId);
+
+        assertThat(responses).singleElement().satisfies(contract -> {
+            assertThat(contract.regionId()).isEqualTo(1L);
+            assertThat(contract.baseSalary()).isNull();
+            assertThat(contract.taxCode()).isNull();
+        });
+    }
+
+    @Test
+    void shouldExposeContractDetailWithDetailPermission() {
+        long employeeId = seedEmployeeWithContract();
+        FernPrincipal principal = new FernPrincipal(
+                11L,
+                "hr-detail-reader",
+                Set.of("hr"),
+                Set.of(PermissionCodes.HR_CONTRACT_READ, PermissionCodes.HR_CONTRACT_DETAIL_READ),
+                new ScopeRoots(false, List.of(1L), List.of()),
+                1L,
+                1L,
+                UUID.randomUUID().toString()
+        );
+
+        var responses = hrReadController.listContracts(principal, employeeId);
+
+        assertThat(responses).singleElement().satisfies(contract -> {
+            assertThat(contract.baseSalary()).isNotNull();
+            assertThat(contract.taxCode()).isEqualTo("TAX-001");
+        });
+    }
+
+    @Test
+    void shouldKeepInternalEffectiveContractsUnmasked() {
+        long employeeId = seedEmployeeWithContract();
+        FernPrincipal servicePrincipal = new FernPrincipal(
+                null,
+                "finance-service",
+                Set.of(),
+                Set.of(PermissionCodes.HR_INTERNAL_READ),
+                new ScopeRoots(true, List.of(), List.of()),
+                1L,
+                1L,
+                UUID.randomUUID().toString(),
+                FernPrincipalType.SERVICE
+        );
+
+        var responses = internalHrController.effectiveContracts(
+                servicePrincipal,
+                1L,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 12, 31)
+        );
+
+        assertThat(responses).anySatisfy(contract -> {
+            assertThat(contract.employeeId()).isEqualTo(employeeId);
+            assertThat(contract.baseSalary()).isNotNull();
+            assertThat(contract.taxCode()).isEqualTo("TAX-001");
+        });
+    }
+
     private FernPrincipal systemPrincipal(String... permissions) {
         return new FernPrincipal(
                 1L,
@@ -348,5 +432,38 @@ class HrServiceIntegrationTest {
                 1L,
                 UUID.randomUUID().toString()
         );
+    }
+
+    private long seedEmployeeWithContract() {
+        FernPrincipal systemPrincipal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_CONTRACT_READ,
+                PermissionCodes.HR_CONTRACT_WRITE,
+                PermissionCodes.HR_CONTRACT_DETAIL_READ
+        );
+        long employeeId = hrService.createEmployee(systemPrincipal, new CreateEmployeeRequest(
+                "EMP-CONTRACT-001",
+                "Daisy",
+                null,
+                null,
+                null,
+                null,
+                null,
+                LocalDate.of(2026, 1, 1),
+                null
+        )).id();
+        hrService.createContract(systemPrincipal, new CreateContractRequest(
+                employeeId,
+                "FULL_TIME",
+                "MONTHLY",
+                java.math.BigDecimal.valueOf(1500),
+                1L,
+                "TAX-001",
+                "ACTIVE",
+                LocalDate.of(2026, 1, 1),
+                null
+        ));
+        return employeeId;
     }
 }

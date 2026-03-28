@@ -93,6 +93,11 @@ class NotificationServiceIntegrationTest {
 
     @Test
     void shouldCreateSingleJobForDuplicateOperationalAlertAndDeliverOnce() throws Exception {
+        Long webhookEndpointId = jdbcTemplate.queryForObject(
+                "SELECT webhook_endpoint_id FROM notification.webhook_endpoint WHERE endpoint_url = ?",
+                Long.class,
+                "http://localhost:" + webhookServer.getAddress().getPort() + "/ops"
+        );
         OperationalAlertEvent event = new OperationalAlertEvent(
                 "ops-alert-1",
                 "ops.alert.raised",
@@ -127,6 +132,10 @@ class NotificationServiceIntegrationTest {
                 "SELECT delivery_status FROM notification.webhook_delivery_log WHERE source_event_id = 'ops-alert-1'",
                 String.class
         )).isEqualTo("DELIVERED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT webhook_endpoint_id FROM notification.webhook_delivery_log WHERE source_event_id = 'ops-alert-1'",
+                Long.class
+        )).isEqualTo(webhookEndpointId);
         assertThat(webhookRequestCount.get()).isEqualTo(1);
         assertThat(webhookBodies).singleElement().satisfies(body -> assertThat(body).contains("EXPORT_FAILED"));
 
@@ -138,6 +147,11 @@ class NotificationServiceIntegrationTest {
 
     @Test
     void shouldRetryDlqWebhookAndFreezeFailedTerminalState() {
+        Long webhookEndpointId = jdbcTemplate.queryForObject(
+                "SELECT webhook_endpoint_id FROM notification.webhook_endpoint WHERE endpoint_url = ?",
+                Long.class,
+                "http://localhost:" + webhookServer.getAddress().getPort() + "/ops"
+        );
         webhookStatus.set(500);
 
         notificationService.ingestDlqMessage("inventory.dlq", 1, 42L, "{\"payload\":\"bad-message\"}");
@@ -168,6 +182,10 @@ class NotificationServiceIntegrationTest {
                 "SELECT delivery_status FROM notification.webhook_delivery_log WHERE source_event_id = 'inventory.dlq:1:42'",
                 String.class
         )).isEqualTo("FAILED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT webhook_endpoint_id FROM notification.webhook_delivery_log WHERE source_event_id = 'inventory.dlq:1:42'",
+                Long.class
+        )).isEqualTo(webhookEndpointId);
         assertThat(jdbcTemplate.queryForList(
                 "SELECT error_message FROM notification.delivery_attempt ORDER BY attempt_number",
                 String.class
@@ -238,6 +256,41 @@ class NotificationServiceIntegrationTest {
                 "SELECT COUNT(*) FROM notification.delivery_attempt WHERE notification_job_id = (SELECT notification_job_id FROM notification.notification_job WHERE source_event_id = 'ops-alert-concurrent')",
                 Integer.class
         )).isEqualTo(1);
+    }
+
+    @Test
+    void shouldResolveWebhookEndpointIdForDeliveryLogs() throws Exception {
+        OperationalAlertEvent event = new OperationalAlertEvent(
+                "ops-alert-endpoint-id",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:15:00Z"),
+                "report-service",
+                "corr-endpoint-id",
+                "ops-idem-endpoint-id",
+                "EXPORT_FAILED",
+                "HIGH",
+                "Endpoint id resolution test",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "100",
+                Map.of("jobId", 100)
+        );
+        String payload = objectMapper.writeValueAsString(event);
+
+        notificationService.ingestOperationalAlert(payload, event);
+        notificationService.deliverPending();
+
+        Long expectedWebhookEndpointId = jdbcTemplate.queryForObject(
+                "SELECT webhook_endpoint_id FROM notification.webhook_endpoint WHERE endpoint_url = ?",
+                Long.class,
+                "http://localhost:" + webhookServer.getAddress().getPort() + "/ops"
+        );
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT webhook_endpoint_id FROM notification.webhook_delivery_log WHERE source_event_id = 'ops-alert-endpoint-id'",
+                Long.class
+        )).isEqualTo(expectedWebhookEndpointId);
     }
 
     private static void await(CountDownLatch latch) {

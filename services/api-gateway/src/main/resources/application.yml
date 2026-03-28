@@ -1,6 +1,15 @@
 spring:
   application:
     name: api-gateway
+  datasource:
+    url: ${FERN_GATEWAY_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=gateway}
+    username: ${FERN_DB_USERNAME:fern}
+    password: ${FERN_DB_PASSWORD:fern}
+  flyway:
+    enabled: true
+    schemas: gateway
+    default-schema: gateway
+    locations: classpath:db/migration/postgresql/master
   data:
     redis:
       host: ${FERN_REDIS_HOST:localhost}
@@ -20,6 +29,9 @@ management:
         include: health,info,metrics,prometheus
 
 fern:
+  outbox:
+    enabled: ${FERN_OUTBOX_ENABLED:true}
+    publish-delay-ms: 5000
   security:
     jwt:
       secret: ${FERN_JWT_SECRET:XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv}

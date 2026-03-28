@@ -68,6 +68,7 @@ public final class PermissionCodes {
     public static final String HR_EMPLOYEE_READ = "hr.employee.read";
     public static final String HR_EMPLOYEE_WRITE = "hr.employee.write";
     public static final String HR_CONTRACT_READ = "hr.contract.read";
+    public static final String HR_CONTRACT_DETAIL_READ = "hr.contract.detail.read";
     public static final String HR_CONTRACT_WRITE = "hr.contract.write";
     public static final String HR_SHIFT_READ = "hr.shift.read";
     public static final String HR_SHIFT_WRITE = "hr.shift.write";
@@ -76,6 +77,7 @@ public final class PermissionCodes {
     public static final String HR_PAYROLL_PREPARE = "hr.payroll.prepare";
     public static final String HR_INTERNAL_READ = "hr.internal.read";
     public static final String FINANCE_PAYROLL_READ = "finance.payroll.read";
+    public static final String FINANCE_PAYROLL_DETAIL_READ = "finance.payroll.detail.read";
     public static final String FINANCE_PAYROLL_PREPARE = "finance.payroll.prepare";
     public static final String FINANCE_PAYROLL_APPROVE = "finance.payroll.approve";
     public static final String FINANCE_PAYROLL_PAY = "finance.payroll.pay";

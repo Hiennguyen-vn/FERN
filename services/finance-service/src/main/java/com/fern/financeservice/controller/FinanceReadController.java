@@ -5,6 +5,7 @@ import com.fern.financeservice.dto.FinanceResponses.PayrollPeriodResponse;
 import com.fern.financeservice.dto.FinanceResponses.PayrollRunResponse;
 import com.fern.financeservice.dto.FinanceResponses.SystemPolicyResponse;
 import com.fern.financeservice.service.FinancePayrollService;
+import com.fern.financeservice.service.PayrollResponseMasker;
 import com.fern.platform.common.FernPrincipal;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,9 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping
 public class FinanceReadController {
     private final FinancePayrollService financePayrollService;
+    private final PayrollResponseMasker payrollResponseMasker;
 
-    public FinanceReadController(FinancePayrollService financePayrollService) {
+    public FinanceReadController(FinancePayrollService financePayrollService, PayrollResponseMasker payrollResponseMasker) {
         this.financePayrollService = financePayrollService;
+        this.payrollResponseMasker = payrollResponseMasker;
     }
 
     @GetMapping("/payroll-periods")
@@ -41,12 +44,14 @@ public class FinanceReadController {
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam(required = false) Long regionId
     ) {
-        return financePayrollService.listPayrollRuns(principal, regionId);
+        return financePayrollService.listPayrollRuns(principal, regionId).stream()
+                .map(response -> payrollResponseMasker.maskForPrincipal(principal, response))
+                .toList();
     }
 
     @GetMapping("/payroll-runs/{id}")
     public PayrollRunResponse getPayrollRun(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        return financePayrollService.getPayrollRun(principal, id);
+        return payrollResponseMasker.maskForPrincipal(principal, financePayrollService.getPayrollRun(principal, id));
     }
 
     @GetMapping("/finance-config/numbering-rules/{documentType}")

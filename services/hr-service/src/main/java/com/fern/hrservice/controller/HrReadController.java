@@ -6,6 +6,7 @@ import com.fern.hrservice.dto.HrResponses.ContractResponse;
 import com.fern.hrservice.dto.HrResponses.EmployeeResponse;
 import com.fern.hrservice.dto.HrResponses.ShiftAssignmentResponse;
 import com.fern.hrservice.dto.HrResponses.ShiftScheduleResponse;
+import com.fern.hrservice.service.ContractResponseMasker;
 import com.fern.hrservice.service.HrService;
 import com.fern.platform.common.FernPrincipal;
 import java.util.List;
@@ -20,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping
 public class HrReadController {
     private final HrService hrService;
+    private final ContractResponseMasker contractResponseMasker;
 
-    public HrReadController(HrService hrService) {
+    public HrReadController(HrService hrService, ContractResponseMasker contractResponseMasker) {
         this.hrService = hrService;
+        this.contractResponseMasker = contractResponseMasker;
     }
 
     @GetMapping("/employees/{id}")
@@ -32,7 +35,9 @@ public class HrReadController {
 
     @GetMapping("/employees/{employeeId}/contracts")
     public List<ContractResponse> listContracts(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long employeeId) {
-        return hrService.listContracts(principal, employeeId);
+        return hrService.listContracts(principal, employeeId).stream()
+                .map(response -> contractResponseMasker.maskForPrincipal(principal, response))
+                .toList();
     }
 
     @GetMapping("/employees/{employeeId}/assignments")

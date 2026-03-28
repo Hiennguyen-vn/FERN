@@ -1,6 +1,9 @@
 package com.fern.reportservice.service;
 
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -20,18 +23,21 @@ public class ExportArtifactStore {
             Files.createDirectories(baseDir);
             Path tempPath = baseDir.resolve(jobId + "-" + datasetName.toLowerCase(Locale.ROOT) + ".csv.tmp");
             Path finalPath = baseDir.resolve(jobId + "-" + datasetName.toLowerCase(Locale.ROOT) + ".csv");
-            StringBuilder builder = new StringBuilder();
-            builder.append(String.join(",", columns)).append('\n');
-            for (Map<String, Object> row : rows) {
-                for (int index = 0; index < columns.size(); index++) {
-                    if (index > 0) {
-                        builder.append(',');
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(tempPath.toFile()), StandardCharsets.UTF_8)
+            )) {
+                writer.write(String.join(",", columns));
+                writer.newLine();
+                for (Map<String, Object> row : rows) {
+                    for (int index = 0; index < columns.size(); index++) {
+                        if (index > 0) {
+                            writer.write(',');
+                        }
+                        writer.write(csvValue(row.get(columns.get(index))));
                     }
-                    builder.append(csvValue(row.get(columns.get(index))));
+                    writer.newLine();
                 }
-                builder.append('\n');
             }
-            Files.writeString(tempPath, builder.toString(), StandardCharsets.UTF_8);
             String checksum = sha256(tempPath);
             Files.move(tempPath, finalPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
             return new ReportArtifact(finalPath, checksum);
@@ -55,11 +61,17 @@ public class ExportArtifactStore {
             return "";
         }
         String text = value instanceof BigDecimal decimal ? decimal.stripTrailingZeros().toPlainString() : String.valueOf(value);
-        String escaped = text.replace("\"", "\"\"");
+        String sanitized = startsWithSpreadsheetFormulaPrefix(text) ? "'" + text : text;
+        String escaped = sanitized.replace("\"", "\"\"");
         if (escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n")) {
             return "\"" + escaped + "\"";
         }
         return escaped;
+    }
+
+    private boolean startsWithSpreadsheetFormulaPrefix(String text) {
+        return !text.isEmpty()
+                && (text.charAt(0) == '=' || text.charAt(0) == '+' || text.charAt(0) == '-' || text.charAt(0) == '@');
     }
 
     private String sha256(Path filePath) {

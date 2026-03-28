@@ -1,23 +1,17 @@
 package com.fern.reportservice.service;
 
-import com.fern.platform.audit.AuditEvent;
+import com.fern.platform.audit.AbstractAuditService;
 import com.fern.platform.audit.AuditEventPublisher;
-import com.fern.platform.audit.SensitiveDataMasker;
 import com.fern.platform.common.FernPrincipal;
 import java.time.Clock;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ReportAuditService {
-    private final AuditEventPublisher auditEventPublisher;
-    private final Clock clock;
+public class ReportAuditService extends AbstractAuditService {
 
     public ReportAuditService(AuditEventPublisher auditEventPublisher, Clock clock) {
-        this.auditEventPublisher = auditEventPublisher;
-        this.clock = clock;
+        super(auditEventPublisher, clock);
     }
 
     public void publish(
@@ -33,38 +27,23 @@ public class ReportAuditService {
             Object newValue,
             Map<String, Object> payload
     ) {
-        auditEventPublisher.publishAuditEvent(new AuditEvent(
-                UUID.randomUUID().toString(),
+        publishToOutbox(buildAuditEvent(
                 eventType,
-                clock.instant(),
-                "report-service",
+                principal,
                 correlationId,
-                principal == null ? null : principal.userId(),
                 regionId,
                 outletId,
                 action,
                 resourceType,
                 resourceId,
-                "SUCCESS",
-                SensitiveDataMasker.mask(oldValue),
-                SensitiveDataMasker.mask(newValue),
-                UUID.randomUUID().toString(),
-                mask(payload)
+                oldValue,
+                newValue,
+                payload
         ));
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> mask(Map<String, Object> payload) {
-        Object masked = SensitiveDataMasker.mask(payload == null ? Map.of() : payload);
-        if (!(masked instanceof Map<?, ?> map)) {
-            return new LinkedHashMap<>();
-        }
-        LinkedHashMap<String, Object> sanitized = new LinkedHashMap<>();
-        map.forEach((key, value) -> {
-            if (key instanceof String stringKey && value != null) {
-                sanitized.put(stringKey, value);
-            }
-        });
-        return sanitized;
+    @Override
+    protected String sourceService() {
+        return "report-service";
     }
 }

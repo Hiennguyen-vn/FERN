@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fern.financeservice.dto.FinanceCommands.MarkPaidRequest;
+import com.fern.financeservice.controller.FinanceReadController;
 import com.fern.financeservice.service.FinancePayrollService;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.common.FernPrincipal;
@@ -63,6 +64,9 @@ class FinanceSecurityIntegrationTest {
 
     @Autowired
     private FinancePayrollService financePayrollService;
+
+    @Autowired
+    private FinanceReadController financeReadController;
 
     @Autowired
     private FernJwtService jwtService;
@@ -398,6 +402,37 @@ class FinanceSecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    void shouldHidePayrollEmployeesWithoutDetailPermission() {
+        long runId = seedPayrollRunWithEmployeeResult();
+        FernPrincipal principal = principal(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                new ScopeRoots(false, List.of(1L), List.of())
+        );
+
+        var response = financeReadController.getPayrollRun(principal, runId);
+        var listed = financeReadController.listPayrollRuns(principal, 1L);
+
+        assertThat(response.employees()).isEmpty();
+        assertThat(listed).singleElement().satisfies(run -> assertThat(run.employees()).isEmpty());
+    }
+
+    @Test
+    void shouldExposePayrollEmployeesWithDetailPermission() {
+        long runId = seedPayrollRunWithEmployeeResult();
+        FernPrincipal principal = principal(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_READ, PermissionCodes.FINANCE_PAYROLL_DETAIL_READ),
+                new ScopeRoots(false, List.of(1L), List.of())
+        );
+
+        var response = financeReadController.getPayrollRun(principal, runId);
+        var listed = financeReadController.listPayrollRuns(principal, 1L);
+
+        assertThat(response.employees()).hasSize(1);
+        assertThat(response.employees().getFirst().allocations()).hasSize(1);
+        assertThat(listed).singleElement().satisfies(run -> assertThat(run.employees()).hasSize(1));
+    }
+
     private Object invokeMarkPaid(FernPrincipal principal, long runId) {
         try {
             financePayrollService.markPayrollPaid(principal, runId, new MarkPaidRequest("PAY-REF-1", "paid"));
@@ -438,5 +473,49 @@ class FinanceSecurityIntegrationTest {
                 1L,
                 UUID.randomUUID().toString()
         );
+    }
+
+    private long seedPayrollRunWithEmployeeResult() {
+        long periodId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_period (
+                    region_id, reference_code, name, start_date, end_date, pay_date, status, created_at, updated_at
+                ) VALUES (
+                    1, 'PP-000001', 'March payroll', DATE '2026-03-01', DATE '2026-03-31', DATE '2026-04-05', 'DRAFT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource(), Long.class);
+        long runId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_run (
+                    payroll_period_id, run_code, run_date, status, total_amount, payment_ref, note, submitted_at, approved_at, paid_at, created_at, updated_at
+                ) VALUES (
+                    :periodId, 'RUN-000001', DATE '2026-04-01', 'APPROVED', 100.00, 'PAY-001', 'ready', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource("periodId", periodId), Long.class);
+        long resultId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_employee_result (
+                    payroll_run_id, employee_id, contract_id, outlet_id, gross_pay, deduction_amount, tax_amount, net_pay,
+                    payment_status, work_days, work_hours, overtime_hours, created_at, updated_at
+                ) VALUES (
+                    :runId, 501, 701, 301, 120.00, 10.00, 10.00, 100.00,
+                    'UNPAID', 20, 160, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource("runId", runId), Long.class);
+        jdbcTemplate.update("""
+                INSERT INTO finance.payroll_result_line (
+                    payroll_employee_result_id, line_type, description, amount, created_at
+                ) VALUES (
+                    :resultId, 'BASE', 'Base salary', 120.00, CURRENT_TIMESTAMP
+                )
+                """, new MapSqlParameterSource("resultId", resultId));
+        jdbcTemplate.update("""
+                INSERT INTO finance.payroll_result_allocation (
+                    payroll_employee_result_id, outlet_id, work_hours, allocated_amount, created_at
+                ) VALUES (
+                    :resultId, 301, 160, 100.00, CURRENT_TIMESTAMP
+                )
+                """, new MapSqlParameterSource("resultId", resultId));
+        return runId;
     }
 }

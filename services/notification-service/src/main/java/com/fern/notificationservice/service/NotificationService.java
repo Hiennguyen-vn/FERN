@@ -62,6 +62,7 @@ public class NotificationService {
     @PostConstruct
     @Transactional
     public void bootstrapWebhookEndpoint() {
+        validateWebhookConfiguration();
         if (properties.getOpsWebhook().getUrl() == null || properties.getOpsWebhook().getUrl().isBlank()) {
             return;
         }
@@ -74,7 +75,7 @@ public class NotificationService {
                     SELECT 1 FROM notification.webhook_endpoint WHERE endpoint_url = :endpointUrl
                 )
                 """, params(
-                "webhookEndpointId", 1L,
+                "webhookEndpointId", idGenerator.nextId(),
                 "endpointUrl", properties.getOpsWebhook().getUrl(),
                 "eventTypes", toJson(properties.getDlqTopics()),
                 "secretKeyRef", "ops-webhook"
@@ -130,22 +131,30 @@ public class NotificationService {
 
     private void deliverNotification(PendingNotification notification) {
         int attemptNumber = nextAttemptNumber(notification.notificationJobId());
+        ResolvedWebhookEndpoint webhookEndpoint = null;
         try {
+            webhookEndpoint = resolveWebhookEndpoint(notification.recipient());
             ResponseEntity<Void> response = restClient.post()
-                    .uri(properties.getOpsWebhook().getUrl())
+                    .uri(webhookEndpoint.endpointUrl())
                     .header("Content-Type", "application/json")
-                    .header("X-Fern-Webhook-Secret", properties.getOpsWebhook().getSecret() == null ? "" : properties.getOpsWebhook().getSecret())
+                    .header("X-Fern-Webhook-Secret", webhookEndpoint.secret())
                     .header("X-Fern-Notification-Idempotency-Key", notification.idempotencyKey())
                     .header("X-Fern-Source-Event-Id", notification.sourceEventId())
                     .body(notification.body())
                     .retrieve()
                     .toBodilessEntity();
-            recordSuccess(notification, attemptNumber, String.valueOf(response.getStatusCode().value()));
+            recordSuccess(notification, webhookEndpoint.webhookEndpointId(), attemptNumber, String.valueOf(response.getStatusCode().value()));
         } catch (RuntimeException exception) {
             webhookFailureCounter.increment();
             String errorSummary = ExceptionSummaries.safeSummary(exception);
             boolean terminalFailure = attemptNumber >= properties.getRetry().getMaxAttempts();
-            recordFailure(notification, attemptNumber, errorSummary, terminalFailure);
+            recordFailure(
+                    notification,
+                    webhookEndpoint == null ? null : webhookEndpoint.webhookEndpointId(),
+                    attemptNumber,
+                    errorSummary,
+                    terminalFailure
+            );
         }
     }
 
@@ -172,7 +181,7 @@ public class NotificationService {
                 ) claimed
                 WHERE job.notification_job_id = claimed.notification_job_id
                 RETURNING job.notification_job_id, job.source_event_id, job.source_service, job.event_type,
-                          job.idempotency_key, job.subject, job.body
+                          job.idempotency_key, job.subject, job.body, job.recipient
                 """, params(
                 "claimedAt", now,
                 "staleBefore", staleBefore
@@ -183,7 +192,8 @@ public class NotificationService {
                 rs.getString("event_type"),
                 rs.getString("idempotency_key"),
                 rs.getString("subject"),
-                rs.getString("body")
+                rs.getString("body"),
+                rs.getString("recipient")
         )));
     }
 
@@ -195,7 +205,7 @@ public class NotificationService {
                 """, params("notificationJobId", notificationJobId), rs -> rs.next() ? rs.getInt(1) : 1);
     }
 
-    private void recordSuccess(PendingNotification notification, int attemptNumber, String responseCode) {
+    private void recordSuccess(PendingNotification notification, long webhookEndpointId, int attemptNumber, String responseCode) {
         transactionTemplate.executeWithoutResult(status -> {
             recordAttempt(notification.notificationJobId(), attemptNumber, "SENT", null, responseCode);
             jdbcTemplate.update("""
@@ -213,6 +223,7 @@ public class NotificationService {
                     notification.sourceService(),
                     notification.eventType(),
                     notification.idempotencyKey(),
+                    webhookEndpointId,
                     "DELIVERED",
                     attemptNumber,
                     notification.body()
@@ -220,7 +231,13 @@ public class NotificationService {
         });
     }
 
-    private void recordFailure(PendingNotification notification, int attemptNumber, String errorSummary, boolean terminalFailure) {
+    private void recordFailure(
+            PendingNotification notification,
+            Long webhookEndpointId,
+            int attemptNumber,
+            String errorSummary,
+            boolean terminalFailure
+    ) {
         transactionTemplate.executeWithoutResult(status -> {
             recordAttempt(notification.notificationJobId(), attemptNumber, "FAILED", errorSummary, null);
             jdbcTemplate.update("""
@@ -237,15 +254,18 @@ public class NotificationService {
                     "terminalFailure", terminalFailure,
                     "notificationJobId", notification.notificationJobId()
             ));
-            upsertWebhookLog(
-                    notification.sourceEventId(),
-                    notification.sourceService(),
-                    notification.eventType(),
-                    notification.idempotencyKey(),
-                    terminalFailure ? "FAILED" : "RETRYING",
-                    attemptNumber,
-                    notification.body()
-            );
+            if (webhookEndpointId != null) {
+                upsertWebhookLog(
+                        notification.sourceEventId(),
+                        notification.sourceService(),
+                        notification.eventType(),
+                        notification.idempotencyKey(),
+                        webhookEndpointId,
+                        terminalFailure ? "FAILED" : "RETRYING",
+                        attemptNumber,
+                        notification.body()
+                );
+            }
         });
     }
 
@@ -308,6 +328,7 @@ public class NotificationService {
             String sourceService,
             String eventType,
             String idempotencyKey,
+            long webhookEndpointId,
             String deliveryStatus,
             int attemptCount,
             String payload
@@ -318,7 +339,7 @@ public class NotificationService {
                     webhook_endpoint_id, delivery_status, attempt_count, last_attempt_at, delivered_at, payload
                 ) VALUES (
                     :webhookDeliveryLogId, :sourceEventId, :sourceService, :eventType, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, :idempotencyKey,
-                    1, :deliveryStatus, :attemptCount, CURRENT_TIMESTAMP,
+                    :webhookEndpointId, :deliveryStatus, :attemptCount, CURRENT_TIMESTAMP,
                     CASE WHEN :deliveryStatus = 'DELIVERED' THEN CURRENT_TIMESTAMP ELSE NULL END,
                     CAST(:payload AS jsonb)
                 )
@@ -334,10 +355,61 @@ public class NotificationService {
                 "sourceService", sourceService,
                 "eventType", eventType,
                 "idempotencyKey", idempotencyKey,
+                "webhookEndpointId", webhookEndpointId,
                 "deliveryStatus", deliveryStatus,
                 "attemptCount", attemptCount,
                 "payload", payload
         ));
+    }
+
+    private ResolvedWebhookEndpoint resolveWebhookEndpoint(String recipient) {
+        String endpointUrl = recipient == null || recipient.isBlank() ? properties.getOpsWebhook().getUrl() : recipient;
+        if (endpointUrl == null || endpointUrl.isBlank()) {
+            throw new IllegalStateException("No webhook recipient configured");
+        }
+        ResolvedWebhookEndpoint existing = findWebhookEndpoint(endpointUrl);
+        if (existing != null) {
+            return existing;
+        }
+        if (endpointUrl.equals(properties.getOpsWebhook().getUrl())) {
+            bootstrapWebhookEndpoint();
+            ResolvedWebhookEndpoint bootstrapped = findWebhookEndpoint(endpointUrl);
+            if (bootstrapped != null) {
+                return bootstrapped;
+            }
+        }
+        throw new IllegalStateException("No active webhook endpoint configured");
+    }
+
+    private void validateWebhookConfiguration() {
+        String webhookUrl = properties.getOpsWebhook().getUrl();
+        if (webhookUrl == null || webhookUrl.isBlank()) {
+            return;
+        }
+        String webhookSecret = properties.getOpsWebhook().getSecret();
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            throw new IllegalStateException(
+                    "fern.notification.ops-webhook.secret is required when fern.notification.ops-webhook.url is configured"
+            );
+        }
+    }
+
+    private ResolvedWebhookEndpoint findWebhookEndpoint(String endpointUrl) {
+        List<ResolvedWebhookEndpoint> endpoints = jdbcTemplate.query("""
+                SELECT webhook_endpoint_id, endpoint_url
+                FROM notification.webhook_endpoint
+                WHERE endpoint_url = :endpointUrl
+                  AND status = 'ACTIVE'
+                ORDER BY webhook_endpoint_id
+                LIMIT 1
+                """, params("endpointUrl", endpointUrl), (rs, rowNum) -> new ResolvedWebhookEndpoint(
+                rs.getLong("webhook_endpoint_id"),
+                rs.getString("endpoint_url"),
+                rs.getString("endpoint_url").equals(properties.getOpsWebhook().getUrl())
+                        ? properties.getOpsWebhook().getSecret()
+                        : ""
+        ));
+        return endpoints.isEmpty() ? null : endpoints.get(0);
     }
 
     private MapSqlParameterSource params(Object... values) {
@@ -370,7 +442,15 @@ public class NotificationService {
             String eventType,
             String idempotencyKey,
             String subject,
-            String body
+            String body,
+            String recipient
+    ) {
+    }
+
+    private record ResolvedWebhookEndpoint(
+            long webhookEndpointId,
+            String endpointUrl,
+            String secret
     ) {
     }
 }

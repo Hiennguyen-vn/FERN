@@ -2,6 +2,7 @@ package com.fern.apigateway;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.apigateway.outbox.GatewayOutboxPublisher;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
@@ -13,7 +14,12 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -25,9 +31,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -39,6 +47,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@DirtiesContext
 class ApiGatewayIntegrationTest {
     private static HttpServer iamServer;
     private static HttpServer orgServer;
@@ -57,6 +66,12 @@ class ApiGatewayIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private GatewayOutboxPublisher gatewayOutboxPublisher;
+
     @MockBean
     private KafkaTemplate<String, String> kafkaTemplate;
 
@@ -67,6 +82,10 @@ class ApiGatewayIntegrationTest {
         ensureServersStarted();
         registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
         registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
+        registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("gateway"));
+        registry.add("spring.datasource.username", FernIntegrationContainers::jdbcUsername);
+        registry.add("spring.datasource.password", FernIntegrationContainers::jdbcPassword);
+        registry.add("spring.task.scheduling.enabled", () -> "false");
         registry.add("fern.security.jwt.allow-insecure-default-secret", () -> true);
         registry.add("fern.routes.iam", () -> "http://localhost:" + iamServer.getAddress().getPort());
         registry.add("fern.routes.org", () -> "http://localhost:" + orgServer.getAddress().getPort());
@@ -193,6 +212,7 @@ class ApiGatewayIntegrationTest {
     void setUp() {
         webTestClient = WebTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
         redisTemplate.getConnectionFactory().getConnection().serverCommands().flushAll();
+        jdbcTemplate.execute("TRUNCATE TABLE gateway.outbox_event");
         when(kafkaTemplate.send(anyString(), anyString(), anyString())).thenReturn(CompletableFuture.completedFuture((SendResult<String, String>) null));
     }
 
@@ -211,6 +231,18 @@ class ApiGatewayIntegrationTest {
                 .uri("/regions/1")
                 .exchange()
                 .expectStatus().isUnauthorized();
+
+        waitForRows("REQUEST_TRACE", 1);
+        waitForRows("SECURITY_EVENT", 1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM gateway.outbox_event WHERE aggregate_type = 'SECURITY_EVENT' AND event_type = 'audit.security'",
+                Integer.class
+        )).isEqualTo(1);
+        String payload = jdbcTemplate.queryForObject(
+                "SELECT payload::text FROM gateway.outbox_event WHERE aggregate_type = 'SECURITY_EVENT' LIMIT 1",
+                String.class
+        );
+        assertThat(payload).contains("gateway.auth.missing_bearer_token");
     }
 
     @Test
@@ -248,6 +280,13 @@ class ApiGatewayIntegrationTest {
         JsonNode response = objectMapper.readTree(body);
         assertThat(response.get("path").asText()).isEqualTo("/regions/1");
         assertThat(response.get("correlationId").asText()).isNotBlank();
+
+        waitForRows("REQUEST_TRACE", 1);
+        String payload = jdbcTemplate.queryForObject(
+                "SELECT payload::text FROM gateway.outbox_event WHERE aggregate_type = 'REQUEST_TRACE' LIMIT 1",
+                String.class
+        );
+        assertThat(payload).contains("request.trace.recorded");
     }
 
     @Test
@@ -388,5 +427,154 @@ class ApiGatewayIntegrationTest {
                 .expectStatus().isOk()
                 .expectBody(String.class)
                 .value(body -> assertThat(body).contains("\"supplierCode\":\"SUP-001\""));
+    }
+
+    @Test
+    void shouldPublishGatewayOutboxRowAndMarkPublished() {
+        insertOutboxRow(
+                "00000000-0000-0000-0000-000000000011",
+                "REQUEST_TRACE",
+                "trace-11",
+                "request.trace",
+                "trace-11",
+                "{\"requestId\":\"trace-11\"}",
+                "PENDING",
+                0
+        );
+
+        gatewayOutboxPublisher.publishPending();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM gateway.outbox_event WHERE aggregate_id = 'trace-11'",
+                String.class
+        )).isEqualTo("PUBLISHED");
+    }
+
+    @Test
+    void shouldMarkGatewayOutboxRowFailedAfterMaxAttempts() {
+        insertOutboxRow(
+                "00000000-0000-0000-0000-000000000012",
+                "SECURITY_EVENT",
+                "security-12",
+                "audit.security",
+                "security-12",
+                "{\"eventId\":\"security-12\"}",
+                "PENDING",
+                4
+        );
+        when(kafkaTemplate.send(anyString(), anyString(), anyString()))
+                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("kafka down")));
+
+        gatewayOutboxPublisher.publishPending();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM gateway.outbox_event WHERE aggregate_id = 'security-12'",
+                String.class
+        )).isEqualTo("FAILED");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT retry_count FROM gateway.outbox_event WHERE aggregate_id = 'security-12'",
+                Integer.class
+        )).isEqualTo(5);
+    }
+
+    @Test
+    void shouldClaimGatewayOutboxRowOnlyOnceAcrossConcurrentPublishers() throws Exception {
+        insertOutboxRow(
+                "00000000-0000-0000-0000-000000000013",
+                "REQUEST_TRACE",
+                "trace-concurrent",
+                "request.trace",
+                "trace-concurrent",
+                "{\"requestId\":\"trace-concurrent\"}",
+                "PENDING",
+                0
+        );
+        when(kafkaTemplate.send(anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> CompletableFuture.supplyAsync(() -> {
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                    }
+                    return null;
+                }));
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            java.util.List<Future<?>> futures = new ArrayList<>();
+            for (int index = 0; index < 2; index++) {
+                futures.add(executor.submit(() -> {
+                    ready.countDown();
+                    start.await();
+                    gatewayOutboxPublisher.publishPending();
+                    return null;
+                }));
+            }
+            ready.await();
+            start.countDown();
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        verify(kafkaTemplate, timeout(1000).times(1))
+                .send(org.mockito.ArgumentMatchers.eq("request.trace"), org.mockito.ArgumentMatchers.eq("trace-concurrent"), anyString());
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM gateway.outbox_event WHERE aggregate_id = 'trace-concurrent'",
+                String.class
+        )).isEqualTo("PUBLISHED");
+    }
+
+    private void insertOutboxRow(
+            String id,
+            String aggregateType,
+            String aggregateId,
+            String eventType,
+            String partitionKey,
+            String payload,
+            String status,
+            int retryCount
+    ) {
+        jdbcTemplate.update("""
+                INSERT INTO gateway.outbox_event (
+                    id, aggregate_type, aggregate_id, event_type, partition_key, payload, status, retry_count, created_at
+                ) VALUES (
+                    CAST(? AS uuid), ?, ?, ?, ?, CAST(? AS jsonb), ?, ?, CURRENT_TIMESTAMP
+                )
+                """,
+                id,
+                aggregateType,
+                aggregateId,
+                eventType,
+                partitionKey,
+                payload,
+                status,
+                retryCount
+        );
+    }
+
+    private void waitForRows(String aggregateType, int expectedRows) {
+        long deadline = System.currentTimeMillis() + 3000;
+        while (System.currentTimeMillis() < deadline) {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM gateway.outbox_event WHERE aggregate_type = ?",
+                    Integer.class,
+                    aggregateType
+            );
+            if (count != null && count >= expectedRows) {
+                return;
+            }
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while waiting for gateway outbox rows", exception);
+            }
+        }
+        throw new AssertionError("Timed out waiting for gateway outbox rows for " + aggregateType);
     }
 }
