@@ -2,6 +2,7 @@ package com.fern.posservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
@@ -17,8 +18,8 @@ import com.fern.posservice.dto.PosCommands.UpdateSaleOrderRequest;
 import com.fern.posservice.dto.PosResponses.SaleOrderLineResponse;
 import com.fern.posservice.dto.PosResponses.SaleOrderResponse;
 import com.fern.posservice.dto.PosResponses.SalePaymentResponse;
-import com.fern.platform.observability.CorrelationId;
-import jakarta.servlet.http.HttpServletRequest;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -30,8 +31,6 @@ import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 public class PosOrderService {
@@ -44,6 +43,8 @@ public class PosOrderService {
     private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final OperationalAlertPublisher operationalAlertPublisher;
+    private final Counter paymentFailureCounter;
 
     public PosOrderService(
             NamedParameterJdbcTemplate jdbcTemplate,
@@ -54,7 +55,9 @@ public class PosOrderService {
             PosReferenceCodeGenerator codeGenerator,
             TransactionTemplate transactionTemplate,
             ObjectMapper objectMapper,
-            Clock clock
+            Clock clock,
+            OperationalAlertPublisher operationalAlertPublisher,
+            MeterRegistry meterRegistry
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.posAuthorizer = posAuthorizer;
@@ -65,6 +68,8 @@ public class PosOrderService {
         this.transactionTemplate = transactionTemplate;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.operationalAlertPublisher = operationalAlertPublisher;
+        this.paymentFailureCounter = Counter.builder("fern_payment_failures_total").register(meterRegistry);
     }
 
     public SaleOrderResponse createOrder(FernPrincipal principal, CreateSaleOrderRequest request) {
@@ -78,7 +83,7 @@ public class PosOrderService {
                 request.lines()
         );
         Long id = Objects.requireNonNull(transactionTemplate.execute(status -> {
-            SessionRecord currentSession = store.requireSession(request.posSessionId());
+            SessionRecord currentSession = store.requireSessionForUpdate(request.posSessionId());
             ensureSessionOpen(currentSession);
             Long orderId = PosSql.insertForId(jdbcTemplate, """
                     INSERT INTO pos.sale_order (
@@ -118,6 +123,7 @@ public class PosOrderService {
         OrderRecord order = store.requireOrder(id);
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_UPDATE);
         ensureOrderOpen(order);
+        ensureNoSuccessfulPayments(id);
         SessionRecord session = store.requireSession(order.posSessionId());
         PricingSnapshot pricingSnapshot = pricingService.resolvePricingSnapshot(
                 principal,
@@ -126,8 +132,9 @@ public class PosOrderService {
                 request.lines()
         );
         transactionTemplate.executeWithoutResult(status -> {
-            OrderRecord currentOrder = store.requireOrder(id);
+            OrderRecord currentOrder = store.requireOrderForUpdate(id);
             ensureOrderOpen(currentOrder);
+            ensureNoSuccessfulPayments(id);
             jdbcTemplate.update("""
                     UPDATE pos.sale_order
                     SET subtotal = :subtotal,
@@ -149,13 +156,19 @@ public class PosOrderService {
         return getOrder(principal, id);
     }
 
-    public SaleOrderResponse addPayment(FernPrincipal principal, Long id, String idempotencyKey, AddPaymentRequest request) {
+    public SaleOrderResponse addPayment(
+            FernPrincipal principal,
+            Long id,
+            String idempotencyKey,
+            String correlationId,
+            AddPaymentRequest request
+    ) {
         requireIdempotencyKey(idempotencyKey);
         OrderRecord order = store.requireOrder(id);
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_UPDATE);
         ensureOrderOpen(order);
         transactionTemplate.executeWithoutResult(status -> {
-            OrderRecord currentOrder = store.requireOrder(id);
+            OrderRecord currentOrder = store.requireOrderForUpdate(id);
             ensureOrderOpen(currentOrder);
             Long existingPaymentId = jdbcTemplate.query("""
                     SELECT id
@@ -198,12 +211,30 @@ public class PosOrderService {
                     "note", request.note(),
                     "idempotencyKey", idempotencyKey
             ));
+            if (SalePaymentStatus.FAILED.name().equals(paymentStatus)) {
+                paymentFailureCounter.increment();
+                operationalAlertPublisher.publish(
+                        "PAYMENT_FAILED",
+                        "MEDIUM",
+                        "Sale payment failed for order " + id,
+                        correlationId,
+                        currentOrder.regionId(),
+                        currentOrder.outletId(),
+                        "SALE_ORDER",
+                        id.toString(),
+                        Map.of(
+                                "paymentMethod", request.paymentMethod(),
+                                "amount", request.amount(),
+                                "transactionRef", request.transactionRef()
+                        )
+                );
+            }
             store.refreshPaymentStatus(id);
         });
         return getOrder(principal, id);
     }
 
-    public SaleOrderResponse completeOrder(FernPrincipal principal, Long id) {
+    public SaleOrderResponse completeOrder(FernPrincipal principal, Long id, String correlationId) {
         OrderRecord order = store.requireOrder(id);
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_COMPLETE);
         ensureOrderOpen(order);
@@ -226,48 +257,64 @@ public class PosOrderService {
                 id,
                 usageItems
         );
-        List<SalePaymentResponse> payments = store.queryPayments(id);
-        Map<String, Object> saleSnapshot = buildSaleSnapshot(order, pricingSnapshot, payments, recipeSnapshots, reservation.reservationId());
-        Instant completedAt = clock.instant();
-        transactionTemplate.executeWithoutResult(status -> {
-            OrderRecord currentOrder = store.requireOrder(id);
-            ensureOrderOpen(currentOrder);
-            if (store.successfulPaymentTotal(id).compareTo(currentOrder.totalAmount()) < 0) {
-                throw new ConflictException("Order cannot be completed until payment covers the full total");
-            }
-            SessionRecord currentSession = store.requireSession(currentOrder.posSessionId());
-            store.replaceOrderLines(id, pricingSnapshot.lines());
-            jdbcTemplate.update("""
-                    INSERT INTO pos.sale_snapshot (sale_order_id, order_snapshot, created_at)
-                    VALUES (:saleOrderId, CAST(:orderSnapshot AS jsonb), CURRENT_TIMESTAMP)
-                    ON CONFLICT (sale_order_id) DO UPDATE
-                    SET order_snapshot = EXCLUDED.order_snapshot
-                    """, PosSql.params("saleOrderId", id, "orderSnapshot", toJson(saleSnapshot)));
-            jdbcTemplate.update("""
-                    UPDATE pos.sale_order
-                    SET status = :status,
-                        payment_status = :paymentStatus,
-                        subtotal = :subtotal,
-                        tax_amount = :taxAmount,
-                        total_amount = :totalAmount,
-                        completed_at = :completedAt,
-                        completed_by_user_id = :completedByUserId,
-                        reservation_id = :reservationId,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = :id
-                    """, PosSql.params(
-                    "status", SaleOrderStatus.COMPLETED.name(),
-                    "paymentStatus", SaleOrderPaymentStatus.PAID.name(),
-                    "subtotal", pricingSnapshot.subtotal(),
-                    "taxAmount", pricingSnapshot.taxAmount(),
-                    "totalAmount", pricingSnapshot.totalAmount(),
-                    "completedAt", completedAt,
-                    "completedByUserId", principal.userId(),
-                    "reservationId", reservation.reservationId(),
-                    "id", id
-            ));
-            enqueueSaleCompletedEvent(currentOrder, currentSession, pricingSnapshot, payments, saleSnapshot, usageItems, reservation, principal, completedAt);
-        });
+        try {
+            List<SalePaymentResponse> payments = store.queryPayments(id);
+            Map<String, Object> saleSnapshot = buildSaleSnapshot(order, pricingSnapshot, payments, recipeSnapshots, reservation.reservationId());
+            Instant completedAt = clock.instant();
+            transactionTemplate.executeWithoutResult(status -> {
+                OrderRecord currentOrder = store.requireOrderForUpdate(id);
+                ensureOrderOpen(currentOrder);
+                if (store.successfulPaymentTotal(id).compareTo(currentOrder.totalAmount()) < 0) {
+                    throw new ConflictException("Order cannot be completed until payment covers the full total");
+                }
+                SessionRecord currentSession = store.requireSession(currentOrder.posSessionId());
+                store.replaceOrderLines(id, pricingSnapshot.lines());
+                jdbcTemplate.update("""
+                        INSERT INTO pos.sale_snapshot (sale_order_id, order_snapshot, created_at)
+                        VALUES (:saleOrderId, CAST(:orderSnapshot AS jsonb), CURRENT_TIMESTAMP)
+                        ON CONFLICT (sale_order_id) DO UPDATE
+                        SET order_snapshot = EXCLUDED.order_snapshot
+                        """, PosSql.params("saleOrderId", id, "orderSnapshot", toJson(saleSnapshot)));
+                jdbcTemplate.update("""
+                        UPDATE pos.sale_order
+                        SET status = :status,
+                            payment_status = :paymentStatus,
+                            subtotal = :subtotal,
+                            tax_amount = :taxAmount,
+                            total_amount = :totalAmount,
+                            completed_at = :completedAt,
+                            completed_by_user_id = :completedByUserId,
+                            reservation_id = :reservationId,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = :id
+                        """, PosSql.params(
+                        "status", SaleOrderStatus.COMPLETED.name(),
+                        "paymentStatus", SaleOrderPaymentStatus.PAID.name(),
+                        "subtotal", pricingSnapshot.subtotal(),
+                        "taxAmount", pricingSnapshot.taxAmount(),
+                        "totalAmount", pricingSnapshot.totalAmount(),
+                        "completedAt", completedAt,
+                        "completedByUserId", principal.userId(),
+                        "reservationId", reservation.reservationId(),
+                        "id", id
+                ));
+                enqueueSaleCompletedEvent(
+                        currentOrder,
+                        currentSession,
+                        pricingSnapshot,
+                        payments,
+                        saleSnapshot,
+                        usageItems,
+                        reservation,
+                        principal,
+                        completedAt,
+                        correlationId
+                );
+            });
+        } catch (RuntimeException exception) {
+            releaseReservationAfterFailure(principal, reservation, exception);
+            throw exception;
+        }
         return getOrder(principal, id);
     }
 
@@ -279,7 +326,7 @@ public class PosOrderService {
             throw new ConflictException("Orders with successful payments cannot be cancelled");
         }
         transactionTemplate.executeWithoutResult(status -> {
-            OrderRecord currentOrder = store.requireOrder(id);
+            OrderRecord currentOrder = store.requireOrderForUpdate(id);
             ensureOrderOpen(currentOrder);
             if (store.successfulPaymentTotal(id).compareTo(BigDecimal.ZERO) > 0) {
                 throw new ConflictException("Orders with successful payments cannot be cancelled");
@@ -310,14 +357,15 @@ public class PosOrderService {
             List<RecipeUsageItem> usageItems,
             SaleReservationResponse reservation,
             FernPrincipal principal,
-            Instant completedAt
+            Instant completedAt,
+            String correlationId
     ) {
         PosSaleCompletedEvent event = new PosSaleCompletedEvent(
                 UUID.randomUUID().toString(),
                 PosEventTypes.SALE_COMPLETED,
                 completedAt,
                 PosServiceNames.POS_SERVICE,
-                currentCorrelationId(),
+                correlationId,
                 UUID.randomUUID().toString(),
                 order.id(),
                 order.posSessionId(),
@@ -394,12 +442,6 @@ public class PosOrderService {
         }
     }
 
-    private String currentCorrelationId() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        HttpServletRequest request = attributes == null ? null : attributes.getRequest();
-        return request == null ? null : request.getHeader(CorrelationId.HEADER);
-    }
-
     private void ensureSessionOpen(SessionRecord session) {
         if (!PosSessionStatus.OPEN.name().equals(session.status())) {
             throw new ConflictException("The POS session is not open");
@@ -409,6 +451,23 @@ public class PosOrderService {
     private void ensureOrderOpen(OrderRecord order) {
         if (!SaleOrderStatus.OPEN.name().equals(order.status())) {
             throw new ConflictException("Only open orders can be modified");
+        }
+    }
+
+    private void ensureNoSuccessfulPayments(Long orderId) {
+        if (store.successfulPaymentTotal(orderId).compareTo(BigDecimal.ZERO) > 0) {
+            throw new ConflictException("Orders with successful payments cannot be updated");
+        }
+    }
+
+    private void releaseReservationAfterFailure(FernPrincipal principal, SaleReservationResponse reservation, RuntimeException originalException) {
+        if (reservation == null || reservation.reservationId() == null) {
+            return;
+        }
+        try {
+            inventoryClient.releaseInventoryReservation(principal, reservation.reservationId());
+        } catch (RuntimeException releaseException) {
+            originalException.addSuppressed(releaseException);
         }
     }
 

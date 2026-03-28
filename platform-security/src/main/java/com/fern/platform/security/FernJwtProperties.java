@@ -4,10 +4,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "fern.security.jwt")
 public class FernJwtProperties {
+    public static final String INSECURE_DEFAULT_SECRET = "XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv";
+
     private String secret;
     private long accessTokenTtlSeconds = 900;
     private long refreshTokenTtlSeconds = 604800;
     private long serviceTokenTtlSeconds = 300;
+    private boolean allowInsecureDefaultSecret;
 
     public String getSecret() {
         return secret;
@@ -39,5 +42,13 @@ public class FernJwtProperties {
 
     public void setServiceTokenTtlSeconds(long serviceTokenTtlSeconds) {
         this.serviceTokenTtlSeconds = serviceTokenTtlSeconds;
+    }
+
+    public boolean isAllowInsecureDefaultSecret() {
+        return allowInsecureDefaultSecret;
+    }
+
+    public void setAllowInsecureDefaultSecret(boolean allowInsecureDefaultSecret) {
+        this.allowInsecureDefaultSecret = allowInsecureDefaultSecret;
     }
 }

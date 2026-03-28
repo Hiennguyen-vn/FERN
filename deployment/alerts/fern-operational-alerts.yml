@@ -1,0 +1,101 @@
+groups:
+  - name: fern-operational-alerts
+    rules:
+      - alert: FernAuthFailureSpike
+        expr: increase(fern_auth_failures_total[5m]) > 20
+        for: 10m
+        labels:
+          severity: warning
+          service: api-gateway
+        annotations:
+          summary: Auth failures are spiking at the gateway
+          description: Investigate invalid or revoked token traffic, rate limit abuse, and IAM rollout issues.
+
+      - alert: FernPaymentFailureSpike
+        expr: increase(fern_payment_failures_total[10m]) > 5
+        for: 10m
+        labels:
+          severity: critical
+          service: pos-service
+        annotations:
+          summary: POS payment failures exceeded the operational threshold
+          description: Check PSP reachability, payment processor errors, and failed payment alerts in notification-service.
+
+      - alert: FernGoodsReceiptPostingFailure
+        expr: increase(fern_goods_receipt_post_failures_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: procurement-service
+        annotations:
+          summary: Goods receipt posting failure detected
+          description: Review procurement-service errors and confirm downstream inventory and finance side effects did not partially apply.
+
+      - alert: FernInventoryAdjustmentFailure
+        expr: increase(fern_inventory_adjustment_failures_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: inventory-service
+        annotations:
+          summary: Inventory adjustment posting failure detected
+          description: Inspect inventory-service operational logs and confirm no duplicate or partial stock movement was recorded.
+
+      - alert: FernPayrollRunFailure
+        expr: increase(fern_payroll_run_failures_total[30m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: finance-service
+        annotations:
+          summary: Payroll run failure detected
+          description: Review payroll lifecycle errors and validate outbox, expense posting, and downstream reporting consistency.
+
+      - alert: FernReportExportFailure
+        expr: increase(fern_report_export_failures_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: report-service
+        annotations:
+          summary: Report export failure detected
+          description: Check export_job error_message, filesystem artifact path, and webhook notification delivery.
+
+      - alert: FernOutboxTerminalFailure
+        expr: increase(fern_outbox_terminal_failures_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: A service outbox reached terminal failure
+          description: Replay or repair the failed outbox row before downstream projections diverge further.
+
+      - alert: FernNotificationWebhookFailure
+        expr: increase(fern_notification_webhook_failures_total[15m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: notification-service
+        annotations:
+          summary: Notification webhook delivery is failing
+          description: Validate webhook endpoint health, shared secret configuration, and delivery_attempt retry backlog.
+
+      - alert: FernProjectionConsumerLagHigh
+        expr: max_over_time(fern_projection_consumer_lag[10m]) > 300000
+        for: 10m
+        labels:
+          severity: warning
+          service: report-service
+        annotations:
+          summary: Reporting projection lag exceeded five minutes
+          description: Check Kafka consumer health, raw event landing growth, and outbox publish failures.
+
+      - alert: FernDlqMessagesDetected
+        expr: increase(fern_dlq_messages_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: notification-service
+        annotations:
+          summary: DLQ messages were detected
+          description: Inspect the affected topic, replay strategy, and the notification job raised from the DLQ event.

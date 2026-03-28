@@ -1,11 +1,15 @@
 package com.fern.financeservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.alerts.KafkaOperationalAlertPublisher;
+import com.fern.platform.alerts.NoopOperationalAlertPublisher;
+import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.KafkaAuditEventPublisher;
 import com.fern.platform.audit.NoopAuditEventPublisher;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.platform.security.FernJwtProperties;
+import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.time.Clock;
@@ -19,6 +23,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -43,6 +48,15 @@ public class FinanceBeans {
     }
 
     @Bean
+    FernServiceTokenSupport fernServiceTokenSupport(
+            FernJwtService jwtService,
+            Clock clock,
+            ObjectProvider<StringRedisTemplate> redisTemplateProvider
+    ) {
+        return new FernServiceTokenSupport(jwtService, clock, redisTemplateProvider.getIfAvailable());
+    }
+
+    @Bean
     ObjectMapper objectMapper() {
         return new ObjectMapper().findAndRegisterModules();
     }
@@ -57,6 +71,19 @@ public class FinanceBeans {
             return new NoopAuditEventPublisher();
         }
         return new KafkaAuditEventPublisher(kafkaTemplate, objectMapper);
+    }
+
+    @Bean
+    OperationalAlertPublisher operationalAlertPublisher(
+            ObjectProvider<KafkaTemplate<String, String>> kafkaTemplateProvider,
+            ObjectMapper objectMapper,
+            Clock clock
+    ) {
+        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateProvider.getIfAvailable();
+        if (kafkaTemplate == null) {
+            return new NoopOperationalAlertPublisher();
+        }
+        return new KafkaOperationalAlertPublisher(kafkaTemplate, objectMapper, clock, "finance-service");
     }
 
     @Bean

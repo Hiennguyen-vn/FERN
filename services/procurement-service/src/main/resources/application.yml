@@ -22,7 +22,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
 
 fern:
   security:
@@ -30,6 +30,11 @@ fern:
       secret: ${FERN_JWT_SECRET:XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv}
       access-token-ttl-seconds: 900
       refresh-token-ttl-seconds: 604800
+  clients:
+    org:
+      base-url: ${FERN_ORG_BASE_URL:http://localhost:8082}
+      connect-timeout: 2s
+      read-timeout: 5s
   outbox:
     enabled: ${FERN_OUTBOX_ENABLED:true}
     publish-delay-ms: 5000

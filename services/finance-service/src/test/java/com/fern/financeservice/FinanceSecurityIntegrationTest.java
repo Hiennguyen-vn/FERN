@@ -1,0 +1,377 @@
+package com.fern.financeservice;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fern.financeservice.dto.FinanceCommands.MarkPaidRequest;
+import com.fern.financeservice.service.FinancePayrollService;
+import com.fern.platform.audit.AuditEventPublisher;
+import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ForbiddenException;
+import com.fern.platform.common.PermissionCodes;
+import com.fern.platform.common.ScopeRoots;
+import com.fern.platform.security.FernJwtClaims;
+import com.fern.platform.security.FernJwtService;
+import com.fern.platform.security.FernServiceTokenSupport;
+import com.fern.platform.testsupport.FernIntegrationContainers;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class FinanceSecurityIntegrationTest {
+    private static final String TEST_SECRET = "finance-test-secret-key-012345678901234567890123456";
+
+    @DynamicPropertySource
+    static void configure(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("public"));
+        registry.add("spring.datasource.username", FernIntegrationContainers::jdbcUsername);
+        registry.add("spring.datasource.password", FernIntegrationContainers::jdbcPassword);
+        registry.add("fern.projection-datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("public"));
+        registry.add("fern.projection-datasource.username", FernIntegrationContainers::jdbcUsername);
+        registry.add("fern.projection-datasource.password", FernIntegrationContainers::jdbcPassword);
+        registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
+        registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
+        registry.add("spring.kafka.listener.auto-startup", () -> "false");
+        registry.add("fern.outbox.enabled", () -> "false");
+        registry.add("fern.security.jwt.secret", () -> TEST_SECRET);
+    }
+
+    @Autowired
+    private FinancePayrollService financePayrollService;
+
+    @Autowired
+    private FernJwtService jwtService;
+
+    @Autowired
+    private FernServiceTokenSupport serviceTokenSupport;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    @Autowired
+    private NamedParameterJdbcTemplate jdbcTemplate;
+
+    @Autowired
+    @Qualifier("masterJdbcTemplate")
+    private NamedParameterJdbcTemplate masterJdbcTemplate;
+
+    @MockBean
+    private AuditEventPublisher auditEventPublisher;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.getJdbcTemplate().execute("""
+                TRUNCATE TABLE
+                    finance.payroll_result_allocation,
+                    finance.payroll_result_line,
+                    finance.payroll_attendance_snapshot,
+                    finance.payroll_contract_snapshot,
+                    finance.payroll_employee_result,
+                    finance.expense_payroll,
+                    finance.expense_inventory_purchase,
+                    finance.expense_record,
+                    finance.outbox_event,
+                    finance.payroll_run,
+                    finance.payroll_period
+                RESTART IDENTITY CASCADE
+                """);
+        masterJdbcTemplate.getJdbcTemplate().execute("""
+                TRUNCATE TABLE
+                    config.document_numbering_rule,
+                    config.system_policy
+                RESTART IDENTITY CASCADE
+                """);
+        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushAll();
+    }
+
+    @AfterEach
+    void tearDown() {
+        redisTemplate.getConnectionFactory().getConnection().serverCommands().flushAll();
+    }
+
+    @Test
+    void shouldRejectRegionalUserFromGlobalPayrollLists() {
+        FernPrincipal principal = principal(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                new ScopeRoots(false, List.of(1L), List.of())
+        );
+
+        assertThatThrownBy(() -> financePayrollService.listPayrollPeriods(principal, null))
+                .isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> financePayrollService.listPayrollRuns(principal, null))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void shouldRestrictFinanceConfigToSystemScope() {
+        FernPrincipal principal = principal(
+                Set.of(PermissionCodes.FINANCE_CONFIG_READ, PermissionCodes.FINANCE_CONFIG_WRITE),
+                new ScopeRoots(false, List.of(1L), List.of())
+        );
+
+        assertThatThrownBy(() -> financePayrollService.getNumberingRule(principal, "PAYROLL_RUN"))
+                .isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> financePayrollService.getSystemPolicy(principal, "payroll.tax"))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void shouldIssueUniqueDocumentNumbersUnderConcurrency() throws Exception {
+        masterJdbcTemplate.update("""
+                INSERT INTO config.document_numbering_rule (
+                    document_type, prefix, next_number, reset_period, is_active, updated_at
+                ) VALUES (
+                    'PAYROLL_PERIOD', 'PP', 1, 'NEVER', TRUE, CURRENT_TIMESTAMP
+                )
+                """, new MapSqlParameterSource());
+
+        FernPrincipal principal = principal(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_PREPARE, PermissionCodes.FINANCE_PAYROLL_READ),
+                new ScopeRoots(true, List.of(), List.of())
+        );
+        int taskCount = 8;
+        CountDownLatch ready = new CountDownLatch(taskCount);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(taskCount);
+        try {
+            List<Future<?>> futures = new ArrayList<>();
+            for (int index = 0; index < taskCount; index++) {
+                final int taskIndex = index;
+                futures.add(executor.submit(() -> {
+                    ready.countDown();
+                    start.await();
+                    financePayrollService.createPayrollPeriod(
+                            principal,
+                            new com.fern.financeservice.dto.FinanceCommands.CreatePayrollPeriodRequest(
+                                    100L + taskIndex,
+                                    "Period " + taskIndex,
+                                    LocalDate.of(2026, 3, 1),
+                                    LocalDate.of(2026, 3, 31),
+                                    LocalDate.of(2026, 4, 5),
+                                    null
+                            )
+                    );
+                    return null;
+                }));
+            }
+            ready.await();
+            start.countDown();
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        List<String> codes = jdbcTemplate.getJdbcTemplate().queryForList("""
+                SELECT reference_code
+                FROM finance.payroll_period
+                ORDER BY reference_code
+                """, String.class);
+        assertThat(codes).containsExactly(
+                "PP-000001",
+                "PP-000002",
+                "PP-000003",
+                "PP-000004",
+                "PP-000005",
+                "PP-000006",
+                "PP-000007",
+                "PP-000008"
+        );
+        Long nextNumber = masterJdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT next_number
+                FROM config.document_numbering_rule
+                WHERE document_type = 'PAYROLL_PERIOD'
+                """, Long.class);
+        assertThat(nextNumber).isEqualTo(9L);
+    }
+
+    @Test
+    void shouldMarkPayrollPaidOnlyOnceUnderConcurrency() throws Exception {
+        masterJdbcTemplate.update("""
+                INSERT INTO config.document_numbering_rule (
+                    document_type, prefix, next_number, reset_period, is_active, updated_at
+                ) VALUES (
+                    'PAYROLL_EXPENSE', 'EXP', 1, 'NEVER', TRUE, CURRENT_TIMESTAMP
+                )
+                """, new MapSqlParameterSource());
+
+        long periodId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_period (
+                    region_id, reference_code, name, start_date, end_date, pay_date, status, created_at, updated_at
+                ) VALUES (
+                    1, 'PP-000001', 'March payroll', DATE '2026-03-01', DATE '2026-03-31', DATE '2026-04-05', 'DRAFT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource(), Long.class);
+        long runId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_run (
+                    payroll_period_id, run_code, run_date, status, total_amount, created_at, updated_at
+                ) VALUES (
+                    :periodId, 'RUN-000001', DATE '2026-04-01', 'APPROVED', 100.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource("periodId", periodId), Long.class);
+        long resultId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_employee_result (
+                    payroll_run_id, employee_id, contract_id, outlet_id, gross_pay, deduction_amount, tax_amount, net_pay,
+                    payment_status, work_days, work_hours, overtime_hours, created_at, updated_at
+                ) VALUES (
+                    :runId, 501, 701, 301, 120.00, 10.00, 10.00, 100.00,
+                    'UNPAID', 20, 160, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource("runId", runId), Long.class);
+        jdbcTemplate.update("""
+                INSERT INTO finance.payroll_result_allocation (
+                    payroll_employee_result_id, outlet_id, work_hours, allocated_amount, created_at
+                ) VALUES (
+                    :resultId, 301, 160, 100.00, CURRENT_TIMESTAMP
+                )
+                """, new MapSqlParameterSource("resultId", resultId));
+
+        FernPrincipal principal = principal(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_PAY, PermissionCodes.FINANCE_PAYROLL_READ),
+                new ScopeRoots(false, List.of(1L), List.of())
+        );
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Object> first = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return invokeMarkPaid(principal, runId);
+            });
+            Future<Object> second = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return invokeMarkPaid(principal, runId);
+            });
+            ready.await();
+            start.countDown();
+
+            List<Object> outcomes = List.of(first.get(), second.get());
+            assertThat(outcomes.stream().filter(outcome -> outcome instanceof String && outcome.equals("OK")).count()).isEqualTo(1);
+            assertThat(outcomes.stream().filter(outcome -> outcome instanceof Exception).count()).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer expenseCount = jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT COUNT(*) FROM finance.expense_record WHERE source_type = 'PAYROLL'
+                """, Integer.class);
+        Integer outboxCount = jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT COUNT(*) FROM finance.outbox_event WHERE event_type = 'payroll.posted'
+                """, Integer.class);
+        String status = jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT status FROM finance.payroll_run WHERE id = %d
+                """.formatted(runId), String.class);
+
+        assertThat(expenseCount).isEqualTo(1);
+        assertThat(outboxCount).isEqualTo(1);
+        assertThat(status).isEqualTo("PAID");
+    }
+
+    @Test
+    void shouldRejectStaleServiceToken() throws Exception {
+        redisTemplate.opsForValue().set("fern:versions:policy", "5");
+        redisTemplate.opsForValue().set("fern:versions:scope", "7");
+
+        mockMvc.perform(get("/payroll-periods")
+                        .header("Authorization", "Bearer " + serviceTokenWithVersions(0L, 0L, Set.of(PermissionCodes.FINANCE_PAYROLL_READ))))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRejectBlacklistedServiceToken() throws Exception {
+        redisTemplate.opsForValue().set("fern:versions:policy", "5");
+        redisTemplate.opsForValue().set("fern:versions:scope", "7");
+        String token = serviceTokenWithVersions(7L, 7L, Set.of(PermissionCodes.FINANCE_PAYROLL_READ));
+        FernJwtClaims claims = jwtService.decode(token);
+        redisTemplate.opsForValue().set("fern:iam:blacklist:" + claims.jti(), "1");
+
+        mockMvc.perform(get("/payroll-periods").header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldAcceptCurrentVersionServiceToken() throws Exception {
+        redisTemplate.opsForValue().set("fern:versions:policy", "9");
+        redisTemplate.opsForValue().set("fern:versions:scope", "11");
+
+        mockMvc.perform(get("/payroll-periods")
+                        .header("Authorization", "Bearer " + serviceTokenSupport.issueToken("finance-service", Set.of(PermissionCodes.FINANCE_PAYROLL_READ))))
+                .andExpect(status().isOk());
+    }
+
+    private Object invokeMarkPaid(FernPrincipal principal, long runId) {
+        try {
+            financePayrollService.markPayrollPaid(principal, runId, new MarkPaidRequest("PAY-REF-1", "paid"));
+            return "OK";
+        } catch (Exception exception) {
+            return exception;
+        }
+    }
+
+    private String serviceTokenWithVersions(long policyVersion, long scopeVersion, Set<String> permissions) {
+        Instant now = Instant.now();
+        return jwtService.encode(
+                new FernJwtClaims(
+                        null,
+                        "finance-service",
+                        Set.of(),
+                        permissions,
+                        new ScopeRoots(true, List.of(), List.of()),
+                        policyVersion,
+                        scopeVersion,
+                        UUID.randomUUID().toString(),
+                        now,
+                        now.plus(jwtService.serviceTokenTtl()),
+                        com.fern.platform.common.FernPrincipalType.SERVICE
+                ),
+                jwtService.serviceTokenTtl()
+        );
+    }
+
+    private FernPrincipal principal(Set<String> permissions, ScopeRoots scopeRoots) {
+        return new FernPrincipal(
+                100L,
+                "finance-user",
+                Set.of("finance"),
+                permissions,
+                scopeRoots,
+                1L,
+                1L,
+                UUID.randomUUID().toString()
+        );
+    }
+}

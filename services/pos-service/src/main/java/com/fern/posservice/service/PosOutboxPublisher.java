@@ -1,6 +1,9 @@
 package com.fern.posservice.service;
 
+import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.posservice.config.PosOutboxProperties;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -24,17 +27,25 @@ public class PosOutboxPublisher {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final PosOutboxProperties outboxProperties;
     private final Clock clock;
+    private final OperationalAlertPublisher operationalAlertPublisher;
+    private final Counter terminalFailureCounter;
 
     public PosOutboxPublisher(
             NamedParameterJdbcTemplate jdbcTemplate,
             KafkaTemplate<String, String> kafkaTemplate,
             PosOutboxProperties outboxProperties,
-            Clock clock
+            Clock clock,
+            OperationalAlertPublisher operationalAlertPublisher,
+            MeterRegistry meterRegistry
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.kafkaTemplate = kafkaTemplate;
         this.outboxProperties = outboxProperties;
         this.clock = clock;
+        this.operationalAlertPublisher = operationalAlertPublisher;
+        this.terminalFailureCounter = Counter.builder("fern_outbox_terminal_failures_total")
+                .tag("service", "pos-service")
+                .register(meterRegistry);
     }
 
     @Scheduled(fixedDelayString = "${fern.outbox.publish-delay-ms:5000}")
@@ -92,6 +103,20 @@ public class PosOutboxPublisher {
                         .addValue("lastAttemptAt", utcNow())
                         .addValue("lastError", failureReason(exception))
                         .addValue("id", event.id()));
+                if (terminalFailure) {
+                    terminalFailureCounter.increment();
+                    operationalAlertPublisher.publish(
+                            "OUTBOX_TERMINAL_FAILURE",
+                            "HIGH",
+                            "POS outbox publish failed for " + event.eventType(),
+                            null,
+                            null,
+                            null,
+                            "SALE_ORDER",
+                            event.id(),
+                            java.util.Map.of("eventId", event.id(), "eventType", event.eventType(), "errorMessage", failureReason(exception))
+                    );
+                }
             }
         }
     }

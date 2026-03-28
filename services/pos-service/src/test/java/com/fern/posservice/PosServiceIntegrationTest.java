@@ -1,18 +1,28 @@
 package com.fern.posservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.common.FernPrincipalType;
+import com.fern.platform.observability.CorrelationId;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
+import com.fern.posservice.service.PosStore;
 import com.sun.net.httpserver.HttpServer;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.io.IOException;
@@ -30,6 +40,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -40,10 +52,13 @@ import org.springframework.test.web.servlet.MockMvc;
 class PosServiceIntegrationTest {
     private static HttpServer catalogServer;
     private static HttpServer inventoryServer;
+    private static HttpServer orgServer;
     private static volatile String lastCatalogAuthorization;
     private static volatile String lastCatalogActorUserId;
     private static volatile String lastInventoryAuthorization;
     private static volatile String lastInventoryActorUserId;
+    private static volatile int inventoryReleaseRequestCount;
+    private static volatile Long lastReleasedReservationId;
     private static volatile boolean delayCatalogMenuResponse;
     private static volatile int recipeBatchRequestCount;
 
@@ -56,10 +71,12 @@ class PosServiceIntegrationTest {
         registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
         registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
         registry.add("fern.outbox.enabled", () -> "false");
+        registry.add("fern.security.jwt.allow-insecure-default-secret", () -> "true");
         registry.add("fern.clients.catalog.base-url", () -> "http://localhost:" + catalogServer.getAddress().getPort());
         registry.add("fern.clients.catalog.connect-timeout", () -> "500ms");
         registry.add("fern.clients.catalog.read-timeout", () -> "500ms");
         registry.add("fern.clients.inventory.base-url", () -> "http://localhost:" + inventoryServer.getAddress().getPort());
+        registry.add("fern.clients.org.base-url", () -> "http://localhost:" + orgServer.getAddress().getPort());
         registry.add("fern.outbox.max-attempts", () -> "3");
     }
 
@@ -79,6 +96,12 @@ class PosServiceIntegrationTest {
     @Autowired
     @Qualifier("inventoryCircuitBreaker")
     private CircuitBreaker inventoryCircuitBreaker;
+
+    @SpyBean
+    private PosStore posStore;
+
+    @MockBean
+    private OperationalAlertPublisher operationalAlertPublisher;
 
     private String token;
 
@@ -206,19 +229,59 @@ class PosServiceIntegrationTest {
         inventoryServer.createContext("/internal/inventory/sale-reservations", exchange -> {
             lastInventoryAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
             lastInventoryActorUserId = exchange.getRequestHeaders().getFirst("X-Fern-Actor-User-Id");
-            byte[] body = """
-                    {
-                      "reservationId": 999,
-                      "expiresAt": "2026-03-27T12:05:00Z"
-                    }
-                    """.getBytes();
+            String path = exchange.getRequestURI().getPath();
+            if ("/internal/inventory/sale-reservations".equals(path)) {
+                byte[] body = """
+                        {
+                          "reservationId": 999,
+                          "expiresAt": "2026-03-27T12:05:00Z"
+                        }
+                        """.getBytes();
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                try (OutputStream outputStream = exchange.getResponseBody()) {
+                    outputStream.write(body);
+                }
+                return;
+            }
+            if (path.matches("/internal/inventory/sale-reservations/\\d+/cancel")) {
+                inventoryReleaseRequestCount++;
+                String[] segments = path.split("/");
+                lastReleasedReservationId = Long.parseLong(segments[segments.length - 2]);
+                exchange.sendResponseHeaders(204, -1);
+                exchange.close();
+                return;
+            }
+            byte[] body = "{}".getBytes();
             exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(200, body.length);
+            exchange.sendResponseHeaders(404, body.length);
             try (OutputStream outputStream = exchange.getResponseBody()) {
                 outputStream.write(body);
             }
         });
         inventoryServer.start();
+
+        orgServer = HttpServer.create(new InetSocketAddress(0), 0);
+        orgServer.createContext("/outlets", exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            int status = 404;
+            byte[] body = "{}".getBytes();
+            if ("/outlets/101".equals(path)) {
+                status = 200;
+                body = """
+                        {
+                          "id": 101,
+                          "regionId": 1
+                        }
+                        """.getBytes();
+            }
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, body.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(body);
+            }
+        });
+        orgServer.start();
     }
 
     @AfterAll
@@ -229,10 +292,13 @@ class PosServiceIntegrationTest {
         if (inventoryServer != null) {
             inventoryServer.stop(0);
         }
+        if (orgServer != null) {
+            orgServer.stop(0);
+        }
     }
 
     private static void ensureServersStarted() {
-        if (catalogServer != null && inventoryServer != null) {
+        if (catalogServer != null && inventoryServer != null && orgServer != null) {
             return;
         }
         try {
@@ -258,12 +324,16 @@ class PosServiceIntegrationTest {
         lastCatalogActorUserId = null;
         lastInventoryAuthorization = null;
         lastInventoryActorUserId = null;
+        inventoryReleaseRequestCount = 0;
+        lastReleasedReservationId = null;
         delayCatalogMenuResponse = false;
         recipeBatchRequestCount = 0;
         catalogCircuitBreaker.reset();
         inventoryCircuitBreaker.reset();
+        reset(posStore, operationalAlertPublisher);
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         token = issueToken(
                 Set.of(
                         "pos.session.read",
@@ -348,7 +418,8 @@ class PosServiceIntegrationTest {
                 .andExpect(jsonPath("$.paymentStatus").value("PAID"));
 
         mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
-                        .header("Authorization", bearer()))
+                        .header("Authorization", bearer())
+                        .header(CorrelationId.HEADER, "corr-complete-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.paymentStatus").value("PAID"));
@@ -365,7 +436,13 @@ class PosServiceIntegrationTest {
                 FROM pos.outbox_event
                 WHERE aggregate_id = ?
                 """, String.class, orderId.toString());
+        String correlationId = jdbcTemplate.queryForObject("""
+                SELECT payload ->> 'correlationId'
+                FROM pos.outbox_event
+                WHERE aggregate_id = ?
+                """, String.class, orderId.toString());
         assertThat(eventType).isEqualTo("pos.sale.completed");
+        assertThat(correlationId).isEqualTo("corr-complete-1");
         assertThat(recipeBatchRequestCount).isEqualTo(1);
         assertThat(lastCatalogActorUserId).isEqualTo("1");
         assertThat(lastInventoryActorUserId).isEqualTo("1");
@@ -374,6 +451,7 @@ class PosServiceIntegrationTest {
 
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         assertThat(jwtService.decode(lastCatalogAuthorization.substring("Bearer ".length())).principalType())
                 .isEqualTo(FernPrincipalType.SERVICE);
@@ -490,6 +568,250 @@ class PosServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectSessionOpenForEmptyScopePrincipal() throws Exception {
+        String emptyScopeToken = issueToken(
+                Set.of("pos.session.open"),
+                List.of(),
+                List.of()
+        );
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", "Bearer " + emptyScopeToken)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRejectSessionOpenWhenOutletRouteDoesNotMatchRequestedRegion() throws Exception {
+        String forgedRouteToken = issueToken(
+                Set.of("pos.session.open"),
+                List.of(999L),
+                List.of(101L)
+        );
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", "Bearer " + forgedRouteToken)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 999,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldRejectUpdatingOrderAfterSuccessfulPayment() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 2.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-update-block")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 110.00
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+
+        mockMvc.perform(patch("/sale-orders/{id}", orderId)
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "lines": [
+                                    {"productId": 11, "qty": 1.0000}
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldRejectClosingSessionTwice() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        mockMvc.perform(post("/pos-sessions/{id}/close", sessionId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CLOSED"));
+
+        mockMvc.perform(post("/pos-sessions/{id}/close", sessionId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldRejectReconcilingSessionTwice() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        mockMvc.perform(post("/pos-sessions/{id}/close", sessionId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CLOSED"));
+
+        mockMvc.perform(post("/pos-sessions/{id}/reconcile", sessionId)
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "countedCashAmount": 0.00
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RECONCILED"));
+
+        mockMvc.perform(post("/pos-sessions/{id}/reconcile", sessionId)
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "countedCashAmount": 0.00
+                                }
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldReleaseReservationWhenCompletionFailsAfterReserve() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 2.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-complete-release")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 110.00
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+
+        doThrow(new RuntimeException("forced completion failure"))
+                .when(posStore)
+                .requireOrderForUpdate(orderId);
+
+        mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isInternalServerError());
+
+        assertThat(inventoryReleaseRequestCount).isEqualTo(1);
+        assertThat(lastReleasedReservationId).isEqualTo(999L);
+        assertThat(lastInventoryActorUserId).isEqualTo("1");
+        assertThat(lastInventoryAuthorization).isNotBlank().isNotEqualTo(bearer());
+
+        String orderStatus = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM pos.sale_order
+                WHERE id = ?
+                """, String.class, orderId);
+        Long outboxCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pos.outbox_event", Long.class);
+
+        assertThat(orderStatus).isEqualTo("OPEN");
+        assertThat(outboxCount).isZero();
+    }
+
+    @Test
     void shouldReturnServiceUnavailableAndAvoidWritesWhenCatalogTimesOut() throws Exception {
         String sessionJson = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())
@@ -530,6 +852,68 @@ class PosServiceIntegrationTest {
         assertThat(orderCount).isEqualTo(0L);
     }
 
+    @Test
+    void shouldPublishFailedPaymentAlertWithCorrelationId() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-failed-correlation")
+                        .header(CorrelationId.HEADER, "corr-pay-1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CARD",
+                                  "amount": 55.00,
+                                  "status": "FAILED",
+                                  "transactionRef": "txn-failed-1"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("UNPAID"));
+
+        verify(operationalAlertPublisher).publish(
+                eq("PAYMENT_FAILED"),
+                eq("MEDIUM"),
+                contains("Sale payment failed for order " + orderId),
+                eq("corr-pay-1"),
+                eq(1L),
+                eq(101L),
+                eq("SALE_ORDER"),
+                eq(orderId.toString()),
+                anyMap()
+        );
+    }
+
     private Long readId(String json) throws Exception {
         JsonNode node = objectMapper.readTree(json);
         return node.get("id").asLong();
@@ -542,6 +926,7 @@ class PosServiceIntegrationTest {
     private String issueToken(Set<String> permissions, List<Long> regions, List<Long> outlets) {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         return jwtService.encode(new FernJwtClaims(
                 1L,

@@ -5,6 +5,7 @@ import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.KafkaAuditEventPublisher;
 import com.fern.platform.audit.NoopAuditEventPublisher;
 import com.fern.platform.security.FernJwtProperties;
+import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.time.Clock;
@@ -18,9 +19,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.client.RestClient;
 
 @Configuration
 public class HrBeans {
@@ -41,6 +44,15 @@ public class HrBeans {
     }
 
     @Bean
+    FernServiceTokenSupport fernServiceTokenSupport(
+            FernJwtService jwtService,
+            Clock clock,
+            ObjectProvider<StringRedisTemplate> redisTemplateProvider
+    ) {
+        return new FernServiceTokenSupport(jwtService, clock, redisTemplateProvider.getIfAvailable());
+    }
+
+    @Bean
     ObjectMapper objectMapper() {
         return new ObjectMapper().findAndRegisterModules();
     }
@@ -55,6 +67,14 @@ public class HrBeans {
             return new NoopAuditEventPublisher();
         }
         return new KafkaAuditEventPublisher(kafkaTemplate, objectMapper);
+    }
+
+    @Bean
+    @Qualifier("orgRestClient")
+    RestClient orgRestClient(@Value("${fern.clients.org.base-url:http://localhost:8082}") String baseUrl) {
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .build();
     }
 
     @Bean

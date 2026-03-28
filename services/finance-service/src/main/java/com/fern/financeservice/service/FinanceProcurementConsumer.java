@@ -3,6 +3,7 @@ package com.fern.financeservice.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.SnowflakeIdGenerator;
+import com.fern.platform.contracts.ExpensePostedEvent;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
 import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import java.math.BigDecimal;
@@ -76,6 +77,24 @@ public class FinanceProcurementConsumer {
                 VALUES (:expenseRecordId, :goodsReceiptId)
                 ON CONFLICT (expense_record_id) DO NOTHING
                 """, params("expenseRecordId", expenseRecordId, "goodsReceiptId", event.goodsReceiptId()));
+        enqueueExpensePostedEvent(new ExpensePostedEvent(
+                java.util.UUID.randomUUID().toString(),
+                "finance.expense.posted",
+                Instant.now(),
+                "finance-service",
+                event.correlationId(),
+                java.util.UUID.randomUUID().toString(),
+                expenseRecordId,
+                event.regionId(),
+                event.outletId(),
+                null,
+                null,
+                event.businessDate(),
+                "INVENTORY_PURCHASE",
+                amount,
+                "GOODS_RECEIPT",
+                event.goodsReceiptId().toString()
+        ), event.regionId().toString(), expenseRecordId.toString());
         markIntegrationProcessed(event.eventId());
     }
 
@@ -154,6 +173,23 @@ public class FinanceProcurementConsumer {
                 """, params("sourceEventId", sourceEventId));
     }
 
+    private void enqueueExpensePostedEvent(ExpensePostedEvent event, String partitionKey, String aggregateId) {
+        jdbcTemplate.update("""
+                INSERT INTO finance.outbox_event (
+                    id, aggregate_type, aggregate_id, event_type, partition_key, payload, status, retry_count, created_at
+                ) VALUES (
+                    CAST(:id AS uuid), 'EXPENSE_RECORD', :aggregateId, :eventType, :partitionKey, CAST(:payload AS jsonb), 'PENDING', 0, CURRENT_TIMESTAMP
+                )
+                ON CONFLICT DO NOTHING
+                """, params(
+                "id", java.util.UUID.randomUUID().toString(),
+                "aggregateId", aggregateId,
+                "eventType", event.eventType(),
+                "partitionKey", partitionKey,
+                "payload", writeValue(event)
+        ));
+    }
+
     private Long insertForId(String sql, MapSqlParameterSource parameters) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(sql, parameters, keyHolder, new String[]{"id"});
@@ -177,5 +213,13 @@ public class FinanceProcurementConsumer {
             }
         }
         return parameters;
+    }
+
+    private String writeValue(Object payload) {
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to serialize payload", exception);
+        }
     }
 }

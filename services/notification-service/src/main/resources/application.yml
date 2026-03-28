@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: ${FERN_NOTIFICATION_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=notification}
+    username: ${FERN_DB_USERNAME:fern}
+    password: ${FERN_DB_PASSWORD:fern}
+  flyway:
+    enabled: true
+    create-schemas: true
+    schemas: notification
+    default-schema: notification
+    locations: classpath:db/migration/postgresql/master
+  kafka:
+    bootstrap-servers: ${FERN_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${FERN_NOTIFICATION_CONSUMER_GROUP:notification-service}
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      auto-startup: ${FERN_NOTIFICATION_KAFKA_AUTO_STARTUP:true}
+server:
+  port: ${PORT:8092}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+
+fern:
+  notification:
+    ops-webhook:
+      url: ${FERN_NOTIFICATION_OPS_WEBHOOK_URL:}
+      secret: ${FERN_NOTIFICATION_OPS_WEBHOOK_SECRET:}
+    retry:
+      max-attempts: ${FERN_NOTIFICATION_RETRY_MAX_ATTEMPTS:5}
+      delay-ms: ${FERN_NOTIFICATION_RETRY_DELAY_MS:10000}
+    dlq-topics: ${FERN_DLQ_TOPICS:__no_dlq__}
+  id-generator:
+    node-id: ${FERN_ID_GENERATOR_NODE_ID:12}
+    epoch-millis: ${FERN_ID_GENERATOR_EPOCH_MILLIS:1767225600000}
+    max-clock-rollback-millis: ${FERN_ID_GENERATOR_MAX_CLOCK_ROLLBACK_MILLIS:5}

@@ -19,6 +19,7 @@ public class PosSessionService {
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final PosAuthorizer posAuthorizer;
     private final PosStore store;
+    private final PosOrgClient posOrgClient;
     private final PosReferenceCodeGenerator codeGenerator;
     private final Clock clock;
 
@@ -26,12 +27,14 @@ public class PosSessionService {
             NamedParameterJdbcTemplate jdbcTemplate,
             PosAuthorizer posAuthorizer,
             PosStore store,
+            PosOrgClient posOrgClient,
             PosReferenceCodeGenerator codeGenerator,
             Clock clock
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.posAuthorizer = posAuthorizer;
         this.store = store;
+        this.posOrgClient = posOrgClient;
         this.codeGenerator = codeGenerator;
         this.clock = clock;
     }
@@ -39,6 +42,11 @@ public class PosSessionService {
     @Transactional
     public PosSessionResponse openSession(FernPrincipal principal, OpenSessionRequest request) {
         posAuthorizer.requireRoutePermission(principal, request.regionId(), request.outletId(), PermissionCodes.POS_SESSION_OPEN);
+        PosOrgClient.OutletRoute outlet = posOrgClient.requireOutlet(request.outletId());
+        if (!outlet.regionId().equals(request.regionId())) {
+            throw new ConflictException("Outlet route does not match requested region");
+        }
+        lockOpenSessionScope(request.outletId());
         boolean openExists;
         if (request.terminalId() != null) {
             openExists = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
@@ -81,7 +89,7 @@ public class PosSessionService {
                 )
                 """, PosSql.params(
                 "sessionCode", codeGenerator.nextSessionCode(),
-                "regionId", request.regionId(),
+                "regionId", outlet.regionId(),
                 "outletId", request.outletId(),
                 "currencyCode", request.currencyCode(),
                 "cashierUserId", principal.userId(),
@@ -147,7 +155,7 @@ public class PosSessionService {
 
     @Transactional
     public PosSessionResponse closeSession(FernPrincipal principal, Long id) {
-        SessionRecord session = store.requireSession(id);
+        SessionRecord session = store.requireSessionForUpdate(id);
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_SESSION_CLOSE);
         ensureSessionStatus(session, PosSessionStatus.OPEN, "Only open sessions can be closed");
         boolean openOrders = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
@@ -160,22 +168,27 @@ public class PosSessionService {
         if (openOrders) {
             throw new ConflictException("Cannot close a POS session while open orders still exist");
         }
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE pos.pos_session
                 SET status = :status, closed_at = :closedAt, manager_user_id = :managerUserId, updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status = :currentStatus
                 """, PosSql.params(
                 "status", PosSessionStatus.CLOSED.name(),
                 "closedAt", clock.instant(),
                 "managerUserId", principal.userId(),
-                "id", id
+                "id", id,
+                "currentStatus", PosSessionStatus.OPEN.name()
         ));
+        if (updated != 1) {
+            throw new ConflictException("Only open sessions can be closed");
+        }
         return getSession(principal, id);
     }
 
     @Transactional
     public PosSessionResponse reconcileSession(FernPrincipal principal, Long id, ReconcileSessionRequest request) {
-        SessionRecord session = store.requireSession(id);
+        SessionRecord session = store.requireSessionForUpdate(id);
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_SESSION_RECONCILE);
         ensureSessionStatus(session, PosSessionStatus.CLOSED, "Only closed sessions can be reconciled");
         BigDecimal expectedCash = jdbcTemplate.queryForObject("""
@@ -192,7 +205,7 @@ public class PosSessionService {
                 "orderStatus", SaleOrderStatus.COMPLETED.name()
         ), BigDecimal.class);
         BigDecimal discrepancy = request.countedCashAmount().subtract(expectedCash);
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE pos.pos_session
                 SET status = :status,
                     manager_user_id = :managerUserId,
@@ -203,6 +216,7 @@ public class PosSessionService {
                     note = COALESCE(:note, note),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status = :currentStatus
                 """, PosSql.params(
                 "status", PosSessionStatus.RECONCILED.name(),
                 "managerUserId", principal.userId(),
@@ -211,8 +225,12 @@ public class PosSessionService {
                 "countedCashAmount", request.countedCashAmount(),
                 "discrepancyAmount", discrepancy,
                 "note", request.note(),
-                "id", id
+                "id", id,
+                "currentStatus", PosSessionStatus.CLOSED.name()
         ));
+        if (updated != 1) {
+            throw new ConflictException("Only closed sessions can be reconciled");
+        }
         return getSession(principal, id);
     }
 
@@ -220,5 +238,11 @@ public class PosSessionService {
         if (!expected.name().equals(session.status())) {
             throw new ConflictException(message);
         }
+    }
+
+    private void lockOpenSessionScope(Long outletId) {
+        jdbcTemplate.query("""
+                SELECT pg_advisory_xact_lock(:lockKey)
+                """, PosSql.params("lockKey", outletId), rs -> null);
     }
 }

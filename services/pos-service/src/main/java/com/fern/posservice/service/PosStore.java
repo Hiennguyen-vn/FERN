@@ -19,12 +19,21 @@ public class PosStore {
     }
 
     public SessionRecord requireSession(Long id) {
+        return requireSession(id, false);
+    }
+
+    public SessionRecord requireSessionForUpdate(Long id) {
+        return requireSession(id, true);
+    }
+
+    private SessionRecord requireSession(Long id, boolean forUpdate) {
         SessionRecord record = jdbcTemplate.query("""
                 SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
                        status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
                 FROM pos.pos_session
                 WHERE id = :id
-                """, PosSql.params("id", id), rs -> rs.next() ? new SessionRecord(
+                %s
+                """.formatted(forUpdate ? "FOR UPDATE" : ""), PosSql.params("id", id), rs -> rs.next() ? new SessionRecord(
                 rs.getLong("id"),
                 rs.getString("session_code"),
                 rs.getLong("region_id"),
@@ -50,12 +59,21 @@ public class PosStore {
     }
 
     public OrderRecord requireOrder(Long id) {
+        return requireOrder(id, false);
+    }
+
+    public OrderRecord requireOrderForUpdate(Long id) {
+        return requireOrder(id, true);
+    }
+
+    private OrderRecord requireOrder(Long id, boolean forUpdate) {
         OrderRecord record = jdbcTemplate.query("""
                 SELECT id, order_number, region_id, outlet_id, pos_session_id, currency_code, order_type, status, payment_status,
                        subtotal, discount_amount, tax_amount, total_amount, note, created_at, completed_at
                 FROM pos.sale_order
                 WHERE id = :id
-                """, PosSql.params("id", id), rs -> rs.next() ? new OrderRecord(
+                %s
+                """.formatted(forUpdate ? "FOR UPDATE" : ""), PosSql.params("id", id), rs -> rs.next() ? new OrderRecord(
                 rs.getLong("id"),
                 rs.getString("order_number"),
                 rs.getLong("region_id"),

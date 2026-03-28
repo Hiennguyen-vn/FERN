@@ -62,6 +62,7 @@ class CatalogAuditScopeIntegrationTest {
         registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
         registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
         registry.add("fern.outbox.enabled", () -> false);
+        registry.add("fern.security.jwt.allow-insecure-default-secret", () -> true);
     }
 
     @BeforeEach
@@ -89,6 +90,7 @@ class CatalogAuditScopeIntegrationTest {
 
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         token = jwtService.encode(new FernJwtClaims(
                 1L,

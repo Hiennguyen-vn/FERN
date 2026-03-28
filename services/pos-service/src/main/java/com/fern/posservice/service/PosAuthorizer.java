@@ -17,7 +17,7 @@ public class PosAuthorizer {
         if (principal.scopeRoots().system()) {
             return;
         }
-        if (!principal.scopeRoots().outlets().isEmpty() && !principal.scopeRoots().outlets().contains(outletId)) {
+        if (!principal.scopeRoots().outlets().contains(outletId)) {
             throw new ForbiddenException("Outlet is outside the current scope");
         }
     }
@@ -27,14 +27,10 @@ public class PosAuthorizer {
         if (principal.scopeRoots().system()) {
             return;
         }
-        if (regionId != null
-                && !principal.scopeRoots().regions().isEmpty()
-                && !principal.scopeRoots().regions().contains(regionId)) {
+        if (regionId != null && !principal.scopeRoots().regions().contains(regionId)) {
             throw new ForbiddenException("Region is outside the current scope");
         }
-        if (outletId != null
-                && !principal.scopeRoots().outlets().isEmpty()
-                && !principal.scopeRoots().outlets().contains(outletId)) {
+        if (outletId != null && !principal.scopeRoots().outlets().contains(outletId)) {
             throw new ForbiddenException("Outlet is outside the current scope");
         }
     }

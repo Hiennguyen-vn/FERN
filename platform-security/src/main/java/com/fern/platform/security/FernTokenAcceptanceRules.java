@@ -1,7 +1,5 @@
 package com.fern.platform.security;
 
-import com.fern.platform.common.FernPrincipalType;
-
 public final class FernTokenAcceptanceRules {
     public static final String POLICY_VERSION_KEY = "fern:versions:policy";
     public static final String SCOPE_VERSION_KEY = "fern:versions:scope";
@@ -18,9 +16,6 @@ public final class FernTokenAcceptanceRules {
     ) {
         if (blacklisted) {
             return false;
-        }
-        if (claims.principalType() == FernPrincipalType.SERVICE) {
-            return true;
         }
         return currentPolicyVersion <= claims.policyVersion()
                 && currentScopeVersion <= claims.scopeVersion();

@@ -22,7 +22,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
 
 fern:
   security:
@@ -53,3 +53,7 @@ fern:
         minimum-number-of-calls: 4
         sliding-window-size: 8
         wait-duration-in-open-state: 15s
+    org:
+      base-url: ${FERN_ORG_BASE_URL:http://localhost:8082}
+      connect-timeout: 2s
+      read-timeout: 5s

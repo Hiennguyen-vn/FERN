@@ -1,10 +1,14 @@
 package com.fern.procurementservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.alerts.KafkaOperationalAlertPublisher;
+import com.fern.platform.alerts.NoopOperationalAlertPublisher;
+import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.KafkaAuditEventPublisher;
 import com.fern.platform.audit.NoopAuditEventPublisher;
 import com.fern.platform.security.FernJwtProperties;
+import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import com.zaxxer.hikari.HikariDataSource;
 import java.time.Clock;
@@ -18,9 +22,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.client.RestClient;
 
 @Configuration
 public class ProcurementBeans {
@@ -41,6 +48,15 @@ public class ProcurementBeans {
     }
 
     @Bean
+    FernServiceTokenSupport fernServiceTokenSupport(
+            FernJwtService jwtService,
+            Clock clock,
+            ObjectProvider<StringRedisTemplate> redisTemplateProvider
+    ) {
+        return new FernServiceTokenSupport(jwtService, clock, redisTemplateProvider.getIfAvailable());
+    }
+
+    @Bean
     ObjectMapper objectMapper() {
         return new ObjectMapper().findAndRegisterModules();
     }
@@ -55,6 +71,31 @@ public class ProcurementBeans {
             return new NoopAuditEventPublisher();
         }
         return new KafkaAuditEventPublisher(kafkaTemplate, objectMapper);
+    }
+
+    @Bean
+    OperationalAlertPublisher operationalAlertPublisher(
+            ObjectProvider<KafkaTemplate<String, String>> kafkaTemplateProvider,
+            ObjectMapper objectMapper,
+            Clock clock
+    ) {
+        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateProvider.getIfAvailable();
+        if (kafkaTemplate == null) {
+            return new NoopOperationalAlertPublisher();
+        }
+        return new KafkaOperationalAlertPublisher(kafkaTemplate, objectMapper, clock, "procurement-service");
+    }
+
+    @Bean
+    @Qualifier("orgRestClient")
+    RestClient orgRestClient(ProcurementClientProperties properties) {
+        return buildRestClient(properties.getOrg());
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "fern.clients")
+    ProcurementClientProperties procurementClientProperties() {
+        return new ProcurementClientProperties();
     }
 
     @Bean
@@ -123,5 +164,15 @@ public class ProcurementBeans {
             hikariDataSource.setMinimumIdle(Math.min(minIdle, maxPoolSize));
         }
         return dataSource;
+    }
+
+    private RestClient buildRestClient(ProcurementClientProperties.ClientProperties properties) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(properties.getConnectTimeout());
+        requestFactory.setReadTimeout(properties.getReadTimeout());
+        return RestClient.builder()
+                .baseUrl(properties.getBaseUrl())
+                .requestFactory(requestFactory)
+                .build();
     }
 }

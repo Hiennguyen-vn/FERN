@@ -7,7 +7,9 @@ import com.fern.inventoryservice.dto.InventoryCommands.UpdateStockCountLinesRequ
 import com.fern.inventoryservice.dto.InventoryResponses.StockAdjustmentResponse;
 import com.fern.inventoryservice.dto.InventoryResponses.StockCountSessionResponse;
 import com.fern.inventoryservice.dto.InventoryResponses.WasteRecordResponse;
-import com.fern.inventoryservice.service.InventoryService;
+import com.fern.inventoryservice.service.StockAdjustmentService;
+import com.fern.inventoryservice.service.StockCountService;
+import com.fern.inventoryservice.service.WasteRecordService;
 import com.fern.platform.common.FernPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,10 +24,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping
 public class InventoryCommandController {
-    private final InventoryService inventoryService;
+    private final StockAdjustmentService stockAdjustmentService;
+    private final WasteRecordService wasteRecordService;
+    private final StockCountService stockCountService;
 
-    public InventoryCommandController(InventoryService inventoryService) {
-        this.inventoryService = inventoryService;
+    public InventoryCommandController(
+            StockAdjustmentService stockAdjustmentService,
+            WasteRecordService wasteRecordService,
+            StockCountService stockCountService
+    ) {
+        this.stockAdjustmentService = stockAdjustmentService;
+        this.wasteRecordService = wasteRecordService;
+        this.stockCountService = stockCountService;
     }
 
     @PostMapping("/stock-adjustments")
@@ -33,7 +43,7 @@ public class InventoryCommandController {
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody CreateStockAdjustmentRequest request
     ) {
-        return inventoryService.createStockAdjustment(principal, request);
+        return stockAdjustmentService.createStockAdjustment(principal, request);
     }
 
     @PostMapping("/stock-adjustments/{id}/post")
@@ -42,7 +52,7 @@ public class InventoryCommandController {
             @PathVariable Long id,
             @RequestHeader("Idempotency-Key") String idempotencyKey
     ) {
-        return inventoryService.postStockAdjustment(principal, id, idempotencyKey);
+        return stockAdjustmentService.postStockAdjustment(principal, id, idempotencyKey);
     }
 
     @PostMapping("/stock-adjustments/{id}/cancel")
@@ -50,7 +60,7 @@ public class InventoryCommandController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return inventoryService.cancelStockAdjustment(principal, id);
+        return stockAdjustmentService.cancelStockAdjustment(principal, id);
     }
 
     @PostMapping("/waste-records")
@@ -58,7 +68,7 @@ public class InventoryCommandController {
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody CreateWasteRecordRequest request
     ) {
-        return inventoryService.createWasteRecord(principal, request);
+        return wasteRecordService.createWasteRecord(principal, request);
     }
 
     @PostMapping("/waste-records/{id}/post")
@@ -67,7 +77,7 @@ public class InventoryCommandController {
             @PathVariable Long id,
             @RequestHeader("Idempotency-Key") String idempotencyKey
     ) {
-        return inventoryService.postWasteRecord(principal, id, idempotencyKey);
+        return wasteRecordService.postWasteRecord(principal, id, idempotencyKey);
     }
 
     @PostMapping("/waste-records/{id}/cancel")
@@ -75,7 +85,7 @@ public class InventoryCommandController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return inventoryService.cancelWasteRecord(principal, id);
+        return wasteRecordService.cancelWasteRecord(principal, id);
     }
 
     @PostMapping("/stock-count-sessions")
@@ -83,7 +93,7 @@ public class InventoryCommandController {
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody CreateStockCountSessionRequest request
     ) {
-        return inventoryService.createStockCountSession(principal, request);
+        return stockCountService.createStockCountSession(principal, request);
     }
 
     @PostMapping("/stock-count-sessions/{id}/start")
@@ -91,7 +101,7 @@ public class InventoryCommandController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return inventoryService.startStockCountSession(principal, id);
+        return stockCountService.startStockCountSession(principal, id);
     }
 
     @PutMapping("/stock-count-sessions/{id}/lines")
@@ -100,7 +110,7 @@ public class InventoryCommandController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateStockCountLinesRequest request
     ) {
-        return inventoryService.updateStockCountLines(principal, id, request);
+        return stockCountService.updateStockCountLines(principal, id, request);
     }
 
     @PostMapping("/stock-count-sessions/{id}/post")
@@ -109,7 +119,7 @@ public class InventoryCommandController {
             @PathVariable Long id,
             @RequestHeader("Idempotency-Key") String idempotencyKey
     ) {
-        return inventoryService.postStockCountSession(principal, id, idempotencyKey);
+        return stockCountService.postStockCountSession(principal, id, idempotencyKey);
     }
 
     @PostMapping("/stock-count-sessions/{id}/cancel")
@@ -117,6 +127,6 @@ public class InventoryCommandController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
-        return inventoryService.cancelStockCountSession(principal, id);
+        return stockCountService.cancelStockCountSession(principal, id);
     }
 }

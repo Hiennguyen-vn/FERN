@@ -45,6 +45,7 @@ public final class PermissionCodes {
     public static final String INVENTORY_STOCK_COUNT_WRITE = "inventory.stock_count.write";
     public static final String INVENTORY_STOCK_COUNT_POST = "inventory.stock_count.post";
     public static final String INVENTORY_INTERNAL_RESERVE = "inventory.internal.reserve";
+    public static final String INVENTORY_INTERNAL_RELEASE = "inventory.internal.release";
     public static final String PROCUREMENT_SUPPLIER_READ = "procurement.supplier.read";
     public static final String PROCUREMENT_SUPPLIER_WRITE = "procurement.supplier.write";
     public static final String PROCUREMENT_PO_READ = "procurement.po.read";
@@ -80,6 +81,8 @@ public final class PermissionCodes {
     public static final String FINANCE_PAYROLL_PAY = "finance.payroll.pay";
     public static final String FINANCE_CONFIG_READ = "finance.config.read";
     public static final String FINANCE_CONFIG_WRITE = "finance.config.write";
+    public static final String REPORT_READ = "report.read";
+    public static final String REPORT_EXPORT = "report.export";
     public static final String REPORT_PAYROLL_READ = "report.payroll.read";
     public static final String REPORT_PAYROLL_EXPORT = "report.payroll.export";
 

@@ -61,6 +61,7 @@ public class ProcurementService {
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate masterJdbcTemplate;
     private final ProcurementAuthorizer procurementAuthorizer;
+    private final ProcurementOrgClient procurementOrgClient;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -68,12 +69,14 @@ public class ProcurementService {
             @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
             @Qualifier("masterJdbcTemplate") NamedParameterJdbcTemplate masterJdbcTemplate,
             ProcurementAuthorizer procurementAuthorizer,
+            ProcurementOrgClient procurementOrgClient,
             ObjectMapper objectMapper,
             Clock clock
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.masterJdbcTemplate = masterJdbcTemplate;
         this.procurementAuthorizer = procurementAuthorizer;
+        this.procurementOrgClient = procurementOrgClient;
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
@@ -178,6 +181,10 @@ public class ProcurementService {
     @Transactional
     public PurchaseOrderResponse createPurchaseOrder(FernPrincipal principal, CreatePurchaseOrderRequest request) {
         procurementAuthorizer.requireOutletPermission(principal, request.outletId(), PermissionCodes.PROCUREMENT_PO_CREATE);
+        ProcurementOrgClient.OutletRoute outlet = procurementOrgClient.requireOutlet(request.outletId());
+        if (!outlet.regionId().equals(request.regionId())) {
+            throw new BadRequestException("Region does not match the outlet route");
+        }
         SupplierRecord supplier = requireActiveApprovedSupplier(request.supplierId());
         PurchaseOrderTotals totals = calculatePurchaseOrderTotals(request.lines());
         Long id = insertForId(jdbcTemplate, """
@@ -190,7 +197,7 @@ public class ProcurementService {
                 )
                 """, params(
                 "poNumber", "PO-" + Instant.now(clock).toEpochMilli(),
-                "regionId", request.regionId(),
+                "regionId", outlet.regionId(),
                 "outletId", request.outletId(),
                 "supplierId", supplier.id(),
                 "orderDate", request.orderDate(),
@@ -214,13 +221,13 @@ public class ProcurementService {
 
     @Transactional
     public PurchaseOrderResponse updatePurchaseOrder(FernPrincipal principal, Long id, UpdatePurchaseOrderRequest request) {
-        PurchaseOrderRecord record = requirePurchaseOrder(id);
+        PurchaseOrderRecord record = requirePurchaseOrderForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_PO_UPDATE);
-        if (!List.of("DRAFT", "SUBMITTED", "APPROVED").contains(record.status())) {
-            throw new ConflictException("Purchase orders can only be updated before issue");
+        if (!"DRAFT".equals(record.status())) {
+            throw new ConflictException("Only draft purchase orders can be updated");
         }
         PurchaseOrderTotals totals = calculatePurchaseOrderTotals(request.lines());
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE procurement.purchase_order
                 SET expected_delivery_date = :expectedDeliveryDate,
                     subtotal_amount = :subtotalAmount,
@@ -229,6 +236,7 @@ public class ProcurementService {
                     note = :note,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status = 'DRAFT'
                 """, params(
                 "expectedDeliveryDate", request.expectedDeliveryDate(),
                 "subtotalAmount", totals.subtotal(),
@@ -237,39 +245,54 @@ public class ProcurementService {
                 "note", request.note(),
                 "id", id
         ));
+        if (updated != 1) {
+            throw new ConflictException("Only draft purchase orders can be updated");
+        }
         replacePurchaseOrderLines(id, request.lines());
         return getPurchaseOrder(principal, id);
     }
 
     @Transactional
     public PurchaseOrderResponse submitPurchaseOrder(FernPrincipal principal, Long id) {
-        PurchaseOrderRecord record = requirePurchaseOrder(id);
+        PurchaseOrderRecord record = requirePurchaseOrderForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_PO_SUBMIT);
         ensureStatus(record.status(), "DRAFT", "Only draft purchase orders can be submitted");
         requireActiveApprovedSupplier(record.supplierId());
-        jdbcTemplate.update("UPDATE procurement.purchase_order SET status = 'SUBMITTED', updated_at = CURRENT_TIMESTAMP WHERE id = :id", params("id", id));
+        int updated = jdbcTemplate.update("""
+                UPDATE procurement.purchase_order
+                SET status = 'SUBMITTED', updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                  AND status = 'DRAFT'
+                """, params("id", id));
+        if (updated != 1) {
+            throw new ConflictException("Only draft purchase orders can be submitted");
+        }
         return getPurchaseOrder(principal, id);
     }
 
     @Transactional
     public PurchaseOrderResponse approvePurchaseOrder(FernPrincipal principal, Long id) {
-        PurchaseOrderRecord record = requirePurchaseOrder(id);
+        PurchaseOrderRecord record = requirePurchaseOrderForUpdate(id);
         procurementAuthorizer.requireRegionPermission(principal, record.regionId(), PermissionCodes.PROCUREMENT_PO_APPROVE);
         ensureStatus(record.status(), "SUBMITTED", "Only submitted purchase orders can be approved");
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE procurement.purchase_order
                 SET status = 'APPROVED', approved_by_user_id = :approvedByUserId, approved_at = :approvedAt, updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status = 'SUBMITTED'
                 """, params("approvedByUserId", principal.userId(), "approvedAt", Instant.now(clock), "id", id));
+        if (updated != 1) {
+            throw new ConflictException("Only submitted purchase orders can be approved");
+        }
         return getPurchaseOrder(principal, id);
     }
 
     @Transactional
     public PurchaseOrderResponse issuePurchaseOrder(FernPrincipal principal, Long id) {
-        PurchaseOrderRecord record = requirePurchaseOrder(id);
+        PurchaseOrderRecord record = requirePurchaseOrderForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_PO_ISSUE);
         ensureStatus(record.status(), "APPROVED", "Only approved purchase orders can be issued");
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE procurement.purchase_order
                 SET status = 'ORDERED',
                     issued_by_user_id = :issuedByUserId,
@@ -277,23 +300,35 @@ public class ProcurementService {
                     commercial_snapshot = CAST(:commercialSnapshot AS jsonb),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status = 'APPROVED'
                 """, params(
                 "issuedByUserId", principal.userId(),
                 "issuedAt", Instant.now(clock),
                 "commercialSnapshot", toJson(mapPurchaseOrder(record)),
                 "id", id
         ));
+        if (updated != 1) {
+            throw new ConflictException("Only approved purchase orders can be issued");
+        }
         return getPurchaseOrder(principal, id);
     }
 
     @Transactional
     public PurchaseOrderResponse cancelPurchaseOrder(FernPrincipal principal, Long id) {
-        PurchaseOrderRecord record = requirePurchaseOrder(id);
+        PurchaseOrderRecord record = requirePurchaseOrderForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_PO_CANCEL);
         if (List.of("PARTIALLY_RECEIVED", "COMPLETED", "CLOSED", "CANCELLED").contains(record.status())) {
             throw new ConflictException("This purchase order can no longer be cancelled");
         }
-        jdbcTemplate.update("UPDATE procurement.purchase_order SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = :id", params("id", id));
+        int updated = jdbcTemplate.update("""
+                UPDATE procurement.purchase_order
+                SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                  AND status = :status
+                """, params("id", id, "status", record.status()));
+        if (updated != 1) {
+            throw new ConflictException("This purchase order can no longer be cancelled");
+        }
         return getPurchaseOrder(principal, id);
     }
 
@@ -339,21 +374,25 @@ public class ProcurementService {
 
     @Transactional
     public GoodsReceiptResponse receiveGoodsReceipt(FernPrincipal principal, Long id) {
-        GoodsReceiptRecord record = requireGoodsReceipt(id);
+        GoodsReceiptRecord record = requireGoodsReceiptForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_GR_CREATE);
         ensureStatus(record.status(), "DRAFT", "Only draft goods receipts can be received");
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE procurement.goods_receipt
                 SET status = 'RECEIVED', received_by_user_id = :receivedByUserId, received_at = :receivedAt, updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status = 'DRAFT'
                 """, params("receivedByUserId", principal.userId(), "receivedAt", Instant.now(clock), "id", id));
+        if (updated != 1) {
+            throw new ConflictException("Only draft goods receipts can be received");
+        }
         return getGoodsReceipt(principal, id);
     }
 
     @Transactional
     public GoodsReceiptResponse postGoodsReceipt(FernPrincipal principal, Long id, String idempotencyKey) {
         requireIdempotencyKey(idempotencyKey);
-        GoodsReceiptRecord record = requireGoodsReceipt(id);
+        GoodsReceiptRecord record = requireGoodsReceiptForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_GR_POST);
         Long duplicateId = jdbcTemplate.query("""
                 SELECT id FROM procurement.goods_receipt WHERE posted_idempotency_key = :idempotencyKey
@@ -362,7 +401,7 @@ public class ProcurementService {
             return getGoodsReceipt(principal, duplicateId);
         }
         ensureStatus(record.status(), "RECEIVED", "Only received goods receipts can be posted");
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE procurement.goods_receipt
                 SET status = 'POSTED',
                     posted_by_user_id = :postedByUserId,
@@ -370,12 +409,16 @@ public class ProcurementService {
                     posted_idempotency_key = :postedIdempotencyKey,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status = 'RECEIVED'
                 """, params(
                 "postedByUserId", principal.userId(),
                 "postedAt", Instant.now(clock),
                 "postedIdempotencyKey", idempotencyKey,
                 "id", id
         ));
+        if (updated != 1) {
+            throw new ConflictException("Only received goods receipts can be posted");
+        }
         updatePurchaseOrderReceiptProgress(record.purchaseOrderId(), id);
         enqueueGoodsReceiptPostedEvent(record, principal);
         return getGoodsReceipt(principal, id);
@@ -383,12 +426,20 @@ public class ProcurementService {
 
     @Transactional
     public GoodsReceiptResponse cancelGoodsReceipt(FernPrincipal principal, Long id) {
-        GoodsReceiptRecord record = requireGoodsReceipt(id);
+        GoodsReceiptRecord record = requireGoodsReceiptForUpdate(id);
         procurementAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.PROCUREMENT_GR_CANCEL);
         if (!List.of("DRAFT", "RECEIVED").contains(record.status())) {
             throw new ConflictException("Only draft or received goods receipts can be cancelled");
         }
-        jdbcTemplate.update("UPDATE procurement.goods_receipt SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE id = :id", params("id", id));
+        int updated = jdbcTemplate.update("""
+                UPDATE procurement.goods_receipt
+                SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                  AND status = :status
+                """, params("id", id, "status", record.status()));
+        if (updated != 1) {
+            throw new ConflictException("Only draft or received goods receipts can be cancelled");
+        }
         return getGoodsReceipt(principal, id);
     }
 
@@ -396,6 +447,10 @@ public class ProcurementService {
     public SupplierInvoiceResponse createSupplierInvoice(FernPrincipal principal, CreateSupplierInvoiceRequest request) {
         procurementAuthorizer.requireRegionPermission(principal, request.regionId(), PermissionCodes.PROCUREMENT_INVOICE_REVIEW);
         SupplierRecord supplier = requireActiveApprovedSupplier(request.supplierId());
+        ProcurementOrgClient.OutletRoute outlet = procurementOrgClient.requireOutlet(request.outletId());
+        if (!outlet.regionId().equals(request.regionId())) {
+            throw new ConflictException("Outlet route does not match requested region");
+        }
         BigDecimal subtotal = request.lines().stream()
                 .map(line -> line.lineTotal().subtract(line.taxAmount() == null ? BigDecimal.ZERO : line.taxAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -438,27 +493,39 @@ public class ProcurementService {
 
     @Transactional
     public SupplierInvoiceResponse approveSupplierInvoice(FernPrincipal principal, Long id) {
-        SupplierInvoiceRecord record = requireSupplierInvoice(id);
+        SupplierInvoiceRecord record = requireSupplierInvoiceForUpdate(id);
         procurementAuthorizer.requireRegionPermission(principal, record.regionId(), PermissionCodes.PROCUREMENT_INVOICE_APPROVE);
         if (!List.of("DRAFT", "RECEIVED", "MATCHED").contains(record.status())) {
             throw new ConflictException("Only received or matched supplier invoices can be approved");
         }
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE procurement.supplier_invoice
                 SET status = 'APPROVED', approved_by_user_id = :approvedByUserId, approved_at = :approvedAt, updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status IN ('DRAFT', 'RECEIVED', 'MATCHED')
                 """, params("approvedByUserId", principal.userId(), "approvedAt", Instant.now(clock), "id", id));
+        if (updated != 1) {
+            throw new ConflictException("Only received or matched supplier invoices can be approved");
+        }
         return getSupplierInvoice(principal, id);
     }
 
     @Transactional
     public SupplierInvoiceResponse disputeSupplierInvoice(FernPrincipal principal, Long id) {
-        SupplierInvoiceRecord record = requireSupplierInvoice(id);
+        SupplierInvoiceRecord record = requireSupplierInvoiceForUpdate(id);
         procurementAuthorizer.requireRegionPermission(principal, record.regionId(), PermissionCodes.PROCUREMENT_INVOICE_DISPUTE);
         if ("CANCELLED".equals(record.status())) {
             throw new ConflictException("Cancelled invoices cannot be disputed");
         }
-        jdbcTemplate.update("UPDATE procurement.supplier_invoice SET status = 'DISPUTED', updated_at = CURRENT_TIMESTAMP WHERE id = :id", params("id", id));
+        int updated = jdbcTemplate.update("""
+                UPDATE procurement.supplier_invoice
+                SET status = 'DISPUTED', updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                  AND status <> 'CANCELLED'
+                """, params("id", id));
+        if (updated != 1) {
+            throw new ConflictException("Cancelled invoices cannot be disputed");
+        }
         return getSupplierInvoice(principal, id);
     }
 
@@ -479,8 +546,21 @@ public class ProcurementService {
         if (allocatedTotal.compareTo(request.amount()) > 0) {
             throw new ConflictException("Supplier payment allocations cannot exceed the payment amount");
         }
-        for (PaymentAllocationInput allocation : request.invoiceAllocations()) {
-            SupplierInvoiceRecord invoice = requireSupplierInvoice(allocation.supplierInvoiceId());
+        Map<Long, BigDecimal> requestedAllocationByInvoice = request.invoiceAllocations().stream()
+                .collect(Collectors.toMap(
+                        PaymentAllocationInput::supplierInvoiceId,
+                        PaymentAllocationInput::allocatedAmount,
+                        BigDecimal::add,
+                        LinkedHashMap::new
+                ));
+        for (Long invoiceId : requestedAllocationByInvoice.keySet().stream().sorted().toList()) {
+            SupplierInvoiceRecord invoice = requireSupplierInvoiceForUpdate(invoiceId);
+            procurementAuthorizer.requireRouteRead(
+                    principal,
+                    invoice.regionId(),
+                    invoice.outletId(),
+                    PermissionCodes.PROCUREMENT_PAYMENT_RECORD
+            );
             if (!invoice.supplierId().equals(request.supplierId())) {
                 throw new ConflictException("Supplier payment allocations must belong to the same supplier");
             }
@@ -488,7 +568,7 @@ public class ProcurementService {
                 throw new ConflictException("Only approved supplier invoices can be paid");
             }
             BigDecimal openAmount = invoice.totalAmount().subtract(invoiceAllocatedAmount(invoice.id()));
-            if (allocation.allocatedAmount().compareTo(openAmount) > 0) {
+            if (requestedAllocationByInvoice.get(invoice.id()).compareTo(openAmount) > 0) {
                 throw new ConflictException("Allocated amount exceeds the supplier invoice open amount");
             }
         }
@@ -593,6 +673,34 @@ public class ProcurementService {
         return record;
     }
 
+    private PurchaseOrderRecord requirePurchaseOrderForUpdate(Long id) {
+        PurchaseOrderRecord record = jdbcTemplate.query("""
+                SELECT id, po_number, region_id, outlet_id, supplier_id, order_date, expected_delivery_date, status, subtotal_amount, tax_amount, total_amount, note, approved_at, issued_at
+                FROM procurement.purchase_order
+                WHERE id = :id
+                FOR UPDATE
+                """, params("id", id), rs -> rs.next() ? new PurchaseOrderRecord(
+                rs.getLong("id"),
+                rs.getString("po_number"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getLong("supplier_id"),
+                rs.getObject("order_date", LocalDate.class),
+                rs.getObject("expected_delivery_date", LocalDate.class),
+                rs.getString("status"),
+                rs.getBigDecimal("subtotal_amount"),
+                rs.getBigDecimal("tax_amount"),
+                rs.getBigDecimal("total_amount"),
+                rs.getString("note"),
+                instant(rs, "approved_at"),
+                instant(rs, "issued_at")
+        ) : null);
+        if (record == null) {
+            throw new ResourceNotFoundException("Purchase order not found");
+        }
+        return record;
+    }
+
     private GoodsReceiptRecord requireGoodsReceipt(Long id) {
         GoodsReceiptRecord record = jdbcTemplate.query("""
                 SELECT id, receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date,
@@ -621,12 +729,70 @@ public class ProcurementService {
         return record;
     }
 
+    private GoodsReceiptRecord requireGoodsReceiptForUpdate(Long id) {
+        GoodsReceiptRecord record = jdbcTemplate.query("""
+                SELECT id, receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date,
+                       status, total_amount, supplier_lot_number, note, received_at, posted_at
+                FROM procurement.goods_receipt
+                WHERE id = :id
+                FOR UPDATE
+                """, params("id", id), rs -> rs.next() ? new GoodsReceiptRecord(
+                rs.getLong("id"),
+                rs.getString("receipt_number"),
+                rs.getLong("purchase_order_id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getLong("supplier_id"),
+                instant(rs, "receipt_time"),
+                rs.getObject("business_date", LocalDate.class),
+                rs.getString("status"),
+                rs.getBigDecimal("total_amount"),
+                rs.getString("supplier_lot_number"),
+                rs.getString("note"),
+                instant(rs, "received_at"),
+                instant(rs, "posted_at")
+        ) : null);
+        if (record == null) {
+            throw new ResourceNotFoundException("Goods receipt not found");
+        }
+        return record;
+    }
+
     private SupplierInvoiceRecord requireSupplierInvoice(Long id) {
         SupplierInvoiceRecord record = jdbcTemplate.query("""
                 SELECT id, supplier_id, region_id, outlet_id, currency_code, invoice_number, invoice_date, due_date,
                        subtotal, tax_amount, total_amount, status, note, approved_at
                 FROM procurement.supplier_invoice
                 WHERE id = :id
+                """, params("id", id), rs -> rs.next() ? new SupplierInvoiceRecord(
+                rs.getLong("id"),
+                rs.getLong("supplier_id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getString("currency_code"),
+                rs.getString("invoice_number"),
+                rs.getObject("invoice_date", LocalDate.class),
+                rs.getObject("due_date", LocalDate.class),
+                rs.getBigDecimal("subtotal"),
+                rs.getBigDecimal("tax_amount"),
+                rs.getBigDecimal("total_amount"),
+                rs.getString("status"),
+                rs.getString("note"),
+                instant(rs, "approved_at")
+        ) : null);
+        if (record == null) {
+            throw new ResourceNotFoundException("Supplier invoice not found");
+        }
+        return record;
+    }
+
+    private SupplierInvoiceRecord requireSupplierInvoiceForUpdate(Long id) {
+        SupplierInvoiceRecord record = jdbcTemplate.query("""
+                SELECT id, supplier_id, region_id, outlet_id, currency_code, invoice_number, invoice_date, due_date,
+                       subtotal, tax_amount, total_amount, status, note, approved_at
+                FROM procurement.supplier_invoice
+                WHERE id = :id
+                FOR UPDATE
                 """, params("id", id), rs -> rs.next() ? new SupplierInvoiceRecord(
                 rs.getLong("id"),
                 rs.getLong("supplier_id"),

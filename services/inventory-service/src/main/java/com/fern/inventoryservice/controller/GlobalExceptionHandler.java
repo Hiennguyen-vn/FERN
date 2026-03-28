@@ -6,6 +6,8 @@ import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.observability.CorrelationId;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Map;
@@ -21,6 +23,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private final Counter inventoryAdjustmentFailureCounter;
+
+    public GlobalExceptionHandler(MeterRegistry meterRegistry) {
+        this.inventoryAdjustmentFailureCounter = Counter.builder("fern_inventory_adjustment_failures_total").register(meterRegistry);
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException exception, HttpServletRequest request) {
@@ -56,6 +63,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiErrorResponse> handleOther(Exception exception, HttpServletRequest request) {
         log.error("inventory_unhandled_exception path={} message={}", request.getRequestURI(), exception.getMessage(), exception);
+        if (request.getRequestURI() != null
+                && request.getRequestURI().contains("/stock-adjustments/")
+                && request.getRequestURI().endsWith("/post")) {
+            inventoryAdjustmentFailureCounter.increment();
+        }
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", exception.getMessage(), request, Map.of());
     }
 

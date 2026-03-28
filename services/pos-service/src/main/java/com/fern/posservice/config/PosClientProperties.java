@@ -5,6 +5,7 @@ import java.time.Duration;
 public class PosClientProperties {
     private ClientProperties catalog = new ClientProperties("http://localhost:8085");
     private ClientProperties inventory = new ClientProperties("http://localhost:8087");
+    private ClientProperties org = new ClientProperties("http://localhost:8082");
 
     public ClientProperties getCatalog() {
         return catalog;
@@ -20,6 +21,14 @@ public class PosClientProperties {
 
     public void setInventory(ClientProperties inventory) {
         this.inventory = inventory;
+    }
+
+    public ClientProperties getOrg() {
+        return org;
+    }
+
+    public void setOrg(ClientProperties org) {
+        this.org = org;
     }
 
     public static class ClientProperties {

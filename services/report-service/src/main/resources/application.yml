@@ -27,7 +27,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
 
 fern:
   security:
@@ -39,3 +39,8 @@ fern:
     node-id: ${FERN_ID_GENERATOR_NODE_ID:10}
     epoch-millis: ${FERN_ID_GENERATOR_EPOCH_MILLIS:1767225600000}
     max-clock-rollback-millis: ${FERN_ID_GENERATOR_MAX_CLOCK_ROLLBACK_MILLIS:5}
+  report:
+    export:
+      base-dir: ${FERN_REPORT_EXPORT_BASE_DIR:${java.io.tmpdir}/fern-report-exports}
+      preview-row-limit: ${FERN_REPORT_EXPORT_PREVIEW_ROW_LIMIT:50}
+      artifact-retention-days: ${FERN_REPORT_EXPORT_RETENTION_DAYS:30}

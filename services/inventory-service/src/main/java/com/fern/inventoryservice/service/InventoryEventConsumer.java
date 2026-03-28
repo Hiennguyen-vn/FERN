@@ -8,21 +8,21 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class InventoryEventConsumer {
-    private final InventoryService inventoryService;
+    private final InventoryEventConsumerService inventoryEventConsumerService;
     private final ObjectMapper objectMapper;
 
-    public InventoryEventConsumer(InventoryService inventoryService, ObjectMapper objectMapper) {
-        this.inventoryService = inventoryService;
+    public InventoryEventConsumer(InventoryEventConsumerService inventoryEventConsumerService, ObjectMapper objectMapper) {
+        this.inventoryEventConsumerService = inventoryEventConsumerService;
         this.objectMapper = objectMapper;
     }
 
     @KafkaListener(topics = "pos.sale.completed", groupId = "${spring.kafka.consumer.group-id}")
     public void consumeSaleCompleted(String payload) throws Exception {
-        inventoryService.consumeSaleCompleted(objectMapper.readValue(payload, PosSaleCompletedEvent.class));
+        inventoryEventConsumerService.consumeSaleCompleted(objectMapper.readValue(payload, PosSaleCompletedEvent.class));
     }
 
     @KafkaListener(topics = "procurement.goods_receipt.posted", groupId = "${spring.kafka.consumer.group-id}")
     public void consumeGoodsReceiptPosted(String payload) throws Exception {
-        inventoryService.consumeGoodsReceiptPosted(objectMapper.readValue(payload, ProcurementGoodsReceiptPostedEvent.class));
+        inventoryEventConsumerService.consumeGoodsReceiptPosted(objectMapper.readValue(payload, ProcurementGoodsReceiptPostedEvent.class));
     }
 }

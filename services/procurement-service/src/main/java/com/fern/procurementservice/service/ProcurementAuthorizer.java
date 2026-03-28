@@ -17,7 +17,7 @@ public class ProcurementAuthorizer {
         if (principal.scopeRoots().system()) {
             return;
         }
-        if (!principal.scopeRoots().outlets().isEmpty() && !principal.scopeRoots().outlets().contains(outletId)) {
+        if (!principal.scopeRoots().outlets().contains(outletId)) {
             throw new ForbiddenException("Outlet is outside the current scope");
         }
     }
@@ -27,7 +27,7 @@ public class ProcurementAuthorizer {
         if (principal.scopeRoots().system()) {
             return;
         }
-        if (!principal.scopeRoots().regions().isEmpty() && !principal.scopeRoots().regions().contains(regionId)) {
+        if (!principal.scopeRoots().regions().contains(regionId)) {
             throw new ForbiddenException("Region is outside the current scope");
         }
     }
@@ -37,8 +37,8 @@ public class ProcurementAuthorizer {
         if (principal.scopeRoots().system()) {
             return;
         }
-        boolean outletAllowed = principal.scopeRoots().outlets().isEmpty() || principal.scopeRoots().outlets().contains(outletId);
-        boolean regionAllowed = principal.scopeRoots().regions().isEmpty() || principal.scopeRoots().regions().contains(regionId);
+        boolean outletAllowed = outletId != null && principal.scopeRoots().outlets().contains(outletId);
+        boolean regionAllowed = regionId != null && principal.scopeRoots().regions().contains(regionId);
         if (!outletAllowed && !regionAllowed) {
             throw new ForbiddenException("Resource is outside the current scope");
         }

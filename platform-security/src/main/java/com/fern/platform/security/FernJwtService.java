@@ -30,9 +30,19 @@ public class FernJwtService {
     public FernJwtService(FernJwtProperties properties, Clock clock) {
         this.properties = properties;
         this.clock = clock;
+        validateSecret(properties);
         SecretKeySpec key = new SecretKeySpec(properties.getSecret().getBytes(), "HmacSHA256");
         this.encoder = new NimbusJwtEncoder(new ImmutableSecret<>(key));
         this.decoder = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+    }
+
+    private void validateSecret(FernJwtProperties properties) {
+        if (properties.getSecret() == null || properties.getSecret().isBlank()) {
+            throw new IllegalStateException("FERN_JWT_SECRET must be configured");
+        }
+        if (FernJwtProperties.INSECURE_DEFAULT_SECRET.equals(properties.getSecret()) && !properties.isAllowInsecureDefaultSecret()) {
+            throw new IllegalStateException("FERN_JWT_SECRET must be overridden outside controlled local/test environments");
+        }
     }
 
     public String encode(FernJwtClaims claims, Duration ttl) {

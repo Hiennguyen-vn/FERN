@@ -65,6 +65,7 @@ class CatalogServiceIntegrationTest {
         registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
         registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
         registry.add("fern.outbox.enabled", () -> false);
+        registry.add("fern.security.jwt.allow-insecure-default-secret", () -> true);
     }
 
     @BeforeEach
@@ -96,6 +97,7 @@ class CatalogServiceIntegrationTest {
 
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         userToken = jwtService.encode(new FernJwtClaims(
                 1L,
@@ -663,6 +665,7 @@ class CatalogServiceIntegrationTest {
     void shouldRejectUserPrincipalOnInternalCatalogEndpoints() throws Exception {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         String userInternalToken = jwtService.encode(new FernJwtClaims(
                 1L,

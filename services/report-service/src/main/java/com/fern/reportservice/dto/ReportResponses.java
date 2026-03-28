@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public final class ReportResponses {
     private ReportResponses() {
@@ -47,8 +48,27 @@ public final class ReportResponses {
     public record ExportJobResponse(
             Long exportJobId,
             String status,
+            String dataset,
+            String format,
+            Instant requestedAt,
+            Instant startedAt,
+            Instant completedAt,
+            Instant failedAt,
+            Long rowCount,
+            String downloadUrl,
+            Instant expiresAt,
+            String errorMessage,
             String filePath,
-            Instant completedAt
+            List<Map<String, Object>> preview
+    ) {
+    }
+
+    public record ExportPreviewResponse(
+            Long exportJobId,
+            String status,
+            String dataset,
+            Long rowCount,
+            List<Map<String, Object>> rows
     ) {
     }
 }

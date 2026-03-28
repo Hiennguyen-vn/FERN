@@ -72,6 +72,21 @@ public class PosInventoryClient {
                 .body(SaleReservationResponse.class)));
     }
 
+    public void releaseInventoryReservation(FernPrincipal principal, Long reservationId) {
+        execute(() -> {
+            restClient.post()
+                    .uri("/internal/inventory/sale-reservations/{reservationId}/cancel", reservationId)
+                    .headers(headers -> internalClientSupport.applyInternalHeaders(
+                            headers,
+                            principal,
+                            Set.of(PermissionCodes.INVENTORY_INTERNAL_RELEASE)
+                    ))
+                    .retrieve()
+                    .toBodilessEntity();
+            return null;
+        });
+    }
+
     private <T> T execute(Supplier<T> supplier) {
         try {
             return circuitBreaker.executeSupplier(supplier);

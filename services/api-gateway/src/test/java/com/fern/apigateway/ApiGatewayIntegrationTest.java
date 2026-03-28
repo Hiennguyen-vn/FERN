@@ -67,6 +67,7 @@ class ApiGatewayIntegrationTest {
         ensureServersStarted();
         registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
         registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
+        registry.add("fern.security.jwt.allow-insecure-default-secret", () -> true);
         registry.add("fern.routes.iam", () -> "http://localhost:" + iamServer.getAddress().getPort());
         registry.add("fern.routes.org", () -> "http://localhost:" + orgServer.getAddress().getPort());
         registry.add("fern.routes.catalog", () -> "http://localhost:" + catalogServer.getAddress().getPort());
@@ -216,6 +217,7 @@ class ApiGatewayIntegrationTest {
     void shouldForwardProtectedRequestWithValidToken() throws Exception {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         String token = jwtService.encode(new FernJwtClaims(
                 1L,
@@ -252,6 +254,7 @@ class ApiGatewayIntegrationTest {
     void shouldRejectBlacklistedToken() {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         String token = jwtService.encode(new FernJwtClaims(
                 1L,
@@ -278,9 +281,10 @@ class ApiGatewayIntegrationTest {
     }
 
     @Test
-    void shouldRouteInternalCatalogRoutes() {
+    void shouldNotExposeInternalCatalogRoutesThroughGateway() {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         String token = jwtService.encode(new FernJwtClaims(
                 1L,
@@ -302,17 +306,14 @@ class ApiGatewayIntegrationTest {
                 .uri("/internal/catalog/menu?outletId=1")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchange()
-                .expectStatus().isOk()
-                .expectBody(String.class)
-                .value(body -> assertThat(body).contains("\"items\""));
-
-        verify(kafkaTemplate, timeout(1000)).send(org.mockito.ArgumentMatchers.eq("request.trace"), anyString(), anyString());
+                .expectStatus().isNotFound();
     }
 
     @Test
     void shouldRouteAuditRequests() {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         String token = jwtService.encode(new FernJwtClaims(
                 1L,
@@ -346,6 +347,7 @@ class ApiGatewayIntegrationTest {
     void shouldRoutePosInventoryAndProcurementRequests() {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         String token = jwtService.encode(new FernJwtClaims(
                 1L,

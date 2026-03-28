@@ -27,6 +27,9 @@ fern:
       secret: ${FERN_JWT_SECRET:XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv}
       access-token-ttl-seconds: 900
       refresh-token-ttl-seconds: 604800
+  clients:
+    org:
+      base-url: ${FERN_ORG_BASE_URL:http://localhost:8082}
   outbox:
     enabled: ${FERN_OUTBOX_ENABLED:true}
     publish-delay-ms: 5000

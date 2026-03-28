@@ -1,12 +1,16 @@
 package com.fern.reportservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.alerts.KafkaOperationalAlertPublisher;
+import com.fern.platform.alerts.NoopOperationalAlertPublisher;
+import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import java.time.Clock;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -14,6 +18,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
 
 @Configuration
 public class ReportBeans {
@@ -30,6 +35,19 @@ public class ReportBeans {
     @Bean
     ObjectMapper objectMapper() {
         return new ObjectMapper().findAndRegisterModules();
+    }
+
+    @Bean
+    OperationalAlertPublisher operationalAlertPublisher(
+            ObjectProvider<KafkaTemplate<String, String>> kafkaTemplateProvider,
+            ObjectMapper objectMapper,
+            Clock clock
+    ) {
+        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateProvider.getIfAvailable();
+        if (kafkaTemplate == null) {
+            return new NoopOperationalAlertPublisher();
+        }
+        return new KafkaOperationalAlertPublisher(kafkaTemplate, objectMapper, clock, "report-service");
     }
 
     @Bean
@@ -57,6 +75,12 @@ public class ReportBeans {
     @Bean
     NamedParameterJdbcTemplate namedParameterJdbcTemplate(DataSource dataSource) {
         return new NamedParameterJdbcTemplate(dataSource);
+    }
+
+    @Bean
+    @ConfigurationProperties("fern.report.export")
+    ReportExportProperties reportExportProperties() {
+        return new ReportExportProperties();
     }
 
     @Bean(initMethod = "migrate")

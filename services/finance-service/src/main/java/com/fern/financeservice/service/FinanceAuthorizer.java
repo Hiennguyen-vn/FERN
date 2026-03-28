@@ -20,7 +20,19 @@ public class FinanceAuthorizer {
         throw new ForbiddenException("Region is outside the current scope");
     }
 
+    public void requireSystemPermission(FernPrincipal principal, String permission) {
+        requirePermission(principal, permission);
+        if (principal.scopeRoots().system()) {
+            return;
+        }
+        throw new ForbiddenException("System scope is required");
+    }
+
     public void requireSystemOrPermission(FernPrincipal principal, String permission) {
+        if (principal != null && principal.scopeRoots().system()) {
+            requirePermission(principal, permission);
+            return;
+        }
         requirePermission(principal, permission);
     }
 }

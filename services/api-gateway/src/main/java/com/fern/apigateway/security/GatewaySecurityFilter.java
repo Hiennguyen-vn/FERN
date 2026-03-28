@@ -5,6 +5,8 @@ import com.fern.platform.observability.CorrelationId;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.security.FernTokenAcceptanceRules;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -23,10 +25,12 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
 
     private final FernJwtService jwtService;
     private final ReactiveStringRedisTemplate redisTemplate;
+    private final Counter authFailureCounter;
 
-    public GatewaySecurityFilter(FernJwtService jwtService, ReactiveStringRedisTemplate redisTemplate) {
+    public GatewaySecurityFilter(FernJwtService jwtService, ReactiveStringRedisTemplate redisTemplate, MeterRegistry meterRegistry) {
         this.jwtService = jwtService;
         this.redisTemplate = redisTemplate;
+        this.authFailureCounter = Counter.builder("fern_auth_failures_total").register(meterRegistry);
     }
 
     @Override
@@ -35,6 +39,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
         if (PUBLIC_PATHS.contains(path)) {
             return checkRateLimit("gateway:public:" + path + ":" + clientKey(exchange), 10).flatMap(allowed -> {
                 if (!allowed) {
+                    authFailureCounter.increment();
                     return writeError(exchange, HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded");
                 }
                 return chain.filter(exchange);
@@ -43,6 +48,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
 
         String authorization = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith("Bearer ")) {
+            authFailureCounter.increment();
             return writeError(exchange, HttpStatus.UNAUTHORIZED, "Missing bearer token");
         }
 
@@ -50,6 +56,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
         try {
             claims = jwtService.decode(authorization.substring(7));
         } catch (Exception exception) {
+            authFailureCounter.increment();
             return writeError(exchange, HttpStatus.UNAUTHORIZED, "Invalid bearer token");
         }
 
@@ -57,11 +64,13 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
         return isTokenAccepted(claims)
                 .flatMap(accepted -> {
                     if (!accepted) {
+                        authFailureCounter.increment();
                         return writeError(exchange, HttpStatus.UNAUTHORIZED, "Token is revoked or stale");
                     }
                     return checkRateLimit("gateway:user:" + principal.username(), 120)
                             .flatMap(allowed -> {
                                 if (!allowed) {
+                                    authFailureCounter.increment();
                                     return writeError(exchange, HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded");
                                 }
                                 ServerWebExchange mutated = exchange.mutate().request(request -> request

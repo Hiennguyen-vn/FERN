@@ -661,9 +661,24 @@ fi
 payroll_summary_response="$(http_json GET "http://localhost:8080/reports/payroll/summary?regionId=${region_id}&fromDate=${SMOKE_EFFECTIVE_FROM}&toDate=${SMOKE_EFFECTIVE_FROM}" "" "Bearer ${smoke_access_token}")"
 payroll_run_report_response="$(http_json GET "http://localhost:8080/reports/payroll/runs/${payroll_run_id}" "" "Bearer ${smoke_access_token}")"
 payroll_export_response="$(http_json POST "http://localhost:8080/reports/payroll/export" "{\"regionId\":${region_id},\"fromDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"toDate\":\"${SMOKE_EFFECTIVE_FROM}\"}" "Bearer ${smoke_access_token}")"
+payroll_export_job_id="$(printf '%s' "${payroll_export_response}" | json_get exportJobId)"
 payroll_export_status="$(printf '%s' "${payroll_export_response}" | json_get status)"
+for _ in $(seq 1 60); do
+  if [[ "${payroll_export_status}" == "COMPLETED" || "${payroll_export_status}" == "FAILED" ]]; then
+    break
+  fi
+  sleep 2
+  payroll_export_response="$(http_json GET "http://localhost:8080/reports/exports/${payroll_export_job_id}" "" "Bearer ${smoke_access_token}")"
+  payroll_export_status="$(printf '%s' "${payroll_export_response}" | json_get status)"
+done
 if [[ "${payroll_export_status}" != "COMPLETED" ]]; then
   printf 'Expected payroll export status COMPLETED, got %s\n' "${payroll_export_status}" >&2
+  exit 1
+fi
+payroll_export_preview="$(http_json GET "http://localhost:8080/reports/exports/${payroll_export_job_id}/preview" "" "Bearer ${smoke_access_token}")"
+payroll_export_download_status="$(http_status GET "http://localhost:8080/reports/exports/${payroll_export_job_id}/download" "Bearer ${smoke_access_token}")"
+if [[ "${payroll_export_download_status}" != "200" ]]; then
+  printf 'Expected payroll export download status 200, got %s\n' "${payroll_export_download_status}" >&2
   exit 1
 fi
 

@@ -1,11 +1,14 @@
 package com.fern.procurementservice.controller;
 
+import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.ApiErrorResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.observability.CorrelationId;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Map;
@@ -18,6 +21,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private final Counter goodsReceiptPostFailureCounter;
+    private final OperationalAlertPublisher operationalAlertPublisher;
+
+    public GlobalExceptionHandler(MeterRegistry meterRegistry, OperationalAlertPublisher operationalAlertPublisher) {
+        this.goodsReceiptPostFailureCounter = Counter.builder("fern_goods_receipt_post_failures_total").register(meterRegistry);
+        this.operationalAlertPublisher = operationalAlertPublisher;
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException exception, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, "resource_not_found", exception.getMessage(), request, Map.of());
@@ -51,6 +62,22 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiErrorResponse> handleOther(Exception exception, HttpServletRequest request) {
+        if (request.getRequestURI() != null
+                && request.getRequestURI().contains("/goods-receipts/")
+                && request.getRequestURI().endsWith("/post")) {
+            goodsReceiptPostFailureCounter.increment();
+            operationalAlertPublisher.publish(
+                    "GOODS_RECEIPT_POST_FAILED",
+                    "HIGH",
+                    "Goods receipt posting failed",
+                    request.getHeader(CorrelationId.HEADER),
+                    null,
+                    null,
+                    "HTTP_REQUEST",
+                    request.getRequestURI(),
+                    Map.of("errorMessage", exception.getMessage(), "path", request.getRequestURI())
+            );
+        }
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", exception.getMessage(), request, Map.of());
     }
 

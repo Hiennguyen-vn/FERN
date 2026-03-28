@@ -17,20 +17,18 @@ import com.fern.financeservice.dto.FinanceResponses.PayrollRunResponse;
 import com.fern.financeservice.dto.FinanceResponses.SystemPolicyResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.FernPrincipal;
-import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.common.FernRequestHeaders;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
-import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.common.SnowflakeIdGenerator;
+import com.fern.platform.contracts.ExpensePostedEvent;
 import com.fern.platform.contracts.PayrollCalculatedEvent;
 import com.fern.platform.contracts.PayrollCalculatedEvent.PayrollAllocation;
 import com.fern.platform.contracts.PayrollCalculatedEvent.PayrollCalculatedEmployee;
 import com.fern.platform.contracts.PayrollPostedEvent;
 import com.fern.platform.contracts.PayrollPostedEvent.PayrollExpenseLink;
 import com.fern.platform.observability.CorrelationId;
-import com.fern.platform.security.FernJwtClaims;
-import com.fern.platform.security.FernJwtService;
+import com.fern.platform.security.FernServiceTokenSupport;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSet;
@@ -72,7 +70,7 @@ public class FinancePayrollService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final RestClient restClient;
-    private final FernJwtService jwtService;
+    private final FernServiceTokenSupport serviceTokenSupport;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
     private final String hrBaseUrl;
 
@@ -84,7 +82,7 @@ public class FinancePayrollService {
             ObjectMapper objectMapper,
             Clock clock,
             RestClient restClient,
-            FernJwtService jwtService,
+            FernServiceTokenSupport serviceTokenSupport,
             SnowflakeIdGenerator snowflakeIdGenerator,
             @Value("${fern.clients.hr-base-url}") String hrBaseUrl
     ) {
@@ -95,7 +93,7 @@ public class FinancePayrollService {
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.restClient = restClient;
-        this.jwtService = jwtService;
+        this.serviceTokenSupport = serviceTokenSupport;
         this.snowflakeIdGenerator = snowflakeIdGenerator;
         this.hrBaseUrl = hrBaseUrl;
     }
@@ -156,7 +154,7 @@ public class FinancePayrollService {
             throw new BadRequestException("Only draft or rejected payroll runs can be submitted");
         }
         recalculateRun(runId, period);
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE finance.payroll_run
                 SET status = 'SUBMITTED',
                     submitted_by_user_id = :submittedByUserId,
@@ -164,11 +162,15 @@ public class FinancePayrollService {
                     note = COALESCE(:note, note),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status IN ('DRAFT', 'REJECTED')
                 """, params(
                 "submittedByUserId", principal == null ? null : principal.userId(),
                 "note", note,
                 "id", runId
         ));
+        if (updated != 1) {
+            throw new BadRequestException("Only draft or rejected payroll runs can be submitted");
+        }
         PayrollRunResponse response = getPayrollRun(principal, runId);
         financeAuditService.publish("finance.payroll.submitted", principal, period.regionId(), null, "SUBMIT", "PAYROLL_RUN", runId.toString(), run, response, Map.of());
         return response;
@@ -182,7 +184,7 @@ public class FinancePayrollService {
         if (!"SUBMITTED".equals(run.status())) {
             throw new BadRequestException("Only submitted payroll runs can be approved");
         }
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE finance.payroll_run
                 SET status = 'APPROVED',
                     approved_by_user_id = :approvedByUserId,
@@ -190,11 +192,15 @@ public class FinancePayrollService {
                     note = COALESCE(:note, note),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status = 'SUBMITTED'
                 """, params(
                 "approvedByUserId", principal == null ? null : principal.userId(),
                 "note", note,
                 "id", runId
         ));
+        if (updated != 1) {
+            throw new BadRequestException("Only submitted payroll runs can be approved");
+        }
         PayrollRunResponse response = getPayrollRun(principal, runId);
         emitPayrollCalculated(period, response, principal);
         financeAuditService.publish("finance.payroll.approved", principal, period.regionId(), null, "APPROVE", "PAYROLL_RUN", runId.toString(), run, response, Map.of());
@@ -209,7 +215,7 @@ public class FinancePayrollService {
         if (!"SUBMITTED".equals(run.status())) {
             throw new BadRequestException("Only submitted payroll runs can be rejected");
         }
-        jdbcTemplate.update("""
+        int updated = jdbcTemplate.update("""
                 UPDATE finance.payroll_run
                 SET status = 'REJECTED',
                     rejected_by_user_id = :rejectedByUserId,
@@ -217,11 +223,15 @@ public class FinancePayrollService {
                     rejection_reason = :rejectionReason,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
+                  AND status = 'SUBMITTED'
                 """, params(
                 "rejectedByUserId", principal == null ? null : principal.userId(),
                 "rejectionReason", note,
                 "id", runId
         ));
+        if (updated != 1) {
+            throw new BadRequestException("Only submitted payroll runs can be rejected");
+        }
         PayrollRunResponse response = getPayrollRun(principal, runId);
         financeAuditService.publish("finance.payroll.rejected", principal, period.regionId(), null, "REJECT", "PAYROLL_RUN", runId.toString(), run, response, Map.of("reason", note));
         return response;
@@ -233,6 +243,25 @@ public class FinancePayrollService {
         PayrollPeriodRecord period = requirePayrollPeriodRecord(run.payrollPeriodId());
         financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PAY);
         if (!"APPROVED".equals(run.status())) {
+            throw new BadRequestException("Only approved payroll runs can be marked paid");
+        }
+        int updated = jdbcTemplate.update("""
+                UPDATE finance.payroll_run
+                SET status = 'PAID',
+                    payment_ref = :paymentRef,
+                    paid_by_user_id = :paidByUserId,
+                    paid_at = CURRENT_TIMESTAMP,
+                    note = COALESCE(:note, note),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                  AND status = 'APPROVED'
+                """, params(
+                "paymentRef", request.paymentReference(),
+                "paidByUserId", principal == null ? null : principal.userId(),
+                "note", request.note(),
+                "id", runId
+        ));
+        if (updated != 1) {
             throw new BadRequestException("Only approved payroll runs can be marked paid");
         }
         List<PayrollEmployeeResultResponse> employees = queryPayrollEmployees(runId);
@@ -263,24 +292,22 @@ public class FinancePayrollService {
                         VALUES (:expenseRecordId, :payrollRunId)
                         ON CONFLICT (expense_record_id) DO NOTHING
                         """, params("expenseRecordId", expenseRecordId, "payrollRunId", runId));
+                emitExpensePosted(
+                        expenseRecordId,
+                        period.regionId(),
+                        allocation.outletId(),
+                        employee.employeeId(),
+                        runId,
+                        run.runDate(),
+                        "PAYROLL",
+                        allocation.allocatedAmount(),
+                        currentCorrelationId(),
+                        "PAYROLL_RUN",
+                        runId.toString()
+                );
                 links.add(new PayrollExpenseLink(expenseRecordId, employee.employeeId(), allocation.outletId(), allocation.allocatedAmount()));
             }
         }
-        jdbcTemplate.update("""
-                UPDATE finance.payroll_run
-                SET status = 'PAID',
-                    payment_ref = :paymentRef,
-                    paid_by_user_id = :paidByUserId,
-                    paid_at = CURRENT_TIMESTAMP,
-                    note = COALESCE(:note, note),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id
-                """, params(
-                "paymentRef", request.paymentReference(),
-                "paidByUserId", principal == null ? null : principal.userId(),
-                "note", request.note(),
-                "id", runId
-        ));
         jdbcTemplate.update("""
                 UPDATE finance.payroll_employee_result
                 SET payment_status = 'PAID', updated_at = CURRENT_TIMESTAMP
@@ -295,15 +322,19 @@ public class FinancePayrollService {
     public List<PayrollPeriodResponse> listPayrollPeriods(FernPrincipal principal, Long regionId) {
         if (regionId != null) {
             financeAuthorizer.requireRegionPermission(principal, regionId, PermissionCodes.FINANCE_PAYROLL_READ);
-        } else {
-            financeAuthorizer.requireSystemOrPermission(principal, PermissionCodes.FINANCE_PAYROLL_READ);
+            return jdbcTemplate.query("""
+                    SELECT id, region_id, reference_code, name, start_date, end_date, pay_date, status, note
+                    FROM finance.payroll_period
+                    WHERE region_id = :regionId
+                    ORDER BY start_date DESC, id DESC
+                    """, params("regionId", regionId), (rs, rowNum) -> mapPayrollPeriod(rs));
         }
+        financeAuthorizer.requireSystemPermission(principal, PermissionCodes.FINANCE_PAYROLL_READ);
         return jdbcTemplate.query("""
                 SELECT id, region_id, reference_code, name, start_date, end_date, pay_date, status, note
                 FROM finance.payroll_period
-                WHERE (:regionId IS NULL OR region_id = :regionId)
                 ORDER BY start_date DESC, id DESC
-                """, params("regionId", regionId), (rs, rowNum) -> mapPayrollPeriod(rs));
+                """, params(), (rs, rowNum) -> mapPayrollPeriod(rs));
     }
 
     public PayrollPeriodResponse getPayrollPeriod(FernPrincipal principal, Long id) {
@@ -319,16 +350,21 @@ public class FinancePayrollService {
     public List<PayrollRunResponse> listPayrollRuns(FernPrincipal principal, Long regionId) {
         if (regionId != null) {
             financeAuthorizer.requireRegionPermission(principal, regionId, PermissionCodes.FINANCE_PAYROLL_READ);
-        } else {
-            financeAuthorizer.requireSystemOrPermission(principal, PermissionCodes.FINANCE_PAYROLL_READ);
+            return jdbcTemplate.query("""
+                    SELECT pr.id
+                    FROM finance.payroll_run pr
+                    JOIN finance.payroll_period pp ON pp.id = pr.payroll_period_id
+                    WHERE pp.region_id = :regionId
+                    ORDER BY pr.run_date DESC, pr.id DESC
+                    """, params("regionId", regionId), (rs, rowNum) -> getPayrollRun(principal, rs.getLong("id")));
         }
+        financeAuthorizer.requireSystemPermission(principal, PermissionCodes.FINANCE_PAYROLL_READ);
         return jdbcTemplate.query("""
                 SELECT pr.id
                 FROM finance.payroll_run pr
                 JOIN finance.payroll_period pp ON pp.id = pr.payroll_period_id
-                WHERE (:regionId IS NULL OR pp.region_id = :regionId)
                 ORDER BY pr.run_date DESC, pr.id DESC
-                """, params("regionId", regionId), (rs, rowNum) -> getPayrollRun(principal, rs.getLong("id")));
+                """, params(), (rs, rowNum) -> getPayrollRun(principal, rs.getLong("id")));
     }
 
     public PayrollRunResponse getPayrollRun(FernPrincipal principal, Long id) {
@@ -357,7 +393,7 @@ public class FinancePayrollService {
 
     @Transactional("masterTransactionManager")
     public NumberingRuleResponse putNumberingRule(FernPrincipal principal, String documentType, PutNumberingRuleRequest request) {
-        financeAuthorizer.requireSystemOrPermission(principal, PermissionCodes.FINANCE_CONFIG_WRITE);
+        financeAuthorizer.requireSystemPermission(principal, PermissionCodes.FINANCE_CONFIG_WRITE);
         masterJdbcTemplate.update("""
                 INSERT INTO config.document_numbering_rule (
                     document_type, prefix, region_id, outlet_id, next_number, reset_period, format_pattern, is_active, updated_at
@@ -387,7 +423,7 @@ public class FinancePayrollService {
     }
 
     public NumberingRuleResponse getNumberingRule(FernPrincipal principal, String documentType) {
-        financeAuthorizer.requireSystemOrPermission(principal, PermissionCodes.FINANCE_CONFIG_READ);
+        financeAuthorizer.requireSystemPermission(principal, PermissionCodes.FINANCE_CONFIG_READ);
         NumberingRuleResponse response = masterJdbcTemplate.query("""
                 SELECT id, document_type, prefix, region_id, outlet_id, next_number, reset_period, format_pattern, is_active
                 FROM config.document_numbering_rule
@@ -411,7 +447,7 @@ public class FinancePayrollService {
 
     @Transactional("masterTransactionManager")
     public SystemPolicyResponse putSystemPolicy(FernPrincipal principal, String policyKey, PutSystemPolicyRequest request) {
-        financeAuthorizer.requireSystemOrPermission(principal, PermissionCodes.FINANCE_CONFIG_WRITE);
+        financeAuthorizer.requireSystemPermission(principal, PermissionCodes.FINANCE_CONFIG_WRITE);
         masterJdbcTemplate.update("""
                 INSERT INTO config.system_policy (
                     policy_key, policy_value, description, updated_by_user_id, updated_at
@@ -433,7 +469,7 @@ public class FinancePayrollService {
     }
 
     public SystemPolicyResponse getSystemPolicy(FernPrincipal principal, String policyKey) {
-        financeAuthorizer.requireSystemOrPermission(principal, PermissionCodes.FINANCE_CONFIG_READ);
+        financeAuthorizer.requireSystemPermission(principal, PermissionCodes.FINANCE_CONFIG_READ);
         SystemPolicyResponse response = masterJdbcTemplate.query("""
                 SELECT policy_key, policy_value::text AS policy_value, description
                 FROM config.system_policy
@@ -800,12 +836,13 @@ public class FinancePayrollService {
 
     private PayrollRunRecord requirePayrollRunRecord(Long id) {
         PayrollRunRecord record = jdbcTemplate.query("""
-                SELECT id, payroll_period_id, status, total_amount
+                SELECT id, payroll_period_id, run_date, status, total_amount
                 FROM finance.payroll_run
                 WHERE id = :id
                 """, params("id", id), rs -> rs.next() ? new PayrollRunRecord(
                 rs.getLong("id"),
                 rs.getLong("payroll_period_id"),
+                rs.getObject("run_date", LocalDate.class),
                 rs.getString("status"),
                 rs.getBigDecimal("total_amount")
         ) : null);
@@ -842,7 +879,7 @@ public class FinancePayrollService {
     }
 
     private void applyInternalHeaders(org.springframework.http.HttpHeaders headers, Collection<String> permissions) {
-        headers.set(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + issueServiceToken(permissions));
+        headers.set(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + serviceTokenSupport.issueToken("finance-service", permissions));
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) {
             return;
@@ -857,43 +894,23 @@ public class FinancePayrollService {
         }
     }
 
-    private String issueServiceToken(Collection<String> permissions) {
-        Instant now = Instant.now(clock);
-        return jwtService.encode(
-                new FernJwtClaims(
-                        null,
-                        "finance-service",
-                        java.util.Set.of(),
-                        java.util.Set.copyOf(permissions),
-                        new ScopeRoots(true, List.of(), List.of()),
-                        0L,
-                        0L,
-                        UUID.randomUUID().toString(),
-                        now,
-                        now.plus(jwtService.serviceTokenTtl()),
-                        FernPrincipalType.SERVICE
-                ),
-                jwtService.serviceTokenTtl()
-        );
-    }
-
     private String nextDocumentNumber(String documentType) {
-        Long next = masterJdbcTemplate.query("""
-                SELECT next_number
-                FROM config.document_numbering_rule
-                WHERE document_type = :documentType AND is_active = TRUE
-                """, params("documentType", documentType), rs -> rs.next() ? rs.getLong("next_number") : null);
-        if (next == null) {
+        DocumentNumberAllocation allocation = masterJdbcTemplate.query("""
+                UPDATE config.document_numbering_rule
+                SET next_number = next_number + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE document_type = :documentType
+                  AND is_active = TRUE
+                RETURNING prefix, next_number - 1 AS allocated_number
+                """, params("documentType", documentType), rs -> rs.next() ? new DocumentNumberAllocation(
+                rs.getString("prefix"),
+                rs.getLong("allocated_number")
+        ) : null);
+        if (allocation == null) {
             return documentType + "-" + snowflakeIdGenerator.nextId();
         }
-        masterJdbcTemplate.update("""
-                UPDATE config.document_numbering_rule
-                SET next_number = next_number + 1, updated_at = CURRENT_TIMESTAMP
-                WHERE document_type = :documentType
-                """, params("documentType", documentType));
-        NumberingRuleResponse rule = getNumberingRule(new FernPrincipal(0L, "system", java.util.Set.of(), java.util.Set.of(PermissionCodes.FINANCE_CONFIG_READ), new ScopeRoots(true, List.of(), List.of()), 0L, 0L, "system"), documentType);
-        String prefix = rule.prefix() == null ? documentType : rule.prefix();
-        return prefix + "-" + String.format("%06d", next);
+        String prefix = allocation.prefix() == null ? documentType : allocation.prefix();
+        return prefix + "-" + String.format("%06d", allocation.allocatedNumber());
     }
 
     private JsonNode readPolicyValue(String policyKey) {
@@ -960,6 +977,40 @@ public class FinancePayrollService {
         enqueueOutbox("PAYROLL_RUN", run.id().toString(), "payroll.posted", period.regionId().toString(), event);
     }
 
+    private void emitExpensePosted(
+            Long expenseRecordId,
+            Long regionId,
+            Long outletId,
+            Long employeeId,
+            Long payrollRunId,
+            LocalDate businessDate,
+            String sourceType,
+            BigDecimal amount,
+            String correlationId,
+            String sourceReferenceType,
+            String sourceReferenceId
+    ) {
+        ExpensePostedEvent event = new ExpensePostedEvent(
+                UUID.randomUUID().toString(),
+                "finance.expense.posted",
+                clock.instant(),
+                "finance-service",
+                correlationId,
+                UUID.randomUUID().toString(),
+                expenseRecordId,
+                regionId,
+                outletId,
+                employeeId,
+                payrollRunId,
+                businessDate,
+                sourceType,
+                amount,
+                sourceReferenceType,
+                sourceReferenceId
+        );
+        enqueueOutbox("EXPENSE_RECORD", expenseRecordId.toString(), "finance.expense.posted", regionId.toString(), event);
+    }
+
     private void enqueueOutbox(String aggregateType, String aggregateId, String eventType, String partitionKey, Object payload) {
         jdbcTemplate.update("""
                 INSERT INTO finance.outbox_event (
@@ -967,6 +1018,7 @@ public class FinancePayrollService {
                 ) VALUES (
                     CAST(:id AS uuid), :aggregateType, :aggregateId, :eventType, :partitionKey, CAST(:payload AS jsonb), 'PENDING', CURRENT_TIMESTAMP
                 )
+                ON CONFLICT DO NOTHING
                 """, params(
                 "id", UUID.randomUUID().toString(),
                 "aggregateType", aggregateType,
@@ -1052,7 +1104,10 @@ public class FinancePayrollService {
     private record PayrollPeriodRecord(Long id, Long regionId, LocalDate startDate, LocalDate endDate, LocalDate payDate, String status) {
     }
 
-    private record PayrollRunRecord(Long id, Long payrollPeriodId, String status, BigDecimal totalAmount) {
+    private record PayrollRunRecord(Long id, Long payrollPeriodId, LocalDate runDate, String status, BigDecimal totalAmount) {
+    }
+
+    private record DocumentNumberAllocation(String prefix, long allocatedNumber) {
     }
 
     private record EffectiveContract(

@@ -1,11 +1,14 @@
 package com.fern.financeservice.controller;
 
+import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.ApiErrorResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.observability.CorrelationId;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Map;
@@ -21,6 +24,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private final Counter payrollRunFailureCounter;
+    private final OperationalAlertPublisher operationalAlertPublisher;
+
+    public GlobalExceptionHandler(MeterRegistry meterRegistry, OperationalAlertPublisher operationalAlertPublisher) {
+        this.payrollRunFailureCounter = Counter.builder("fern_payroll_run_failures_total").register(meterRegistry);
+        this.operationalAlertPublisher = operationalAlertPublisher;
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException exception, HttpServletRequest request) {
@@ -56,6 +66,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiErrorResponse> handleOther(Exception exception, HttpServletRequest request) {
         log.error("finance_unhandled_exception path={} message={}", request.getRequestURI(), exception.getMessage(), exception);
+        if (request.getRequestURI() != null && request.getRequestURI().contains("/payroll-runs/")) {
+            payrollRunFailureCounter.increment();
+            operationalAlertPublisher.publish(
+                    "PAYROLL_RUN_FAILED",
+                    "HIGH",
+                    "Payroll run operation failed",
+                    request.getHeader(CorrelationId.HEADER),
+                    null,
+                    null,
+                    "HTTP_REQUEST",
+                    request.getRequestURI(),
+                    Map.of("errorMessage", exception.getMessage(), "path", request.getRequestURI())
+            );
+        }
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", exception.getMessage(), request, Map.of());
     }
 

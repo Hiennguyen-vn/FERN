@@ -56,6 +56,7 @@ public class HrService {
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate masterJdbcTemplate;
     private final HrAuthorizer hrAuthorizer;
+    private final HrOrgClient hrOrgClient;
     private final HrAuditService hrAuditService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
@@ -64,6 +65,7 @@ public class HrService {
             @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
             @Qualifier("masterJdbcTemplate") NamedParameterJdbcTemplate masterJdbcTemplate,
             HrAuthorizer hrAuthorizer,
+            HrOrgClient hrOrgClient,
             HrAuditService hrAuditService,
             ObjectMapper objectMapper,
             Clock clock
@@ -71,6 +73,7 @@ public class HrService {
         this.jdbcTemplate = jdbcTemplate;
         this.masterJdbcTemplate = masterJdbcTemplate;
         this.hrAuthorizer = hrAuthorizer;
+        this.hrOrgClient = hrOrgClient;
         this.hrAuditService = hrAuditService;
         this.objectMapper = objectMapper;
         this.clock = clock;
@@ -136,7 +139,11 @@ public class HrService {
 
     @Transactional
     public AssignmentResponse createAssignment(FernPrincipal principal, CreateAssignmentRequest request) {
-        hrAuthorizer.requireRegionPermission(principal, request.regionId(), PermissionCodes.HR_SHIFT_WRITE);
+        HrOrgClient.OutletRoute outlet = hrOrgClient.requireOutlet(request.outletId());
+        hrAuthorizer.requireRegionPermission(principal, outlet.regionId(), PermissionCodes.HR_SHIFT_WRITE);
+        if (!outlet.regionId().equals(request.regionId())) {
+            throw new ConflictException("Assignment route does not match outlet route");
+        }
         requireEmployee(request.employeeId());
         Long id = insertForId(jdbcTemplate, """
                 INSERT INTO hr.employee_assignment (
@@ -146,7 +153,7 @@ public class HrService {
                 )
                 """, params(
                 "employeeId", request.employeeId(),
-                "regionId", request.regionId(),
+                "regionId", outlet.regionId(),
                 "outletId", request.outletId(),
                 "positionTitle", request.positionTitle(),
                 "startDate", request.startDate(),
@@ -155,13 +162,17 @@ public class HrService {
                 "status", normalize(request.status(), "ACTIVE")
         ));
         AssignmentResponse response = requireAssignment(id);
-        hrAuditService.publish("hr.assignment.created", principal, request.regionId(), request.outletId(), "CREATE", "EMPLOYEE_ASSIGNMENT", id.toString(), null, response, Map.of("employeeId", request.employeeId()));
+        hrAuditService.publish("hr.assignment.created", principal, outlet.regionId(), request.outletId(), "CREATE", "EMPLOYEE_ASSIGNMENT", id.toString(), null, response, Map.of("employeeId", request.employeeId()));
         return response;
     }
 
     @Transactional
     public ShiftScheduleResponse createShiftSchedule(FernPrincipal principal, CreateShiftScheduleRequest request) {
+        HrOrgClient.OutletRoute outlet = hrOrgClient.requireOutlet(request.outletId());
         hrAuthorizer.requireOutletPermission(principal, request.outletId(), PermissionCodes.HR_SHIFT_WRITE);
+        if (!outlet.regionId().equals(request.regionId())) {
+            throw new ConflictException("Shift schedule route does not match outlet route");
+        }
         Long id = insertForId(jdbcTemplate, """
                 INSERT INTO hr.shift_schedule (
                     region_id, outlet_id, shift_date, shift_name, start_time, end_time, status, created_by_user_id, created_at, updated_at
@@ -169,7 +180,7 @@ public class HrService {
                     :regionId, :outletId, :shiftDate, :shiftName, :startTime, :endTime, :status, :createdByUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
                 """, params(
-                "regionId", request.regionId(),
+                "regionId", outlet.regionId(),
                 "outletId", request.outletId(),
                 "shiftDate", request.shiftDate(),
                 "shiftName", request.shiftName(),
@@ -203,10 +214,13 @@ public class HrService {
 
     @Transactional
     public AttendanceEventResponse recordAttendanceEvent(FernPrincipal principal, RecordAttendanceEventRequest request) {
-        hrAuthorizer.requireOutletPermission(principal, request.outletId(), PermissionCodes.HR_ATTENDANCE_WRITE);
-        ShiftAssignmentResponse assignment = requireShiftAssignmentResponse(request.shiftAssignmentId());
+        ShiftAssignmentRecord assignment = requireShiftAssignment(request.shiftAssignmentId());
+        hrAuthorizer.requireOutletPermission(principal, assignment.outletId(), PermissionCodes.HR_ATTENDANCE_WRITE);
         if (!assignment.employeeId().equals(request.employeeId())) {
             throw new ConflictException("Attendance employee does not match shift assignment");
+        }
+        if (!assignment.regionId().equals(request.regionId()) || !assignment.outletId().equals(request.outletId())) {
+            throw new ConflictException("Attendance route does not match shift assignment");
         }
         Long id = insertForId(jdbcTemplate, """
                 INSERT INTO hr.attendance_event (
@@ -216,8 +230,8 @@ public class HrService {
                 )
                 """, params(
                 "employeeId", request.employeeId(),
-                "regionId", request.regionId(),
-                "outletId", request.outletId(),
+                "regionId", assignment.regionId(),
+                "outletId", assignment.outletId(),
                 "shiftAssignmentId", request.shiftAssignmentId(),
                 "eventType", request.eventType(),
                 "eventTime", request.eventTime(),
@@ -237,7 +251,7 @@ public class HrService {
                 request.eventTime(),
                 request.sourceSystem()
         );
-        hrAuditService.publish("hr.attendance.recorded", principal, request.regionId(), request.outletId(), "CREATE", "ATTENDANCE_EVENT", id.toString(), null, response, Map.of("shiftAssignmentId", request.shiftAssignmentId()));
+        hrAuditService.publish("hr.attendance.recorded", principal, assignment.regionId(), assignment.outletId(), "CREATE", "ATTENDANCE_EVENT", id.toString(), null, response, Map.of("shiftAssignmentId", request.shiftAssignmentId()));
         return response;
     }
 
@@ -246,26 +260,39 @@ public class HrService {
         ShiftAssignmentRecord assignment = requireShiftAssignment(shiftAssignmentId);
         hrAuthorizer.requireOutletPermission(principal, assignment.outletId(), PermissionCodes.HR_ATTENDANCE_REVIEW);
         AttendanceComputation computation = computeAttendance(shiftAssignmentId, assignment);
-        Long approvalId = currentApprovalId(shiftAssignmentId).orElseGet(() -> insertForId(jdbcTemplate, """
-                INSERT INTO hr.attendance_approval (
-                    shift_assignment_id, status, created_at, updated_at
-                ) VALUES (
-                    :shiftAssignmentId, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                )
-                """, params("shiftAssignmentId", shiftAssignmentId)));
+        ensureApprovalRow(shiftAssignmentId);
+        ApprovalRow currentApproval = queryApprovalForUpdate(shiftAssignmentId)
+                .orElseThrow(() -> new IllegalStateException("Approval row not found after upsert"));
+        if ("APPROVED".equals(currentApproval.status()) && !"APPROVED".equals(status)) {
+            throw new BadRequestException("Approved attendance cannot be changed");
+        }
+        if (status.equals(currentApproval.status())) {
+            return mapAttendanceApproval(
+                    currentApproval.id(),
+                    assignment,
+                    computation,
+                    currentApproval.status(),
+                    currentApproval.comments(),
+                    currentApproval.approvedByUserId(),
+                    currentApproval.approvedAt()
+            );
+        }
+        Instant approvedAt = "APPROVED".equals(status) ? clock.instant() : null;
+        Long approvedByUserId = "APPROVED".equals(status) ? principal == null ? null : principal.userId() : null;
         jdbcTemplate.update("""
                 UPDATE hr.attendance_approval
                 SET status = :status,
                     comments = :comments,
                     approved_by_user_id = :approvedByUserId,
-                    approved_at = CURRENT_TIMESTAMP,
+                    approved_at = :approvedAt,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
                 """, params(
                 "status", status,
                 "comments", comments,
-                "approvedByUserId", principal == null ? null : principal.userId(),
-                "id", approvalId
+                "approvedByUserId", approvedByUserId,
+                "approvedAt", approvedAt,
+                "id", currentApproval.id()
         ));
         jdbcTemplate.update("""
                 UPDATE hr.shift_assignment
@@ -278,7 +305,15 @@ public class HrService {
                 "attendanceStatus", "APPROVED".equals(status) ? computation.attendanceStatus() : "PENDING",
                 "id", shiftAssignmentId
         ));
-        AttendanceApprovalResponse response = mapAttendanceApproval(approvalId, assignment, computation, status, comments, principal == null ? null : principal.userId());
+        AttendanceApprovalResponse response = mapAttendanceApproval(
+                currentApproval.id(),
+                assignment,
+                computation,
+                status,
+                comments,
+                approvedByUserId,
+                approvedAt
+        );
         if ("APPROVED".equals(status)) {
             EffectiveContractResponse contract = activeContractForDate(assignment.employeeId(), assignment.shiftDate()).orElse(null);
             AttendanceApprovedEvent event = new AttendanceApprovedEvent(
@@ -288,7 +323,7 @@ public class HrService {
                     "hr-service",
                     currentCorrelationId(),
                     UUID.randomUUID().toString(),
-                    approvalId,
+                    currentApproval.id(),
                     shiftAssignmentId,
                     assignment.employeeId(),
                     assignment.regionId(),
@@ -300,7 +335,7 @@ public class HrService {
                     contract == null ? null : contract.contractId(),
                     principal == null ? null : principal.userId()
             );
-            enqueueOutbox("ATTENDANCE_APPROVAL", approvalId.toString(), "attendance.approved", assignment.outletId().toString(), event);
+            enqueueOutbox("ATTENDANCE_APPROVAL", currentApproval.id().toString(), "attendance.approved", assignment.outletId().toString(), event);
         }
         hrAuditService.publish(
                 "APPROVED".equals(status) ? "hr.attendance.approved" : "hr.attendance.rejected",
@@ -309,7 +344,7 @@ public class HrService {
                 assignment.outletId(),
                 status,
                 "ATTENDANCE_APPROVAL",
-                approvalId.toString(),
+                currentApproval.id().toString(),
                 null,
                 response,
                 Map.of("shiftAssignmentId", shiftAssignmentId)
@@ -390,7 +425,8 @@ public class HrService {
                 computation,
                 approval.status(),
                 approval.comments(),
-                approval.approvedByUserId()
+                approval.approvedByUserId(),
+                approval.approvedAt()
         );
     }
 
@@ -757,11 +793,37 @@ public class HrService {
                 """, params("shiftAssignmentId", shiftAssignmentId), rs -> rs.next() ? rs.getLong("id") : null));
     }
 
+    private void ensureApprovalRow(Long shiftAssignmentId) {
+        jdbcTemplate.update("""
+                INSERT INTO hr.attendance_approval (
+                    shift_assignment_id, status, created_at, updated_at
+                ) VALUES (
+                    :shiftAssignmentId, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                ON CONFLICT (shift_assignment_id) DO NOTHING
+                """, params("shiftAssignmentId", shiftAssignmentId));
+    }
+
     private Optional<ApprovalRow> queryApproval(Long shiftAssignmentId) {
         return Optional.ofNullable(jdbcTemplate.query("""
                 SELECT id, status, comments, approved_by_user_id, approved_at
                 FROM hr.attendance_approval
                 WHERE shift_assignment_id = :shiftAssignmentId
+                """, params("shiftAssignmentId", shiftAssignmentId), rs -> rs.next() ? new ApprovalRow(
+                rs.getLong("id"),
+                rs.getString("status"),
+                rs.getString("comments"),
+                nullableLong(rs, "approved_by_user_id"),
+                instant(rs, "approved_at")
+        ) : null));
+    }
+
+    private Optional<ApprovalRow> queryApprovalForUpdate(Long shiftAssignmentId) {
+        return Optional.ofNullable(jdbcTemplate.query("""
+                SELECT id, status, comments, approved_by_user_id, approved_at
+                FROM hr.attendance_approval
+                WHERE shift_assignment_id = :shiftAssignmentId
+                FOR UPDATE
                 """, params("shiftAssignmentId", shiftAssignmentId), rs -> rs.next() ? new ApprovalRow(
                 rs.getLong("id"),
                 rs.getString("status"),
@@ -777,9 +839,9 @@ public class HrService {
             AttendanceComputation computation,
             String status,
             String comments,
-            Long approvedByUserId
+            Long approvedByUserId,
+            Instant approvedAt
     ) {
-        Instant approvedAt = queryApproval(assignment.id()).map(ApprovalRow::approvedAt).orElse("PENDING".equals(status) ? null : clock.instant());
         return new AttendanceApprovalResponse(
                 approvalId,
                 assignment.id(),
@@ -816,6 +878,7 @@ public class HrService {
                 ) VALUES (
                     CAST(:id AS uuid), :aggregateType, :aggregateId, :eventType, :partitionKey, CAST(:payload AS jsonb), 'PENDING', CURRENT_TIMESTAMP
                 )
+                ON CONFLICT DO NOTHING
                 """, params(
                 "id", UUID.randomUUID().toString(),
                 "aggregateType", aggregateType,

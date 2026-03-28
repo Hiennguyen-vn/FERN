@@ -1,6 +1,7 @@
 package com.fern.posservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.observability.CorrelationId;
 import com.fern.posservice.dto.PosCommands.AddPaymentRequest;
 import com.fern.posservice.dto.PosCommands.CreateSaleOrderRequest;
 import com.fern.posservice.dto.PosCommands.UpdateSaleOrderRequest;
@@ -56,17 +57,19 @@ public class SaleOrderController {
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @Valid @RequestBody AddPaymentRequest request
     ) {
-        return posOrderService.addPayment(principal, id, idempotencyKey, request);
+        return posOrderService.addPayment(principal, id, idempotencyKey, correlationId, request);
     }
 
     @PostMapping("/{id}/complete")
     public SaleOrderResponse completeOrder(
             @AuthenticationPrincipal FernPrincipal principal,
-            @PathVariable Long id
+            @PathVariable Long id,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId
     ) {
-        return posOrderService.completeOrder(principal, id);
+        return posOrderService.completeOrder(principal, id, correlationId);
     }
 
     @PostMapping("/{id}/cancel")

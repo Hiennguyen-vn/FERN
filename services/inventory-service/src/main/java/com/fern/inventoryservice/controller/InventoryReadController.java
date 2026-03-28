@@ -4,8 +4,8 @@ import com.fern.inventoryservice.dto.InventoryResponses.InventoryTransactionResp
 import com.fern.inventoryservice.dto.InventoryResponses.StockBalanceResponse;
 import com.fern.inventoryservice.service.InventoryService;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.PageResponse;
 import java.time.LocalDate;
-import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,16 +22,18 @@ public class InventoryReadController {
     }
 
     @GetMapping("/stock-balances")
-    public List<StockBalanceResponse> listStockBalances(
+    public PageResponse<StockBalanceResponse> listStockBalances(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam Long outletId,
-            @RequestParam(required = false) Long ingredientId
+            @RequestParam(required = false) Long ingredientId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
     ) {
-        return inventoryService.listStockBalances(principal, outletId, ingredientId);
+        return inventoryService.listStockBalances(principal, outletId, ingredientId, page, size);
     }
 
     @GetMapping("/inventory-transactions")
-    public List<InventoryTransactionResponse> listInventoryTransactions(
+    public PageResponse<InventoryTransactionResponse> listInventoryTransactions(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam Long outletId,
             @RequestParam(required = false) Long ingredientId,
@@ -39,8 +41,10 @@ public class InventoryReadController {
             @RequestParam(required = false) LocalDate from,
             @RequestParam(required = false) LocalDate to,
             @RequestParam(required = false) String sourceType,
-            @RequestParam(required = false) String sourceId
+            @RequestParam(required = false) String sourceId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
     ) {
-        return inventoryService.listInventoryTransactions(principal, outletId, ingredientId, txnType, from, to, sourceType, sourceId);
+        return inventoryService.listInventoryTransactions(principal, outletId, ingredientId, txnType, from, to, sourceType, sourceId, page, size);
     }
 }

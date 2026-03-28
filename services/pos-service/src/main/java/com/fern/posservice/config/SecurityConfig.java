@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(registry -> registry
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/actuator/info").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/prometheus").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new ServletCorrelationIdFilter(), UsernamePasswordAuthenticationFilter.class)
