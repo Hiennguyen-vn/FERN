@@ -45,6 +45,21 @@ public class RouteConfig {
                         "/supplier-invoices/**",
                         "/supplier-payments/**"
                 ).uri(properties.getProcurement()))
+                .route("hr-core", r -> r.path(
+                        "/employees/**",
+                        "/employee-contracts/**",
+                        "/employee-assignments/**",
+                        "/shift-schedules/**",
+                        "/shift-assignments/**",
+                        "/attendance-events/**",
+                        "/attendance-approvals/**"
+                ).uri(properties.getHr()))
+                .route("finance-core", r -> r.path(
+                        "/payroll-periods/**",
+                        "/payroll-runs/**",
+                        "/finance-config/**"
+                ).uri(properties.getFinance()))
+                .route("report-core", r -> r.path("/reports/**").uri(properties.getReport()))
                 .build();
     }
 }

@@ -30,7 +30,7 @@ public class PosCatalogClient {
 
     public PosCatalogClient(
             @Qualifier("catalogRestClient") RestClient restClient,
-            CircuitBreaker catalogCircuitBreaker,
+            @Qualifier("catalogCircuitBreaker") CircuitBreaker catalogCircuitBreaker,
             PosInternalClientSupport internalClientSupport,
             PosDownstreamErrorHandler errorHandler
     ) {

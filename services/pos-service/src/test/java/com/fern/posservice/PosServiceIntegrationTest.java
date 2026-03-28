@@ -1,8 +1,6 @@
 package com.fern.posservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,22 +8,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.ScopeRoots;
+import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
 import com.sun.net.httpserver.HttpServer;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -42,6 +44,8 @@ class PosServiceIntegrationTest {
     private static volatile String lastCatalogActorUserId;
     private static volatile String lastInventoryAuthorization;
     private static volatile String lastInventoryActorUserId;
+    private static volatile boolean delayCatalogMenuResponse;
+    private static volatile int recipeBatchRequestCount;
 
     @DynamicPropertySource
     static void configure(DynamicPropertyRegistry registry) {
@@ -52,8 +56,11 @@ class PosServiceIntegrationTest {
         registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
         registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
         registry.add("fern.outbox.enabled", () -> "false");
-        registry.add("fern.clients.catalog-base-url", () -> "http://localhost:" + catalogServer.getAddress().getPort());
-        registry.add("fern.clients.inventory-base-url", () -> "http://localhost:" + inventoryServer.getAddress().getPort());
+        registry.add("fern.clients.catalog.base-url", () -> "http://localhost:" + catalogServer.getAddress().getPort());
+        registry.add("fern.clients.catalog.connect-timeout", () -> "500ms");
+        registry.add("fern.clients.catalog.read-timeout", () -> "500ms");
+        registry.add("fern.clients.inventory.base-url", () -> "http://localhost:" + inventoryServer.getAddress().getPort());
+        registry.add("fern.outbox.max-attempts", () -> "3");
     }
 
     @Autowired
@@ -65,6 +72,14 @@ class PosServiceIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    @Qualifier("catalogCircuitBreaker")
+    private CircuitBreaker catalogCircuitBreaker;
+
+    @Autowired
+    @Qualifier("inventoryCircuitBreaker")
+    private CircuitBreaker inventoryCircuitBreaker;
+
     private String token;
 
     @BeforeAll
@@ -73,6 +88,13 @@ class PosServiceIntegrationTest {
         catalogServer.createContext("/internal/catalog/menu", exchange -> {
             lastCatalogAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
             lastCatalogActorUserId = exchange.getRequestHeaders().getFirst("X-Fern-Actor-User-Id");
+            if (delayCatalogMenuResponse) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                }
+            }
             byte[] body = """
                     {
                       "items": [
@@ -84,6 +106,15 @@ class PosServiceIntegrationTest {
                           "currencyCode": "VND",
                           "priceValue": 50.00,
                           "taxPercent": 10.00
+                        },
+                        {
+                          "productId": 11,
+                          "productCode": "ESP",
+                          "productName": "Espresso",
+                          "categoryCode": "BEV",
+                          "currencyCode": "VND",
+                          "priceValue": 30.00,
+                          "taxPercent": 5.00
                         }
                       ]
                     }
@@ -94,29 +125,75 @@ class PosServiceIntegrationTest {
                 outputStream.write(body);
             }
         });
-        catalogServer.createContext("/internal/catalog/recipe-resolution", exchange -> {
+        catalogServer.createContext("/internal/catalog/recipe-resolutions", exchange -> {
             lastCatalogAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
             lastCatalogActorUserId = exchange.getRequestHeaders().getFirst("X-Fern-Actor-User-Id");
-            byte[] body = """
-                    {
-                      "productId": 10,
-                      "recipeId": 20,
-                      "recipeVersionId": 30,
-                      "recipeCode": "RCP-LATTE",
-                      "versionNo": "v1",
-                      "effectiveFrom": "2026-03-01",
-                      "ingredients": [
-                        {
-                          "ingredientId": 200,
-                          "ingredientCode": "MILK",
-                          "ingredientName": "Milk",
-                          "uomCode": "L",
-                          "qty": 1.5000,
-                          "sortOrder": 1
-                        }
-                      ]
-                    }
-                    """.getBytes();
+            recipeBatchRequestCount++;
+            String query = exchange.getRequestURI().getQuery();
+            boolean includesEspresso = query != null && query.contains("11");
+            byte[] body = (includesEspresso
+                    ? """
+                    [
+                      {
+                        "productId": 10,
+                        "recipeId": 20,
+                        "recipeVersionId": 30,
+                        "recipeCode": "RCP-LATTE",
+                        "versionNo": "v1",
+                        "effectiveFrom": "2026-03-01",
+                        "ingredients": [
+                          {
+                            "ingredientId": 200,
+                            "ingredientCode": "MILK",
+                            "ingredientName": "Milk",
+                            "uomCode": "L",
+                            "qty": 1.5000,
+                            "sortOrder": 1
+                          }
+                        ]
+                      },
+                      {
+                        "productId": 11,
+                        "recipeId": 21,
+                        "recipeVersionId": 31,
+                        "recipeCode": "RCP-ESP",
+                        "versionNo": "v1",
+                        "effectiveFrom": "2026-03-01",
+                        "ingredients": [
+                          {
+                            "ingredientId": 201,
+                            "ingredientCode": "BEAN",
+                            "ingredientName": "Coffee Bean",
+                            "uomCode": "GRAM",
+                            "qty": 8.0000,
+                            "sortOrder": 1
+                          }
+                        ]
+                      }
+                    ]
+                    """
+                    : """
+                    [
+                      {
+                        "productId": 10,
+                        "recipeId": 20,
+                        "recipeVersionId": 30,
+                        "recipeCode": "RCP-LATTE",
+                        "versionNo": "v1",
+                        "effectiveFrom": "2026-03-01",
+                        "ingredients": [
+                          {
+                            "ingredientId": 200,
+                            "ingredientCode": "MILK",
+                            "ingredientName": "Milk",
+                            "uomCode": "L",
+                            "qty": 1.5000,
+                            "sortOrder": 1
+                          }
+                        ]
+                      }
+                    ]
+                    """).getBytes();
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, body.length);
             try (OutputStream outputStream = exchange.getResponseBody()) {
@@ -181,13 +258,13 @@ class PosServiceIntegrationTest {
         lastCatalogActorUserId = null;
         lastInventoryAuthorization = null;
         lastInventoryActorUserId = null;
+        delayCatalogMenuResponse = false;
+        recipeBatchRequestCount = 0;
+        catalogCircuitBreaker.reset();
+        inventoryCircuitBreaker.reset();
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
-        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
-        token = jwtService.encode(new FernJwtClaims(
-                1L,
-                "pos-tester",
-                Set.of("outlet_manager"),
+        token = issueToken(
                 Set.of(
                         "pos.session.read",
                         "pos.session.open",
@@ -200,13 +277,9 @@ class PosServiceIntegrationTest {
                         "pos.order.complete",
                         "catalog.internal.resolve"
                 ),
-                new ScopeRoots(java.util.List.of(1L), java.util.List.of(101L)),
-                1L,
-                1L,
-                "pos-test-jti",
-                Instant.now(),
-                Instant.now().plusSeconds(900)
-        ), jwtService.accessTokenTtl());
+                List.of(1L),
+                List.of(101L)
+        );
     }
 
     @Test
@@ -224,6 +297,7 @@ class PosServiceIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("OPEN"))
+                .andExpect(jsonPath("$.sessionCode").value(org.hamcrest.Matchers.startsWith("POSS-")))
                 .andReturn().getResponse().getContentAsString();
         Long sessionId = readId(sessionJson);
 
@@ -235,12 +309,14 @@ class PosServiceIntegrationTest {
                                   "posSessionId": %d,
                                   "orderType": "DINE_IN",
                                   "lines": [
-                                    {"productId": 10, "qty": 2.0000}
+                                    {"productId": 10, "qty": 2.0000},
+                                    {"productId": 11, "qty": 1.0000}
                                   ]
                                 }
                                 """.formatted(sessionId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalAmount").value(110.00))
+                .andExpect(jsonPath("$.orderNumber").value(org.hamcrest.Matchers.startsWith("SO-")))
+                .andExpect(jsonPath("$.totalAmount").value(141.50))
                 .andReturn().getResponse().getContentAsString();
         Long orderId = readId(orderJson);
 
@@ -264,7 +340,7 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CARD",
-                                  "amount": 50.00,
+                                  "amount": 81.50,
                                   "transactionRef": "txn-2"
                                 }
                                 """))
@@ -290,6 +366,7 @@ class PosServiceIntegrationTest {
                 WHERE aggregate_id = ?
                 """, String.class, orderId.toString());
         assertThat(eventType).isEqualTo("pos.sale.completed");
+        assertThat(recipeBatchRequestCount).isEqualTo(1);
         assertThat(lastCatalogActorUserId).isEqualTo("1");
         assertThat(lastInventoryActorUserId).isEqualTo("1");
         assertThat(lastCatalogAuthorization).isNotBlank().isNotEqualTo(bearer());
@@ -299,9 +376,9 @@ class PosServiceIntegrationTest {
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
         assertThat(jwtService.decode(lastCatalogAuthorization.substring("Bearer ".length())).principalType())
-                .isEqualTo(com.fern.platform.common.FernPrincipalType.SERVICE);
+                .isEqualTo(FernPrincipalType.SERVICE);
         assertThat(jwtService.decode(lastInventoryAuthorization.substring("Bearer ".length())).principalType())
-                .isEqualTo(com.fern.platform.common.FernPrincipalType.SERVICE);
+                .isEqualTo(FernPrincipalType.SERVICE);
     }
 
     @Test
@@ -333,6 +410,126 @@ class PosServiceIntegrationTest {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    void shouldRequireOrderUpdatePermissionToAddPayment() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        String createOnlyToken = issueToken(
+                Set.of(
+                        "pos.session.read",
+                        "pos.session.open",
+                        "pos.order.read",
+                        "pos.order.create"
+                ),
+                List.of(1L),
+                List.of(101L)
+        );
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", "Bearer " + createOnlyToken)
+                        .header("Idempotency-Key", "pay-no-update")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 20.00
+                                }
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRejectMismatchedRegionScopeEvenWhenOutletMatches() throws Exception {
+        String wrongRegionToken = issueToken(
+                Set.of("pos.session.open"),
+                List.of(999L),
+                List.of(101L)
+        );
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", "Bearer " + wrongRegionToken)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldReturnServiceUnavailableAndAvoidWritesWhenCatalogTimesOut() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        delayCatalogMenuResponse = true;
+        try {
+            mockMvc.perform(post("/sale-orders")
+                            .header("Authorization", bearer())
+                            .contentType("application/json")
+                            .content("""
+                                    {
+                                      "posSessionId": %d,
+                                      "orderType": "DINE_IN",
+                                      "lines": [
+                                        {"productId": 10, "qty": 1.0000}
+                                      ]
+                                    }
+                                    """.formatted(sessionId)))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value("downstream_unavailable"));
+        } finally {
+            delayCatalogMenuResponse = false;
+        }
+
+        Long orderCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pos.sale_order", Long.class);
+        assertThat(orderCount).isEqualTo(0L);
+    }
+
     private Long readId(String json) throws Exception {
         JsonNode node = objectMapper.readTree(json);
         return node.get("id").asLong();
@@ -340,5 +537,23 @@ class PosServiceIntegrationTest {
 
     private String bearer() {
         return "Bearer " + token;
+    }
+
+    private String issueToken(Set<String> permissions, List<Long> regions, List<Long> outlets) {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        return jwtService.encode(new FernJwtClaims(
+                1L,
+                "pos-tester",
+                Set.of("outlet_manager"),
+                permissions,
+                new ScopeRoots(regions, outlets),
+                1L,
+                1L,
+                "pos-test-jti-" + permissions.hashCode() + "-" + regions.hashCode() + "-" + outlets.hashCode(),
+                Instant.now(),
+                Instant.now().plusSeconds(900)
+        ), jwtService.accessTokenTtl());
     }
 }

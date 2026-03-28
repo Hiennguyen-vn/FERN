@@ -19,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
+    static final String DUMMY_PASSWORD_HASH =
+            "$argon2id$v=19$m=16384,t=2,p=1$Ph4yxbFM2DnrUjVhJurd+g$6v0ldzsZwxbJS8EJlxoxXrigppDyYK2GkA2MGBxfqqA";
+
     private final UserAccountService userAccountService;
     private final UserViewService userViewService;
     private final FernPasswordHasher passwordHasher;
@@ -68,7 +71,11 @@ public class AuthService {
         }
 
         UserAccountEntity user = userAccountService.findOptionalByUsername(request.username()).orElse(null);
-        if (user == null || user.getStatus() != UserStatus.ACTIVE || !passwordHasher.matches(request.password(), user.getPasswordHash())) {
+        boolean passwordMatches = passwordHasher.matches(
+                request.password(),
+                user == null ? DUMMY_PASSWORD_HASH : user.getPasswordHash()
+        );
+        if (user == null || user.getStatus() != UserStatus.ACTIVE || !passwordMatches) {
             boolean locked = loginProtectionService.recordFailure(request.username());
             iamAuditService.publishSecurityEvent(
                     "iam.auth.login.failed",

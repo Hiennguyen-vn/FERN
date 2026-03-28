@@ -151,6 +151,7 @@ public class PromotionService {
         validate(request);
         boolean overlap = promotionRepository.findAllByCodeIgnoreCaseOrderByEffectiveFromDescIdDesc(request.code()).stream()
                 .filter(existing -> excludeId == null || !existing.getId().equals(excludeId))
+                .filter(existing -> STATUS_ACTIVE.equalsIgnoreCase(existing.getStatus()))
                 .filter(existing -> normalizeScope(existing.getScopeType()).equals(normalizeScope(request.scopeType())))
                 .filter(existing -> sameScopeId(existing.getScopeId(), request.scopeId()))
                 .anyMatch(existing -> EffectiveDateSupport.overlaps(

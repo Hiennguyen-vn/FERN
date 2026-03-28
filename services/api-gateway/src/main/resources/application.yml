@@ -33,3 +33,6 @@ fern:
     pos: ${FERN_POS_ROUTE_URI:http://localhost:8086}
     inventory: ${FERN_INVENTORY_ROUTE_URI:http://localhost:8087}
     procurement: ${FERN_PROCUREMENT_ROUTE_URI:http://localhost:8088}
+    hr: ${FERN_HR_ROUTE_URI:http://localhost:8089}
+    report: ${FERN_REPORT_ROUTE_URI:http://localhost:8090}
+    finance: ${FERN_FINANCE_ROUTE_URI:http://localhost:8091}

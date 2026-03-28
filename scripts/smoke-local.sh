@@ -37,6 +37,8 @@ CATALOG_PID=""
 POS_PID=""
 INVENTORY_PID=""
 PROCUREMENT_PID=""
+HR_PID=""
+REPORT_PID=""
 FINANCE_PID=""
 AUDIT_PID=""
 GATEWAY_PID=""
@@ -210,6 +212,14 @@ cleanup() {
     kill "${PROCUREMENT_PID}" >/dev/null 2>&1 || true
     wait "${PROCUREMENT_PID}" 2>/dev/null || true
   fi
+  if [[ -n "${HR_PID}" ]] && kill -0 "${HR_PID}" >/dev/null 2>&1; then
+    kill "${HR_PID}" >/dev/null 2>&1 || true
+    wait "${HR_PID}" 2>/dev/null || true
+  fi
+  if [[ -n "${REPORT_PID}" ]] && kill -0 "${REPORT_PID}" >/dev/null 2>&1; then
+    kill "${REPORT_PID}" >/dev/null 2>&1 || true
+    wait "${REPORT_PID}" 2>/dev/null || true
+  fi
   if [[ -n "${FINANCE_PID}" ]] && kill -0 "${FINANCE_PID}" >/dev/null 2>&1; then
     kill "${FINANCE_PID}" >/dev/null 2>&1 || true
     wait "${FINANCE_PID}" 2>/dev/null || true
@@ -249,7 +259,7 @@ wait_for_container_health fern-kafka 90
 log "Building runnable modules for smoke flow"
 (
   cd "${ROOT_DIR}" &&
-  ./mvnw -q -pl services/iam-service,services/org-service,services/catalog-service,services/pos-service,services/inventory-service,services/procurement-service,services/finance-service,services/audit-service,services/api-gateway -am install -DskipTests >"${LOG_DIR}/build.log" 2>&1
+  ./mvnw -q -pl services/iam-service,services/org-service,services/catalog-service,services/pos-service,services/inventory-service,services/procurement-service,services/hr-service,services/report-service,services/finance-service,services/audit-service,services/api-gateway -am install -DskipTests >"${LOG_DIR}/build.log" 2>&1
 )
 
 log "Applying database migrations for smoke flow"
@@ -320,6 +330,18 @@ log "Starting procurement-service"
 PROCUREMENT_PID=$!
 wait_for_http "procurement-service" "http://localhost:8088/actuator/health"
 
+log "Starting hr-service"
+(
+  cd "${ROOT_DIR}" &&
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
+  FERN_DATASOURCE_MAX_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
+  FERN_DATASOURCE_MIN_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
+  FERN_OUTBOX_PUBLISH_DELAY_MS=1000 ./mvnw -q -f services/hr-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/hr-service.log" 2>&1
+) &
+HR_PID=$!
+wait_for_http "hr-service" "http://localhost:8089/actuator/health"
+
 log "Starting finance-service"
 (
   cd "${ROOT_DIR}" &&
@@ -331,6 +353,16 @@ log "Starting finance-service"
 ) &
 FINANCE_PID=$!
 wait_for_http "finance-service" "http://localhost:8091/actuator/health"
+
+log "Starting report-service"
+(
+  cd "${ROOT_DIR}" &&
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
+  ./mvnw -q -f services/report-service/pom.xml spring-boot:run -Dspring-boot.run.fork=false >"${LOG_DIR}/report-service.log" 2>&1
+) &
+REPORT_PID=$!
+wait_for_http "report-service" "http://localhost:8090/actuator/health"
 
 log "Starting audit-service"
 (
@@ -397,7 +429,7 @@ user_response="$(http_json POST "http://localhost:8080/users" "{\"username\":\"$
 user_id="$(printf '%s' "${user_response}" | json_get id)"
 
 bootstrap_access_token="$(login_access_token "http://localhost:8080" "${BOOTSTRAP_USERNAME}" "${BOOTSTRAP_PASSWORD}")"
-http_json POST "http://localhost:8080/users/${user_id}/roles" "{\"roleCodes\":[\"${role_code}\",\"outlet_manager\",\"regional_finance\",\"finance\"]}" "Bearer ${bootstrap_access_token}" >/dev/null
+http_json POST "http://localhost:8080/users/${user_id}/roles" "{\"roleCodes\":[\"${role_code}\",\"outlet_manager\",\"regional_finance\",\"finance\",\"hr\"]}" "Bearer ${bootstrap_access_token}" >/dev/null
 
 bootstrap_access_token="$(login_access_token "http://localhost:8080" "${BOOTSTRAP_USERNAME}" "${BOOTSTRAP_PASSWORD}")"
 http_json POST "http://localhost:8080/users/${user_id}/scopes" "{\"regionIds\":[${region_id}],\"outletIds\":[${outlet_id}]}" "Bearer ${bootstrap_access_token}" >/dev/null
@@ -407,6 +439,30 @@ smoke_access_token="$(login_access_token "http://localhost:8080" "${SMOKE_USER_U
 
 log "Calling Org API through gateway"
 http_json GET "http://localhost:8080/regions/${region_id}" "" "Bearer ${smoke_access_token}" >/dev/null
+
+log "Running HR payroll source flow through gateway"
+bootstrap_access_token="$(login_access_token "http://localhost:8080" "${BOOTSTRAP_USERNAME}" "${BOOTSTRAP_PASSWORD}")"
+employee_response="$(http_json POST "http://localhost:8080/employees" "{\"employeeCode\":\"EMP-${RUN_ID}\",\"fullName\":\"Smoke Employee ${RUN_ID}\",\"status\":\"ACTIVE\",\"hiredAt\":\"${SMOKE_EFFECTIVE_FROM}\"}" "Bearer ${bootstrap_access_token}")"
+employee_id="$(printf '%s' "${employee_response}" | json_get id)"
+http_json POST "http://localhost:8080/employee-contracts" "{\"employeeId\":${employee_id},\"employmentType\":\"FULL_TIME\",\"salaryType\":\"MONTHLY\",\"baseSalary\":12000000.00,\"regionId\":${region_id},\"taxCode\":\"TAX-${RUN_ID}\",\"contractStatus\":\"ACTIVE\",\"startDate\":\"${SMOKE_EFFECTIVE_FROM}\"}" "Bearer ${bootstrap_access_token}" >/dev/null
+
+assignment_response="$(http_json POST "http://localhost:8080/employee-assignments" "{\"employeeId\":${employee_id},\"regionId\":${region_id},\"outletId\":${outlet_id},\"positionTitle\":\"Barista\",\"startDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"primaryAssignment\":true,\"status\":\"ACTIVE\"}" "Bearer ${smoke_access_token}")"
+employee_assignment_id="$(printf '%s' "${assignment_response}" | json_get id)"
+
+shift_schedule_response="$(http_json POST "http://localhost:8080/shift-schedules" "{\"regionId\":${region_id},\"outletId\":${outlet_id},\"shiftDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"shiftName\":\"Morning Smoke\",\"startTime\":\"08:00:00\",\"endTime\":\"16:00:00\",\"status\":\"SCHEDULED\"}" "Bearer ${smoke_access_token}")"
+shift_schedule_id="$(printf '%s' "${shift_schedule_response}" | json_get id)"
+
+shift_assignment_response="$(http_json POST "http://localhost:8080/shift-assignments" "{\"shiftScheduleId\":${shift_schedule_id},\"employeeId\":${employee_id},\"assignedRole\":\"STAFF\",\"note\":\"Smoke payroll shift\"}" "Bearer ${smoke_access_token}")"
+shift_assignment_id="$(printf '%s' "${shift_assignment_response}" | json_get id)"
+
+http_json POST "http://localhost:8080/attendance-events" "{\"employeeId\":${employee_id},\"regionId\":${region_id},\"outletId\":${outlet_id},\"shiftAssignmentId\":${shift_assignment_id},\"eventType\":\"CLOCK_IN\",\"eventTime\":\"${SMOKE_EFFECTIVE_FROM}T08:00:00Z\",\"sourceSystem\":\"SMOKE\"}" "Bearer ${smoke_access_token}" >/dev/null
+http_json POST "http://localhost:8080/attendance-events" "{\"employeeId\":${employee_id},\"regionId\":${region_id},\"outletId\":${outlet_id},\"shiftAssignmentId\":${shift_assignment_id},\"eventType\":\"CLOCK_OUT\",\"eventTime\":\"${SMOKE_EFFECTIVE_FROM}T17:00:00Z\",\"sourceSystem\":\"SMOKE\"}" "Bearer ${smoke_access_token}" >/dev/null
+attendance_approval_response="$(http_json POST "http://localhost:8080/attendance-approvals/${shift_assignment_id}/approve" "{\"comments\":\"Smoke attendance approved\"}" "Bearer ${smoke_access_token}")"
+attendance_approval_status="$(printf '%s' "${attendance_approval_response}" | json_get status)"
+if [[ "${attendance_approval_status}" != "APPROVED" ]]; then
+  printf 'Expected attendance approval status APPROVED, got %s\n' "${attendance_approval_status}" >&2
+  exit 1
+fi
 
 log "Seeding operational inventory through gateway"
 adjustment_response="$(http_json POST "http://localhost:8080/stock-adjustments" "{\"regionId\":${region_id},\"outletId\":${outlet_id},\"ingredientId\":${ingredient_id},\"adjustmentDirection\":\"IN\",\"qty\":50.0000,\"businessDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"reason\":\"BOOTSTRAP\",\"note\":\"Seed opening stock\"}" "Bearer ${smoke_access_token}")"
@@ -574,8 +630,45 @@ if [[ "${finance_expense_count:-0}" != "1" || "${finance_posting_count:-0}" != "
   exit 1
 fi
 
+log "Running payroll draft -> approve -> paid flow through gateway"
+payroll_period_response="$(http_json POST "http://localhost:8080/payroll-periods" "{\"regionId\":${region_id},\"name\":\"Smoke Payroll ${RUN_ID}\",\"startDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"endDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"payDate\":\"${SMOKE_EFFECTIVE_FROM}\"}" "Bearer ${smoke_access_token}")"
+payroll_period_id="$(printf '%s' "${payroll_period_response}" | json_get id)"
+payroll_run_response="$(http_json POST "http://localhost:8080/payroll-runs" "{\"payrollPeriodId\":${payroll_period_id},\"runDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"note\":\"Smoke payroll draft\"}" "Bearer ${smoke_access_token}")"
+payroll_run_id="$(printf '%s' "${payroll_run_response}" | json_get id)"
+http_json POST "http://localhost:8080/payroll-runs/${payroll_run_id}/submit" "{\"note\":\"Smoke submit\"}" "Bearer ${smoke_access_token}" >/dev/null
+http_json POST "http://localhost:8080/payroll-runs/${payroll_run_id}/approve" "{\"note\":\"Smoke approve\"}" "Bearer ${smoke_access_token}" >/dev/null
+payroll_paid_response="$(http_json POST "http://localhost:8080/payroll-runs/${payroll_run_id}/mark-paid" "{\"paymentReference\":\"PAYROLL-${RUN_ID}\",\"note\":\"Smoke payroll payment\"}" "Bearer ${smoke_access_token}")"
+payroll_status="$(printf '%s' "${payroll_paid_response}" | json_get status)"
+if [[ "${payroll_status}" != "PAID" ]]; then
+  printf 'Expected payroll run status PAID, got %s\n' "${payroll_status}" >&2
+  exit 1
+fi
+
+for _ in $(seq 1 60); do
+  payroll_expense_count="$(docker_psql_scalar fern_operational "SELECT COUNT(*) FROM finance.expense_payroll WHERE payroll_run_id = ${payroll_run_id};" | tr -d '[:space:]')"
+  payroll_fact_count="$(docker_psql_scalar fern_master "SELECT COUNT(*) FROM report.payroll_fact WHERE payroll_run_id = ${payroll_run_id};" | tr -d '[:space:]')"
+  payroll_expense_fact_count="$(docker_psql_scalar fern_master "SELECT COUNT(*) FROM report.expense_fact WHERE payroll_run_id = ${payroll_run_id};" | tr -d '[:space:]')"
+  if [[ "${payroll_expense_count:-0}" -ge 1 && "${payroll_fact_count:-0}" -ge 1 && "${payroll_expense_fact_count:-0}" -ge 1 ]]; then
+    break
+  fi
+  sleep 2
+done
+if [[ "${payroll_expense_count:-0}" -lt 1 || "${payroll_fact_count:-0}" -lt 1 || "${payroll_expense_fact_count:-0}" -lt 1 ]]; then
+  printf 'Timed out waiting for payroll finance/report rows\n' >&2
+  exit 1
+fi
+
+payroll_summary_response="$(http_json GET "http://localhost:8080/reports/payroll/summary?regionId=${region_id}&fromDate=${SMOKE_EFFECTIVE_FROM}&toDate=${SMOKE_EFFECTIVE_FROM}" "" "Bearer ${smoke_access_token}")"
+payroll_run_report_response="$(http_json GET "http://localhost:8080/reports/payroll/runs/${payroll_run_id}" "" "Bearer ${smoke_access_token}")"
+payroll_export_response="$(http_json POST "http://localhost:8080/reports/payroll/export" "{\"regionId\":${region_id},\"fromDate\":\"${SMOKE_EFFECTIVE_FROM}\",\"toDate\":\"${SMOKE_EFFECTIVE_FROM}\"}" "Bearer ${smoke_access_token}")"
+payroll_export_status="$(printf '%s' "${payroll_export_response}" | json_get status)"
+if [[ "${payroll_export_status}" != "COMPLETED" ]]; then
+  printf 'Expected payroll export status COMPLETED, got %s\n' "${payroll_export_status}" >&2
+  exit 1
+fi
+
 bootstrap_access_token="$(login_access_token "http://localhost:8080" "${BOOTSTRAP_USERNAME}" "${BOOTSTRAP_PASSWORD}")"
-for endpoint in "/sale-orders/${sale_order_id}/complete" "/goods-receipts/${goods_receipt_id}/post" "/supplier-payments"; do
+for endpoint in "/sale-orders/${sale_order_id}/complete" "/goods-receipts/${goods_receipt_id}/post" "/supplier-payments" "/attendance-approvals/${shift_assignment_id}/approve" "/payroll-runs/${payroll_run_id}/approve" "/payroll-runs/${payroll_run_id}/mark-paid"; do
   trace_found="0"
   for _ in $(seq 1 60); do
     trace_response="$(http_json GET "http://localhost:8080/audit/request-traces?sourceService=api-gateway&endpoint=${endpoint}&statusCode=200&limit=10" "" "Bearer ${bootstrap_access_token}" 2>/dev/null || true)"
@@ -614,4 +707,6 @@ log "POS session ID: ${pos_session_id}"
 log "Sale order ID: ${sale_order_id}"
 log "Goods receipt ID: ${goods_receipt_id}"
 log "Supplier payment ID: ${supplier_payment_id}"
+log "Employee ID: ${employee_id}"
+log "Payroll run ID: ${payroll_run_id}"
 log "Service logs: ${LOG_DIR}"

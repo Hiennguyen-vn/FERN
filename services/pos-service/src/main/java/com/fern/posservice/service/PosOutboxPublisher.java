@@ -105,6 +105,6 @@ public class PosOutboxPublisher {
         return OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
     }
 
-    private record PendingEvent(String id, String eventType, String partitionKey, String payload, int retryCount) {
+    record PendingEvent(String id, String eventType, String partitionKey, String payload, int retryCount) {
     }
 }

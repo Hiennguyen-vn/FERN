@@ -11,6 +11,9 @@ public class GatewayRoutesProperties {
     private String pos = "http://localhost:8086";
     private String inventory = "http://localhost:8087";
     private String procurement = "http://localhost:8088";
+    private String hr = "http://localhost:8089";
+    private String report = "http://localhost:8090";
+    private String finance = "http://localhost:8091";
 
     public String getIam() {
         return iam;
@@ -66,5 +69,29 @@ public class GatewayRoutesProperties {
 
     public void setProcurement(String procurement) {
         this.procurement = procurement;
+    }
+
+    public String getHr() {
+        return hr;
+    }
+
+    public void setHr(String hr) {
+        this.hr = hr;
+    }
+
+    public String getReport() {
+        return report;
+    }
+
+    public void setReport(String report) {
+        this.report = report;
+    }
+
+    public String getFinance() {
+        return finance;
+    }
+
+    public void setFinance(String finance) {
+        this.finance = finance;
     }
 }

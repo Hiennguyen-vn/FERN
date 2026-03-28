@@ -23,7 +23,7 @@ public interface PromotionRepository extends JpaRepository<PromotionEntity, Long
     @Query("""
             select p
             from PromotionEntity p
-            where p.code = :code
+            where lower(p.code) = lower(:code)
               and p.status = :status
               and p.effectiveFrom <= :businessDate
               and p.effectiveTo is null
@@ -38,7 +38,7 @@ public interface PromotionRepository extends JpaRepository<PromotionEntity, Long
     @Query("""
             select p
             from PromotionEntity p
-            where p.code = :code
+            where lower(p.code) = lower(:code)
               and p.status = :status
               and p.effectiveFrom <= :businessDate
               and (p.effectiveTo is null or p.effectiveTo >= :businessDate)

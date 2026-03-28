@@ -1,10 +1,17 @@
 package com.fern.financeservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.audit.AuditEventPublisher;
+import com.fern.platform.audit.KafkaAuditEventPublisher;
+import com.fern.platform.audit.NoopAuditEventPublisher;
 import com.fern.platform.common.SnowflakeIdGenerator;
+import com.fern.platform.security.FernJwtProperties;
+import com.fern.platform.security.FernJwtService;
 import com.zaxxer.hikari.HikariDataSource;
+import java.time.Clock;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
@@ -14,6 +21,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.web.client.RestClient;
 
 @Configuration
 public class FinanceBeans {
@@ -24,8 +33,35 @@ public class FinanceBeans {
     private int minIdle;
 
     @Bean
+    Clock clock() {
+        return Clock.systemUTC();
+    }
+
+    @Bean
+    FernJwtService fernJwtService(FernJwtProperties properties, Clock clock) {
+        return new FernJwtService(properties, clock);
+    }
+
+    @Bean
     ObjectMapper objectMapper() {
         return new ObjectMapper().findAndRegisterModules();
+    }
+
+    @Bean
+    AuditEventPublisher auditEventPublisher(
+            ObjectProvider<KafkaTemplate<String, String>> kafkaTemplateProvider,
+            ObjectMapper objectMapper
+    ) {
+        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateProvider.getIfAvailable();
+        if (kafkaTemplate == null) {
+            return new NoopAuditEventPublisher();
+        }
+        return new KafkaAuditEventPublisher(kafkaTemplate, objectMapper);
+    }
+
+    @Bean
+    RestClient restClient() {
+        return RestClient.builder().build();
     }
 
     @Bean
@@ -63,18 +99,23 @@ public class FinanceBeans {
     }
 
     @Bean
-    DataSource projectionDataSource(@Qualifier("projectionDataSourceProperties") DataSourceProperties projectionDataSourceProperties) {
+    DataSource masterDataSource(@Qualifier("projectionDataSourceProperties") DataSourceProperties projectionDataSourceProperties) {
         return tunePool(projectionDataSourceProperties.initializeDataSourceBuilder().build());
     }
 
     @Bean
-    NamedParameterJdbcTemplate projectionJdbcTemplate(@Qualifier("projectionDataSource") DataSource projectionDataSource) {
-        return new NamedParameterJdbcTemplate(projectionDataSource);
+    NamedParameterJdbcTemplate masterJdbcTemplate(@Qualifier("masterDataSource") DataSource masterDataSource) {
+        return new NamedParameterJdbcTemplate(masterDataSource);
     }
 
     @Bean
-    DataSourceTransactionManager projectionTransactionManager(@Qualifier("projectionDataSource") DataSource projectionDataSource) {
-        return new DataSourceTransactionManager(projectionDataSource);
+    NamedParameterJdbcTemplate projectionJdbcTemplate(@Qualifier("masterDataSource") DataSource masterDataSource) {
+        return new NamedParameterJdbcTemplate(masterDataSource);
+    }
+
+    @Bean
+    DataSourceTransactionManager masterTransactionManager(@Qualifier("masterDataSource") DataSource masterDataSource) {
+        return new DataSourceTransactionManager(masterDataSource);
     }
 
     @Bean(initMethod = "migrate")
@@ -88,9 +129,19 @@ public class FinanceBeans {
     }
 
     @Bean(initMethod = "migrate")
-    Flyway financeProjectionFlyway(@Qualifier("projectionDataSource") DataSource projectionDataSource) {
+    Flyway financeConfigFlyway(@Qualifier("masterDataSource") DataSource masterDataSource) {
         return Flyway.configure()
-                .dataSource(projectionDataSource)
+                .dataSource(masterDataSource)
+                .schemas("config")
+                .defaultSchema("config")
+                .locations("classpath:db/migration/postgresql/master")
+                .load();
+    }
+
+    @Bean(initMethod = "migrate")
+    Flyway financeProjectionFlyway(@Qualifier("masterDataSource") DataSource masterDataSource) {
+        return Flyway.configure()
+                .dataSource(masterDataSource)
                 .schemas("finance_projection")
                 .defaultSchema("finance_projection")
                 .locations("classpath:db/migration/postgresql/master_projection")

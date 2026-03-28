@@ -516,6 +516,77 @@ class CatalogServiceIntegrationTest {
     }
 
     @Test
+    void shouldAllowReplacementPromotionAfterDeactivation() throws Exception {
+        Long promotionId = createPromotion(
+                "PROMO-REPLACE",
+                "Original Promotion",
+                "GLOBAL",
+                null,
+                "10.00",
+                null,
+                null,
+                null,
+                LocalDate.of(2026, 3, 1),
+                null
+        );
+
+        mockMvc.perform(post("/catalog/promotions/{id}/deactivate", promotionId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
+
+        mockMvc.perform(post("/catalog/promotions")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "PROMO-REPLACE",
+                                  "name": "Replacement Promotion",
+                                  "description": "Replacement after deactivate",
+                                  "promotionType": "ORDER",
+                                  "discountPercent": null,
+                                  "discountAmount": 12000.00,
+                                  "scopeType": "GLOBAL",
+                                  "scopeId": null,
+                                  "minOrderAmount": null,
+                                  "maxUsageTotal": null,
+                                  "effectiveFrom": "2026-03-01",
+                                  "effectiveTo": null
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("PROMO-REPLACE"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void shouldResolvePromotionCaseInsensitively() throws Exception {
+        createPromotion(
+                "save10",
+                "Lowercase Promotion",
+                "GLOBAL",
+                null,
+                "10.00",
+                null,
+                "50000.00",
+                null,
+                LocalDate.of(2026, 3, 1),
+                null
+        );
+
+        mockMvc.perform(get("/internal/catalog/promotion-resolution")
+                        .header("Authorization", serviceBearer())
+                        .param("code", "SAVE10")
+                        .param("outletId", "101")
+                        .param("regionId", "202")
+                        .param("orderTotal", "100000.00")
+                        .param("at", "2026-03-15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("save10"))
+                .andExpect(jsonPath("$.scopeType").value("GLOBAL"));
+    }
+
+    @Test
     void shouldReturnNotFoundWhenPromotionResolutionHasNoApplicableMatch() throws Exception {
         createPromotion(
                 "PROMO-NOPE",

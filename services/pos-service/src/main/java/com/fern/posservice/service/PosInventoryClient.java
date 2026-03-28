@@ -29,7 +29,7 @@ public class PosInventoryClient {
 
     public PosInventoryClient(
             @Qualifier("inventoryRestClient") RestClient restClient,
-            CircuitBreaker inventoryCircuitBreaker,
+            @Qualifier("inventoryCircuitBreaker") CircuitBreaker inventoryCircuitBreaker,
             PosInternalClientSupport internalClientSupport,
             PosDownstreamErrorHandler errorHandler
     ) {
