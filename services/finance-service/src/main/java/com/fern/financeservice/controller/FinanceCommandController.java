@@ -12,12 +12,14 @@ import com.fern.financeservice.dto.FinanceResponses.PayrollRunResponse;
 import com.fern.financeservice.dto.FinanceResponses.SystemPolicyResponse;
 import com.fern.financeservice.service.FinancePayrollService;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.observability.CorrelationId;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,53 +35,69 @@ public class FinanceCommandController {
     @PostMapping("/payroll-periods")
     public PayrollPeriodResponse createPayrollPeriod(
             @AuthenticationPrincipal FernPrincipal principal,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @Valid @RequestBody CreatePayrollPeriodRequest request
     ) {
-        return financePayrollService.createPayrollPeriod(principal, request);
+        return financePayrollService.createPayrollPeriod(principal, request, correlationId);
     }
 
     @PostMapping("/payroll-runs")
     public PayrollRunResponse createPayrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @Valid @RequestBody CreatePayrollRunRequest request
     ) {
-        return financePayrollService.createPayrollRun(principal, request);
+        return financePayrollService.createPayrollRun(principal, request, correlationId);
     }
 
     @PostMapping("/payroll-runs/{id}/submit")
     public PayrollRunResponse submitPayrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @RequestBody(required = false) ReviewPayrollRequest request
     ) {
-        return financePayrollService.submitPayrollRun(principal, id, request == null ? null : request.note());
+        return financePayrollService.submitPayrollRun(principal, id, request == null ? null : request.note(), correlationId);
     }
 
     @PostMapping("/payroll-runs/{id}/approve")
     public PayrollRunResponse approvePayrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @RequestBody(required = false) ReviewPayrollRequest request
     ) {
-        return financePayrollService.approvePayrollRun(principal, id, request == null ? null : request.note());
+        return financePayrollService.approvePayrollRun(principal, id, request == null ? null : request.note(), correlationId);
     }
 
     @PostMapping("/payroll-runs/{id}/reject")
     public PayrollRunResponse rejectPayrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @RequestBody(required = false) ReviewPayrollRequest request
     ) {
-        return financePayrollService.rejectPayrollRun(principal, id, request == null ? null : request.note());
+        return financePayrollService.rejectPayrollRun(principal, id, request == null ? null : request.note(), correlationId);
+    }
+
+    @PostMapping("/payroll-runs/{id}/cancel")
+    public PayrollRunResponse cancelPayrollRun(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @PathVariable Long id,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
+            @RequestBody(required = false) ReviewPayrollRequest request
+    ) {
+        return financePayrollService.cancelPayrollRun(principal, id, request == null ? null : request.note(), correlationId);
     }
 
     @PostMapping("/payroll-runs/{id}/mark-paid")
     public PayrollRunResponse markPayrollPaid(
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @Valid @RequestBody MarkPaidRequest request
     ) {
-        return financePayrollService.markPayrollPaid(principal, id, request);
+        return financePayrollService.markPayrollPaid(principal, id, request, correlationId);
     }
 
     @PutMapping("/finance-config/numbering-rules/{documentType}")

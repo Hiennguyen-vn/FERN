@@ -302,6 +302,71 @@ class FinanceSecurityIntegrationTest {
     }
 
     @Test
+    void shouldCancelDraftPayrollRun() {
+        long periodId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_period (
+                    region_id, reference_code, name, start_date, end_date, pay_date, status, created_at, updated_at
+                ) VALUES (
+                    1, 'PP-000001', 'March payroll', DATE '2026-03-01', DATE '2026-03-31', DATE '2026-04-05', 'DRAFT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource(), Long.class);
+        long runId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_run (
+                    payroll_period_id, run_code, run_date, status, note, total_amount, created_at, updated_at
+                ) VALUES (
+                    :periodId, 'RUN-000001', DATE '2026-04-01', 'DRAFT', 'initial', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource("periodId", periodId), Long.class);
+
+        FernPrincipal principal = principal(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_PREPARE, PermissionCodes.FINANCE_PAYROLL_READ),
+                new ScopeRoots(false, List.of(1L), List.of())
+        );
+
+        var response = financePayrollService.cancelPayrollRun(principal, runId, "cancelled by reviewer", "corr-cancel-payroll");
+
+        assertThat(response.status()).isEqualTo("CANCELLED");
+        assertThat(response.note()).isEqualTo("cancelled by reviewer");
+        String persistedStatus = jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT status
+                FROM finance.payroll_run
+                WHERE id = %d
+                """.formatted(runId), String.class);
+        assertThat(persistedStatus).isEqualTo("CANCELLED");
+    }
+
+    @Test
+    void shouldRejectCancellingApprovedPayrollRun() {
+        long periodId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_period (
+                    region_id, reference_code, name, start_date, end_date, pay_date, status, created_at, updated_at
+                ) VALUES (
+                    1, 'PP-000001', 'March payroll', DATE '2026-03-01', DATE '2026-03-31', DATE '2026-04-05', 'DRAFT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource(), Long.class);
+        long runId = jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_run (
+                    payroll_period_id, run_code, run_date, status, note, total_amount, created_at, updated_at
+                ) VALUES (
+                    :periodId, 'RUN-000001', DATE '2026-04-01', 'APPROVED', 'approved', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """, new MapSqlParameterSource("periodId", periodId), Long.class);
+
+        FernPrincipal principal = principal(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_PREPARE, PermissionCodes.FINANCE_PAYROLL_READ),
+                new ScopeRoots(false, List.of(1L), List.of())
+        );
+
+        assertThatThrownBy(() -> financePayrollService.cancelPayrollRun(principal, runId, "cancelled by reviewer", "corr-cancel-payroll"))
+                .isInstanceOf(com.fern.platform.common.BadRequestException.class)
+                .hasMessageContaining("Only draft or rejected payroll runs can be cancelled");
+    }
+
+    @Test
     void shouldRejectStaleServiceToken() throws Exception {
         redisTemplate.opsForValue().set("fern:versions:policy", "5");
         redisTemplate.opsForValue().set("fern:versions:scope", "7");

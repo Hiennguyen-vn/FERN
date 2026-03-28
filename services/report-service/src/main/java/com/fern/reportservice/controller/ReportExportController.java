@@ -1,6 +1,7 @@
 package com.fern.reportservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.observability.CorrelationId;
 import com.fern.reportservice.dto.ReportCommands.CreateExportRequest;
 import com.fern.reportservice.dto.ReportResponses.ExportJobResponse;
 import com.fern.reportservice.dto.ReportResponses.ExportPreviewResponse;
@@ -32,9 +33,10 @@ public class ReportExportController {
     public ExportJobResponse createExport(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @Valid @RequestBody CreateExportRequest request
     ) {
-        return reportService.createExport(principal, request, idempotencyKey);
+        return reportService.createExport(principal, request, idempotencyKey, correlationId);
     }
 
     @GetMapping("/{jobId}")

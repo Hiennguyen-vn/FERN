@@ -1,0 +1,7035 @@
+Hệ thống ERP F&B
+Đặc tả Yêu cầu Phần mềm
+
+Phiên bản 1.0
+
+| Ngày 26 tháng 3 năm 2026
+
+Trạng thái: Bản nháp
+Phạm vi:
+Chuỗi F&B đa chi nhánh
+Đối tượng: Nhóm Phát triển, QA, Các bên liên quan
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+0
+
+i
+
+Mục lục
+
+1 Giới thiệu
+1.1 Mục đích . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.2 Bối cảnh nghiệp vụ . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.3 Phạm vi hệ thống . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.4 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.5 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.6 Assumptions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.7 Constraints . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.8 Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.9 Danh mục Actor Chuẩn . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.10 Định nghĩa và Viết tắt . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.11 Quy ước tài liệu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+1.12 Tổng quan hệ thống . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+1
+1
+1
+1
+2
+2
+2
+3
+3
+3
+4
+4
+5
+
+2 Quản lý Tham chiếu & Tổ chức
+2.1 Mục tiêu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.2 Mô hình tổ chức và phạm vi chuẩn . . . . . . . . . . . . . . . . . . . .
+2.3 Dữ liệu tham chiếu tài chính . . . . . . . . . . . . . . . . . . . . . . . .
+2.4 Hồ sơ Region và Outlet . . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.5 Nguyên tắc phạm vi dữ liệu . . . . . . . . . . . . . . . . . . . . . . . .
+2.6 Quy tắc nghiệp vụ chính . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.7 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.8 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+2.9 Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+5
+5
+6
+6
+6
+7
+7
+7
+7
+8
+
+3 Quản lý Danh tính & Quyền truy cập (IAM)
+3.1 Mục tiêu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.2 Danh mục actor chuẩn . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.3 Identity . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.4 Authentication . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.5 Authorization . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.6 Role Assignment . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.7 Scope Inheritance . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.8 Effective Permission Evaluation . . . . . . . . . . . . . . . . . . . . . .
+3.9 Field-level Access . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.10 Export Permission . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.11 Auditability . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+8
+8
+8
+8
+8
+9
+9
+9
+10
+10
+10
+10
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+ii
+
+3.12 Nguyên tắc actor theo scope . . . . . . . . . . . . . . . . . . . . . . . .
+3.13 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.14 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+3.15 Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+10
+11
+11
+11
+
+4 Nhân sự & Chấm công
+4.1 Mục tiêu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+4.2 Trách nhiệm actor . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+4.3 Hồ sơ nhân sự và hợp đồng . . . . . . . . . . . . . . . . . . . . . . . . .
+4.4 Mẫu ca và phân ca tại outlet . . . . . . . . . . . . . . . . . . . . . . . .
+4.5 Chấm công và phê duyệt chấm công . . . . . . . . . . . . . . . . . . . .
+4.6 Bàn giao sang payroll . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+4.7 State lifecycle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+4.7.1 Phân ca . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+4.7.2 Hợp đồng lao động . . . . . . . . . . . . . . . . . . . . . . . . .
+4.8 Quy tắc nghiệp vụ chính . . . . . . . . . . . . . . . . . . . . . . . . . .
+4.9 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+4.10 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+4.11 Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+11
+11
+11
+12
+12
+12
+13
+13
+13
+13
+13
+14
+14
+14
+
+5 Quản lý Sản phẩm, Công thức & Định giá
+5.1 Mục tiêu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5.2 Đơn vị đo lường và nguyên liệu . . . . . . . . . . . . . . . . . . . . . .
+5.3 Danh mục sản phẩm . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5.4 Công thức . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5.5 Thuế và giá bán . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5.6 Quy tắc nghiệp vụ chính . . . . . . . . . . . . . . . . . . . . . . . . . .
+5.7 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5.8 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+5.9 Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+14
+14
+14
+15
+15
+15
+15
+16
+16
+16
+
+6 Thu mua
+6.1 Mục tiêu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.2 Trách nhiệm actor . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.3 Supplier master . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.4 Purchase Order (PO) . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.5 Goods Receipt (GR) . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.6 Hóa đơn nhà cung cấp và thanh toán . . . . . . . . . . . . . . . . . . .
+6.7 State lifecycle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.7.1 Purchase Order . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+16
+16
+16
+16
+17
+17
+18
+18
+18
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+iii
+
+6.7.2 Goods Receipt . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.8 Quy tắc nghiệp vụ chính . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.9 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.10 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6.11 Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+18
+19
+19
+19
+19
+
+7 Bán hàng & Điểm bán hàng (POS)
+7.1 Mục tiêu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.2 Trách nhiệm actor . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.3 POS session . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.4 Order bán hàng . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.5 Thanh toán và sale record . . . . . . . . . . . . . . . . . . . . . . . . .
+7.6 Đối soát phiên POS . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.7 State lifecycle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.7.1 Order bán hàng . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.7.2 POS session . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.8 Quy tắc nghiệp vụ chính . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.9 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.10 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+7.11 Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+19
+19
+19
+20
+20
+21
+21
+21
+21
+22
+22
+22
+22
+22
+
+8 Quản lý Kho
+8.1 Mục tiêu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8.2 Nguyên tắc actor tại outlet warehouse . . . . . . . . . . . . . . . . . .
+8.3 Stock balance và inventory ledger . . . . . . . . . . . . . . . . . . . . .
+8.4 Xem tồn kho và lịch sử biến động . . . . . . . . . . . . . . . . . . . . .
+8.5 Waste và inventory adjustment . . . . . . . . . . . . . . . . . . . . . .
+8.6 Stock count . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8.7 State lifecycle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8.7.1 Inventory adjustment / waste document . . . . . . . . . . . . .
+8.7.2 Stock count . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8.8 Quy tắc nghiệp vụ chính . . . . . . . . . . . . . . . . . . . . . . . . . .
+8.9 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8.10 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8.11 Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+23
+23
+23
+23
+23
+24
+24
+24
+24
+25
+25
+25
+25
+25
+
+9 Tài chính & Lương
+9.1 Mục tiêu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+9.2 Kỳ lương và dữ liệu đầu vào . . . . . . . . . . . . . . . . . . . . . . . .
+9.3 Payroll calculation . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+26
+26
+26
+26
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+9.4
+9.5
+9.6
+
+iv
+
+Review, approval và payment . . . . . . . . . . . . . . . . . . . . . . .
+Chi phí và truy vết tài chính . . . . . . . . . . . . . . . . . . . . . . . .
+State lifecycle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+9.6.1 Payroll . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+9.7 Quy tắc nghiệp vụ chính . . . . . . . . . . . . . . . . . . . . . . . . . .
+9.8 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+9.9 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+9.10 Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+26
+27
+27
+27
+28
+28
+28
+28
+
+10 Lịch sử Thao tác (Audit)
+10.1 Mục tiêu . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+10.2 Sự kiện phải được kiểm toán . . . . . . . . . . . . . . . . . . . . . . . .
+10.3 Nội dung bản ghi audit . . . . . . . . . . . . . . . . . . . . . . . . . . .
+10.4 Tính bất biến và truy cập . . . . . . . . . . . . . . . . . . . . . . . . .
+10.5 Quy tắc nghiệp vụ chính . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+28
+28
+28
+29
+29
+29
+
+11 Yêu cầu Phi chức năng
+11.1 Bảo mật . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+11.2 Hiệu năng & Năng lực tải . . . . . . . . . . . . . . . . . . . . . . . . .
+11.3 Khả năng mở rộng mục tiêu của V1 . . . . . . . . . . . . . . . . . . . .
+11.4 Tính sẵn sàng, sao lưu & khôi phục . . . . . . . . . . . . . . . . . . . .
+11.5 Tính toàn vẹn dữ liệu . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+11.6 Quan sát vận hành (Observability) . . . . . . . . . . . . . . . . . . . .
+11.7 Tuân thủ, retention & traceability . . . . . . . . . . . . . . . . . . . . .
+11.8 In Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+11.9 Out of Scope for V1 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+11.10Future Extension . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+29
+29
+30
+30
+30
+31
+31
+31
+32
+32
+32
+
+12 Đặc tả Use Case
+12.1 IAM và Quản trị người dùng . . . . . . . . . . . . . . . . . . . . . . . .
+12.1.1 UC-IAM-01 – Tạo tài khoản người dùng . . . . . . . . . . . . .
+12.1.2 UC-IAM-02 – Gán vai trò và phạm vi truy cập . . . . . . . . .
+12.1.3 UC-IAM-03 – Vô hiệu hóa tài khoản người dùng . . . . . . . . .
+12.1.4 UC-IAM-04 – Người dùng đăng nhập . . . . . . . . . . . . . . .
+12.1.5 UC-IAM-05 – Người dùng đăng xuất . . . . . . . . . . . . . . .
+12.2 Nhân sự & Chấm công . . . . . . . . . . . . . . . . . . . . . . . . . . .
+12.2.1 UC-HR-01 – Quản lý hợp đồng lao động . . . . . . . . . . . . .
+12.2.2 UC-HR-02 – Phân công nhân viên vào ca . . . . . . . . . . . . .
+12.2.3 UC-HR-03 – Ghi nhận chấm công vào/ra ca . . . . . . . . . . .
+12.2.4 UC-HR-04 – Phê duyệt chấm công . . . . . . . . . . . . . . . .
+
+32
+33
+33
+34
+35
+36
+36
+37
+37
+38
+39
+40
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+v
+
+12.3 Sản phẩm, Công thức & Định giá . . . . . . . . . . . . . . . . . . . . .
+12.3.1 UC-PRD-01 – Quản lý sản phẩm . . . . . . . . . . . . . . . . .
+12.3.2 UC-PRD-02 – Quản lý công thức sản phẩm . . . . . . . . . . .
+12.3.3 UC-PRD-03 – Công bố giá và phạm vi bán theo outlet . . . . .
+12.4 Thu mua . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+12.4.1 UC-PROC-01 – Tạo và gửi Purchase Order . . . . . . . . . . . .
+12.4.2 UC-PROC-02 – Rà soát và phê duyệt Purchase Order . . . . . .
+12.4.3 UC-PROC-03 – Issue Purchase Order cho nhà cung cấp . . . . .
+12.4.4 UC-PROC-04 – Ghi nhận Goods Receipt . . . . . . . . . . . . .
+12.4.5 UC-PROC-05 – Rà soát yêu cầu thanh toán và ghi nhận chi trả
+nhà cung cấp . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+12.5 Bán hàng & POS . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+12.5.1 UC-SAL-01 – Mở phiên POS . . . . . . . . . . . . . . . . . . .
+12.5.2 UC-SAL-02 – Tạo và cập nhật order POS . . . . . . . . . . . .
+12.5.3 UC-SAL-03 – Xử lý thanh toán và hoàn tất sale . . . . . . . . .
+12.5.4 UC-SAL-04 – Hủy order trước khi hoàn tất thanh toán . . . . .
+12.5.5 UC-SAL-05 – Đóng và đối soát phiên POS . . . . . . . . . . . .
+12.6 Kho tại Outlet . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+12.6.1 UC-INV-01 – Ghi nhận inventory adjustment . . . . . . . . . .
+12.6.2 UC-INV-02 – Ghi nhận waste . . . . . . . . . . . . . . . . . . .
+12.6.3 UC-INV-03 – Tạo và nhập kết quả stock count . . . . . . . . . .
+12.6.4 UC-INV-04 – Chốt stock count và post chênh lệch . . . . . . . .
+12.7 Payroll . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+12.7.1 UC-FIN-01 – Chuẩn bị payroll run . . . . . . . . . . . . . . . .
+12.7.2 UC-FIN-02 – Phê duyệt payroll . . . . . . . . . . . . . . . . . .
+12.7.3 UC-FIN-03 – Ghi nhận payroll đã chi trả . . . . . . . . . . . . .
+
+41
+41
+42
+43
+44
+44
+45
+46
+47
+
+13 Biểu đồ luồng Use Case
+13.1 Luồng thiết lập tham chiếu và tổ chức . . . . . . . . . . . . . . . . . .
+13.2 Luồng xác thực và kiểm soát truy cập . . . . . . . . . . . . . . . . . . .
+13.3 Luồng phân ca và chấm công . . . . . . . . . . . . . . . . . . . . . . .
+13.4 Luồng công bố sản phẩm, công thức và giá . . . . . . . . . . . . . . . .
+13.5 Luồng procure-to-pay . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+13.6 Luồng order-to-cash tại POS . . . . . . . . . . . . . . . . . . . . . . . .
+13.7 Luồng kiểm kê và điều chỉnh tồn kho . . . . . . . . . . . . . . . . . . .
+13.8 Luồng chuẩn bị, phê duyệt và chi trả payroll . . . . . . . . . . . . . . .
+
+60
+61
+61
+63
+63
+65
+66
+67
+68
+
+14 Biểu đồ Use Case
+14.1 POS . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+14.2 Kho tại Outlet . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+68
+69
+69
+
+48
+49
+49
+50
+51
+52
+53
+54
+54
+55
+56
+57
+58
+58
+59
+59
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+vi
+
+14.3 Tài chính vùng và giám sát khu vực . . . . . . . . . . . . . . . . . . . .
+14.4 Vận hành lực lượng lao động tại Outlet . . . . . . . . . . . . . . . . . .
+14.5 Quản trị hệ thống và dữ liệu chủ . . . . . . . . . . . . . . . . . . . . .
+14.6 HR và Payroll ở cấp hệ thống . . . . . . . . . . . . . . . . . . . . . . .
+
+69
+69
+69
+78
+
+15 Phụ lục – Permission Matrix
+15.1 Ghi chú áp dụng . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+78
+81
+
+16 Phụ lục – Design Notes & Assumptions
+16.1 Mục đích . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+16.2 Nguyên tắc sử dụng . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+16.3 Gợi ý logical entity catalog . . . . . . . . . . . . . . . . . . . . . . . . .
+16.4 Implementation notes gợi ý . . . . . . . . . . . . . . . . . . . . . . . .
+16.5 Assumptions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+81
+81
+81
+81
+82
+82
+
+17 Phụ lục – Entity-Relationship Diagram
+17.1 Mục đích . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+17.2 Tổng quan Entity theo Module . . . . . . . . . . . . . . . . . . . . . .
+17.3 ER Diagram – Reference & Organization . . . . . . . . . . . . . . . . .
+17.4 ER Diagram – IAM . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+17.5 ER Diagram – HR & Attendance . . . . . . . . . . . . . . . . . . . . .
+17.6 ER Diagram – Product / Recipe / Pricing . . . . . . . . . . . . . . . .
+17.7 ER Diagram – Procurement (Procure-to-Pay) . . . . . . . . . . . . . .
+17.8 ER Diagram – Sales / POS . . . . . . . . . . . . . . . . . . . . . . . .
+17.9 ER Diagram – Inventory . . . . . . . . . . . . . . . . . . . . . . . . . .
+17.10ER Diagram – Finance / Payroll . . . . . . . . . . . . . . . . . . . . .
+17.11Cross-Module Relationship Summary . . . . . . . . . . . . . . . . . . .
+17.12Thiết kế đáng chú ý . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+82
+82
+83
+83
+85
+85
+85
+87
+87
+87
+90
+90
+92
+
+18 Phần cuối – Ghi chú bàn giao
+18.1 Major Changes Made . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+18.2 Confirmed Decisions . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+18.3 Open Questions / Decisions Needed . . . . . . . . . . . . . . . . . . . .
+18.4 Recommended Next Documents . . . . . . . . . . . . . . . . . . . . . .
+18.5 Ghi chú . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+93
+93
+93
+94
+94
+95
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+1
+
+Giới thiệu
+
+1.1
+
+Mục đích
+
+1
+
+Tài liệu này là Đặc tả Yêu cầu Phần mềm (Software Requirements Specification
+– SRS) cho Hệ thống ERP F&B. Đây là tài liệu nền tảng để BA, Architect,
+Development, QA và các bên liên quan thống nhất về:
+• Phạm vi chức năng và phi chức năng của hệ thống
+• Hành vi nghiệp vụ và quy trình vận hành
+• Ràng buộc kỹ thuật và giới hạn triển khai
+• Tiêu chí chấp nhận (acceptance criteria) cho từng module
+Tài liệu đóng vai trò hợp đồng kỹ thuật giữa các bên và là đầu vào cho thiết kế kiến
+trúc, phát triển, kiểm thử và bàn giao hệ thống.
+1.2
+
+Bối cảnh nghiệp vụ
+
+Hệ thống phục vụ mô hình kinh doanh chuỗi F&B với cấu trúc tổ chức phân cấp
+gồm hai cấp vận hành chính. Thông tin công ty được quản lý qua cấu hình hệ thống
+(system_config) – một singleton – không phải entity quan hệ trong cơ sở dữ liệu:
+• Region là cấp quản lý trung gian, được tổ chức theo cây phân cấp nhiều tầng
+để hỗ trợ tổng hợp báo cáo, mở rộng phạm vi truy cập và áp dụng chính sách
+vùng cho toàn bộ subtree bên dưới.
+• Outlet là đơn vị vận hành cơ sở. Trong V1, mỗi outlet vừa là điểm bán (POS)
+và kho tại chỗ (on-site warehouse).
+Tài liệu này sử dụng nhất quán danh mục actor chuẩn được mô tả tại tiểu
+mục Danh mục Actor Chuẩn. Tại tầng outlet, hệ thống không định nghĩa actor kho
+riêng. Toàn bộ nghiệp vụ procurement, goods receipt, stock count, waste, inventory
+adjustment và inventory transaction tại outlet đều thuộc trách nhiệm của Outlet
+Manager. Staff tại outlet chủ yếu thực hiện nghiệp vụ bán hàng và POS.
+1.3
+
+Phạm vi hệ thống
+
+Hệ thống bao gồm các nhóm nghiệp vụ chính sau:
+1. Tham chiếu & Tổ chức: Region, Outlet, tiền tệ, tỷ giá và cấu hình hệ thống.
+2. IAM: định danh, xác thực, phân quyền theo vai trò và phạm vi dữ liệu.
+3. Nhân sự & Chấm công: hồ sơ nhân sự, hợp đồng, phân ca và chấm công.
+4. Sản phẩm, Công thức & Định giá: danh mục sản phẩm, nguyên liệu, công
+thức, thuế và giá bán.
+5. Thu mua: supplier master do Finance sở hữu, PO, goods receipt, hóa đơn nhà
+cung cấp và thanh toán nhà cung cấp.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+2
+
+6. Bán hàng & POS: phiên POS, order, thanh toán, sale record, hủy order trước
+khi hoàn tất thanh toán và đối soát phiên.
+7. Kho tại outlet: stock balance, inventory ledger, waste, stock count và inventory
+adjustment.
+8. Tài chính & Lương: supplier master, thanh toán nhà cung cấp, kỳ lương, tính
+lương, phê duyệt, chi trả và truy vết chi phí.
+9. Audit & Traceability: nhật ký bất biến cho các hành động quan trọng của
+người dùng và hệ thống.
+1.4
+
+In Scope for V1
+• Hệ thống quản lý nhiều Region và nhiều Outlet trong phạm vi một công ty
+duy nhất; thông tin công ty là cấu hình hệ thống (system_config), không phải
+entity quan hệ.
+• Region được tổ chức theo cây nhiều cấp; quyền và báo cáo theo region áp dụng
+cho toàn bộ subtree, trừ khi có policy giới hạn.
+• Mỗi Outlet có đúng một POS và đúng một kho tại chỗ.
+• Mỗi outlet tại một thời điểm chỉ có một phiên POS đang mở.
+• POS, procurement, goods receipt, inventory ledger và payroll hoạt động trên cùng
+một nền tảng trực tuyến.
+• Phân quyền theo action permission kết hợp với data scope.
+
+1.5
+
+Out of Scope for V1
+• Nhiều Company trong cùng một instance vận hành.
+• Kho trung tâm độc lập với outlet.
+• Nhiều kho con hoặc nhiều sub-location bên trong một outlet.
+• Inter-outlet transfer như một luồng nghiệp vụ chuẩn.
+• POS offline, hàng đợi cục bộ, đồng bộ trì hoãn, đồng bộ xung đột hoặc nhiều
+thiết bị POS cho một outlet.
+• Approval engine nhiều cấp cấu hình động cho mọi chứng từ.
+
+1.6
+
+Assumptions
+• V1 phục vụ một công ty duy nhất; thông tin công ty là cấu hình hệ thống, không
+phải entity quan hệ trong cơ sở dữ liệu.
+• Một Outlet tương ứng với đúng một điểm bán và đúng một kho tại chỗ.
+• Outlet Manager là actor mặc định mở POS session và bao phủ cả vận hành
+POS manager lẫn warehouse/procurement tại outlet.
+• Customer chỉ đóng vai trò quan sát ở nghiệp vụ POS; khách hàng không được
+xem như người dùng nội bộ được xác thực trong hệ thống.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+1.7
+
+3
+
+Constraints
+• Mọi giao dịch vận hành cốt lõi PHẢI được neo vào đúng một Outlet.
+• POS V1 PHẢI là online-only; khi không có kết nối hợp lệ, hệ thống không
+nhận giao dịch bán mới.
+• Tại outlet, hệ thống không tách actor kho riêng ngoài Outlet Manager.
+• Tài liệu này chỉ mô tả ranh giới scope giữa Regional Finance và Finance;
+không đưa vào logic phê duyệt dựa trên giá trị tiền.
+
+1.8
+
+Future Extension
+• Multi-company và legal entity riêng.
+• Central warehouse, replenishment trung tâm và quản lý location/bin chi tiết.
+• Inter-outlet transfer với workflow giao, nhận và đối soát.
+• Tích hợp accounting, banking, tax filing và delivery aggregator ở mức doanh
+nghiệp.
+
+1.9
+
+Danh mục Actor Chuẩn
+
+Actor
+
+Vai trò chính trong SRS
+
+Customer
+
+Xem menu và xem chi tiết thanh toán tại POS;
+không tạo order và không trực tiếp xử lý thanh toán
+trên hệ thống.
+Xem menu, tạo order, xem order, cập nhật order line
+trước khi hoàn tất thanh toán, xử lý thanh toán và
+ghi nhận sale record trong phạm vi outlet được phân
+công.
+Mở và quản lý POS session, đối soát phiên, theo dõi
+vận hành outlet và bao phủ toàn bộ nghiệp vụ
+procurement/kho tại outlet.
+Giám sát outlet trong phạm vi region subtree, xem
+báo cáo vùng và xử lý ngoại lệ vận hành theo chính
+sách.
+Rà soát và phê duyệt nghiệp vụ tài chính trong phạm
+vi region subtree được giao; không giữ thẩm quyền
+tài chính toàn doanh nghiệp.
+Quản lý hồ sơ nhân sự, hợp đồng và chuẩn bị dữ liệu
+đầu vào cho payroll.
+
+Staff
+
+Outlet Manager
+
+Region Manager
+
+Regional Finance
+
+HR
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+Actor
+
+Vai trò chính trong SRS
+
+Finance
+
+Quản trị supplier master, ghi nhận thanh toán nhà
+cung cấp, phê duyệt và ghi nhận chi trả payroll, xem
+báo cáo tài chính toàn hệ thống.
+Quản lý danh mục sản phẩm, nguyên liệu, công thức,
+giá và phạm vi bán; chỉ được tham chiếu supplier đã
+được phê duyệt.
+Quản trị người dùng, vai trò, permission, scope và
+cấu hình hệ thống ở phạm vi toàn hệ thống.
+
+Product Manager
+
+System Admin
+
+1.10
+
+Định nghĩa và Viết tắt
+
+Thuật ngữ
+
+Định nghĩa
+
+Company
+
+Doanh nghiệp F&B duy nhất được hệ thống phục vụ. Không
+được lưu trữ như entity quan hệ; thông tin công ty được quản
+lý qua cấu hình hệ thống (system_config).
+Cấp quản lý trung gian trong cấu trúc cây nhiều cấp; scope
+tại một node áp dụng cho toàn bộ subtree bên dưới khi không
+bị policy giới hạn.
+Điểm vận hành cơ sở; trong V1 đồng thời là điểm bán và kho
+tại chỗ.
+Point of Sale.
+Purchase Order – đơn mua hàng gửi nhà cung cấp.
+Goods Receipt – chứng từ xác nhận hàng đã nhận.
+Số dư tồn kho hiện hành của một nguyên liệu tại một outlet.
+Bản ghi ledger cho từng biến động tăng/giảm tồn kho.
+
+Region
+
+Outlet
+POS
+PO
+GR
+Stock balance
+Inventory
+transaction
+Payroll
+Audit log
+Action permission
+Data scope
+Effective access
+SRS
+
+1.11
+
+Kết quả tính lương cho một nhân viên trong một kỳ lương.
+Nhật ký bất biến ghi lại hành động bảo mật, thay đổi trạng
+thái và thao tác dữ liệu quan trọng.
+Quyền cho biết actor được thực hiện hành động gì.
+Phạm vi dữ liệu mà actor được phép thao tác.
+Kết quả của action permission ∩ data scope.
+Software Requirements Specification – tài liệu này.
+
+Quy ước tài liệu
+
+• Mã yêu cầu dùng mẫu [MOD-NNN].
+
+4
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+5
+
+• PHẢI là bắt buộc; NÊN là khuyến nghị mạnh; CÓ THỂ là tùy chọn.
+• Các trạng thái nghiệp vụ được viết theo kiểu snake_case.
+• Tên actor trong tài liệu được dùng nhất quán theo đúng danh mục actor chuẩn
+ở trên.
+1.12
+
+Tổng quan hệ thống
+
+Hình 1 minh họa bức tranh module cấp cao của hệ thống.
+
+Reference / Org
+
+Product / Recipe / Pricing
+
+HR / Attendance
+
+Procurement
+
+IAM
+
+Inventory
+
+Sales / POS
+
+Finance / Payroll
+
+Audit
+
+Hình 1: Sơ đồ tương tác module cấp cao
+Mọi giao dịch vận hành cốt lõi trong V1 được neo vào một Outlet cụ thể. Các
+nghiệp vụ ở cấp Region và toàn hệ thống mở rộng phạm vi xem, phê duyệt, tổng hợp
+và quản trị nhưng không thay đổi nguồn gốc giao dịch ở cấp outlet.
+
+2
+
+Quản lý Tham chiếu & Tổ chức
+
+2.1
+
+Mục tiêu
+
+Module Tham chiếu & Tổ chức cung cấp dữ liệu nền cho toàn bộ hệ thống: cấu hình
+hệ thống (system config đơn tồn tại thay cho Company entity), Region / Outlet, tiền
+tệ, tỷ giá, lịch vận hành và hồ sơ outlet. Đây là lớp định danh phạm vi chuẩn để các
+module khác tham chiếu.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+2.2
+
+6
+
+Mô hình tổ chức và phạm vi chuẩn
+• [REF-001] Hệ thống PHẢI hỗ trợ hai cấp vận hành chính: Region và Outlet.
+Cấp công ty là đơn tồn tại duy nhất, được quản lý qua system_config (singleton),
+không phải entity quan hệ.
+• [REF-002] Hệ thống PHẢI phục vụ đúng một công ty. Thông tin công ty
+PHẢI được lưu dưới dạng cấu hình hệ thống đơn tồn tại (system_config),
+không phải entity quan hệ trong cơ sở dữ liệu.
+• [REF-003] Region PHẢI được mô hình hóa theo cây nhiều cấp. Mỗi region
+có tối đa một parent region.
+• [REF-004] Mỗi Outlet PHẢI thuộc đúng một Region.
+• [REF-005] Trong V1, mỗi Outlet PHẢI đồng thời là điểm bán và kho tại chỗ
+của chính outlet đó.
+• [REF-006] Trong V1, mỗi Outlet PHẢI có đúng một kho vận hành và đúng
+một POS.
+• [REF-007] Mọi giao dịch vận hành cốt lõi như POS, procurement, goods receipt,
+waste, stock count, inventory adjustment và tiêu thụ nguyên liệu PHẢI gắn với
+đúng một Outlet.
+• [REF-008] Quyền hoặc báo cáo có phạm vi Region PHẢI được mở rộng xuống
+toàn bộ region con và outlet con trong subtree của region đó, trừ khi policy quy
+định giới hạn hẹp hơn.
+• [REF-009] Đóng một Outlet PHẢI bị chặn nếu còn phiên POS đang mở,
+chứng từ kho chưa chốt hoặc nghĩa vụ tài chính chưa hoàn tất theo chính sách
+vận hành.
+
+2.3
+
+Dữ liệu tham chiếu tài chính
+• [REF-010] Hệ thống PHẢI duy trì danh mục tiền tệ hợp lệ dùng cho giá bán,
+mua hàng, thanh toán và báo cáo.
+• [REF-011] Mỗi Region PHẢI có một tiền tệ mặc định và múi giờ vận hành
+mặc định.
+• [REF-012] Hệ thống PHẢI hỗ trợ tỷ giá hiệu lực theo thời gian để phục vụ
+quy đổi và tổng hợp báo cáo khi cần.
+• [REF-013] Tại một thời điểm hiệu lực, một cặp tiền tệ KHÔNG ĐƯỢC có
+nhiều hơn một tỷ giá đang hoạt động gây mơ hồ cho cùng ngữ cảnh sử dụng.
+
+2.4
+
+Hồ sơ Region và Outlet
+• [REF-014] Mỗi Region PHẢI có mã định danh, tên, trạng thái vận hành và
+thông tin cấu hình phạm vi.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+7
+
+• [REF-015] Mỗi Outlet PHẢI có mã định danh duy nhất, tên, trạng thái vận
+hành, địa chỉ và thông tin liên hệ.
+• [REF-016] Vòng đời của Outlet PHẢI hỗ trợ tối thiểu các trạng thái draft,
+active, inactive, closed.
+• [REF-017] Một Outlet ở trạng thái inactive hoặc closed KHÔNG ĐƯỢC
+là đích cho giao dịch mới.
+• [REF-018] Hệ thống PHẢI lưu lịch sử thay đổi trạng thái của Region và
+Outlet để phục vụ truy vết vận hành.
+2.5
+
+Nguyên tắc phạm vi dữ liệu
+• [REF-019] Outlet là biên vận hành chính của dữ liệu giao dịch.
+• [REF-020] Region là biên quản trị, giám sát và tổng hợp, không thay thế nguồn
+gốc giao dịch ở cấp outlet.
+• [REF-021] Các chính sách hoặc báo cáo ở cấp hệ thống PHẢI có khả năng
+tổng hợp toàn bộ dữ liệu của tất cả Region và Outlet trong phạm vi instance.
+• [REF-022] Nếu một actor có quyền trên Region, hệ thống PHẢI suy diễn tập
+region và outlet hiệu lực tại thời điểm kiểm tra quyền, thay vì sao chép quyền
+vào từng giao dịch outlet.
+
+2.6
+
+Quy tắc nghiệp vụ chính
+
+1. [REF-023] Mọi dữ liệu cấu hình dùng cho giao dịch vận hành PHẢI được kích
+hoạt trước khi outlet có thể vận hành chính thức.
+2. [REF-024] Tỷ giá, tiền tệ, trạng thái outlet và phạm vi tổ chức PHẢI được
+kiểm soát lịch sử đủ để giải thích dữ liệu quá khứ.
+2.7
+
+In Scope for V1
+• Hệ thống quản lý nhiều Region và nhiều Outlet cho một công ty duy nhất.
+• Thông tin công ty được lưu qua system_config (singleton), không phải entity
+quan hệ.
+• Region nhiều cấp dùng làm scope quản trị, báo cáo và authorization.
+• Outlet là đơn vị vận hành giao dịch và là kho tại chỗ.
+
+2.8
+
+Out of Scope for V1
+• Multi-company trong cùng một triển khai vận hành.
+• Legal entity độc lập với Company.
+• Central warehouse hoặc nhiều kho con trong một outlet.
+• Inter-outlet transfer như workflow chuẩn.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+2.9
+
+8
+
+Future Extension
+• Multi-company consolidation.
+• Legal entity độc lập với chính sách tài chính riêng.
+• Central warehouse, bin, zone và replenishment trung tâm.
+
+3
+
+Quản lý Danh tính & Quyền truy cập (IAM)
+
+3.1
+
+Mục tiêu
+
+IAM kiểm soát ai được truy cập hệ thống, truy cập bằng cách nào, được phép thực
+hiện hành động gì và trên phạm vi dữ liệu nào. Mô hình IAM của tài liệu này là nền
+tảng chung cho toàn bộ module nghiệp vụ.
+3.2
+
+Danh mục actor chuẩn
+
+Tài liệu này dùng đúng danh mục actor chuẩn đã công bố ở phần Giới thiệu. Không
+định nghĩa actor kho riêng tại outlet. Quyền nghiệp vụ kho tại outlet được quy về
+Outlet Manager.
+3.3
+
+Identity
+• [IAM-001] Hệ thống PHẢI duy trì hồ sơ định danh người dùng với mã người
+dùng duy nhất, tên đăng nhập duy nhất, thông tin liên hệ và trạng thái vòng đời
+tài khoản.
+• [IAM-002] Mỗi tài khoản người dùng PHẢI được gắn với đúng một actor
+nghiệp vụ chính tại một thời điểm.
+• [IAM-003] Tài khoản PHẢI hỗ trợ tối thiểu các trạng thái active, inactive,
+locked, suspended.
+• [IAM-004] Tài khoản đã bị vô hiệu hoặc đã bị xóa mềm KHÔNG ĐƯỢC sử
+dụng để đăng nhập hoặc thực hiện giao dịch mới.
+• [IAM-005] Thay đổi vai trò, trạng thái tài khoản hoặc phạm vi truy cập PHẢI
+được truy vết kiểm toán.
+
+3.4
+
+Authentication
+• [IAM-006] Hệ thống PHẢI xác thực người dùng bằng thông tin đăng nhập an
+toàn và từ chối truy cập với tài khoản không hợp lệ.
+• [IAM-007] Sau số lần đăng nhập sai liên tiếp vượt ngưỡng cấu hình, tài khoản
+PHẢI bị khóa tạm thời hoặc yêu cầu quy trình mở khóa.
+• [IAM-008] Xác thực thành công PHẢI tạo phiên truy cập có thời hạn và có
+thể bị thu hồi.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+9
+
+• [IAM-009] Đăng xuất PHẢI chấm dứt hiệu lực của phiên hiện tại trong giới
+hạn kỹ thuật đã công bố.
+• [IAM-010] Các sự kiện đăng nhập thành công, đăng nhập thất bại, khóa tài
+khoản, mở khóa và đăng xuất PHẢI được ghi kiểm toán.
+3.5
+
+Authorization
+• [IAM-011] Mô hình cấp quyền PHẢI tách riêng action permission và data
+scope.
+• [IAM-012] Action permission PHẢI mô tả loại hành động được phép, ví
+dụ: view, create, update, approve, cancel, reconcile, post, pay, export,
+manage_config.
+• [IAM-013] Data scope PHẢI hỗ trợ tối thiểu ba cấp: system (toàn bộ dữ liệu
+trong instance hệ thống),
+region_subtree và outlet_set.
+• [IAM-014] Mọi kiểm tra quyền đối với chức năng nghiệp vụ PHẢI được thực
+hiện ở phía máy chủ.
+• [IAM-015] Ẩn hoặc hiện thành phần trên giao diện người dùng KHÔNG
+ĐƯỢC được coi là cơ chế kiểm soát truy cập duy nhất.
+
+3.6
+
+Role Assignment
+• [IAM-016] Hệ thống PHẢI hỗ trợ gán một hoặc nhiều vai trò cho một người
+dùng.
+• [IAM-017] Quyền trực tiếp cho từng người dùng CÓ THỂ được cấp như một
+ngoại lệ có kiểm soát, nhưng PHẢI được truy vết rõ nguồn cấp quyền.
+• [IAM-018] Khi vai trò hoặc quyền bị thay đổi, quyền hiệu lực của người dùng
+PHẢI được đánh giá lại ở lần xác thực tiếp theo và NÊN được làm mới cho
+phiên đang hoạt động theo chính sách bảo mật.
+
+3.7
+
+Scope Inheritance
+• [IAM-019] Quyền có phạm vi system PHẢI bao phủ toàn bộ dữ liệu trong hệ
+thống.
+• [IAM-020] Quyền có phạm vi region_subtree PHẢI được mở rộng xuống tất
+cả region con và outlet con thuộc cây vùng đó.
+• [IAM-021] Quyền có phạm vi outlet_set PHẢI chỉ có hiệu lực trên tập outlet
+được cấp tường minh.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+3.8
+
+10
+
+Effective Permission Evaluation
+• [IAM-022] Quyền hiệu lực của một người dùng PHẢI là hợp của các action
+permission được cấp qua vai trò và ngoại lệ trực tiếp.
+• [IAM-023] Phạm vi dữ liệu hiệu lực PHẢI là hợp của các scope hợp lệ sau khi
+áp dụng quy tắc kế thừa từ Company hoặc Region.
+• [IAM-024] Một yêu cầu chỉ được cho phép khi effective access = action
+permission ∩ data scope và dữ liệu đích nằm hoàn toàn trong phạm vi hiệu
+lực.
+• [IAM-025] Quyền trực tiếp KHÔNG ĐƯỢC dùng để ngầm mở rộng ra ngoài
+scope mà người dùng không được cấp chính thức.
+
+3.9
+
+Field-level Access
+• [IAM-026] Các trường nhạy cảm như lương, tài khoản ngân hàng, số định danh
+cá nhân và chi tiết audit PHẢI hỗ trợ kiểm soát xem theo trường hoặc nhóm
+trường.
+• [IAM-027] Người dùng có quyền xem bản ghi tổng quát KHÔNG ĐƯỢC mặc
+nhiên được xem toàn bộ trường nhạy cảm của bản ghi đó.
+
+3.10
+
+Export Permission
+
+• [IAM-028] Quyền export PHẢI được coi là quyền riêng biệt, không suy ra
+mặc định từ quyền view.
+• [IAM-029] Hệ thống PHẢI cho phép cấu hình quyền export theo module và
+theo data scope.
+3.11
+
+Auditability
+
+• [IAM-030] Mọi quyết định cho phép hoặc từ chối đối với hành động nhạy cảm
+NÊN có khả năng truy vết được nguồn permission và scope được dùng để ra
+quyết định.
+• [IAM-031] Các thay đổi đối với người dùng, vai trò, permission, scope và fieldlevel access PHẢI được ghi kiểm toán.
+• [IAM-032] Các thao tác export dữ liệu nhạy cảm PHẢI được ghi kiểm toán
+với actor, thời điểm, phạm vi dữ liệu và ngữ cảnh nghiệp vụ.
+3.12
+
+Nguyên tắc actor theo scope
+
+• Customer không phải là người dùng nội bộ được xác thực; vai trò của customer
+trong V1 chỉ giới hạn ở việc xem menu và xem chi tiết thanh toán.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+11
+
+• Staff mặc định hoạt động trong phạm vi Outlet được phân công và chủ yếu
+trên module POS.
+• Outlet Manager bao phủ vận hành outlet, POS manager và toàn bộ nghiệp vụ
+warehouse/procurement tại outlet được giao.
+• Region Manager và Regional Finance hoạt động trên region_subtree.
+• HR, Finance, Product Manager, System Admin mặc định hoạt động ở
+phạm vi system trừ khi chính sách cấu hình giới hạn khác.
+3.13
+
+In Scope for V1
+
+• RBAC kết hợp scope Company / Region subtree / Outlet set.
+• Direct permission có kiểm soát.
+• Quyền xem theo trường cho dữ liệu nhạy cảm.
+• Quyền export tách riêng.
+3.14
+
+Out of Scope for V1
+
+• Attribute-based access control tổng quát cho mọi điều kiện nghiệp vụ.
+• Policy engine độc lập theo ngôn ngữ chính sách chuyên biệt.
+• Delegation tạm thời nhiều tầng và approval chain IAM động.
+3.15
+
+Future Extension
+
+• Legal entity scope.
+• Separation-of-duty engine theo rủi ro nghiệp vụ.
+• Dynamic policy rule theo ngữ cảnh giao dịch và thời gian.
+
+4
+
+Nhân sự & Chấm công
+
+4.1
+
+Mục tiêu
+
+Module Nhân sự & Chấm công quản lý hồ sơ nhân sự, hợp đồng lao động, kế hoạch ca
+làm, dữ liệu chấm công và đầu vào cho payroll. Module này phải tách rõ trách nhiệm
+giữa HR ở cấp Company và Outlet Manager ở cấp outlet.
+4.2
+
+Trách nhiệm actor
+• HR quản lý hồ sơ nhân sự, hợp đồng và quy tắc nhân sự ở cấp Company.
+• Outlet Manager quản lý phân ca, theo dõi và phê duyệt chấm công cho nhân
+sự tại outlet được giao.
+• Staff chỉ thực hiện chấm công cho chính mình và các thao tác vận hành được
+cấp quyền.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+4.3
+
+12
+
+Hồ sơ nhân sự và hợp đồng
+• [HR-001] Hệ thống PHẢI duy trì hồ sơ nhân sự tập trung cho mỗi người lao
+động, bao gồm danh tính cơ bản, trạng thái làm việc và outlet hoặc region đang
+được phân công.
+• [HR-002] Hợp đồng lao động PHẢI ghi rõ loại hợp đồng, hình thức trả lương,
+mức lương cơ sở, ngày hiệu lực và ngày kết thúc nếu có.
+• [HR-003] Một nhân viên KHÔNG ĐƯỢC có hai hợp đồng hiệu lực chồng lấp
+cho cùng một khoảng thời gian nếu điều đó làm phát sinh hai nguồn trả lương
+cạnh tranh trong cùng ngữ cảnh tính lương.
+• [HR-004] Tại một thời điểm, một nhân viên NÊN có tối đa một hợp đồng ở
+trạng thái active dùng cho payroll chính thức.
+• [HR-005] Thông tin thanh toán lương và dữ liệu nhân thân nhạy cảm PHẢI
+chịu field-level access theo Phần 3.
+
+4.4
+
+Mẫu ca và phân ca tại outlet
+• [HR-006] Outlet Manager PHẢI có thể tạo và duy trì mẫu ca làm việc cho
+outlet được giao.
+• [HR-007] Mỗi mẫu ca PHẢI xác định ít nhất giờ bắt đầu, giờ kết thúc, thời
+lượng nghỉ và trạng thái hiệu lực.
+• [HR-008] Outlet Manager PHẢI có thể phân công Staff vào ca cho outlet
+của mình.
+• [HR-009] Hệ thống PHẢI ngăn phân công trùng lặp gây xung đột ca cho cùng
+một nhân viên trong cùng khoảng thời gian tại cùng outlet.
+• [HR-010] Vòng đời bản ghi phân ca PHẢI hỗ trợ tối thiểu:
+scheduled, confirmed, cancelled.
+
+4.5
+
+Chấm công và phê duyệt chấm công
+• [HR-011] Staff PHẢI có thể chấm công vào ca và ra ca cho chính mình trong
+các ca được phân công hoặc theo quy trình ngoại lệ có kiểm soát.
+• [HR-012] Hệ thống PHẢI ghi nhận thời điểm chấm công và tự động xác định
+trạng thái chuyên cần sơ bộ như present, late, absent hoặc leave theo chính
+sách vùng và lịch làm việc.
+• [HR-013] Outlet Manager PHẢI có thể phê duyệt hoặc từ chối các bản ghi
+chấm công ngoại lệ trong phạm vi outlet được giao.
+• [HR-014] Chỉ dữ liệu chấm công đã được phê duyệt MỚI ĐƯỢC dùng làm
+đầu vào chính thức cho payroll.
+• [HR-015] Thay đổi dữ liệu chấm công sau khi đã dùng cho payroll PHẢI đi
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+13
+
+qua quy trình điều chỉnh có kiểm toán.
+4.6
+
+Bàn giao sang payroll
+• [HR-016] Hệ thống PHẢI tổng hợp được dữ liệu chấm công đã phê duyệt theo
+kỳ lương và theo region áp dụng.
+• [HR-017] Dữ liệu chuyên cần PHẢI giữ được khả năng phân bổ ngược về outlet
+nơi nhân viên làm việc để phục vụ tính chi phí.
+• [HR-018] Thay đổi hợp đồng trong kỳ PHẢI được phản ánh rõ trong dữ liệu
+đầu vào payroll để hỗ trợ pro-rate lương.
+
+4.7
+
+State lifecycle
+
+4.7.1
+
+Phân ca
+
+• State lifecycle: scheduled → confirmed → cancelled.
+• Allowed transitions: xác nhận ca chỉ áp dụng cho ca đã được lập; hủy ca chỉ
+áp dụng cho ca chưa hoàn tất hoặc không còn hiệu lực.
+• Guard conditions: nhân viên thuộc outlet hợp lệ, không bị xung đột ca và ca
+còn hiệu lực.
+• Side effects: cập nhật lịch làm việc, cập nhật danh sách chờ chấm công và ghi
+audit.
+• Immutable states: ca đã hủy không được tự động mở lại nếu không tạo bản
+ghi điều chỉnh mới.
+4.7.2
+
+Hợp đồng lao động
+
+• State lifecycle: draft → active → expired hoặc terminated.
+• Allowed transitions: chỉ hợp đồng đã đủ thông tin và đã được phê chuẩn nội
+bộ mới được kích hoạt.
+• Guard conditions: ngày hiệu lực hợp lệ, không chồng lấp với hợp đồng active
+khác gây xung đột tính lương.
+• Side effects: mở hiệu lực cho payroll, cập nhật thông tin phân bổ chi phí và ghi
+audit.
+• Immutable states: hợp đồng đã expired hoặc terminated không được sửa làm
+thay đổi lịch sử trả lương đã chốt.
+4.8
+
+Quy tắc nghiệp vụ chính
+
+1. [HR-019] Outlet Manager không phải là actor tạo người dùng hay tạo hợp
+đồng trong mô hình chuẩn; các nghiệp vụ đó thuộc HR hoặc System Admin
+theo phân quyền.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+14
+
+2. [HR-020] Một bản ghi chấm công bị từ chối KHÔNG ĐƯỢC tự động đi vào
+payroll nếu chưa có hành động sửa hoặc phê duyệt lại.
+3. [HR-021] Lịch sử hợp đồng, phân ca và chấm công PHẢI đủ để tái dựng được
+đầu vào của một kỳ payroll đã duyệt.
+4.9
+
+In Scope for V1
+• Employee master cơ bản.
+• Hợp đồng, phân ca, chấm công và bàn giao sang payroll.
+• Phê duyệt chấm công tại outlet bởi Outlet Manager.
+
+4.10
+
+Out of Scope for V1
+
+• Recruitment, onboarding workflow và performance appraisal.
+• Leave management phức tạp nhiều loại quota.
+• Workforce planning liên outlet tự động.
+4.11
+
+Future Extension
+
+• Self-service portal cho nhân viên.
+• Leave accrual engine.
+• Scheduling optimization và multi-outlet rostering.
+
+5
+
+Quản lý Sản phẩm, Công thức & Định giá
+
+5.1
+
+Mục tiêu
+
+Module này quản lý danh mục sản phẩm bán ra, nguyên liệu, công thức, thuế và giá
+bán. Product Manager là actor chính ở cấp Company cho phần dữ liệu chủ này; các
+outlet chỉ sử dụng dữ liệu đã được công bố.
+5.2
+
+Đơn vị đo lường và nguyên liệu
+• [PRD-001] Hệ thống PHẢI duy trì danh mục đơn vị đo lường chuẩn dùng nhất
+quán cho nguyên liệu và công thức.
+• [PRD-002] Hệ thống PHẢI hỗ trợ quy đổi đơn vị đo lường hợp lệ để bảo đảm
+tính đúng đắn khi mua hàng, nhập hàng và tiêu thụ nguyên liệu.
+• [PRD-003] Mỗi nguyên liệu PHẢI có mã định danh duy nhất, tên, đơn vị cơ
+sở và trạng thái vòng đời.
+• [PRD-004] Nguyên liệu ở trạng thái discontinued KHÔNG ĐƯỢC dùng
+cho công thức mới hoặc PO mới.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+5.3
+
+15
+
+Danh mục sản phẩm
+• [PRD-005] Mỗi sản phẩm bán ra PHẢI có mã định danh duy nhất, tên hiển
+thị, trạng thái vòng đời và nhóm sản phẩm nếu có.
+• [PRD-006] Vòng đời sản phẩm PHẢI hỗ trợ tối thiểu draft, active, inactive,
+discontinued.
+• [PRD-007] Chỉ sản phẩm ở trạng thái active và được phép bán tại outlet đích
+MỚI ĐƯỢC hiển thị trên POS của outlet đó.
+• [PRD-008] Hệ thống PHẢI hỗ trợ cấu hình phạm vi bán theo outlet cho từng
+sản phẩm.
+
+5.4
+
+Công thức
+• [PRD-009] Hệ thống PHẢI hỗ trợ định nghĩa công thức cho từng sản phẩm
+bán ra bằng danh sách nguyên liệu và định lượng tương ứng.
+• [PRD-010] Công thức PHẢI hỗ trợ quản lý phiên bản và ngày hiệu lực.
+• [PRD-011] Tại một thời điểm, mỗi sản phẩm NÊN có tối đa một công thức
+đang hoạt động để phục vụ tính tiêu hao nguyên liệu.
+• [PRD-012] Khi hoàn tất đơn bán hàng, hệ thống PHẢI sử dụng công thức hiệu
+lực tại thời điểm giao dịch để tính lượng nguyên liệu tiêu thụ.
+
+5.5
+
+Thuế và giá bán
+• [PRD-013] Thuế suất PHẢI được cấu hình theo thời gian hiệu lực và không
+được gây mơ hồ cho cùng một sản phẩm trong cùng phạm vi áp dụng.
+• [PRD-014] Giá bán PHẢI hỗ trợ cấu hình theo outlet và theo thời gian hiệu
+lực.
+• [PRD-015] Hệ thống PHẢI xác định giá áp dụng theo outlet và thời điểm bán;
+nếu không có giá riêng của outlet thì CÓ THỂ dùng giá mặc định theo chính
+sách đã công bố.
+• [PRD-016] Các cấu hình thuế và giá KHÔNG ĐƯỢC có nhiều bản ghi cùng
+hiệu lực gây ra hơn một kết quả giá hoặc thuế cho cùng giao dịch.
+
+5.6
+
+Quy tắc nghiệp vụ chính
+
+1. [PRD-017] Dữ liệu sản phẩm, công thức và giá đã dùng cho giao dịch lịch sử
+PHẢI vẫn truy vết được ngay cả khi cấu hình hiện tại đã thay đổi.
+2. [PRD-018] Product master là dữ liệu cấp Company; Staff và Outlet Manager
+không phải actor chuẩn để tạo hoặc sửa product master nếu không có quyền mở
+rộng được cấp chính thức.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+16
+
+3. [PRD-019] Việc thay công thức hoặc giá mới KHÔNG ĐƯỢC làm thay đổi
+ngầm các giao dịch đã hoàn tất trước thời điểm hiệu lực.
+5.7
+
+In Scope for V1
+• Item master, product master, recipe version, tax và outlet pricing.
+• Outlet-level availability.
+• Suy diễn tiêu hao nguyên liệu từ công thức hiệu lực.
+
+5.8
+
+Out of Scope for V1
+• Product variant matrix phức tạp theo size/topping.
+• Costing simulation nâng cao và menu engineering.
+• Dynamic pricing theo thời tiết hoặc demand curve thời gian thực.
+
+5.9
+
+Future Extension
+• Combo engine nâng cao.
+• Product bundle và modifier tree.
+• Cost-to-serve analytics và margin optimization.
+
+6
+
+Thu mua
+
+6.1
+
+Mục tiêu
+
+Module Thu mua quản lý vòng đời từ nhu cầu mua hàng tại outlet đến goods receipt,
+đối chiếu hóa đơn và ghi nhận thanh toán nhà cung cấp. Trong mô hình chuẩn của tài
+liệu này, actor vận hành thu mua tại outlet là Outlet Manager; không có actor kho
+riêng tại outlet.
+6.2
+
+Trách nhiệm actor
+• Outlet Manager tạo, cập nhật, gửi, hủy và issue PO; ghi nhận goods receipt;
+rà soát tình trạng đơn mua của outlet.
+• Regional Finance xem supplier master ở cấp Company để rà soát và phê duyệt
+PO cùng các nghiệp vụ tài chính trong phạm vi region_subtree được giao.
+• Finance quản trị supplier master ở phạm vi toàn hệ thống và ghi nhận thanh
+toán cuối cùng cho nhà cung cấp.
+
+6.3
+
+Supplier master
+• [PROC-001] Hệ thống PHẢI duy trì supplier master do Finance sở hữu và
+quản trị.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+17
+
+• [PROC-002] Mỗi supplier master PHẢI có mã định danh duy nhất, thông tin
+đăng ký, thông tin pháp lý, thông tin thuế, điều khoản thanh toán, tài khoản
+ngân hàng và trạng thái kích hoạt.
+• [PROC-003] Chỉ supplier ở trạng thái active và đã được phê duyệt MỚI
+ĐƯỢC tham chiếu trong PO, hóa đơn nhà cung cấp và thanh toán.
+• [PROC-004] Regional Finance PHẢI có quyền xem đầy đủ supplier master ở
+phạm vi hệ thống để rà soát nghiệp vụ tài chính; Product Manager và Outlet
+Manager chỉ được tham chiếu supplier đã được phê duyệt; chỉ Finance mới
+được tạo mới, cập nhật hoặc kích hoạt supplier master.
+6.4
+
+Purchase Order (PO)
+• [PROC-005] Outlet Manager PHẢI có thể tạo PO cho outlet được giao từ
+danh sách supplier hợp lệ.
+• [PROC-006] PO PHẢI ghi rõ outlet, supplier, ngày đặt, ngày giao dự kiến nếu
+có, danh sách mặt hàng và các tổng tiền liên quan.
+• [PROC-007] Hệ thống PHẢI kiểm tra tính hợp lệ của supplier, mặt hàng, số
+lượng và ngày giao dự kiến trước khi cho phép gửi PO.
+• [PROC-008] Vòng đời PO PHẢI hỗ trợ tối thiểu draft, submitted, approved,
+ordered, partially_received, completed, closed, cancelled.
+• [PROC-009] Outlet Manager PHẢI có thể issue một PO đã approved cho
+supplier; khi issue, hệ thống PHẢI chuyển PO sang ordered và khóa các trường
+thương mại cốt lõi.
+• [PROC-010] Chỉ PO ở trạng thái ordered MỚI ĐƯỢC sẵn sàng cho bước
+goods receipt.
+
+6.5
+
+Goods Receipt (GR)
+• [PROC-011] Outlet Manager PHẢI có thể ghi nhận goods receipt cho outlet
+của mình từ một PO ở trạng thái ordered hoặc theo quy trình ngoại lệ có kiểm
+soát.
+• [PROC-012] GR PHẢI lưu số lượng thực nhận, chênh lệch, hàng hỏng quan
+sát được và ghi chú nhận hàng khi cần.
+• [PROC-013] Vòng đời GR PHẢI hỗ trợ tối thiểu draft, received, posted,
+cancelled.
+• [PROC-014] GR đã posted PHẢI tạo giao dịch nhập kho tương ứng trong
+inventory ledger.
+• [PROC-015] GR đã posted PHẢI cập nhật trạng thái và số lượng đã nhận
+của PO liên quan.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+6.6
+
+18
+
+Hóa đơn nhà cung cấp và thanh toán
+• [PROC-016] Hệ thống PHẢI hỗ trợ ghi nhận hóa đơn nhà cung cấp gắn với
+supplier, outlet, số hóa đơn, số tiền và trạng thái xử lý.
+• [PROC-017] Hóa đơn nhà cung cấp PHẢI có khả năng đối chiếu với PO và
+GR nguồn khi áp dụng quy trình matching.
+• [PROC-018] Regional Finance PHẢI có thể rà soát và phê duyệt yêu cầu
+thanh toán nhà cung cấp trong phạm vi region_subtree được giao.
+• [PROC-019] Finance PHẢI có thể ghi nhận thanh toán cuối cùng cho nhà
+cung cấp và liên kết thanh toán với hóa đơn tương ứng.
+• [PROC-020] Hệ thống PHẢI ngăn tổng tiền phân bổ vượt quá số tiền thực tế
+của thanh toán hoặc số tiền còn phải trả của hóa đơn.
+
+6.7
+
+State lifecycle
+
+6.7.1
+
+Purchase Order
+
+• State lifecycle: draft → submitted → approved → ordered; sau đó PO đi
+tới partially_received hoặc completed, rồi kết thúc ở closed. Nhánh ngoại
+lệ là cancelled.
+• Allowed transitions: chỉ PO hợp lệ mới được submit; chỉ Regional Finance
+trong scope mới được approve PO đã submit; chỉ Outlet Manager mới được
+issue PO đã approved; chỉ PO đã ordered mới được nhận hàng.
+• Guard conditions: supplier hợp lệ, actor có scope đúng, có ít nhất một dòng
+hàng, số lượng hợp lệ và không có thay đổi chưa được gửi lại để rà soát.
+• Side effects: approve xác nhận bước rà soát tài chính; issue ghi audit, khóa
+snapshot thương mại của PO, mở khả năng nhận hàng và cập nhật backlog mua
+hàng của outlet.
+• Immutable states: PO đã closed hoặc cancelled không được quay lại trạng
+thái trước bằng chỉnh sửa trực tiếp.
+6.7.2
+
+Goods Receipt
+
+• State lifecycle: draft → received → posted; nhánh ngoại lệ là cancelled.
+• Allowed transitions: chỉ GR có ít nhất một dòng nhận hợp lệ mới được chuyển
+sang received; chỉ GR đã nhận mới được post.
+• Guard conditions: PO nguồn ở trạng thái ordered và còn hiệu lực nếu có tham
+chiếu, số lượng thực nhận hợp lệ và chưa có posting trước đó.
+• Side effects: tạo inventory transaction loại nhập hàng, cập nhật stock balance
+và cập nhật lượng đã nhận của PO nguồn.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+19
+
+• Immutable states: GR đã posted không được hủy bằng cách sửa ngược lịch
+sử; sai sót phải xử lý bằng chứng từ bù trừ hoặc inventory adjustment có audit.
+6.8
+
+Quy tắc nghiệp vụ chính
+
+1. [PROC-021] Mọi nghiệp vụ warehouse/procurement tại outlet PHẢI được gắn
+với Outlet Manager là actor vận hành chính.
+2. [PROC-022] Ranh giới trách nhiệm giữa Regional Finance và Finance PHẢI
+được xác định theo scope nghiệp vụ, không theo giá trị tiền của chứng từ.
+3. [PROC-023] Chứng từ mua hàng đã post PHẢI truy vết được đến nguồn tạo
+kho và nguồn thanh toán tương ứng.
+6.9
+
+In Scope for V1
+• Supplier master do Finance quản trị.
+• PO, GR, đối chiếu hóa đơn cơ bản và supplier payment.
+• Outlet-level procurement do Outlet Manager vận hành.
+
+6.10
+
+Out of Scope for V1
+
+• Central procurement shared cart nhiều outlet.
+• Approval engine nhiều cấp cấu hình động cho mọi PO.
+• Contract procurement hoặc blanket order phức tạp.
+6.11
+
+Future Extension
+
+• Automatic three-way match nâng cao.
+• Supplier portal và EDI.
+• Contract sourcing ở cấp doanh nghiệp.
+
+7
+
+Bán hàng & Điểm bán hàng (POS)
+
+7.1
+
+Mục tiêu
+
+Module Bán hàng & POS quản lý phiên POS tại outlet, tạo order, cập nhật order trước
+khi hoàn tất thanh toán, xử lý thanh toán, ghi nhận sale record và đối soát cuối phiên.
+Đây là nguồn doanh thu và là nguồn phát sinh tiêu thụ nguyên liệu cho inventory
+ledger. Trong V1, POS hoạt động theo mô hình online-only.
+7.2
+
+Trách nhiệm actor
+• Customer chỉ tham gia ở bước xem menu và xem chi tiết thanh toán.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+20
+
+• Staff xem menu, tạo order, xem order, cập nhật order line trước khi hoàn tất
+thanh toán, xử lý thanh toán và ghi nhận sale record trong phạm vi outlet được
+giao.
+• Outlet Manager là actor mặc định mở POS session, quản lý POS session, đối
+soát phiên và theo dõi vận hành bán hàng tại outlet.
+7.3
+
+POS session
+• [SAL-001] Trong V1, mỗi outlet PHẢI có đúng một POS.
+• [SAL-002] Tại một thời điểm, một outlet CHỈ ĐƯỢC có tối đa một phiên
+POS ở trạng thái open.
+• [SAL-003] POS V1 PHẢI là online-only; khi không có kết nối hợp lệ đến dịch
+vụ trung tâm, hệ thống KHÔNG ĐƯỢC chấp nhận giao dịch bán mới.
+• [SAL-004] Outlet Manager PHẢI là actor mặc định mở phiên POS ở outlet
+của mình.
+• [SAL-005] Chỉ phiên POS đang open MỚI ĐƯỢC tiếp nhận order và thanh
+toán mới.
+• [SAL-006] Vòng đời phiên POS PHẢI hỗ trợ tối thiểu:
+open, closed, reconciled, cancelled.
+
+7.4
+
+Order bán hàng
+• [SAL-007] Người dùng nội bộ được phân quyền tại outlet PHẢI có thể xem
+menu bán hàng của outlet đó.
+• [SAL-008] Staff PHẢI có thể tạo order mới trong phạm vi outlet được phân
+công khi phiên POS đang mở.
+• [SAL-009] Customer chỉ được xem menu và xem chi tiết thanh toán; customer
+KHÔNG ĐƯỢC trực tiếp tạo order, cập nhật order hoặc xử lý thanh toán
+trên hệ thống.
+• [SAL-010] Order PHẢI lưu outlet, phiên POS liên quan, actor thực hiện, trạng
+thái order, trạng thái thanh toán và các tổng tiền cần thiết cho quyết toán.
+• [SAL-011] Order line CHỈ ĐƯỢC cập nhật khi order chưa hoàn tất thanh
+toán.
+• [SAL-012] Order đang mở CÓ THỂ bị hủy trước khi hoàn tất thanh toán;
+order đã hoàn tất KHÔNG ĐƯỢC hủy theo workflow POS V1.
+• [SAL-013] Giá bán và thuế của từng dòng hàng PHẢI được xác định từ dữ liệu
+hiệu lực ở Phần 5.
+• [SAL-014] Hệ thống PHẢI bảo đảm tổng tiền, thuế và số tiền phải thu của
+order nhất quán với các dòng sản phẩm và chính sách giá có hiệu lực.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+7.5
+
+21
+
+Thanh toán và sale record
+• [SAL-015] Staff PHẢI có thể xử lý thanh toán cho order đang mở trong outlet
+được phân công.
+• [SAL-016] Hệ thống PHẢI hỗ trợ tối thiểu các phương thức thanh toán: tiền
+mặt, thẻ, ví điện tử, chuyển khoản và voucher.
+• [SAL-017] Hệ thống PHẢI hỗ trợ split payment cho cùng một order khi nghiệp
+vụ yêu cầu.
+• [SAL-018] Trạng thái thanh toán của order PHẢI được suy diễn từ các giao
+dịch thanh toán thành công hoặc thất bại.
+• [SAL-019] Order chỉ được chuyển sang completed khi điều kiện thanh toán đáp
+ứng quy tắc của loại order và phương thức thanh toán áp dụng.
+• [SAL-020] Mỗi sale hoàn tất PHẢI liên kết được với outlet, session, người
+thực hiện, chi tiết thanh toán và thời điểm giao dịch.
+• [SAL-021] Khi sale hoàn tất, hệ thống PHẢI tạo sale record và truy vết được
+tiêu thụ nguyên liệu theo công thức hiệu lực.
+
+7.6
+
+Đối soát phiên POS
+• [SAL-022] Mọi order, payment và reconciliation của POS PHẢI gắn trực tiếp
+với outlet và được thực hiện bởi người dùng nội bộ được phân quyền tại outlet
+đó.
+• [SAL-023] Chỉ phiên POS đã closed MỚI ĐƯỢC chuyển sang reconciled.
+• [SAL-024] Đối soát phiên POS PHẢI ghi nhận chênh lệch nếu có mà không
+được chỉnh sửa ngược lịch sử sale record đã hoàn tất.
+
+7.7
+
+State lifecycle
+
+7.7.1
+
+Order bán hàng
+
+• State lifecycle: open → completed; nhánh ngoại lệ là cancelled.
+• Allowed transitions: chỉ order đang mở mới được cập nhật dòng hàng, thanh
+toán, hoàn tất hoặc hủy; order đã completed không đi vào luồng hủy của POS
+V1.
+• Guard conditions: phiên POS còn mở, dữ liệu dòng hàng hợp lệ, actor có quyền
+tại outlet và thanh toán đáp ứng điều kiện hoàn tất.
+• Side effects: khi hoàn tất order, hệ thống tạo payment record, khóa nội dung
+order, tạo sale record và tạo giao dịch tiêu thụ nguyên liệu theo công thức hiệu
+lực.
+• Immutable states: order đã completed hoặc cancelled KHÔNG ĐƯỢC
+sửa trực tiếp; mọi sai sót sau khi hoàn tất sale nằm ngoài workflow POS V1 của
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+22
+
+tài liệu này.
+7.7.2
+
+POS session
+
+• State lifecycle: open → closed → reconciled; nhánh ngoại lệ là cancelled.
+• Allowed transitions: chỉ phiên đang mở mới được đóng; chỉ phiên đã đóng mới
+được đối soát.
+• Guard conditions: outlet đang hoạt động, chưa có phiên mở khác cùng thời
+điểm, mọi order mở đã được xử lý và actor có quyền manager-level tại outlet đó.
+• Side effects: khóa nhận order mới trên phiên đã đóng, ghi nhận số liệu quyết
+toán và ghi audit cho mọi chênh lệch.
+• Immutable states: phiên đã reconciled không được mở lại bằng chỉnh sửa
+ngược lịch sử; sai sót phải xử lý bằng chứng từ điều chỉnh hoặc quyết định quản
+trị được kiểm toán.
+7.8
+
+Quy tắc nghiệp vụ chính
+
+1. [SAL-025] Customer chỉ đóng vai trò quan sát ở phía nghiệp vụ và KHÔNG
+được xem như người dùng nội bộ để thao tác order hoặc payment.
+2. [SAL-026] Staff không được thực hiện nghiệp vụ kho tại outlet trừ khi có yêu
+cầu mở rộng được đặc tả riêng.
+3. [SAL-027] POS V1 KHÔNG bao gồm luồng hoàn tiền, không bao gồm POS
+offline và không bao gồm nhiều thiết bị POS cho một outlet.
+7.9
+
+In Scope for V1
+• Mở phiên POS, tạo/cập nhật/hủy order trước thanh toán, xử lý thanh toán, ghi
+nhận sale record, đóng phiên và đối soát phiên.
+• Customer interaction ở mức xem menu và xem chi tiết thanh toán.
+
+7.10
+
+Out of Scope for V1
+
+• Luồng hoàn tiền tại POS.
+• Kịch bản khách hàng tự tạo đơn trên hệ thống.
+• POS offline, hàng đợi cục bộ, đồng bộ trì hoãn, đồng bộ xung đột, nhiều thiết bị
+POS cho một outlet hoặc register POS tách biệt.
+7.11
+
+Future Extension
+
+• Loyalty và coupon campaign nâng cao.
+• Tích hợp delivery aggregator hoặc omnichannel orchestration.
+• Kịch bản customer ordering riêng nếu doanh nghiệp phát hành phạm vi mới.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+8
+
+Quản lý Kho
+
+8.1
+
+Mục tiêu
+
+23
+
+Module Quản lý Kho duy trì stock balance tại outlet, inventory ledger và các nghiệp
+vụ warehouse tại outlet như goods receipt posting, waste, stock count và inventory
+adjustment. Trong mô hình chuẩn của tài liệu này, actor vận hành warehouse tại
+outlet là Outlet Manager.
+8.2
+
+Nguyên tắc actor tại outlet warehouse
+• [INV-001] Tại outlet, Outlet Manager PHẢI là actor chính cho toàn bộ
+nghiệp vụ warehouse.
+• [INV-002] Hệ thống KHÔNG định nghĩa actor kho riêng tại outlet.
+• [INV-003] Staff không được gán mặc định các tác vụ kho như goods receipt,
+waste, inventory adjustment hoặc stock count nếu không có yêu cầu mở rộng
+được đặc tả riêng.
+
+8.3
+
+Stock balance và inventory ledger
+• [INV-004] Hệ thống PHẢI duy trì stock balance theo từng nguyên liệu tại từng
+outlet.
+• [INV-005] Stock balance PHẢI là dữ liệu dẫn xuất từ các inventory transaction
+đã post; người dùng không được sửa trực tiếp stock balance.
+• [INV-006] Mọi tăng/giảm hàng hóa PHẢI được ghi vào inventory ledger với
+loại giao dịch, số lượng, thời điểm, outlet và nguồn nghiệp vụ tương ứng.
+• [INV-007] Mỗi inventory transaction PHẢI truy vết được đến đúng một nguồn
+nghiệp vụ như goods receipt, sale completion, waste, stock count hoặc inventory
+adjustment.
+• [INV-008] Ledger kho đã post PHẢI có tính append-only; mọi sửa sai sau khi
+post phải dùng giao dịch bù trừ hoặc chứng từ điều chỉnh mới.
+
+8.4
+
+Xem tồn kho và lịch sử biến động
+• [INV-009] Outlet Manager PHẢI có quyền xem stock balance hiện tại và
+inventory transaction của outlet được giao.
+• [INV-010] Hệ thống PHẢI hỗ trợ truy vết tồn kho từ ledger về chứng từ nguồn
+như PO/GR, sale, waste hoặc stock count.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+8.5
+
+24
+
+Waste và inventory adjustment
+• [INV-011] Outlet Manager PHẢI có thể ghi nhận waste record cho nguyên
+liệu tại outlet của mình.
+• [INV-012] Mỗi waste record PHẢI có lý do, số lượng, thời điểm nghiệp vụ và
+người ghi nhận.
+• [INV-013] Outlet Manager PHẢI có thể ghi nhận inventory adjustment
+để điều chỉnh tăng hoặc giảm tồn kho tại outlet của mình.
+• [INV-014] Mỗi inventory adjustment PHẢI có lý do điều chỉnh, số lượng điều
+chỉnh, actor thực hiện và dấu vết kiểm toán.
+• [INV-015] Waste record và inventory transaction phát sinh trong cùng một lần
+ghi nhận PHẢI do cùng một actor thực hiện và phải truy vết được với nhau.
+• [INV-016] Waste record hoặc inventory adjustment đã posted PHẢI sinh ra
+inventory transaction tương ứng.
+• [INV-017] Hệ thống PHẢI chặn giao dịch làm tồn kho âm trong vận hành bình
+thường, trừ khi có quy trình ngoại lệ được phê duyệt và ghi audit riêng.
+
+8.6
+
+Stock count
+• [INV-018] Outlet Manager PHẢI có thể tạo stock count sheet cho outlet
+được giao.
+• [INV-019] Hệ thống PHẢI chụp snapshot số lượng hệ thống tại thời điểm bắt
+đầu stock count.
+• [INV-020] Outlet Manager PHẢI có thể nhập kết quả đếm thực tế và chốt
+stock count tại outlet của mình.
+• [INV-021] Stock count đã được post PHẢI tạo inventory adjustment cho các
+dòng có chênh lệch khác không.
+• [INV-022] Hệ thống PHẢI lưu được số lượng hệ thống, số lượng thực tế và
+chênh lệch cho từng dòng kiểm kê.
+
+8.7
+
+State lifecycle
+
+8.7.1
+
+Inventory adjustment / waste document
+
+• State lifecycle: draft → posted; nhánh ngoại lệ là cancelled.
+• Allowed transitions: chỉ chứng từ hợp lệ mới được post; chứng từ draft có
+thể bị hủy trước khi post.
+• Guard conditions: có ít nhất một dòng điều chỉnh hợp lệ, có lý do, actor có
+quyền tại outlet và chứng từ chưa post trước đó.
+• Side effects: tạo inventory transaction tăng hoặc giảm, cập nhật stock balance,
+ghi audit và bảo toàn actor nguồn giữa chứng từ và ledger phát sinh.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+25
+
+• Immutable states: chứng từ đã posted không được sửa ngược lịch sử; điều
+chỉnh sai phải được bù trừ bằng chứng từ mới.
+8.7.2
+
+Stock count
+
+• State lifecycle: draft → counting → posted; nhánh ngoại lệ là cancelled.
+• Allowed transitions: chỉ phiên kiểm kê ở draft mới được bắt đầu; chỉ phiên
+đang counting mới được post hoặc hủy.
+• Guard conditions: snapshot tồn kho đã được khóa, các dòng kiểm kê có số
+lượng thực tế và actor có quyền warehouse tại outlet.
+• Side effects: tạo inventory adjustment cho chênh lệch, cập nhật stock balance
+và ghi audit.
+• Immutable states: phiên đã posted không được mở lại; điều chỉnh tiếp theo
+phải thực hiện bằng phiên kiểm kê hoặc chứng từ điều chỉnh mới.
+8.8
+
+Quy tắc nghiệp vụ chính
+
+1. [INV-023] Mọi nghiệp vụ warehouse tại outlet PHẢI dùng actor
+Outlet Manager nhất quán trong narrative, use case, permission matrix và
+diagram tương ứng.
+2. [INV-024] Ledger kho PHẢI đủ để tái dựng stock balance của một nguyên liệu
+tại bất kỳ thời điểm kiểm toán hợp lệ nào.
+3. [INV-025] Inventory reversal PHẢI được thực hiện bằng giao dịch bù trừ có
+nguồn gốc rõ ràng, không xóa lịch sử gốc.
+8.9
+
+In Scope for V1
+• Stock balance, inventory ledger, waste, stock count và inventory adjustment tại
+outlet.
+• Truy vết từ goods receipt và sale completion sang inventory ledger.
+• Stock count và inventory adjustment không bắt buộc tách bước submit/approve.
+
+8.10
+
+Out of Scope for V1
+
+• Inter-outlet transfer như workflow chuẩn.
+• Central warehouse, bin location hoặc wave picking.
+• Maker-checker bắt buộc cho stock count và inventory adjustment.
+8.11
+
+Future Extension
+
+• Lot tracking chi tiết, FEFO/FIFO thực thi đầy đủ và traceability nâng cao.
+• Central warehouse replenishment.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+26
+
+• Inter-outlet transfer với approval và receiving workflow.
+
+9
+
+Tài chính & Lương
+
+9.1
+
+Mục tiêu
+
+Module Tài chính & Lương chuyển dữ liệu chấm công đã phê duyệt và hợp đồng lao
+động thành payroll chính thức, sau đó ghi nhận phê duyệt, chi trả và chi phí. Trong
+mô hình chuẩn: HR chuẩn bị dữ liệu đầu vào và payroll draft; Finance phê duyệt và
+ghi nhận chi trả; Regional Finance xem hoặc rà soát chi phí trong phạm vi region
+theo chính sách.
+9.2
+
+Kỳ lương và dữ liệu đầu vào
+• [FIN-001] Payroll period PHẢI được xác định theo Region.
+• [FIN-002] Các payroll period trong cùng một region KHÔNG ĐƯỢC chồng
+lấp gây mơ hồ cho một ngày làm việc.
+• [FIN-003] Dữ liệu đầu vào payroll PHẢI được lấy từ chấm công đã phê duyệt
+và hợp đồng còn hiệu lực trong kỳ.
+
+9.3
+
+Payroll calculation
+• [FIN-004] Hệ thống PHẢI tính được gross pay, deduction, allowance, overtime
+và net pay cho từng nhân viên theo chính sách vùng và hợp đồng hiệu lực.
+• [FIN-005] Trong một payroll period và region, mỗi nhân viên PHẢI có tối đa
+một kết quả payroll cuối cùng cho kỳ đó.
+• [FIN-006] Nếu hợp đồng thay đổi giữa kỳ, hệ thống PHẢI hỗ trợ tính pro-rate
+theo thời gian hiệu lực thực tế.
+• [FIN-007] Payroll calculation PHẢI giữ khả năng phân bổ chi phí ngược về
+outlet nguồn dựa trên dữ liệu làm việc thực tế.
+
+9.4
+
+Review, approval và payment
+• [FIN-008] Vòng đời payroll PHẢI hỗ trợ tối thiểu draft, submitted, approved,
+rejected, paid, cancelled.
+• [FIN-009] HR PHẢI có thể chuẩn bị payroll draft và gửi phê duyệt.
+• [FIN-010] Finance PHẢI là actor chuẩn để phê duyệt payroll ở cấp cuối và
+ghi nhận việc chi trả.
+• [FIN-011] Payroll chỉ được chuyển sang paid khi có bằng chứng thanh toán
+hoặc mã tham chiếu chi trả hợp lệ.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+27
+
+• [FIN-012] Payroll đã paid PHẢI được coi là trạng thái bất biến; không được
+sửa trực tiếp nội dung payroll đã trả.
+9.5
+
+Chi phí và truy vết tài chính
+• [FIN-013] Hệ thống PHẢI tạo được bản ghi chi phí từ payroll đã được phê
+duyệt hoặc đã chi trả theo chính sách vận hành.
+• [FIN-014] Chi phí payroll PHẢI truy vết được đến payroll nguồn, payroll period
+và outlet hoặc region phân bổ tương ứng.
+• [FIN-015] Regional Finance PHẢI có thể xem hoặc xuất báo cáo chi phí
+payroll trong phạm vi region được giao mà không làm thay đổi payroll đã được
+phê duyệt ở cấp hệ thống.
+
+9.6
+
+State lifecycle
+
+9.6.1
+
+Payroll
+
+Draft
+submit payroll
+Submitted
+cancel
+
+revise
+
+reject
+Rejected
+
+approve payroll
+Approved
+
+cancel before payment
+Cancelled
+
+mark paid
+Paid
+
+Hình 2: State machine cho payroll
+• State lifecycle: draft → submitted → approved → paid; nhánh ngoại lệ gồm
+rejected và cancelled.
+• Allowed transitions: chỉ payroll draft hợp lệ mới được submit; chỉ payroll
+submitted mới được approve; chỉ payroll approved mới được mark paid.
+• Guard conditions: bảng công đã chốt, hợp đồng áp dụng xác định rõ, ngoại lệ
+payroll đã được giải quyết hoặc chấp thuận, actor có quyền đúng cấp.
+• Side effects: ghi audit, khóa dữ liệu payroll sau khi approve, liên kết chi phí và
+mã chi trả khi mark paid.
+• Immutable states: payroll đã paid không được chỉnh sửa trực tiếp; mọi sửa sai
+hậu thanh toán phải qua payroll adjustment hoặc reversal độc lập có kiểm toán.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+9.7
+
+28
+
+Quy tắc nghiệp vụ chính
+
+1. [FIN-016] Mọi thay đổi dữ liệu chấm công hoặc hợp đồng sau khi payroll đã
+submitted PHẢI đi qua quy trình điều chỉnh có kiểm toán.
+2. [FIN-017] Payroll đã approved KHÔNG ĐƯỢC bị thay đổi bởi actor chỉ có
+quyền xem hoặc rà soát.
+3. [FIN-018] Kết quả payroll, trạng thái phê duyệt và trạng thái chi trả PHẢI
+luôn giải thích được từ audit trail và dữ liệu nguồn.
+9.8
+
+In Scope for V1
+• Payroll period theo region.
+• Payroll calculation, approval, payment reference và payroll expense traceability.
+• Phân bổ ngược chi phí về outlet.
+
+9.9
+
+Out of Scope for V1
+• Core accounting ledger đầy đủ.
+• Treasury workflow và bank integration chi tiết.
+• Multi-level payroll approval engine có cấu hình động.
+
+9.10
+
+Future Extension
+
+• Payroll adjustment run tự động.
+• Legal entity payroll separation.
+• Tích hợp trực tiếp với kế toán và ngân hàng.
+
+10
+
+Lịch sử Thao tác (Audit)
+
+10.1
+
+Mục tiêu
+
+Module Audit bảo đảm mọi hành động bảo mật, thay đổi trạng thái và thao tác dữ
+liệu quan trọng đều có thể truy vết được, không bị chỉnh sửa trái phép và đủ giàu
+thông tin để phục vụ vận hành, điều tra sự cố và tuân thủ.
+10.2
+
+Sự kiện phải được kiểm toán
+
+• [AUD-001] Hệ thống PHẢI ghi audit cho các sự kiện xác thực, phân quyền, thay
+đổi cấu hình, phê duyệt, đăng chứng từ, hủy order trước thanh toán, reconcile
+phiên POS, payment, export dữ liệu và thay đổi trạng thái nghiệp vụ.
+• [AUD-002] Hệ thống PHẢI ghi audit cho các thao tác làm thay đổi inventory
+ledger, stock balance dẫn xuất, payroll status và payment status.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+29
+
+• [AUD-003] Các hành động từ chối truy cập đối với nghiệp vụ nhạy cảm NÊN
+có khả năng truy vết được trong log hoặc audit tùy mức độ rủi ro.
+10.3
+
+Nội dung bản ghi audit
+
+• [AUD-004] Mỗi bản ghi audit PHẢI chứa tối thiểu actor, hành động, loại thực
+thể, định danh thực thể, thời điểm, phạm vi dữ liệu và kết quả thao tác.
+• [AUD-005] Với các thao tác thay đổi dữ liệu, hệ thống NÊN lưu được trạng
+thái trước và sau thay đổi theo mức độ phù hợp với loại dữ liệu.
+• [AUD-006] Với các thao tác nhạy cảm như approve, cancel open order, inventory
+adjustment, waste posting, payroll approval, supplier payment và export dữ liệu,
+audit PHẢI lưu được lý do hoặc ngữ cảnh nghiệp vụ nếu có.
+10.4
+
+Tính bất biến và truy cập
+
+• [AUD-007] Audit trail PHẢI là append-only đối với người dùng nghiệp vụ
+thông thường.
+• [AUD-008] Nhật ký audit KHÔNG ĐƯỢC bị xóa hoặc ghi đè bởi các luồng
+xử lý nghiệp vụ thông thường.
+• [AUD-009] Quyền xem audit chi tiết PHẢI được kiểm soát chặt qua IAM và
+field-level access.
+• [AUD-010] Hệ thống PHẢI hỗ trợ tra cứu audit theo actor, module, hành
+động, thực thể, thời gian và scope dữ liệu.
+10.5
+
+Quy tắc nghiệp vụ chính
+
+1. [AUD-011] Thiếu audit cho một hành động bắt buộc kiểm toán PHẢI được
+xem là lỗi hệ thống cần điều tra.
+2. [AUD-012] Audit trail PHẢI tồn tại độc lập với vòng đời xóa mềm của bản
+ghi nghiệp vụ nguồn.
+3. [AUD-013] Dữ liệu audit liên quan đến tài chính, payroll, inventory và IAM
+PHẢI được giữ đủ lâu để phục vụ kiểm toán nội bộ và pháp lý theo chính sách
+retention.
+
+11
+
+Yêu cầu Phi chức năng
+
+11.1
+
+Bảo mật
+
+• [NFR-001] Toàn bộ lưu lượng đã xác thực PHẢI được bảo vệ bằng TLS 1.2
+trở lên.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+30
+
+• [NFR-002] Mọi thao tác cần bảo vệ PHẢI được kiểm tra quyền ở phía máy
+chủ theo mô hình tại Phần 3.
+• [NFR-003] Tài khoản PHẢI bị khóa tạm thời hoặc kích hoạt quy trình bảo vệ
+sau tối đa 5 lần đăng nhập thất bại liên tiếp trong một cửa sổ 15 phút.
+• [NFR-004] Dữ liệu nhạy cảm như PII, payroll, tài khoản ngân hàng và token bí
+mật PHẢI được bảo vệ khi lưu trữ và khi hiển thị theo field-level access.
+• [NFR-005] Các hành động approve, cancel, reconcile, post, pay và export
+PHẢI được audit.
+11.2
+
+Hiệu năng & Năng lực tải
+
+• [NFR-006] Truy vấn danh mục sản phẩm cho POS PHẢI đạt P95 không quá
+1.5 giây trong tải cơ sở được phê duyệt.
+• [NFR-007] Tạo order POS PHẢI đạt P95 không quá 2 giây; xác nhận thanh
+toán POS PHẢI đạt P95 không quá 3 giây trong tải cơ sở được phê duyệt.
+• [NFR-008] Đóng phiên POS PHẢI hoàn thành trong tối đa 60 giây cho một
+phiên có đến 2,000 giao dịch; đối soát phiên PHẢI hoàn thành trong tối đa 5
+phút cho cùng quy mô.
+• [NFR-009] Post goods receipt, stock count hoặc inventory adjustment với tối
+đa 200 dòng PHẢI đạt P95 không quá 5 giây.
+• [NFR-010] Payroll run cho một region tối đa 2,000 nhân viên PHẢI hoàn thành
+trong không quá 15 phút.
+• [NFR-011] Export báo cáo đến 50,000 dòng PHẢI hoàn thành trong không
+quá 2 phút ở chế độ bất đồng bộ hoặc 30 giây cho preview đồng bộ.
+• [NFR-012] Cấu hình triển khai chuẩn PHẢI hỗ trợ tối thiểu 20 người dùng vận
+hành đồng thời trên mỗi outlet và 500 người dùng đã xác thực đồng thời trên
+toàn hệ thống.
+11.3
+
+Khả năng mở rộng mục tiêu của V1
+
+• [NFR-013] V1 PHẢI được thiết kế cho quy mô mục tiêu tối thiểu: 1 Company,
+20 Region, 300 Outlet, 10,000 nhân viên, 5,000 sản phẩm bán và 20,000 nguyên
+liệu.
+• [NFR-014] Thiết kế module NÊN cho phép mở rộng thêm outlet, region và
+actor mà không phải thay đổi lại mô hình permission cốt lõi.
+11.4
+
+Tính sẵn sàng, sao lưu & khôi phục
+
+• [NFR-015] Mục tiêu uptime dịch vụ sản xuất NÊN đạt tối thiểu 99.9% theo
+tháng, không tính thời gian bảo trì đã công bố.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+31
+
+• [NFR-016] Hệ thống PHẢI có sao lưu toàn bộ dữ liệu tối thiểu hàng ngày và
+sao lưu gia tăng hoặc log tối thiểu mỗi 15 phút.
+• [NFR-017] Mục tiêu phục hồi sản xuất PHẢI đạt RPO ≤ 15 phút và RTO ≤
+4 giờ.
+• [NFR-018] Quy trình khôi phục PHẢI được kiểm thử tối thiểu hàng quý hoặc
+theo chu kỳ vận hành ngắn hơn nếu chính sách yêu cầu.
+11.5
+
+Tính toàn vẹn dữ liệu
+
+• [NFR-019] Các giao dịch liên quan đến payment, inventory, goods receipt,
+payroll approval và payroll payment PHẢI thực hiện theo nguyên tắc nguyên
+tử.
+• [NFR-020] Các API ghi cho payment, inventory, goods receipt và payroll PHẢI
+có cơ chế chống xử lý trùng ở phía máy chủ.
+• [NFR-021] Ledger kho, audit trail và các trạng thái đã post hoặc đã paid PHẢI
+có tính bất biến theo mô hình nghiệp vụ.
+• [NFR-022] Các cấu hình hiệu lực theo thời gian như giá, thuế, hợp đồng và tỷ
+giá PHẢI ngăn chồng lấp gây mơ hồ cho cùng ngữ cảnh áp dụng.
+11.6
+
+Quan sát vận hành (Observability)
+
+• [NFR-023] Hệ thống PHẢI phát sinh log có cấu trúc với correlation ID cho
+các request nghiệp vụ và batch job quan trọng.
+• [NFR-024] Hệ thống PHẢI có metric và cảnh báo cho ít nhất: auth failure rate,
+payment failure rate, goods receipt posting failure, inventory adjustment failure,
+payroll run failure và export failure.
+• [NFR-025] Batch process như payroll run, report export và session reconciliation
+PHẢI công bố trạng thái chạy, kết quả thành công/thất bại và số lần retry.
+11.7
+
+Tuân thủ, retention & traceability
+
+• [NFR-026] Audit log PHẢI được lưu tối thiểu 7 năm hoặc lâu hơn nếu yêu cầu
+pháp lý địa phương nghiêm ngặt hơn.
+• [NFR-027] Dữ liệu payroll, payment, hóa đơn nhà cung cấp và chứng từ tài
+chính PHẢI được lưu tối thiểu 7 năm hoặc theo yêu cầu pháp lý dài hơn tại
+từng vùng vận hành.
+• [NFR-028] Mọi export dữ liệu tài chính, nhân sự và audit PHẢI có khả năng
+truy vết actor, bộ lọc, thời điểm và scope dữ liệu.
+• [NFR-029] Việc xóa hoặc ẩn danh dữ liệu cá nhân sau thời hạn retention PHẢI
+không làm mất khả năng truy vết đối với dữ liệu bắt buộc lưu cho kiểm toán và
+pháp lý.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+11.8
+
+32
+
+In Scope for V1
+
+• NFR đo được cho security, performance, availability, integrity, observability và
+retention.
+• Mục tiêu hiệu năng cho POS online-only với một phiên mở duy nhất trên mỗi
+outlet tại cùng một thời điểm.
+11.9
+
+Out of Scope for V1
+
+• Cam kết active-active đa vùng địa lý.
+• Offline-first trên mọi module.
+• Real-time streaming analytics cấp enterprise.
+11.10
+
+Future Extension
+
+• Chaos testing và DR automation mức cao.
+• SLO riêng theo module và theo tier khách hàng.
+• Zero-downtime migration ở quy mô đa cụm.
+
+12
+
+Đặc tả Use Case
+
+Phần này chuẩn hóa các use case quan trọng theo cùng một cấu trúc:
+• Use Case ID
+• Use Case Name
+• Goal
+• Primary Actor
+• Supporting Actors
+• Preconditions
+• Trigger
+• Main Flow
+• Alternate Flows
+• Exception Flows
+• Postconditions
+• Business Rules Referenced
+• Audit Events
+Mục tiêu của format này là:
+• giảm mơ hồ khi triển khai;
+• giúp QA suy ra test scenario trực tiếp từ tài liệu;
+• đảm bảo actor, scope và business rule nhất quán với phần SRS lõi.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+12.1
+12.1.1
+
+33
+
+IAM và Quản trị người dùng
+UC-IAM-01 – Tạo tài khoản người dùng
+
+Use Case ID:
+UC-IAM-01
+Use Case Name:
+Tạo tài khoản người dùng
+Goal:
+Tạo tài khoản mới cho actor nghiệp vụ hợp lệ và đưa tài khoản vào trạng thái sẵn
+sàng cấp quyền.
+Primary Actor:
+System Admin
+Supporting Actors:
+HR
+Preconditions:
+Hồ sơ nhân sự hoặc thông tin actor nguồn đã tồn tại và actor thực hiện có quyền
+quản trị người dùng ở scope phù hợp.
+Trigger:
+Actor chọn chức năng tạo tài khoản người dùng mới.
+Main Flow
+1. System Admin nhập thông tin tài khoản và actor nghiệp vụ đích.
+2. Hệ thống kiểm tra tính duy nhất của tên đăng nhập và tính hợp lệ của trạng
+thái tài khoản khởi tạo.
+3. System Admin lưu tài khoản ở trạng thái phù hợp.
+4. Hệ thống tạo tài khoản, ghi nhận người tạo và thời điểm tạo.
+Alternate Flows
+• HR cung cấp hoặc xác nhận dữ liệu nhân sự nền trước khi tài khoản được tạo
+chính thức.
+Exception Flows
+• Tên đăng nhập trùng hoặc actor nguồn không hợp lệ: hệ thống từ chối lưu.
+• Actor tạo tài khoản vượt ngoài scope quản trị được cấp: hệ thống từ chối thao
+tác.
+Postconditions:
+Tài khoản mới tồn tại, có actor nghiệp vụ chính và sẵn sàng cho bước gán vai
+trò/phạm vi.
+Business Rules Referenced:
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+34
+
+[IAM-001], [IAM-002], [IAM-005]
+Audit Events:
+Tạo tài khoản, actor tạo, trạng thái ban đầu, scope áp dụng.
+12.1.2
+
+UC-IAM-02 – Gán vai trò và phạm vi truy cập
+
+Use Case ID:
+UC-IAM-02
+Use Case Name:
+Gán vai trò và phạm vi truy cập
+Goal:
+Cấp đúng action permission và data scope cho một người dùng.
+Primary Actor:
+System Admin
+Supporting Actors:
+Không có
+Preconditions:
+Tài khoản người dùng đã tồn tại và actor thực hiện có quyền quản trị IAM ở scope
+phù hợp.
+Trigger:
+Actor chọn người dùng và mở màn hình role/scope assignment.
+Main Flow
+1. System Admin chọn người dùng đích.
+2. Hệ thống hiển thị các vai trò, direct permission và phạm vi dữ liệu khả dụng.
+3. System Admin gán vai trò và scope tương ứng.
+4. Hệ thống tính lại quyền hiệu lực và lưu cấu hình phân quyền mới.
+Alternate Flows
+• Actor có thể thêm direct permission như ngoại lệ có kiểm soát nếu chính sách
+cho phép.
+Exception Flows
+• Scope được gán vượt ngoài quyền của actor quản trị: hệ thống từ chối lưu.
+• Vai trò không còn hiệu lực: hệ thống cảnh báo và không cho gán mới.
+Postconditions:
+Người dùng có bộ role/scope mới được lưu và sẽ có hiệu lực theo chính sách phiên
+đăng nhập.
+Business Rules Referenced:
+[IAM-016], [IAM-017], [IAM-019], [IAM-024], [IAM-025]
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+35
+
+Audit Events:
+Thay đổi role, direct permission, scope và nguồn cấp quyền.
+12.1.3
+
+UC-IAM-03 – Vô hiệu hóa tài khoản người dùng
+
+Use Case ID:
+UC-IAM-03
+Use Case Name:
+Vô hiệu hóa tài khoản người dùng
+Goal:
+Ngăn tài khoản tiếp tục truy cập hệ thống mà không xóa lịch sử nghiệp vụ.
+Primary Actor:
+System Admin
+Supporting Actors:
+HR
+Preconditions:
+Tài khoản đích tồn tại và không ở trạng thái đã bị xóa mềm.
+Trigger:
+Actor chọn chức năng vô hiệu hóa tài khoản.
+Main Flow
+1. System Admin chọn tài khoản đích.
+2. Hệ thống hiển thị trạng thái hiện tại và yêu cầu xác nhận.
+3. Actor xác nhận vô hiệu hóa.
+4. Hệ thống cập nhật trạng thái tài khoản và thu hồi quyền truy cập theo chính
+sách phiên.
+Alternate Flows
+• HR yêu cầu vô hiệu hóa do thay đổi quan hệ lao động; System Admin thực hiện
+bước kỹ thuật cuối cùng.
+Exception Flows
+• Tài khoản là tài khoản quản trị hệ thống cuối cùng còn hoạt động: hệ thống chặn
+thao tác nếu chính sách an toàn yêu cầu.
+Postconditions:
+Tài khoản không thể tiếp tục dùng cho đăng nhập mới.
+Business Rules Referenced:
+[IAM-003], [IAM-004], [IAM-018]
+Audit Events:
+Thay đổi trạng thái tài khoản, actor thực hiện, lý do nếu có.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+12.1.4
+
+36
+
+UC-IAM-04 – Người dùng đăng nhập
+
+Use Case ID:
+UC-IAM-04
+Use Case Name:
+Người dùng đăng nhập
+Goal:
+Xác thực actor hợp lệ và cấp phiên truy cập có scope phù hợp.
+Primary Actor:
+Mọi actor hệ thống nội bộ
+Supporting Actors:
+Không có
+Preconditions:
+Tài khoản tồn tại, đang hoạt động và chưa bị khóa hoặc treo.
+Trigger:
+Người dùng gửi tên đăng nhập và thông tin xác thực.
+Main Flow
+1. Người dùng nhập thông tin đăng nhập.
+2. Hệ thống xác thực thông tin đăng nhập và trạng thái tài khoản.
+3. Hệ thống tính quyền hiệu lực từ role, direct permission và scope.
+4. Hệ thống tạo phiên truy cập và chuyển người dùng đến chức năng phù hợp.
+Alternate Flows
+• Nếu actor có nhiều scope hợp lệ, hệ thống có thể yêu cầu người dùng chọn ngữ
+cảnh làm việc mặc định.
+Exception Flows
+• Thông tin đăng nhập sai: hệ thống từ chối truy cập và tăng bộ đếm thất bại.
+• Tài khoản bị locked hoặc suspended: hệ thống từ chối đăng nhập.
+Postconditions:
+Người dùng có phiên truy cập hợp lệ hoặc bị từ chối với lý do kiểm soát truy cập.
+Business Rules Referenced:
+[IAM-006], [IAM-007], [IAM-008], [IAM-022], [IAM-024]
+Audit Events:
+Đăng nhập thành công/thất bại, nguồn xác thực, lý do từ chối nếu có.
+12.1.5
+
+UC-IAM-05 – Người dùng đăng xuất
+
+Use Case ID:
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+37
+
+UC-IAM-05
+Use Case Name:
+Người dùng đăng xuất
+Goal:
+Kết thúc phiên truy cập hiện tại một cách an toàn.
+Primary Actor:
+Mọi actor hệ thống nội bộ
+Supporting Actors:
+Không có
+Preconditions:
+Người dùng đang có phiên truy cập hợp lệ.
+Trigger:
+Người dùng chọn chức năng đăng xuất hoặc phiên bị buộc thu hồi.
+Main Flow
+1. Người dùng hoặc hệ thống kích hoạt đăng xuất.
+2. Hệ thống thu hồi hoặc đánh dấu chấm dứt phiên hiện tại.
+3. Hệ thống chuyển người dùng về màn hình đăng nhập.
+Alternate Flows
+• Hệ thống tự động đăng xuất khi phiên hết hạn hoặc khi quyền bị thu hồi.
+Exception Flows
+• Phiên đã hết hạn trước đó: hệ thống vẫn hoàn tất thao tác kết thúc phiên và ghi
+nhận sự kiện.
+Postconditions:
+Phiên hiện tại không còn hiệu lực sử dụng.
+Business Rules Referenced:
+[IAM-009], [IAM-010]
+Audit Events:
+Đăng xuất, thu hồi phiên, actor và thời điểm.
+12.2
+12.2.1
+
+Nhân sự & Chấm công
+UC-HR-01 – Quản lý hợp đồng lao động
+
+Use Case ID:
+UC-HR-01
+Use Case Name:
+Quản lý hợp đồng lao động
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+38
+
+Goal:
+Tạo mới hoặc cập nhật hợp đồng lao động hợp lệ cho một nhân viên.
+Primary Actor:
+HR
+Supporting Actors:
+System Admin
+Preconditions:
+Hồ sơ nhân sự đã tồn tại và actor có quyền quản lý hợp đồng ở cấp Company.
+Trigger:
+HR tạo hợp đồng mới hoặc điều chỉnh hợp đồng hiện hữu.
+Main Flow
+1. HR chọn nhân viên đích.
+2. HR nhập loại hợp đồng, hình thức trả lương, mức lương cơ sở và ngày hiệu lực.
+3. Hệ thống kiểm tra chồng lấp hiệu lực và tính đầy đủ của dữ liệu.
+4. Hệ thống lưu hợp đồng và cập nhật trạng thái hiệu lực tương ứng.
+Alternate Flows
+• HR cập nhật hợp đồng do thay đổi mức lương hoặc hình thức trả lương trong kỳ.
+Exception Flows
+• Hợp đồng mới chồng lấp với hợp đồng active hiện có gây mơ hồ tính lương: hệ
+thống từ chối lưu.
+Postconditions:
+Hợp đồng hợp lệ được lưu và sẵn sàng làm đầu vào cho payroll khi đến kỳ.
+Business Rules Referenced:
+[HR-001], [HR-002], [HR-003], [HR-004], [HR-021]
+Audit Events:
+Tạo/sửa hợp đồng, actor thực hiện, thay đổi hiệu lực và thông tin lương nhạy cảm
+theo chính sách masking.
+12.2.2
+
+UC-HR-02 – Phân công nhân viên vào ca
+
+Use Case ID:
+UC-HR-02
+Use Case Name:
+Phân công nhân viên vào ca
+Goal:
+Lập lịch làm việc hợp lệ cho nhân viên tại outlet.
+Primary Actor:
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+39
+
+Outlet Manager
+Supporting Actors:
+Không có
+Preconditions:
+Outlet Manager có quyền trên outlet đích; mẫu ca đã tồn tại; nhân viên thuộc
+outlet hoặc được phân công hợp lệ.
+Trigger:
+Outlet Manager chọn ngày làm việc và mẫu ca để phân công.
+Main Flow
+1. Outlet Manager chọn ngày làm việc, ca làm và nhân viên.
+2. Hệ thống kiểm tra xung đột ca và trạng thái hiệu lực của ca.
+3. Outlet Manager xác nhận phân công.
+4. Hệ thống lưu lịch phân ca ở trạng thái phù hợp.
+Alternate Flows
+• Outlet Manager cập nhật hoặc hủy lịch phân ca trước khi ca diễn ra.
+Exception Flows
+• Nhân viên bị phân công trùng ca hoặc outlet ngoài scope: hệ thống từ chối lưu.
+Postconditions:
+Bản ghi phân ca hợp lệ được tạo cho nhân viên.
+Business Rules Referenced:
+[HR-006], [HR-008], [HR-009], [HR-010]
+Audit Events:
+Tạo, sửa hoặc hủy phân ca.
+12.2.3
+
+UC-HR-03 – Ghi nhận chấm công vào/ra ca
+
+Use Case ID:
+UC-HR-03
+Use Case Name:
+Ghi nhận chấm công vào/ra ca
+Goal:
+Ghi nhận thời điểm làm việc thực tế của nhân viên cho ca được phân công.
+Primary Actor:
+Staff
+Supporting Actors:
+Outlet Manager
+Preconditions:
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+40
+
+Nhân viên có ca hợp lệ hoặc thuộc quy trình ngoại lệ được cho phép.
+Trigger:
+Staff chọn chức năng vào ca hoặc ra ca.
+Main Flow
+1. Staff mở chức năng chấm công của chính mình.
+2. Hệ thống xác định ca đang áp dụng.
+3. Staff xác nhận vào ca hoặc ra ca.
+4. Hệ thống lưu thời điểm chấm công và trạng thái chuyên cần sơ bộ.
+Alternate Flows
+• Nếu chưa có ca hợp lệ, hệ thống có thể ghi nhận theo quy trình ngoại lệ chờ
+Outlet Manager xử lý.
+Exception Flows
+• Staff cố chấm công thay cho người khác hoặc ngoài scope tài khoản: hệ thống từ
+chối thao tác.
+Postconditions:
+Sự kiện chấm công được lưu, sẵn sàng cho bước phê duyệt nếu cần.
+Business Rules Referenced:
+[HR-011], [HR-012], [HR-020]
+Audit Events:
+Chấm công vào ca, ra ca và thao tác ngoại lệ.
+12.2.4
+
+UC-HR-04 – Phê duyệt chấm công
+
+Use Case ID:
+UC-HR-04
+Use Case Name:
+Phê duyệt chấm công
+Goal:
+Xác nhận dữ liệu chuyên cần chính thức cho payroll.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+HR
+Preconditions:
+Bản ghi chấm công tồn tại, thuộc outlet của actor và chưa được phê duyệt cuối
+cùng.
+Trigger:
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+41
+
+Outlet Manager mở danh sách chấm công cần rà soát.
+Main Flow
+1. Outlet Manager xem chi tiết chấm công và ngoại lệ nếu có.
+2. Outlet Manager chọn phê duyệt bản ghi hợp lệ.
+3. Hệ thống cập nhật trạng thái chấm công thành đã phê duyệt.
+4. Hệ thống đưa dữ liệu vào tập đầu vào sẵn sàng cho payroll.
+Alternate Flows
+• Outlet Manager từ chối bản ghi và yêu cầu nhân viên hoặc HR cập nhật lại dữ
+liệu nền nếu cần.
+Exception Flows
+• Actor phê duyệt ngoài scope outlet hoặc bản ghi đã được dùng cho payroll đã
+submit: hệ thống yêu cầu đi qua quy trình điều chỉnh.
+Postconditions:
+Bản ghi chấm công được phê duyệt hoặc bị từ chối với lý do rõ ràng.
+Business Rules Referenced:
+[HR-013], [HR-014], [HR-015], [HR-016], [HR-020]
+Audit Events:
+Phê duyệt, từ chối và lý do xử lý ngoại lệ chấm công.
+12.3
+12.3.1
+
+Sản phẩm, Công thức & Định giá
+UC-PRD-01 – Quản lý sản phẩm
+
+Use Case ID:
+UC-PRD-01
+Use Case Name:
+Quản lý sản phẩm
+Goal:
+Tạo mới hoặc cập nhật product master dùng cho bán hàng tại các outlet.
+Primary Actor:
+Product Manager
+Supporting Actors:
+System Admin
+Preconditions:
+Actor có quyền quản lý product master ở cấp Company.
+Trigger:
+Product Manager tạo hoặc chỉnh sửa một sản phẩm.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+42
+
+Main Flow
+1. Product Manager nhập hoặc cập nhật thông tin sản phẩm.
+2. Hệ thống kiểm tra mã sản phẩm, trạng thái và nhóm sản phẩm.
+3. Product Manager lưu bản ghi sản phẩm.
+4. Hệ thống cập nhật phiên bản dữ liệu sản phẩm.
+Alternate Flows
+• Product Manager chuyển trạng thái sản phẩm từ draft sang active khi dữ liệu
+thương mại đã sẵn sàng.
+Exception Flows
+• Mã sản phẩm trùng hoặc trạng thái chuyển không hợp lệ: hệ thống từ chối lưu.
+Postconditions:
+Product master được lưu và sẵn sàng cho cấu hình công thức, thuế và giá.
+Business Rules Referenced:
+[PRD-005], [PRD-006], [PRD-017]
+Audit Events:
+Tạo/sửa sản phẩm, đổi trạng thái sản phẩm.
+12.3.2
+
+UC-PRD-02 – Quản lý công thức sản phẩm
+
+Use Case ID:
+UC-PRD-02
+Use Case Name:
+Quản lý công thức sản phẩm
+Goal:
+Định nghĩa hoặc thay đổi công thức hiệu lực của sản phẩm.
+Primary Actor:
+Product Manager
+Supporting Actors:
+Không có
+Preconditions:
+Sản phẩm và nguyên liệu nguồn đã tồn tại hợp lệ.
+Trigger:
+Product Manager tạo mới hoặc sửa một phiên bản công thức.
+Main Flow
+1. Product Manager chọn sản phẩm đích.
+2. Product Manager khai báo các nguyên liệu và định lượng.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+43
+
+3. Hệ thống kiểm tra tính hợp lệ của nguyên liệu và định lượng.
+4. Product Manager lưu công thức và kích hoạt theo ngày hiệu lực.
+Alternate Flows
+• Product Manager tạo phiên bản công thức mới nhưng giữ công thức hiện tại đến
+trước ngày hiệu lực mới.
+Exception Flows
+• Công thức thiếu nguyên liệu hoặc dùng nguyên liệu đã discontinued: hệ thống
+từ chối kích hoạt.
+Postconditions:
+Công thức hợp lệ được lưu và có thể được dùng để tính tiêu hao nguyên liệu cho
+giao dịch bán.
+Business Rules Referenced:
+[PRD-009], [PRD-010], [PRD-011], [PRD-012], [PRD-019]
+Audit Events:
+Tạo/sửa công thức, kích hoạt phiên bản công thức.
+12.3.3
+
+UC-PRD-03 – Công bố giá và phạm vi bán theo outlet
+
+Use Case ID:
+UC-PRD-03
+Use Case Name:
+Công bố giá và phạm vi bán theo outlet
+Goal:
+Thiết lập giá bán và outlet availability để sản phẩm được bán đúng nơi, đúng thời
+điểm.
+Primary Actor:
+Product Manager
+Supporting Actors:
+Outlet Manager
+Preconditions:
+Sản phẩm đã tồn tại và có trạng thái thương mại phù hợp.
+Trigger:
+Product Manager cấu hình giá hoặc phạm vi bán cho sản phẩm.
+Main Flow
+1. Product Manager chọn sản phẩm và outlet hoặc phạm vi outlet áp dụng.
+2. Product Manager nhập giá bán và ngày hiệu lực.
+3. Hệ thống kiểm tra chồng lấp hiệu lực và tính hợp lệ của cấu hình.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+44
+
+4. Hệ thống công bố giá và phạm vi bán mới.
+Alternate Flows
+• Outlet Manager xem cấu hình được công bố cho outlet của mình để chuẩn bị bán
+hàng.
+Exception Flows
+• Hai mức giá cùng hiệu lực cho cùng một product/outlet: hệ thống từ chối lưu.
+Postconditions:
+Sản phẩm có giá bán và outlet availability hợp lệ cho POS.
+Business Rules Referenced:
+[PRD-008], [PRD-013], [PRD-014], [PRD-015], [PRD-016]
+Audit Events:
+Công bố giá, thay đổi phạm vi bán và thay đổi hiệu lực.
+12.4
+12.4.1
+
+Thu mua
+UC-PROC-01 – Tạo và gửi Purchase Order
+
+Use Case ID:
+UC-PROC-01
+Use Case Name:
+Tạo và gửi Purchase Order
+Goal:
+Tạo PO hợp lệ cho outlet và chuyển PO sang bước rà soát tài chính.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+Regional Finance
+Preconditions:
+Outlet Manager có quyền procurement tại outlet; supplier đã được phê duyệt; mặt
+hàng hợp lệ; outlet đang hoạt động.
+Trigger:
+Outlet Manager tạo PO mới cho outlet.
+Main Flow
+1. Outlet Manager chọn supplier và nhập các dòng hàng cần mua.
+2. Hệ thống kiểm tra trạng thái supplier, số lượng và ngày giao dự kiến.
+3. Outlet Manager lưu PO ở trạng thái draft.
+4. Outlet Manager gửi PO để rà soát.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+45
+
+5. Hệ thống chuyển PO sang submitted.
+Alternate Flows
+• Outlet Manager cập nhật PO khi còn ở trạng thái draft.
+Exception Flows
+• Supplier không hợp lệ hoặc dữ liệu dòng hàng thiếu: hệ thống không cho gửi PO.
+Postconditions:
+PO được tạo và ở trạng thái submitted hoặc draft nếu chưa gửi.
+Business Rules Referenced:
+[PROC-001], [PROC-003] đến [PROC-007], [PROC-021]
+Audit Events:
+Tạo PO, cập nhật PO, gửi PO để rà soát.
+12.4.2
+
+UC-PROC-02 – Rà soát và phê duyệt Purchase Order
+
+Use Case ID:
+UC-PROC-02
+Use Case Name:
+Rà soát và phê duyệt Purchase Order
+Goal:
+Rà soát PO trong phạm vi region subtree và quyết định phê duyệt tài chính trước
+bước issue.
+Primary Actor:
+Regional Finance
+Supporting Actors:
+Outlet Manager
+Preconditions:
+PO ở trạng thái submitted và actor có scope region_subtree bao phủ outlet đích.
+Trigger:
+Regional Finance mở danh sách PO chờ rà soát.
+Main Flow
+1. Regional Finance xem chi tiết PO.
+2. Regional Finance kiểm tra outlet, supplier, mục đích chi tiêu và dữ liệu thương
+mại của PO.
+3. Regional Finance phê duyệt PO.
+4. Hệ thống chuyển PO sang approved.
+Alternate Flows
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+46
+
+• Regional Finance trả PO về cho Outlet Manager để cập nhật và gửi lại.
+Exception Flows
+• Actor nằm ngoài scope region subtree hoặc supplier không còn hợp lệ: hệ thống
+từ chối thao tác.
+Postconditions:
+PO được approved và chờ Outlet Manager issue cho supplier, hoặc được trả lại
+để chỉnh sửa với lý do rõ ràng.
+Business Rules Referenced:
+[PROC-003], [PROC-004], [PROC-008], [PROC-022]
+Audit Events:
+Phê duyệt PO, trả lại PO, actor rà soát, lý do xử lý.
+12.4.3
+
+UC-PROC-03 – Issue Purchase Order cho nhà cung cấp
+
+Use Case ID:
+UC-PROC-03
+Use Case Name:
+Issue Purchase Order cho nhà cung cấp
+Goal:
+Chuyển PO đã approved sang ordered bằng hành động issue chính thức cho
+supplier.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+Không có
+Preconditions:
+PO ở trạng thái approved; Outlet Manager có quyền procurement tại outlet;
+supplier vẫn active và hợp lệ.
+Trigger:
+Outlet Manager quyết định issue PO cho supplier.
+Main Flow
+1. Outlet Manager mở chi tiết PO đã approved.
+2. Outlet Manager kiểm tra snapshot thương mại và thông tin supplier.
+3. Outlet Manager xác nhận issue/send PO cho supplier.
+4. Hệ thống ghi audit, khóa các trường thương mại cốt lõi và chuyển PO sang
+ordered.
+Alternate Flows
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+47
+
+• Outlet Manager tạm dừng thao tác; PO giữ nguyên trạng thái approved.
+Exception Flows
+• PO không còn ở trạng thái approved hoặc supplier không còn hợp lệ: hệ thống
+từ chối thao tác.
+Postconditions:
+PO ở trạng thái ordered và sẵn sàng cho goods receipt.
+Business Rules Referenced:
+[PROC-003], [PROC-008], [PROC-009], [PROC-010], [PROC-021]
+Audit Events:
+Issue PO, actor issue, thời điểm issue, supplier đích.
+12.4.4
+
+UC-PROC-04 – Ghi nhận Goods Receipt
+
+Use Case ID:
+UC-PROC-04
+Use Case Name:
+Ghi nhận Goods Receipt
+Goal:
+Xác nhận số lượng hàng thực nhận tại outlet và cập nhật tồn kho.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+Regional Finance
+Preconditions:
+PO ở trạng thái ordered, hoặc có quy trình nhận hàng ngoại lệ được cho phép;
+outlet đang hoạt động.
+Trigger:
+Hàng được giao tới outlet.
+Main Flow
+1. Outlet Manager chọn PO hoặc chứng từ nguồn cần nhận hàng.
+2. Outlet Manager nhập số lượng thực nhận và ghi chú chênh lệch nếu có.
+3. Hệ thống lưu GR ở trạng thái received.
+4. Outlet Manager xác nhận post GR.
+5. Hệ thống tạo inventory transaction nhập hàng và cập nhật trạng thái PO.
+Alternate Flows
+• Outlet Manager ghi nhận nhận thiếu hoặc nhận một phần; hệ thống cập nhật
+PO sang partially_received.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+48
+
+Exception Flows
+• GR đã post trước đó hoặc số lượng nhập không hợp lệ: hệ thống từ chối post.
+Postconditions:
+GR được post, tồn kho tăng và PO được cập nhật theo số lượng thực nhận.
+Business Rules Referenced:
+[PROC-011], [PROC-012], [PROC-013], [PROC-014], [PROC-015], [INV006], [INV-007]
+Audit Events:
+Tạo GR, post GR, chênh lệch nhận hàng.
+12.4.5 UC-PROC-05 – Rà soát yêu cầu thanh toán và ghi nhận chi trả nhà
+cung cấp
+Use Case ID:
+UC-PROC-05
+Use Case Name:
+Rà soát yêu cầu thanh toán và ghi nhận chi trả nhà cung cấp
+Goal:
+Xác nhận hóa đơn và ghi nhận thanh toán nhà cung cấp theo đúng scope tài chính.
+Primary Actor:
+Regional Finance
+Supporting Actors:
+Finance, Outlet Manager
+Preconditions:
+Hóa đơn nhà cung cấp đã được ghi nhận và có đối chiếu nguồn phù hợp theo chính
+sách.
+Trigger:
+Regional Finance mở yêu cầu thanh toán hoặc hóa đơn chờ xử lý.
+Main Flow
+1. Regional Finance rà soát hóa đơn, PO và GR nguồn trong region subtree được
+giao.
+2. Regional Finance phê duyệt yêu cầu thanh toán.
+3. Finance ghi nhận thanh toán cuối cùng cho nhà cung cấp.
+4. Hệ thống liên kết thanh toán với hóa đơn tương ứng.
+Alternate Flows
+• Regional Finance yêu cầu Outlet Manager bổ sung chứng từ hoặc giải trình chênh
+lệch trước khi phê duyệt.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+49
+
+Exception Flows
+• Hóa đơn không khớp với chứng từ nguồn hoặc actor nằm ngoài scope dữ liệu: hệ
+thống từ chối xử lý.
+Postconditions:
+Yêu cầu thanh toán được phê duyệt hoặc từ chối; thanh toán cuối cùng được Finance
+ghi nhận khi hợp lệ.
+Business Rules Referenced:
+[PROC-016] đến [PROC-020], [PROC-022], [PROC-023]
+Audit Events:
+Phê duyệt thanh toán, từ chối thanh toán, ghi nhận chi trả nhà cung cấp.
+12.5
+12.5.1
+
+Bán hàng & POS
+UC-SAL-01 – Mở phiên POS
+
+Use Case ID:
+UC-SAL-01
+Use Case Name:
+Mở phiên POS
+Goal:
+Kích hoạt phiên POS để outlet bắt đầu nhận order trong ngày nghiệp vụ.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+Staff
+Preconditions:
+Outlet đang hoạt động, actor có quyền manager-level tại outlet, POS có kết nối
+hợp lệ và chưa có phiên POS mở tại outlet.
+Trigger:
+Outlet Manager chọn chức năng mở phiên POS.
+Main Flow
+1. Outlet Manager nhập thông tin mở phiên.
+2. Hệ thống kiểm tra điều kiện một phiên mở duy nhất tại outlet.
+3. Hệ thống tạo phiên POS ở trạng thái open.
+4. Staff bắt đầu sử dụng phiên vừa mở để tạo order.
+Alternate Flows
+• Outlet Manager tiếp tục sử dụng phiên đã mở nếu hệ thống phát hiện đang có
+phiên hợp lệ chưa được đóng.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+50
+
+Exception Flows
+• Đã tồn tại phiên mở khác hoặc POS không có kết nối hợp lệ: hệ thống từ chối
+tạo phiên mới.
+Postconditions:
+Outlet có phiên POS open sẵn sàng nhận order.
+Business Rules Referenced:
+[SAL-001], [SAL-002], [SAL-003], [SAL-004], [SAL-005], [SAL-022]
+Audit Events:
+Mở phiên POS, actor mở phiên, thời điểm mở phiên.
+12.5.2
+
+UC-SAL-02 – Tạo và cập nhật order POS
+
+Use Case ID:
+UC-SAL-02
+Use Case Name:
+Tạo và cập nhật order POS
+Goal:
+Ghi nhận nhu cầu mua hàng của khách tại outlet và hoàn thiện nội dung order
+trước khi thanh toán.
+Primary Actor:
+Staff
+Supporting Actors:
+Customer
+Preconditions:
+Phiên POS đang mở; Staff có quyền POS tại outlet.
+Trigger:
+Staff bắt đầu tạo order mới hoặc mở lại order đang ở trạng thái open.
+Main Flow
+1. Staff chọn sản phẩm từ menu outlet.
+2. Hệ thống tính giá, thuế và tổng tiền hiện hành của order.
+3. Staff thêm, cập nhật hoặc xóa order line khi order chưa hoàn tất thanh toán.
+4. Hệ thống lưu order ở trạng thái open.
+Alternate Flows
+• Customer chỉ tham gia bước xem menu hoặc xem chi tiết thanh toán để xác nhận
+thông tin mua hàng.
+Exception Flows
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+51
+
+• Sản phẩm không còn hiệu lực tại outlet hoặc không có giá bán hợp lệ: hệ thống
+không cho thêm vào order.
+Postconditions:
+Order open được tạo hoặc cập nhật với các tổng tiền hợp lệ.
+Business Rules Referenced:
+[SAL-007], [SAL-008], [SAL-009], [SAL-010], [SAL-011], [SAL-013], [SAL014]
+Audit Events:
+Tạo order, cập nhật order line trong trạng thái mở.
+12.5.3
+
+UC-SAL-03 – Xử lý thanh toán và hoàn tất sale
+
+Use Case ID:
+UC-SAL-03
+Use Case Name:
+Xử lý thanh toán và hoàn tất sale
+Goal:
+Thu tiền hợp lệ và chuyển order sang trạng thái hoàn tất.
+Primary Actor:
+Staff
+Supporting Actors:
+Customer
+Preconditions:
+Order ở trạng thái open; phiên POS đang mở.
+Trigger:
+Staff chọn chức năng thanh toán cho order.
+Main Flow
+1. Staff chọn phương thức thanh toán và nhập số tiền tương ứng.
+2. Hệ thống ghi nhận giao dịch thanh toán.
+3. Hệ thống kiểm tra điều kiện đủ để hoàn tất order.
+4. Hệ thống chuyển order sang completed.
+5. Hệ thống tạo payment record, sale record và truy vết tiêu thụ nguyên liệu.
+Alternate Flows
+• Staff sử dụng split payment nếu khách thanh toán bằng nhiều phương thức.
+Exception Flows
+• Thanh toán thất bại hoặc chưa đủ số tiền: hệ thống giữ order ở trạng thái open
+để xử lý tiếp.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+52
+
+Postconditions:
+Order được hoàn tất hoặc vẫn ở trạng thái open.
+Business Rules Referenced:
+[SAL-015], [SAL-016], [SAL-017], [SAL-018], [SAL-019], [SAL-020], [SAL021], [INV-007]
+Audit Events:
+Thanh toán thành công/thất bại, hoàn tất sale, actor thực hiện, chi tiết thanh toán.
+12.5.4
+
+UC-SAL-04 – Hủy order trước khi hoàn tất thanh toán
+
+Use Case ID:
+UC-SAL-04
+Use Case Name:
+Hủy order trước khi hoàn tất thanh toán
+Goal:
+Xử lý sai sót trên order đang mở mà không phát sinh sale hoàn tất.
+Primary Actor:
+Staff
+Supporting Actors:
+Outlet Manager
+Preconditions:
+Order ở trạng thái open; order chưa hoàn tất thanh toán; actor có quyền POS tại
+outlet.
+Trigger:
+Actor chọn hủy order đang mở.
+Main Flow
+1. Actor mở order đích.
+2. Hệ thống kiểm tra trạng thái order và điều kiện hủy.
+3. Actor xác nhận hủy order.
+4. Hệ thống chuyển order sang cancelled.
+Alternate Flows
+• Outlet Manager hỗ trợ xử lý order bị treo hoặc order cần rà soát trước khi hủy.
+Exception Flows
+• Order đã hoàn tất thanh toán hoặc đã bị hủy trước đó: hệ thống từ chối thao
+tác.
+Postconditions:
+Order được cancelled với đầy đủ truy vết thao tác.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+53
+
+Business Rules Referenced:
+[SAL-011], [SAL-012], [SAL-022], [SAL-025]
+Audit Events:
+Hủy order đang mở, actor thực hiện, thời điểm hủy.
+12.5.5
+
+UC-SAL-05 – Đóng và đối soát phiên POS
+
+Use Case ID:
+UC-SAL-05
+Use Case Name:
+Đóng và đối soát phiên POS
+Goal:
+Chốt phiên POS cuối ca mà không làm thay đổi lịch sử sale record.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+Staff
+Preconditions:
+Phiên POS ở trạng thái open hoặc closed và actor có quyền manager-level tại
+outlet.
+Trigger:
+Outlet Manager chọn chức năng đóng hoặc đối soát phiên.
+Main Flow
+1. Outlet Manager rà soát các order còn mở và yêu cầu xử lý dứt điểm nếu có.
+2. Outlet Manager đóng phiên POS.
+3. Hệ thống khóa nhận order mới trên phiên vừa đóng.
+4. Outlet Manager nhập số liệu quyết toán và xác nhận đối soát.
+5. Hệ thống ghi nhận phiên ở trạng thái reconciled.
+Alternate Flows
+• Nếu có chênh lệch, Outlet Manager ghi nhận lý do và hệ thống lưu sự khác biệt
+để rà soát tài chính.
+Exception Flows
+• Vẫn còn order chưa xử lý xong: hệ thống không cho đóng phiên.
+Postconditions:
+Phiên POS được đóng hoặc đối soát thành công với truy vết chênh lệch nếu có.
+Business Rules Referenced:
+[SAL-022], [SAL-023], [SAL-024], [SAL-027]
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+54
+
+Audit Events:
+Đóng phiên, đối soát phiên, chênh lệch và actor xử lý.
+12.6
+12.6.1
+
+Kho tại Outlet
+UC-INV-01 – Ghi nhận inventory adjustment
+
+Use Case ID:
+UC-INV-01
+Use Case Name:
+Ghi nhận inventory adjustment
+Goal:
+Điều chỉnh tăng hoặc giảm tồn kho tại outlet có kiểm soát.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+Không có
+Preconditions:
+Actor có quyền warehouse tại outlet; mặt hàng tồn kho tồn tại; outlet đang hoạt
+động.
+Trigger:
+Outlet Manager cần điều chỉnh tồn kho do sai lệch vận hành.
+Main Flow
+1. Outlet Manager chọn mặt hàng và loại điều chỉnh.
+2. Outlet Manager nhập số lượng và lý do điều chỉnh.
+3. Hệ thống kiểm tra điều kiện tồn kho và tính hợp lệ của chứng từ.
+4. Outlet Manager xác nhận post chứng từ.
+5. Hệ thống tạo inventory transaction điều chỉnh và cập nhật stock balance.
+Alternate Flows
+• Outlet Manager có thể lưu chứng từ ở trạng thái draft để hoàn thiện trước khi
+post.
+Exception Flows
+• Điều chỉnh làm tồn kho âm mà không có quyền ngoại lệ: hệ thống từ chối post.
+Postconditions:
+Adjustment được lưu ở trạng thái draft hoặc đã posted với ledger tương ứng.
+Business Rules Referenced:
+[INV-013], [INV-014], [INV-016], [INV-017], [INV-023], [INV-025]
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+55
+
+Audit Events:
+Tạo, post hoặc hủy inventory adjustment.
+12.6.2
+
+UC-INV-02 – Ghi nhận waste
+
+Use Case ID:
+UC-INV-02
+Use Case Name:
+Ghi nhận waste
+Goal:
+Ghi nhận nguyên liệu hỏng, hao hụt hoặc phải loại bỏ tại outlet.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+Không có
+Preconditions:
+Actor có quyền warehouse tại outlet; mặt hàng tồn kho hợp lệ.
+Trigger:
+Outlet Manager phát hiện nguyên liệu cần loại bỏ.
+Main Flow
+1. Outlet Manager chọn nguyên liệu cần ghi nhận waste.
+2. Outlet Manager nhập số lượng, lý do và thời điểm nghiệp vụ.
+3. Hệ thống kiểm tra tính hợp lệ của lượng waste.
+4. Hệ thống post waste record và tạo inventory transaction giảm tồn với cùng actor
+nguồn.
+Alternate Flows
+• Outlet Manager có thể lưu waste record ở trạng thái draft trước khi post nếu
+chưa đủ thông tin.
+Exception Flows
+• Số lượng waste không hợp lệ hoặc làm âm tồn kho trái policy: hệ thống từ chối
+post.
+Postconditions:
+Waste record được ghi nhận và tồn kho được cập nhật đúng ledger.
+Business Rules Referenced:
+[INV-011], [INV-012], [INV-015], [INV-016], [INV-017], [INV-023]
+Audit Events:
+Ghi nhận waste, actor thực hiện, lý do waste.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+12.6.3
+
+56
+
+UC-INV-03 – Tạo và nhập kết quả stock count
+
+Use Case ID:
+UC-INV-03
+Use Case Name:
+Tạo và nhập kết quả stock count
+Goal:
+Thực hiện kiểm kê kho tại outlet và chuẩn bị dữ liệu chênh lệch để chốt.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+Không có
+Preconditions:
+Actor có quyền warehouse tại outlet; outlet đang hoạt động.
+Trigger:
+Outlet Manager bắt đầu một đợt kiểm kê kho.
+Main Flow
+1. Outlet Manager tạo stock count sheet.
+2. Hệ thống chụp snapshot số lượng hệ thống tại thời điểm bắt đầu.
+3. Outlet Manager nhập số lượng thực tế cho từng mặt hàng.
+4. Hệ thống tính chênh lệch giữa số lượng hệ thống và số lượng thực tế.
+5. Hệ thống lưu phiên kiểm kê ở trạng thái counting để chờ chốt.
+Alternate Flows
+• Kiểm kê có thể được thực hiện theo từng nhóm mặt hàng hoặc toàn bộ outlet
+tùy kế hoạch vận hành.
+Exception Flows
+• Chưa nhập đủ số lượng thực tế cho các dòng bắt buộc: hệ thống không cho chuyển
+tiếp sang bước chốt.
+Postconditions:
+Phiên stock count ở trạng thái counting với đầy đủ số liệu kiểm kê.
+Business Rules Referenced:
+[INV-018], [INV-019], [INV-020], [INV-022]
+Audit Events:
+Tạo sheet kiểm kê, ghi nhận snapshot, nhập số lượng thực tế.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+12.6.4
+
+57
+
+UC-INV-04 – Chốt stock count và post chênh lệch
+
+Use Case ID:
+UC-INV-04
+Use Case Name:
+Chốt stock count và post chênh lệch
+Goal:
+Ghi nhận chính thức chênh lệch kiểm kê vào inventory ledger.
+Primary Actor:
+Outlet Manager
+Supporting Actors:
+Không có
+Preconditions:
+Phiên stock count ở trạng thái counting; actor có quyền chốt kiểm kê tại outlet.
+Trigger:
+Outlet Manager mở phiên kiểm kê đã nhập đủ số liệu để chốt.
+Main Flow
+1. Outlet Manager rà soát các dòng chênh lệch.
+2. Outlet Manager xác nhận post phiên kiểm kê.
+3. Hệ thống tạo inventory adjustment cho các dòng chênh lệch khác không.
+4. Hệ thống cập nhật stock balance và chuyển phiên kiểm kê sang trạng thái posted.
+Alternate Flows
+• Nếu toàn bộ dòng không có chênh lệch, hệ thống post phiên kiểm kê mà không
+tạo adjustment dòng chênh lệch.
+Exception Flows
+• Phiên kiểm kê đã post hoặc đã hủy: hệ thống từ chối thao tác chốt lại.
+Postconditions:
+Chênh lệch kiểm kê được ghi vào inventory ledger; phiên kiểm kê trở thành bất biến
+về mặt lịch sử.
+Business Rules Referenced:
+[INV-020], [INV-021], [INV-022], [INV-024], [INV-025]
+Audit Events:
+Post kiểm kê, chênh lệch kiểm kê, actor xử lý.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+12.7
+12.7.1
+
+58
+
+Payroll
+UC-FIN-01 – Chuẩn bị payroll run
+
+Use Case ID:
+UC-FIN-01
+Use Case Name:
+Chuẩn bị payroll run
+Goal:
+Tổng hợp dữ liệu payroll draft cho một region và kỳ lương.
+Primary Actor:
+HR
+Supporting Actors:
+Outlet Manager
+Preconditions:
+Payroll period đã tồn tại; dữ liệu chấm công đã phê duyệt và hợp đồng hợp lệ đã
+sẵn sàng.
+Trigger:
+HR bắt đầu payroll run cho một payroll period.
+Main Flow
+1. HR chọn payroll period và region đích.
+2. Hệ thống tổng hợp attendance đã phê duyệt và hợp đồng hiệu lực.
+3. Hệ thống tính payroll draft cho từng nhân viên.
+4. HR rà soát ngoại lệ và gửi payroll run sang trạng thái submitted.
+Alternate Flows
+• Outlet Manager hỗ trợ xử lý ngoại lệ attendance trước khi HR submit payroll
+run.
+Exception Flows
+• Thiếu attendance đã phê duyệt hoặc hợp đồng hiệu lực: hệ thống đánh dấu ngoại
+lệ và không cho chốt hoàn toàn cho đến khi xử lý xong theo policy.
+Postconditions:
+Payroll run được tạo ở trạng thái submitted hoặc vẫn ở draft nếu còn ngoại lệ
+chưa xử lý.
+Business Rules Referenced:
+[FIN-001], [FIN-003], [FIN-004], [FIN-006], [FIN-007], [FIN-016]
+Audit Events:
+Tạo payroll draft, submit payroll run, ghi nhận ngoại lệ.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+12.7.2
+
+59
+
+UC-FIN-02 – Phê duyệt payroll
+
+Use Case ID:
+UC-FIN-02
+Use Case Name:
+Phê duyệt payroll
+Goal:
+Xác nhận payroll run cuối cùng trước khi chi trả.
+Primary Actor:
+Finance
+Supporting Actors:
+HR, Regional Finance
+Preconditions:
+Payroll run ở trạng thái submitted; actor có quyền phê duyệt ở cấp hệ thống.
+Trigger:
+Finance mở payroll run chờ phê duyệt.
+Main Flow
+1. Finance rà soát số liệu payroll run.
+2. Finance phê duyệt payroll.
+3. Hệ thống chuyển payroll run và các bản ghi payroll sang trạng thái approved.
+4. Hệ thống khóa dữ liệu payroll khỏi chỉnh sửa trực tiếp.
+Alternate Flows
+• Regional Finance chỉ xem hoặc rà soát chi phí payroll theo region nếu chính sách
+yêu cầu.
+Exception Flows
+• Payroll run còn ngoại lệ chưa xử lý hoặc actor không đủ thẩm quyền: hệ thống
+từ chối approve.
+Postconditions:
+Payroll ở trạng thái approved hoặc bị trả lại với lý do rõ ràng.
+Business Rules Referenced:
+[FIN-008], [FIN-009], [FIN-010], [FIN-017]
+Audit Events:
+Phê duyệt payroll, từ chối payroll, actor và lý do.
+12.7.3
+
+UC-FIN-03 – Ghi nhận payroll đã chi trả
+
+Use Case ID:
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+60
+
+UC-FIN-03
+Use Case Name:
+Ghi nhận payroll đã chi trả
+Goal:
+Chuyển payroll đã được phê duyệt sang trạng thái đã trả và liên kết chứng từ chi
+trả.
+Primary Actor:
+Finance
+Supporting Actors:
+HR
+Preconditions:
+Payroll ở trạng thái approved; đã có bằng chứng hoặc mã tham chiếu thanh toán
+hợp lệ.
+Trigger:
+Finance xác nhận hoàn tất chi trả payroll.
+Main Flow
+1. Finance mở payroll đã approved.
+2. Finance nhập hoặc xác nhận thông tin thanh toán.
+3. Hệ thống chuyển payroll sang trạng thái paid.
+4. Hệ thống liên kết payroll với chi phí và thông tin truy vết thanh toán.
+Alternate Flows
+• Nếu chi trả chia nhiều đợt, hệ thống chỉ đánh dấu paid khi đã thỏa điều kiện
+hoàn tất thanh toán theo policy.
+Exception Flows
+• Thiếu bằng chứng thanh toán hoặc payroll chưa được approve: hệ thống từ chối
+mark paid.
+Postconditions:
+Payroll ở trạng thái paid và trở thành bất biến về mặt nội dung.
+Business Rules Referenced:
+[FIN-011], [FIN-012], [FIN-013], [FIN-014], [FIN-018]
+Audit Events:
+Mark paid, tham chiếu chi trả, liên kết chi phí payroll.
+
+13
+
+Biểu đồ luồng Use Case
+
+Phần này trực quan hóa các luồng nghiệp vụ chính theo dạng end-to-end, nhằm làm
+rõ điểm bắt đầu, quyết định trung gian, cập nhật trạng thái và tác động chéo module.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+13.1
+
+61
+
+Luồng thiết lập tham chiếu và tổ chức
+
+Luồng này cho thấy cách dữ liệu nền của Company, Region, Outlet và tiền tệ được
+chuẩn bị trước khi vận hành nghiệp vụ.
+Admin creates currencies
+
+Admin defines exchange
+rates
+
+Admin creates region
+hierarchy
+
+Assign currency and
+timezone to region
+
+Create outlet profile
+
+Outlet data valid?
+
+Yes
+
+Activate outlet
+
+No
+
+Fix missing or invalid data
+
+Outlet available for HR,
+sales,
+procurement, and payroll
+
+Hình 3: Luồng use case cho thiết lập tham chiếu và tổ chức
+
+13.2
+
+Luồng xác thực và kiểm soát truy cập
+
+Luồng này mô tả cách IAM cấp quyền, tính scope hiệu lực và kiểm tra truy cập trên
+từng yêu cầu nghiệp vụ.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+62
+
+System Admin manages
+permissions
+
+System Admin defines roles
+
+Assign roles and direct
+permissions
+
+Assign data scope:
+company, region subtree,
+or outlet set
+
+User submits login
+
+Account active and not
+locked?
+
+Yes
+
+Validate credentials
+
+No
+
+Credentials valid?
+
+No
+
+Yes
+
+Issue session and access
+token
+
+Reject login
+
+Resolve effective action
+permission
+
+Resolve effective data
+scope
+
+User requests protected
+action
+
+Action permission granted?
+
+Yes
+
+No
+
+Target data scope allowed?
+Company / region subtree
+/
+outlet set
+
+No
+
+Deny action
+
+Yes
+
+Allow action
+
+Write audit log
+
+Hình 4: Luồng use case cho IAM và phân quyền
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+13.3
+
+63
+
+Luồng phân ca và chấm công
+
+Luồng này thể hiện việc tạo ca, phân ca tại outlet, chấm công và bàn giao dữ liệu đã
+phê duyệt sang payroll.
+Outlet Manager defines
+shift template
+
+Outlet Manager assigns
+staff to work shift
+
+System checks duplicate
+schedule
+
+Schedule valid?
+
+Yes
+
+Confirm work shift
+
+Staff clocks in or out
+
+System records attendance
+events
+
+No
+
+System derives present,
+late,
+absent, or leave
+
+Outlet Manager reviews
+attendance
+
+Approved?
+
+No
+
+Yes
+
+Revise assignment or
+attendance
+
+Approved attendance
+available
+for payroll timesheet
+
+Hình 5: Luồng use case cho phân ca và chấm công
+
+13.4
+
+Luồng công bố sản phẩm, công thức và giá
+
+Luồng này mô tả cách Product Manager chuẩn bị dữ liệu thương mại để sản phẩm có
+thể được bán tại outlet.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+Create UOM and conversion
+rules
+
+Create ingredient item
+master
+
+Create sellable product
+
+Define recipe version
+
+Set tax rate
+
+Set outlet price
+
+Set outlet availability
+
+All commercial data ready?
+
+Yes
+
+Activate product and
+recipe
+
+No
+
+Complete missing setup
+
+Product appears on POS
+menu
+
+POS sale resolves price and
+tax
+
+Inventory usage uses active
+recipe
+
+Hình 6: Luồng use case cho sản phẩm, công thức và định giá
+
+64
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+13.5
+
+65
+
+Luồng procure-to-pay
+
+Luồng này mô tả toàn bộ vòng đời mua hàng từ outlet: sử dụng supplier đã được
+Finance phê duyệt, tạo PO, rà soát tài chính, nhận hàng, đối chiếu hóa đơn và ghi
+nhận thanh toán nhà cung cấp.
+Company Finance
+maintains approved
+supplier master
+
+Outlet Manager selects
+approved supplier
+
+Create purchase order
+draft
+
+Submit purchase order
+
+Regional Finance reviews
+PO
+
+PO approved?
+
+No
+
+Return PO for revision
+
+Yes
+
+Issue approved PO to
+supplier
+
+Receive goods at outlet
+
+Outlet Manager records
+goods receipt
+
+Post goods receipt and
+update stock
+
+Record supplier invoice
+
+Regional Finance reviews
+payment request
+
+Payment request approved?
+
+No
+Yes
+
+Return request for
+correction
+
+Company Finance records
+supplier payment
+
+Allocate payment to
+invoice
+
+Record expense and audit
+trail
+
+Hình 7: Luồng use case cho thu mua và thanh toán nhà cung cấp
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+13.6
+
+66
+
+Luồng order-to-cash tại POS
+
+Luồng này mô tả quy trình POS online-only tại outlet: mở phiên, tạo và cập nhật
+order trước thanh toán, xử lý thanh toán, ghi nhận sale record, sau đó đóng và đối
+soát phiên.
+Outlet Manager opens POS
+session
+
+Staff creates order
+
+Staff updates open order
+line
+
+System resolves outlet
+price and tax
+
+Present order total
+
+Continue with payment?
+
+Yes
+
+Staff captures one or more
+payments
+
+Payment sufficient?
+
+No
+
+Keep order open for further
+payment
+
+Yes
+
+No
+
+Mark sale completed
+
+Create payment
+transactions and sale
+record
+
+Consume inventory via
+active recipe
+
+Outlet Manager closes and
+reconciles session
+
+Cancel open order
+
+Write audit trail
+
+Hình 8: Luồng use case cho bán hàng và vận hành POS
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+13.7
+
+67
+
+Luồng kiểm kê và điều chỉnh tồn kho
+
+Luồng này thể hiện quá trình kiểm kê và điều chỉnh tồn kho tại outlet theo mô hình V1,
+trong đó Outlet Manager trực tiếp chốt stock count và post inventory adjustment
+mà không bắt buộc tách submit/approve.
+
+Outlet Manager creates
+stock count sheet
+
+Freeze system quantity
+snapshot
+
+Enter actual quantity per
+item
+
+System computes variance
+
+Review count result
+
+Variance non-zero?
+
+Yes
+
+No
+
+Post adjustment
+transactions
+
+Post stock count without
+adjustment
+
+Refresh stock balance and
+audit log
+
+Hình 9: Luồng use case cho stock count và inventory adjustment
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+13.8
+
+68
+
+Luồng chuẩn bị, phê duyệt và chi trả payroll
+
+Luồng này mô tả cách HR chuẩn bị payroll, Finance phê duyệt và ghi nhận chi trả,
+đồng thời liên kết chi phí payroll.
+HR prepares payroll period
+
+System aggregates
+approved attendance
+
+Load active employee
+contract
+
+Compute base salary,
+overtime,
+and deductions
+
+Generate payroll draft
+
+HR reviews payroll
+exceptions
+
+Submit payroll run
+
+Company Finance reviews
+payroll
+
+Approved?
+
+No
+
+Return for correction
+
+Yes
+
+Mark payroll approved
+
+Record payroll payment
+
+Create payroll expense
+
+Write audit trail
+
+Hình 10: Luồng use case cho payroll
+
+14
+
+Biểu đồ Use Case
+
+Phần này nhóm các biểu đồ use case theo từng miền nghiệp vụ để actor, scope và ranh
+giới trách nhiệm được nhìn thấy rõ ràng mà không cần một sơ đồ tổng hợp quá lớn.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+14.1
+
+69
+
+POS
+
+Nhóm biểu đồ này thể hiện các use case POS theo baseline V1: Customer chỉ quan sát
+menu và chi tiết thanh toán, Staff thực hiện nghiệp vụ bán hàng và Outlet Manager
+quản lý phiên POS tại outlet.
+
+POS Customer Ordering
+View Menu
+Customer
+View Payment Detail
+
+Hình 11: Biểu đồ 01: POS cho Customer
+
+14.2
+
+Kho tại Outlet
+
+Nhóm biểu đồ này thể hiện rõ rằng toàn bộ nghiệp vụ kho tại outlet thuộc trách nhiệm
+của Outlet Manager; không có actor kho riêng tại outlet.
+14.3
+
+Tài chính vùng và giám sát khu vực
+
+Nhóm biểu đồ này mô tả use case tài chính ở cấp Regional Finance, Company Finance
+và Region Manager, bao gồm cả ownership của supplier master ở cấp Company.
+14.4
+
+Vận hành lực lượng lao động tại Outlet
+
+Biểu đồ này tập trung vào trách nhiệm của Outlet Manager đối với phân ca, rà soát
+chuyên cần và theo dõi nhân sự vận hành tại outlet.
+14.5
+
+Quản trị hệ thống và dữ liệu chủ
+
+Biểu đồ này mô tả trách nhiệm của System Admin và Product Manager đối với IAM
+và master data sản phẩm; supplier master thuộc phạm vi Finance và được mô tả ở
+nhóm biểu đồ tài chính.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+70
+
+POS Staff Ordering and Payment
+View Menu
+
+Create Order
+
+View Order
+
+Staff
+
+Update Open Order Line
+
+Cancel Open Order
+
+Process Payment
+
+Record Sale Record
+
+Hình 12: Biểu đồ 02: POS cho Staff
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+71
+
+POS Outlet Manager Control
+Open POS Session
+
+Close POS Session
+
+Outlet Manager
+
+Reconcile POS Session
+
+View POS Session Status
+
+View Outlet Sales Summary
+
+Hình 13: Biểu đồ 03: POS manager control tại outlet
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+72
+
+Outlet Warehouse Procurement
+View Stock Status
+
+Create Purchase Order
+
+Update Purchase Order
+Outlet Manager
+Submit Purchase Order
+
+Cancel Purchase Order
+
+Record Goods Receipt
+
+Hình 14: Biểu đồ 04: Thu mua tại outlet
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+73
+
+Outlet Warehouse Inventory Control
+View Inventory Transactions
+
+Record Inventory
+Adjustment
+
+Record Waste
+Outlet Manager
+Create Stock Count Sheet
+
+Submit Stock Count Result
+
+Review Stock Status
+
+Hình 15: Biểu đồ 05: Kiểm soát tồn kho tại outlet
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+74
+
+Finance Review and Approval
+View Outlet Spend
+
+View Financial Transactions
+
+Regional Finance
+
+Approve Supplier Payment
+Request
+
+Create Regional Revenue
+Report
+
+Create Regional Expense
+Report
+
+Manage Supplier Master
+
+View Company-wide
+Revenue
+
+View Company-wide
+Expense
+Company Finance
+Record Supplier Payment
+
+Approve Payroll Payment
+
+Create Consolidated
+Financial Report
+
+Hình 16: Biểu đồ 06: Tài chính vùng, tài chính công ty và supplier master
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+75
+
+Regional Oversight
+View Regional Revenue
+
+View Outlet Revenue
+
+View Financial Summary
+
+Region Manager
+
+View Regional Inventory
+Status
+
+View Regional Payroll
+Summary
+
+Review Outlet Exceptions
+
+Review Outlet Operating
+Status
+
+Hình 17: Biểu đồ 07: Giám sát ở cấp Region
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+76
+
+Outlet Workforce Administration
+Create Shift Assignment
+
+Update Shift Assignment
+
+Cancel Shift Assignment
+
+Outlet Manager
+
+View Outlet Workforce
+Summary
+
+Review Attendance
+Exception
+
+Approve Attendance
+
+Review Outlet Payroll
+Preview
+
+Hình 18: Biểu đồ 08: Vận hành lực lượng lao động tại outlet
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+77
+
+System Administration and Master Data
+Master Data
+Create Product
+
+Update Product
+
+Publish Product
+
+Create Recipe
+Product Manager
+Update Recipe
+
+Create Ingredient
+
+Update Ingredient
+
+Manage Pricing and
+Availability
+
+Administration
+Manage User
+
+Create Role
+
+Update Role
+
+Deactivate Role
+
+System Manager / Admin
+
+Create Permission
+
+Update Permission
+
+Deactivate Permission
+
+Assign Role to User
+
+Manage Access Scope by
+Company / Region / Outlet
+
+Hình 19: Biểu đồ 10: Quản trị hệ thống và dữ liệu chủ
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+14.6
+
+78
+
+HR và Payroll ở cấp hệ thống
+
+Biểu đồ này mô tả cách HR và Finance phối hợp trong quản lý nhân sự, rà soát payroll
+và phê duyệt chi trả.
+Company HR and Payroll Review
+Manage Employee Master
+Data
+
+Manage Employee Contract
+
+HR
+
+View Attendance Summary
+
+Prepare Payroll Run
+
+Review Payroll Draft
+
+Approve Payroll
+Company Finance
+Mark Payroll Paid
+
+View Consolidated Finance
+Summary
+
+Hình 20: Biểu đồ 09: HR và payroll ở cấp hệ thống
+
+15
+
+Phụ lục – Permission Matrix
+
+Ma trận dưới đây là baseline permission matrix cho V1. Đây là tài liệu tham chiếu cho
+BA, Dev và QA khi thiết kế role, API authorization và test scenario.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+79
+
+Actor
+
+Module
+
+Action
+
+Scope
+
+Notes
+
+Customer
+
+POS
+
+view menu, view payment
+detail
+
+outlet
+
+Chỉ quan sát thông tin
+bán hàng; không tạo
+order và không xử lý
+thanh toán.
+
+Staff
+
+POS
+
+view menu, create order, view assigned
+order,
+outlet
+update open order line, cancel
+open order before payment,
+process payment, record sale
+record
+
+Chỉ áp dụng cho người
+dùng nội bộ được phân
+quyền tại outlet.
+
+Outlet
+Manager
+
+POS
+
+open POS session, close POS
+session, reconcile POS
+session,
+view outlet sales summary,
+monitor outlet POS status
+
+assigned
+outlet set
+
+Là actor mặc định mở
+POS session tại outlet.
+
+Outlet
+Manager
+
+Outlet
+Workforce
+
+view workforce summary,
+create/update/cancel shift
+assignment,
+approve attendance, review
+payroll preview
+
+assigned
+outlet set
+
+Không tạo user hoặc
+contract trong mô hình
+chuẩn V1.
+
+Outlet
+Manager
+
+Procurement view approved supplier,
+create/update/submit PO,
+cancel/issue PO,
+record goods receipt, review
+PO status
+
+assigned
+outlet set
+
+Không được tạo mới
+hoặc kích hoạt supplier
+master.
+
+Outlet
+Manager
+
+Inventory
+
+view inventory transaction,
+assigned
+review stock status,
+outlet set
+record inventory adjustment,
+record waste,
+create stock count sheet, post
+stock count result
+
+Toàn bộ warehouse
+action tại outlet thuộc
+actor này.
+
+Region
+Manager
+
+Regional
+Oversight
+
+view outlet summary, view
+regional revenue,
+view regional inventory
+summary, view regional
+payroll summary,
+review outlet exception
+
+region
+subtree
+
+Chủ yếu là giám sát và
+xử lý ngoại lệ.
+
+Regional
+Finance
+
+Supplier
+Master
+
+view supplier full detail
+
+system
+
+Read-only system-wide
+view để rà soát tài
+chính;
+không có quyền
+write/admin.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+Action
+
+80
+
+Actor
+
+Module
+
+Regional
+Finance
+
+Procurement approve PO, view supplier
+region
+/ Finance
+invoice,
+subtree
+review financial transaction,
+approve supplier payment
+request,
+export regional finance report
+
+PO approval và
+financial review chạy
+theo region subtree
+được giao.
+
+Regional
+Finance
+
+Payroll
+Reporting
+
+view payroll cost summary,
+export region payroll cost
+report
+
+Chỉ xem/rá soát,
+không approve payroll
+cuối cùng.
+
+HR
+
+HR Master
+
+view, create, update employee system
+master and employee contract
+
+Quyền trên dữ liệu
+nhạy cảm chịu
+field-level access.
+
+HR
+
+Attendance
+/ Payroll
+Input
+
+view attendance summary,
+prepare payroll run,
+submit payroll run, export
+HR report
+
+system
+
+Không mark payroll
+paid.
+
+Finance
+
+Supplier
+Master
+
+view, create, update legal
+system
+info, update tax info,
+update payment terms,
+update bank details,
+activate or inactivate supplier
+
+Owner của supplier
+master trong baseline
+V1.
+
+Finance
+
+Finance
+
+view finance summary, record system
+supplier payment,
+export finance report
+
+Scope toàn hệ thống.
+
+Finance
+
+Payroll
+
+review payroll draft, approve
+payroll,
+mark payroll paid, export
+payroll report
+
+system
+
+Actor cuối cho
+approval/payment
+trong mô hình chuẩn
+V1.
+
+Product
+Manager
+
+Product
+Master
+
+view, create, update, publish
+product, manage recipe,
+manage pricing, manage
+outlet availability
+
+system
+
+Chỉ được tham chiếu
+supplier đã được phê
+duyệt khi cấu hình dữ
+liệu sản phẩm nếu cần.
+
+System
+Admin
+
+IAM
+
+manage user, manage role,
+manage permission,
+assign role, manage scope,
+export IAM report
+
+system
+
+Là actor chuẩn cho
+quản trị IAM.
+
+System
+Admin
+
+Reference / manage Region / Outlet
+Organization config,
+currency, exchange rate,
+system config
+
+system
+
+Không thay thế actor
+nghiệp vụ trong vận
+hành hằng ngày.
+
+System
+Admin
+
+Audit
+
+system
+
+Quyền này nên được
+giới hạn chặt và có ghi
+audit riêng.
+
+view detailed audit, export
+audit log
+
+Scope
+
+region
+subtree
+
+Notes
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+15.1
+
+81
+
+Ghi chú áp dụng
+
+• Quyền hiệu lực luôn được hiểu là: effective access = action permission ∩ data
+scope.
+• Quyền export là quyền riêng, không tự suy ra từ view.
+• Quyền xem dữ liệu nhạy cảm theo trường phải tuân theo field-level access tại Phần 3.
+• Nếu doanh nghiệp cần quyền vượt baseline này, phải phát hành thay đổi SRS hoặc
+approval chính thức cho permission exception.
+
+16
+
+Phụ lục – Design Notes & Assumptions
+
+16.1
+
+Mục đích
+
+Phần này chứa các ghi chú không chuẩn tắc về hướng triển khai. Các nội dung tại đây
+nhằm hỗ trợ Architect và Dev định hướng thiết kế, nhưng không thay thế requirement
+ở các phần trước.
+16.2
+
+Nguyên tắc sử dụng
+
+• Requirement chính thức nằm ở các section nghiệp vụ và NFR.
+• Các chi tiết persistence, hashing, token, index hoặc workflow engine ở đây có
+thể thay đổi nếu vẫn đáp ứng requirement đã công bố.
+• Mọi quyết định triển khai khác với phụ lục này phải chứng minh vẫn giữ đúng
+hành vi nghiệp vụ và khả năng kiểm thử.
+16.3
+
+Gợi ý logical entity catalog
+
+Miền
+
+Entity logic gợi ý
+
+Reference &
+Org
+IAM
+
+system_config (singleton), region, outlet, currency,
+exchange_rate
+user, role, permission, role_permission, user_permission,
+access_scope_grant, session
+employee, employee_contract, shift_template, work_shift,
+attendance_event, attendance_approval
+item, product, recipe, recipe_line, tax_rate,
+product_price, product_availability
+supplier, purchase_order, purchase_order_line,
+goods_receipt, goods_receipt_line, supplier_invoice,
+supplier_payment
+
+HR
+Product
+Procurement
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+Miền
+
+Entity logic gợi ý
+
+Inventory
+
+stock_balance, inventory_transaction, waste_record,
+inventory_adjustment, stock_count_sheet, stock_count_line
+payroll_period, payroll_run, payroll_record,
+payroll_line, expense_record
+audit_log, export_log, approval_history
+
+Finance &
+Payroll
+Audit
+
+16.4
+
+82
+
+Implementation notes gợi ý
+
+• Password hashing: có thể dùng Argon2id hoặc bcrypt với tham số đủ mạnh
+theo chuẩn bảo mật nội bộ.
+• Session/token: có thể dùng access token thời hạn ngắn kèm refresh token hoặc
+server-side session store; lựa chọn cụ thể không làm thay đổi requirement IAM.
+• Effective-dated data: giá, thuế, hợp đồng và tỷ giá nên có cơ chế chống overlap
+theo business key và khoảng hiệu lực.
+• Append-only ledger: inventory transaction, audit log và payroll đã paid nên
+được thiết kế bất biến; sai sót xử lý bằng reversal/adjustment.
+• Concurrency: payment, goods receipt posting, stock count posting và payroll
+payment nên có idempotency key hoặc replay guard tương đương.
+• Authorization evaluation: nên cache permission ngắn hạn nhưng phải có cơ
+chế invalidation khi role hoặc scope bị thay đổi.
+16.5
+
+Assumptions
+
+• V1 triển khai cho một công ty duy nhất; Company không phải entity quan hệ
+mà là system_config singleton.
+• Mỗi outlet có đúng một kho tại chỗ.
+• Region có thể được mở rộng dạng cây để phục vụ scope inheritance.
+• Inter-outlet transfer, central warehouse và multi-company là mở rộng tương lai,
+không phải baseline V1.
+• Payroll approval cuối cùng thuộc Finance; nếu doanh nghiệp cần thêm cấp phê
+duyệt, cần phát hành quyết định phạm vi bổ sung.
+
+17
+
+Phụ lục – Entity-Relationship Diagram
+
+17.1
+
+Mục đích
+
+Phần này mô tả mô hình dữ liệu logic (Entity-Relationship) cho toàn bộ hệ thống
+ERP F&B V1. Schema chi tiết (bao gồm kiểu dữ liệu, ràng buộc, index) nằm trong
+file database/erp_fb.dbml.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+17.2
+
+83
+
+Tổng quan Entity theo Module
+
+Hệ thống gồm 56 entity phân bổ vào 9 module:
+Module
+
+Số entity
+
+Reference & Org
+
+5
+
+IAM
+
+8
+
+HR &
+Attendance
+Product / Recipe
+
+4
+11
+
+Procurement
+
+9
+
+Sales / POS
+
+12
+
+Inventory
+
+6
+
+Finance / Payroll
+
+7
+
+Audit
+
+1
+
+17.3
+
+Danh sách entity
+currency, region, outlet, exchange_rate,
+numbering_sequence
+user, role, permission, role_permission,
+outlet_permission, user_role, user_permission,
+user_scope
+shift, work_shift, attendance_event,
+employee_contract
+product_category, item_category,
+unit_of_measure, uom_conversion, item,
+product, tax_rate, recipe, recipe_item,
+product_outlet_availability, product_price
+supplier, purchase_order, purchase_order_item,
+goods_receipt, goods_receipt_item,
+supplier_invoice, supplier_invoice_item,
+supplier_payment,
+supplier_payment_allocation
+customer, pos_session, cash_closure,
+sale_record, sale_item, payment, promotion,
+promotion_scope, sale_item_promotion,
+void_record, refund_record, refund_item
+lot, stock_balance, inventory_transaction,
+waste_record, stock_count_session,
+stock_count_line
+payroll_period, payroll_timesheet, payroll,
+payroll_line, expense_record,
+expense_inventory_purchase, expense_payroll,
+expense_operating
+audit_log
+
+ER Diagram – Reference & Organization
+
+Quan hệ chính:
+• region → region (self-ref ): phân cấp vùng, hỗ trợ cây đa cấp.
+• region → currency: mỗi vùng gắn một đồng tiền mặc định.
+• outlet → region: mỗi outlet thuộc đúng một region.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+84
+
+currency
+varchar
+
+code
+
+PK
+
+varchar
+
+name
+
+varchar
+
+symbol
+
+int
+
+decimal_places
+
+to_currency_code
+
+currency_code
+
+from_currency_code
+
+region
+exchange_rate
+int
+
+id
+
+PK
+
+varchar
+
+code
+
+UK
+
+int
+
+parent_region_id
+
+FK
+
+varchar
+
+currency_code
+
+FK
+
+varchar
+
+name
+
+varchar
+
+timezone_name
+
+varchar
+
+from_currency_code
+
+PK
+
+varchar
+
+to_currency_code
+
+PK
+
+date
+
+effective_from
+
+PK
+
+decimal
+
+rate
+
+date
+
+effective_to
+
+region_id
+
+outlet
+int
+
+id
+
+PK
+
+int
+
+region_id
+
+FK
+
+varchar
+
+code
+
+UK
+
+varchar
+
+name
+
+enum
+
+status
+
+text
+
+address
+
+date
+
+opened_at
+
+date
+
+closed_at
+
+parent_region_id
+
+outlet_id
+
+numbering_sequence
+int
+
+id
+
+varchar
+
+entity_type
+
+int
+
+outlet_id
+
+varchar
+
+prefix
+
+enum
+
+reset_period
+
+PK
+
+FK
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+85
+
+• numbering_sequence: sinh mã tự động (PO, GR, Sale. . . ) theo outlet.
+17.4
+
+ER Diagram – IAM
+
+user
+
+role
+
+permission
+PK
+
+int
+
+id
+
+PK
+
+varchar
+
+username
+
+UK
+
+varchar
+
+password_hash
+
+varchar
+
+code
+
+PK
+
+varchar
+
+code
+
+varchar
+
+name
+
+UK
+
+varchar
+
+module
+
+varchar
+
+full_name
+
+enum
+
+status
+
+varchar
+
+name
+
+varchar
+
+employee_code
+
+enum
+
+status
+
+int
+
+failed_login_count
+
+outlet
+
+role_code
+
+region_id
+
+permission_code
+
+permission_code
+
+user_id
+user_id
+
+user_scope
+
+user_permission
+int
+PK
+
+varchar
+
+permission_code
+
+PK
+
+varchar
+timestamptz
+
+user_id
+role_code
+
+outlet_id
+
+user_id
+
+user_role
+role_permission
+role_code
+
+outlet_id
+
+permission_code
+
+role_code
+
+varchar
+
+region
+
+UK
+
+bigint
+
+id
+
+PK
+
+int
+
+user_id
+
+FK
+
+varchar
+
+scope_type
+
+int
+
+region_id
+
+FK
+
+int
+
+outlet_id
+
+FK
+
+outlet_permission
+
+PK
+int
+
+user_id
+
+PK
+
+int
+
+outlet_id
+
+PK
+
+varchar
+
+permission_code
+
+PK
+
+varchar
+
+permission_code
+
+PK
+
+PK
+
+assigned_at
+
+Hình 22: ER Diagram – Identity & Access Management
+Quan hệ chính:
+• RBAC: user ↔ role qua user_role (M:N).
+• Permission: role ↔ permission qua role_permission (M:N).
+• Data scope: user_scope xác định phạm vi dữ liệu (system / region_subtree /
+outlet_set) theo IAM-015–IAM-020.
+• Direct grant: user_permission cho phép cấp permission trực tiếp ngoài role.
+17.5
+
+ER Diagram – HR & Attendance
+
+Quan hệ chính:
+• shift: ca mẫu theo outlet. work_shift: phân ca cụ thể cho nhân viên theo ngày.
+• attendance_event: log punch (clock_in/out, break) append-only, derive thời
+gian thực tế.
+• employee_contract: hợp đồng theo thời gian, EXCLUDE overlap cho mỗi user_id.
+17.6
+
+ER Diagram – Product / Recipe / Pricing
+
+Quan hệ chính:
+• product → recipe (1:N theo version), mỗi recipe → nhiều recipe_item (nguyên
+liệu).
+• product_price: giá theo outlet + loại giá (retail/dine_in/takeaway...), có hiệu
+lực theo thời gian.
+• tax_rate: thuế theo product, có effective date, EXCLUDE overlap.
+• uom_conversion: chuyển đổi đơn vị (chỉ lưu 1 chiều).
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+86
+
+outlet
+
+outlet_id
+
+shift
+int
+
+id
+
+PK
+
+int
+
+outlet_id
+
+FK
+
+varchar
+
+code
+
+varchar
+
+name
+
+time
+
+start_time
+
+time
+
+end_time
+
+int
+
+break_minutes
+
+user
+
+outlet_id
+
+region
+
+currency
+
+region_code
+
+currency_code
+
+employee_id
+shift_id
+
+user_id
+
+employee_contract
+work_shift
+bigint
+
+id
+
+PK
+
+int
+
+shift_id
+
+FK
+
+int
+
+employee_id
+
+FK
+
+date
+
+work_date
+
+enum
+
+schedule_status
+
+enum
+
+attendance_status
+
+enum
+
+approval_status
+
+timestamptz
+
+actual_start_time
+
+timestamptz
+
+bigint
+
+id
+
+PK
+
+int
+
+user_id
+
+FK
+
+int
+
+outlet_id
+
+FK
+
+enum
+
+employment_type
+
+enum
+
+salary_type
+
+decimal
+
+base_salary
+
+varchar
+
+region_code
+
+date
+
+start_date
+
+date
+
+end_date
+
+enum
+
+status
+
+FK
+
+actual_end_time
+
+work_shift_id
+
+attendance_event
+bigint
+
+id
+
+PK
+
+bigint
+
+work_shift_id
+
+FK
+
+enum
+
+event_type
+
+timestamptz
+
+event_time
+
+varchar
+
+source
+
+Hình 23: ER Diagram – HR & Attendance
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+87
+
+product_category
+varchar
+
+code
+
+PK
+
+varchar
+
+name
+
+UK
+
+varchar
+
+parent_code
+
+FK
+
+boolean
+
+is_active
+
+category_code
+
+product
+item_category
+unit_of_measure
+varchar
+varchar
+
+code
+name
+
+varchar
+PK
+
+code
+
+varchar
+
+UK
+
+name
+
+UK
+
+id
+
+PK
+
+varchar
+
+code
+
+UK
+
+varchar
+
+name
+
+varchar
+
+parent_code
+
+boolean
+
+is_active
+
+varchar
+
+category_code
+
+varchar
+
+current_status
+
+outlet
+
+FK
+
+base_uom_code
+
+to_uom_code
+
+int
+PK
+
+FK
+
+outlet_id
+category_code
+
+from_uom_code
+
+product_id
+
+product_id
+
+outlet_id
+
+product_id
+product_id
+
+item
+product_price
+int
+
+id
+
+PK
+
+varchar
+
+code
+
+UK
+
+recipe
+tax_rate
+
+uom_conversion
+varchar
+
+from_uom_code
+
+bigint
+
+to_uom_code
+
+decimal
+
+conversion_factor
+
+name
+
+varchar
+
+category_code
+
+PK
+
+uom_code
+
+varchar
+
+varchar
+
+int
+base_uom_code
+
+decimal
+
+min_stock_level
+
+decimal
+
+max_stock_level
+
+product_id
+
+PK
+FK
+
+bigint
+
+id
+
+PK
+
+int
+
+product_id
+
+FK
+
+int
+
+FK
+
+int
+
+product_id
+
+decimal
+
+tax_percent
+
+string
+
+price_type
+
+int
+
+outlet_id
+
+date
+
+effective_from
+
+decimal
+
+price_value
+
+boolean
+
+is_available
+
+date
+
+effective_to
+
+date
+
+effective_from
+
+FK
+
+date
+varchar
+
+outlet_id
+
+int
+
+product_id
+
+PK
+
+int
+
+version_num
+
+PK
+
+decimal
+
+yield_qty
+
+date
+
+effective_from
+
+date
+
+effective_to
+
+varchar
+
+current_status
+
+product_outlet_availability
+PK
+
+FK
+
+PK
+varchar
+
+id
+
+PK
+
+effective_to
+
+current_status
+
+item_id
+
+product_id_version
+
+recipe_item
+int
+
+product_id
+
+PK
+
+int
+
+version_num
+
+PK
+
+int
+
+item_id
+
+PK
+
+varchar
+
+uom_code
+
+FK
+
+decimal
+
+qty
+
+Hình 24: ER Diagram – Product, Recipe & Pricing
+17.7
+
+ER Diagram – Procurement (Procure-to-Pay)
+
+Luồng Procure-to-Pay:
+1. PO → approve → issue to supplier.
+2. Goods Receipt: nhập hàng theo PO, cập nhật qty_received trên PO item.
+3. Supplier Invoice: khớp ba chiều (PO ↔ GR ↔ Invoice) với tolerance %.
+4. Supplier Payment: thanh toán, phân bổ qua supplier_payment_allocation.
+17.8
+
+ER Diagram – Sales / POS
+
+Quan hệ chính:
+• pos_session: một session/outlet/ngày. cash_closure: đối soát cuối ca.
+• sale_record → nhiều sale_item; split payment qua nhiều payment.
+• void_record: hủy đơn/item cần duyệt. refund_record → refund_item: hoàn
+tiền theo dòng.
+• payment.idempotency_key: chống duplicate (NFR-024).
+17.9
+
+ER Diagram – Inventory
+
+Quan hệ chính:
+• inventory_transaction: sổ cái bất biến (append-only). Polymorphic FK (reference_type
++ reference_id) thay cho các bridge table riêng lẻ.
+• stock_balance: số liệu tổng hợp, derived từ inventory_transaction.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+88
+
+supplier
+int
+
+id
+
+PK
+
+varchar
+
+supplier_code
+
+UK
+
+varchar
+
+name
+
+int
+
+payment_term_days
+
+enum
+
+status
+
+outlet
+
+outlet_id
+supplier_id
+
+supplier_id
+supplier_id
+
+purchase_order
+supplier_invoice
+bigint
+
+id
+
+varchar
+
+invoice_number
+
+int
+
+supplier_id
+
+bigint
+
+id
+
+PK
+
+varchar
+
+po_code
+
+UK
+
+bigint
+
+supplier_payment
+id
+
+PK
+
+int
+
+supplier_id
+
+FK
+
+int
+
+supplier_id
+
+FK
+
+int
+
+outlet_id
+
+FK
+
+enum
+
+payment_method
+
+date
+
+order_date
+
+decimal
+
+amount
+
+decimal
+
+total_amount
+
+timestamptz
+
+payment_time
+
+PK
+
+decimal
+
+total_amount
+
+decimal
+
+matching_tolerance_pct
+
+enum
+
+status
+
+FK
+
+item
+
+supplier_id
+
+enum invoice_id
+status
+
+po_id
+
+payment_id
+
+po_id
+
+item_id
+
+goods_receipt
+
+purchase_order_item
+
+bigint
+
+id
+
+PK
+
+bigint
+
+varchar
+
+gr_code
+
+UK
+
+id
+
+PK
+
+bigint
+
+po_id
+
+bigint
+
+po_id
+
+FK
+
+bigint
+
+payment_id
+
+FK
+
+PK
+
+int
+
+item_id
+
+int
+
+supplier_id
+
+FK
+
+bigint
+
+invoice_id
+
+FK
+
+PK
+
+decimal
+
+qty_ordered
+
+int
+
+outlet_id
+
+FK
+
+decimal
+
+allocated_amount
+
+decimal
+
+qty_received
+
+date
+enum
+
+business_date
+
+decimal
+
+unit_price
+
+status
+
+enum
+
+status
+
+supplier_payment_allocation
+
+item_id
+
+invoice_id
+
+receipt_id
+
+po_item_id
+
+goods_receipt_item
+bigint
+
+id
+
+PK
+
+bigint
+
+receipt_id
+
+FK
+
+bigint
+
+po_item_id
+
+FK
+
+int
+
+item_id
+
+FK
+
+decimal
+
+qty_received
+
+decimal
+
+unit_cost
+
+decimal
+
+line_total
+
+goods_receipt_item_id
+
+supplier_invoice_item
+bigint
+
+id
+
+PK
+
+bigint
+
+invoice_id
+
+FK
+
+bigint
+
+goods_receipt_item_id
+
+FK
+
+enum
+
+line_type
+
+decimal
+
+qty_invoiced
+
+decimal
+
+unit_price
+
+Hình 25: ER Diagram – Procurement (Procure-to-Pay)
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+89
+
+outlet
+
+user
+
+outlet_id
+manager_id
+
+pos_session
+customer
+bigint
+
+id
+
+PK
+
+varchar
+
+session_code
+
+UK
+
+int
+
+outlet_id
+
+FK
+
+int
+
+manager_id
+
+FK
+
+date
+
+business_date
+
+decimal
+
+opening_cash
+
+varchar
+
+bigint
+
+id
+
+PK
+
+varchar
+
+code
+
+UK
+
+varchar
+
+full_name
+
+varchar
+
+phone
+
+string
+
+tier
+
+decimal
+
+total_spent
+
+current_status
+pos_session_id
+
+pos_session_id
+
+customer_id
+
+sale_record
+bigint
+
+id
+
+PK
+
+varchar
+
+sale_code
+
+UK
+
+int
+
+outlet_id
+
+FK
+
+bigint
+
+pos_session_id
+
+FK
+
+bigint
+
+customer_id
+
+FK
+
+string
+
+order_type
+
+varchar
+
+current_status
+
+string
+
+payment_status
+
+decimal
+
+total_amount
+
+cash_closure
+bigint
+
+id
+
+bigint
+
+PK
+
+pos_session_id
+
+decimal
+
+expected_cash
+
+decimal
+
+actual_cash
+
+decimal
+
+variance
+
+varchar
+
+current_status
+
+FK
+product
+
+sale_id
+
+outlet_id
+
+sale_id
+
+sale_id
+
+sale_id
+
+product_id
+
+sale_item
+promotion
+payment
+refund_record
+bigint
+
+id
+
+varchar
+bigint
+
+sale_id
+
+decimal
+
+refund_amount
+
+varchar
+
+id
+
+PK
+
+bigint
+
+sale_id
+
+FK
+
+string
+
+payment_method
+
+decimal
+
+amount
+
+varchar
+
+current_status
+
+varchar
+
+idempotency_key
+
+PK
+
+refund_code
+
+bigint
+
+id
+
+PK
+
+bigint
+
+sale_id
+
+FK
+
+int
+
+product_id
+
+FK
+
+decimal
+
+unit_price
+
+decimal
+
+qty
+
+decimal
+
+discount_amount
+
+decimal
+
+tax_amount
+
+decimal
+
+line_total
+
+void_record
+bigint
+
+bigint
+
+UK
+
+bigint
+
+FK
+
+current_status
+
+refund_id
+
+sale_item_id
+
+sale_id
+
+bigint
+
+sale_item_id
+
+text
+
+reason
+
+varchar
+UK
+
+id
+
+PK
+FK
+FK
+
+current_status
+
+sale_item_id
+
+bigint
+
+id
+
+PK
+
+varchar
+
+code
+
+UK
+
+varchar
+
+name
+
+string
+
+promo_type
+
+varchar
+
+current_status
+
+timestamptz
+
+effective_from
+
+timestamptz
+
+effective_to
+
+promotion_id
+
+promotion_id
+
+refund_item
+sale_item_promotion
+bigint
+
+refund_id
+
+PK
+
+bigint
+
+sale_item_id
+
+PK
+
+decimal
+decimal
+
+promotion_scope
+bigint
+
+sale_item_id
+
+PK
+
+bigint
+
+promotion_id
+
+PK
+
+decimal
+
+discount_amount
+
+qty_refunded
+refund_amount
+
+Hình 26: ER Diagram – Sales / POS
+
+bigint
+
+promotion_id
+
+PK
+
+int
+
+outlet_id
+
+PK
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+outlet
+
+90
+
+item
+outlet_id
+
+outlet_id
+item_id
+
+item_id
+
+item_id
+
+outlet_id
+
+outlet_id
+
+lot
+waste_record
+stock_balance
+bigint
+int
+
+outlet_id
+
+PK
+
+int
+
+item_id
+
+PK
+
+decimal
+
+qty_on_hand
+
+decimal
+
+reserved_qty
+
+decimal
+
+unit_cost
+
+date
+
+last_count_date
+
+id
+
+int
+
+outlet_id
+
+FK
+
+int
+
+item_id
+
+FK
+
+decimal
+
+qty
+
+outlet_id
+
+item_id
+
+varchar
+
+reason
+
+date
+
+waste_date
+
+enum
+
+status
+
+bigint
+
+id
+
+PK
+
+int
+
+item_id
+
+FK
+
+int
+
+outlet_id
+
+FK
+
+varchar
+
+PK
+stock_count_session
+bigint
+
+id
+
+PK
+
+lot_number
+
+int
+
+outlet_id
+
+FK
+
+date
+
+manufacture_date
+
+date
+
+count_date
+
+date
+
+expiry_date
+
+enum
+
+status
+
+decimal
+
+qty_on_hand
+
+enum
+
+status
+
+lot_id
+
+item_id
+
+session_id
+
+inventory_transaction
+bigint
+
+id
+
+PK
+
+int
+
+outlet_id
+
+FK
+
+int
+
+item_id
+
+FK
+
+decimal
+
+qty_change
+
+stock_count_line
+
+decimal
+
+bigint
+
+id
+
+PK
+
+bigint
+
+session_id
+
+FK
+
+int
+
+item_id
+
+FK
+
+decimal
+
+system_qty
+
+decimal
+
+actual_qty
+
+decimal
+
+variance_qty
+
+running_balance
+
+date
+
+business_date
+
+enum
+
+txn_type
+
+decimal
+
+unit_cost
+
+bigint
+
+lot_id
+
+varchar
+
+reference_type
+
+bigint
+
+reference_id
+
+FK
+
+Hình 27: ER Diagram – Inventory
+• lot: theo dõi lô hàng (tùy chọn), liên kết qua lot_id trên inventory_transaction
+và goods_receipt_item.
+• waste_record: ghi nhận hao hụt, posting tạo inventory_transaction loại waste_out.
+• stock_count_line: chênh lệch tạo stock_adjustment_in hoặc stock_adjustment_out.
+17.10
+
+ER Diagram – Finance / Payroll
+
+Quan hệ chính:
+• payroll_period → payroll_timesheet (1:N per employee) → payroll (1:1).
+• payroll_line: chi tiết từng khoản (lương cơ bản, OT, phụ cấp, các khoản trừ. . . )
+theo payroll_line_type_enum.
+• Pro-rate: base_salary * (work_days / total_period_days) cho thay đổi
+hợp đồng giữa kỳ.
+• expense_record: chi phí phân loại qua source_type discriminator → sub-table
+tương ứng.
+17.11
+
+Cross-Module Relationship Summary
+
+Bảng dưới đây tóm tắt các quan hệ xuyên module quan trọng nhất:
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+91
+
+region
+
+region_id
+
+payroll_period
+bigint
+
+id
+
+PK
+
+int
+
+region_id
+
+FK
+
+varchar
+
+name
+
+date
+
+start_date
+
+date
+
+end_date
+
+date
+
+pay_date
+
+varchar
+
+current_status
+
+user
+
+outlet
+
+employee_contract
+
+outlet_id
+
+payroll_period_id
+
+user_id
+
+contract_id
+
+payroll_timesheet
+bigint
+
+id
+
+PK
+
+bigint
+
+payroll_period_id
+
+FK
+
+int
+
+user_id
+
+FK
+
+int
+
+outlet_id
+
+FK
+
+bigint
+
+contract_id
+
+FK
+
+decimal
+
+work_days
+
+decimal
+
+work_hours
+
+decimal
+
+overtime_hours
+
+decimal
+
+overtime_rate
+
+int
+
+late_count
+
+decimal
+
+absent_days
+
+outlet_id
+
+payroll_timesheet_id
+
+payroll
+
+expense_record
+
+bigint
+
+id
+
+PK
+
+bigint
+
+id
+
+PK
+
+bigint
+
+payroll_timesheet_id
+
+FK
+
+int
+
+outlet_id
+
+FK
+
+decimal
+
+base_salary_amount
+
+date
+
+expense_date
+
+decimal
+
+gross_salary
+
+string
+
+expense_type
+
+decimal
+
+total_deductions
+
+decimal
+
+amount
+
+decimal
+
+net_salary
+
+string
+
+source_type
+
+varchar
+
+current_status
+
+varchar
+
+current_status
+
+goods_receipt
+
+expense_record_id
+
+goods_receipt_id
+payroll_id
+
+payroll_id
+
+expense_record_id
+expense_record_id
+
+payroll_line
+expense_operating
+bigint
+
+id
+
+PK
+
+bigint
+
+payroll_id
+
+FK
+
+string
+
+line_type
+
+varchar
+
+description
+
+decimal
+
+amount
+
+expense_payroll
+
+expense_inventory_purchase
+
+bigint
+
+expense_record_id
+
+bigint
+
+expense_record_id
+
+PK
+
+bigint
+
+expense_record_id
+
+PK
+
+varchar
+
+category
+
+bigint
+
+payroll_id
+
+FK
+
+bigint
+
+goods_receipt_id
+
+FK
+
+text
+
+description
+
+varchar
+
+vendor_name
+
+Hình 28: ER Diagram – Finance & Payroll
+
+PK
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+92
+
+Từ (From)
+
+Card.
+
+Đến (To)
+
+sale_item
+
+1:N
+
+goods_receipt_item
+
+1:N
+
+waste_record
+stock_count_line
+goods_receipt
+supplier_invoice_item
+
+1:1
+1:1
+N:1
+N:1
+
+inventory_transaction Tiêu hao nguyên liệu
+theo recipe
+inventory_transaction Nhập kho từ mua
+hàng
+inventory_transaction Hao hụt xuất kho
+inventory_transaction Điều chỉnh chênh lệch
+purchase_order
+Nhận hàng theo PO
+goods_receipt_item
+Khớp hóa đơn-phiếu
+nhập
+supplier_invoice
+Phân bổ thanh toán
+employee_contract
+Liên kết hợp đồngbảng công
+work_shift
+Tổng hợp từ chấm
+(approved)
+công đã duyệt
+cash_closure
+Đối soát cuối ca
+customer
+Liên kết khách hàng
+(tùy chọn)
+goods_receipt
+Chi phí mua hàng
+payroll
+Chi phí lương
+user
+Actor thực hiện hành
+động
+
+supplier_payment_alloc N:1
+payroll_timesheet
+N:1
+payroll_timesheet
+
+derives
+
+pos_session
+sale_record
+
+1:1
+N:1
+
+expense_inv_purchase
+expense_payroll
+audit_log
+
+N:1
+N:1
+N:1
+
+17.12
+
+Mô tả
+
+Thiết kế đáng chú ý
+
+1. Polymorphic FK cho inventory_transaction: Dùng reference_type +
+reference_id thay vì nhiều bridge table riêng lẻ. Ưu điểm: schema đơn giản
+hơn, query thống nhất. Nhược điểm: không enforce FK ở DB level – cần CHECK
+tại application.
+2. Effective-dated data: product_price, tax_rate, recipe, exchange_rate đều
+sử dụng effective_from/effective_to với EXCLUDE constraint chống overlap.
+3. Append-only ledger: inventory_transaction và audit_log là append-only
+(không UPDATE/DELETE). Sai sót xử lý qua reversal transaction.
+4. Soft delete: Các master table (user, product, item, supplier, outlet) dùng
+deleted_at + partial unique index trên business key.
+5. Idempotency: payment.idempotency_key ngăn duplicate payment (NFR-024).
+6. Pro-rate payroll: Khi nhân viên thay đổi hợp đồng giữa kỳ: base_salary_amount
+= contract.base_salary × (work_days / total_period_days).
+7. Three-way matching: Invoice matching với tolerance: auto-match khi chênh
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+93
+
+lệch ≤ matching_tolerance_percent (%). Vượt tolerance → status = disputed.
+
+18
+
+Phần cuối – Ghi chú bàn giao
+
+18.1
+
+Major Changes Made
+
+• Chuẩn hóa mô hình tổ chức theo Region / Outlet với region hierarchy là cây
+nhiều cấp; Company là system_config singleton, không phải entity quan hệ.
+• Khóa cứng giả định V1 rằng mỗi outlet có đúng một POS và đúng một
+kho tại chỗ.
+• Đồng bộ lại actor tại outlet để Outlet Manager bao phủ toàn bộ nghiệp vụ
+procurement và warehouse; không còn actor kho riêng.
+• Viết lại IAM theo cấu trúc chuẩn: Identity, Authentication, Authorization, Role
+assignment, Scope inheritance, Effective permission evaluation, Field-level access,
+Export permission và Auditability.
+• Viết lại POS theo baseline online-only, một phiên POS mở duy nhất trên mỗi
+outlet và không có luồng hoàn tiền trong V1.
+• Chuyển ownership của supplier master sang Finance và làm rõ ranh giới scope
+giữa Regional Finance và Finance.
+• Đơn giản hóa workflow inventory để stock count và inventory adjustment không
+bắt buộc tách submit/approve trong V1 nhưng vẫn giữ audit trail đầy đủ.
+• Rà soát lại permission matrix, use case, flow, diagram, state lifecycle và appendix
+API để bám cùng baseline nghiệp vụ; các appendix vẫn phải tiếp tục được kiểm
+tra chéo khi SRS lõi thay đổi.
+18.2
+
+Confirmed Decisions
+
+Chủ đề
+
+Quyết định
+
+Tổ chức và scope
+
+Hệ thống phục vụ một công ty duy nhất với cấu trúc
+Region > Outlet. Thông tin công ty là
+system_config singleton, không phải entity quan hệ.
+Region là cây phân cấp nhiều cấp và scope theo region
+áp dụng cho toàn bộ subtree, trừ khi bị policy giới hạn.
+Mỗi Outlet trong V1 vừa là điểm bán vừa là kho tại
+chỗ, có đúng một POS và đúng một kho vận hành.
+POS V1 là online-only. Mỗi outlet tại một thời điểm
+chỉ có một phiên POS đang mở và Outlet Manager là
+actor mở phiên mặc định.
+
+Outlet model
+POS model
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+94
+
+Chủ đề
+
+Quyết định
+
+Customer role
+
+Customer chỉ xem menu và xem chi tiết thanh toán
+qua bề mặt quan sát dành cho khách; không trực tiếp
+tạo order, xử lý thanh toán hoặc được xem như người
+dùng nội bộ đã xác thực.
+Staff thực hiện nghiệp vụ bán hàng. Outlet Manager
+bao phủ POS, procurement và toàn bộ warehouse tại
+outlet; không có actor kho riêng trong V1.
+Finance sở hữu và quản trị supplier master. Regional
+Finance có quyền xem read-only ở phạm vi hệ thống
+để rà soát. Product Manager và Outlet Manager
+chỉ được tham chiếu supplier đã được phê duyệt.
+Regional Finance phê duyệt PO và nghiệp vụ tài
+chính trong region subtree được giao; riêng supplier
+master có quyền xem read-only ở phạm vi hệ thống.
+Finance có quyền tài chính ở phạm vi toàn hệ thống.
+Tài liệu không sử dụng logic phê duyệt dựa trên giá trị
+tiền.
+Stock count và inventory adjustment không bắt buộc
+tách submit/approve trong V1. Stock count vẫn đi qua
+baseline draft -> counting -> posted. Audit trail
+vẫn là bắt buộc và lịch sử ledger là append-only.
+
+Outlet actor
+
+Supplier master
+
+Finance scope
+
+Inventory workflow
+
+18.3
+
+Open Questions / Decisions Needed
+
+Tại thời điểm phát hành bản SRS này, không còn quyết định mở nào chặn
+baseline V1. Các baseline nghiệp vụ trọng yếu cho POS, procurement, inventory,
+IAM và finance đã được khóa ở mức SRS lõi; tuy nhiên các appendix như permission
+matrix, API catalog và handover notes vẫn phải tiếp tục được duy trì đồng bộ khi tài
+liệu được cập nhật.
+18.4
+
+Recommended Next Documents
+
+• Permission Matrix chi tiết ở mức API, screen và field-level access.
+• API Specification cho từng module và contract lỗi chuẩn.
+• Domain State Transition Catalog tổng hợp guard, side effect và immutable
+rule cho từng workflow.
+• Data Dictionary cho entity logic, mã trạng thái và định nghĩa trường.
+• Test Scenario Catalog truy vết từ requirement và use case sang test case.
+
+Hệ thống ERP F&B – Đặc tả Yêu cầu Phần mềm
+
+95
+
+• Integration Contract cho payment gateway, accounting, banking, tax và các
+hệ thống bên ngoài nếu có.
+18.5
+
+Ghi chú
+
+Tài liệu này liệt kê các endpoint REST API chính của hệ thống ERP F&B, được
+tổ chức theo service. Đây là tham chiếu mức cao cho BA, Dev và QA khi thiết kế
+API contracts, authorization rules và test scenarios. Đây không phải là wire-level
+contract exhaustive; detailed request/response schemas được định nghĩa riêng trong
+API Specification document.
+• Tất cả các endpoint nội bộ đều yêu cầu xác thực, ngoại trừ POST /api/v1/auth/login.
+• Các endpoint quan sát dành cho khách hàng dưới /api/v1/public/... nằm
+ngoài IAM nội bộ và không được coi là vai trò người dùng nội bộ.
+• Quyền truy cập hiệu lực luôn được đánh giá là: action permission ∩ data
+scope.
+• Quyền export độc lập và không được suy ra từ view.
+• Dữ liệu chủ nhà cung cấp thuộc sở hữu của Finance. Regional Finance có
+quyền đọc toàn hệ thống để kiểm tra tài chính. Outlet Manager và Product
+Manager chỉ được tham chiếu các nhà cung cấp đã được duyệt.
+• Chuyển đổi PO là rõ ràng: approval chuyển PO đã submit sang approved; action
+issue chuyển PO đã approved sang ordered.
+• Goods receipts đã post điều khiển trạng thái hoàn thành nhận hàng của PO theo
+line-level; đóng theo chính sách vòng đời tài liệu.
+• Tạo/Post goods receipt yêu cầu PO nguồn ở trạng thái ordered, trừ khi có
+workflow ngoại lệ được kiểm soát và duyệt.
+• POS hoạt động online-only. Mỗi outlet tối đa một phiên POS active tại bất kỳ
+thời điểm nào.
+• Kiểm kê và điều chỉnh tồn kho đơn giản trong V1; đầy đủ audit trail vẫn được
+yêu cầu.
+• Trạng thái paid của payroll run là bất biến; sửa chữa phải qua workflow reversal/adjustment.
+
+

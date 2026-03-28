@@ -1,6 +1,7 @@
 package com.fern.reportservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.observability.CorrelationId;
 import com.fern.reportservice.dto.ReportCommands.CreatePayrollExportRequest;
 import com.fern.reportservice.dto.ReportResponses.ExportJobResponse;
 import com.fern.reportservice.dto.ReportResponses.PayrollRunReportResponse;
@@ -48,8 +49,9 @@ public class ReportController {
     public ExportJobResponse export(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @Valid @RequestBody CreatePayrollExportRequest request
     ) {
-        return reportService.createPayrollExport(principal, request, idempotencyKey);
+        return reportService.createPayrollExport(principal, request, idempotencyKey, correlationId);
     }
 }

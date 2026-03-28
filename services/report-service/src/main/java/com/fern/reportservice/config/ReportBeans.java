@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.alerts.KafkaOperationalAlertPublisher;
 import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.alerts.OperationalAlertPublisher;
+import com.fern.platform.audit.AuditEventPublisher;
+import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
@@ -19,6 +21,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
 public class ReportBeans {
@@ -51,6 +55,14 @@ public class ReportBeans {
     }
 
     @Bean
+    AuditEventPublisher auditEventPublisher(
+            NamedParameterJdbcTemplate jdbcTemplate,
+            ObjectMapper objectMapper
+    ) {
+        return new JdbcAuditOutboxEventPublisher(jdbcTemplate, objectMapper, "report.outbox_event", true);
+    }
+
+    @Bean
     SnowflakeIdGenerator snowflakeIdGenerator(
             @Value("${fern.id-generator.epoch-millis:1767225600000}") long epochMillis,
             @Value("${fern.id-generator.node-id:10}") long nodeId,
@@ -75,6 +87,11 @@ public class ReportBeans {
     @Bean
     NamedParameterJdbcTemplate namedParameterJdbcTemplate(DataSource dataSource) {
         return new NamedParameterJdbcTemplate(dataSource);
+    }
+
+    @Bean
+    TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
+        return new TransactionTemplate(transactionManager);
     }
 
     @Bean

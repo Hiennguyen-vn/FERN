@@ -1,4 +1,4 @@
-package com.fern.financeservice.service;
+package com.fern.reportservice.service;
 
 import com.fern.platform.audit.AuditEvent;
 import com.fern.platform.audit.AuditEventPublisher;
@@ -11,28 +11,13 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
-public class FinanceAuditService {
+public class ReportAuditService {
     private final AuditEventPublisher auditEventPublisher;
     private final Clock clock;
 
-    public FinanceAuditService(AuditEventPublisher auditEventPublisher, Clock clock) {
+    public ReportAuditService(AuditEventPublisher auditEventPublisher, Clock clock) {
         this.auditEventPublisher = auditEventPublisher;
         this.clock = clock;
-    }
-
-    public void publish(
-            String eventType,
-            FernPrincipal principal,
-            Long regionId,
-            Long outletId,
-            String action,
-            String resourceType,
-            String resourceId,
-            Object oldValue,
-            Object newValue,
-            Map<String, Object> payload
-    ) {
-        publish(eventType, principal, null, regionId, outletId, action, resourceType, resourceId, oldValue, newValue, payload);
     }
 
     public void publish(
@@ -52,7 +37,7 @@ public class FinanceAuditService {
                 UUID.randomUUID().toString(),
                 eventType,
                 clock.instant(),
-                "finance-service",
+                "report-service",
                 correlationId,
                 principal == null ? null : principal.userId(),
                 regionId,

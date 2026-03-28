@@ -13,7 +13,11 @@ import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -29,6 +33,7 @@ import org.springframework.test.context.DynamicPropertySource;
 class NotificationServiceIntegrationTest {
     private static HttpServer webhookServer;
     private static final AtomicInteger webhookStatus = new AtomicInteger(200);
+    private static final AtomicInteger webhookDelayMs = new AtomicInteger();
     private static final AtomicInteger webhookRequestCount = new AtomicInteger();
     private static final CopyOnWriteArrayList<String> webhookBodies = new CopyOnWriteArrayList<>();
 
@@ -81,6 +86,7 @@ class NotificationServiceIntegrationTest {
                 """);
         notificationService.bootstrapWebhookEndpoint();
         webhookStatus.set(200);
+        webhookDelayMs.set(0);
         webhookRequestCount.set(0);
         webhookBodies.clear();
     }
@@ -182,6 +188,67 @@ class NotificationServiceIntegrationTest {
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.delivery_attempt", Integer.class)).isEqualTo(2);
     }
 
+    @Test
+    void shouldClaimPendingNotificationOnceAcrossConcurrentSchedulers() throws Exception {
+        webhookDelayMs.set(200);
+        OperationalAlertEvent event = new OperationalAlertEvent(
+                "ops-alert-concurrent",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:00:00Z"),
+                "report-service",
+                "corr-concurrent",
+                "ops-idem-concurrent",
+                "EXPORT_FAILED",
+                "HIGH",
+                "Concurrent delivery test",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "99",
+                Map.of("jobId", 99)
+        );
+        String payload = objectMapper.writeValueAsString(event);
+        notificationService.ingestOperationalAlert(payload, event);
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<?> first = executor.submit(() -> {
+                ready.countDown();
+                await(start);
+                notificationService.deliverPending();
+            });
+            Future<?> second = executor.submit(() -> {
+                ready.countDown();
+                await(start);
+                notificationService.deliverPending();
+            });
+            ready.await();
+            start.countDown();
+            first.get();
+            second.get();
+        }
+
+        assertThat(webhookRequestCount.get()).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM notification.notification_job WHERE source_event_id = 'ops-alert-concurrent'",
+                String.class
+        )).isEqualTo("SENT");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM notification.delivery_attempt WHERE notification_job_id = (SELECT notification_job_id FROM notification.notification_job WHERE source_event_id = 'ops-alert-concurrent')",
+                Integer.class
+        )).isEqualTo(1);
+    }
+
+    private static void await(CountDownLatch latch) {
+        try {
+            latch.await();
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while waiting", exception);
+        }
+    }
+
     private static void ensureWebhookServerStarted() {
         if (webhookServer != null) {
             return;
@@ -189,6 +256,14 @@ class NotificationServiceIntegrationTest {
         try {
             webhookServer = HttpServer.create(new InetSocketAddress(0), 0);
             webhookServer.createContext("/ops", exchange -> {
+                int delay = webhookDelayMs.get();
+                if (delay > 0) {
+                    try {
+                        Thread.sleep(delay);
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
                 webhookRequestCount.incrementAndGet();
                 byte[] requestBody = exchange.getRequestBody().readAllBytes();
                 webhookBodies.add(new String(requestBody));

@@ -2,8 +2,7 @@ package com.fern.hrservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.audit.AuditEventPublisher;
-import com.fern.platform.audit.KafkaAuditEventPublisher;
-import com.fern.platform.audit.NoopAuditEventPublisher;
+import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
@@ -59,14 +58,10 @@ public class HrBeans {
 
     @Bean
     AuditEventPublisher auditEventPublisher(
-            ObjectProvider<KafkaTemplate<String, String>> kafkaTemplateProvider,
+            @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper
     ) {
-        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateProvider.getIfAvailable();
-        if (kafkaTemplate == null) {
-            return new NoopAuditEventPublisher();
-        }
-        return new KafkaAuditEventPublisher(kafkaTemplate, objectMapper);
+        return new JdbcAuditOutboxEventPublisher(jdbcTemplate, objectMapper, "hr.outbox_event", true);
     }
 
     @Bean

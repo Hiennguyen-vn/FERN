@@ -4,14 +4,11 @@ import com.fern.platform.audit.AuditEvent;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.SensitiveDataMasker;
 import com.fern.platform.common.FernPrincipal;
-import com.fern.platform.observability.CorrelationId;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 public class HrAuditService {
@@ -35,12 +32,28 @@ public class HrAuditService {
             Object newValue,
             Map<String, Object> payload
     ) {
+        publish(eventType, principal, null, regionId, outletId, action, resourceType, resourceId, oldValue, newValue, payload);
+    }
+
+    public void publish(
+            String eventType,
+            FernPrincipal principal,
+            String correlationId,
+            Long regionId,
+            Long outletId,
+            String action,
+            String resourceType,
+            String resourceId,
+            Object oldValue,
+            Object newValue,
+            Map<String, Object> payload
+    ) {
         auditEventPublisher.publishAuditEvent(new AuditEvent(
                 UUID.randomUUID().toString(),
                 eventType,
                 clock.instant(),
                 "hr-service",
-                correlationId(),
+                correlationId,
                 principal == null ? null : principal.userId(),
                 regionId,
                 outletId,
@@ -58,14 +71,15 @@ public class HrAuditService {
     @SuppressWarnings("unchecked")
     private Map<String, Object> mask(Map<String, Object> payload) {
         Object masked = SensitiveDataMasker.mask(payload == null ? Map.of() : payload);
-        return masked instanceof Map<?, ?> map ? (Map<String, Object>) map : new LinkedHashMap<>();
-    }
-
-    private String correlationId() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes == null) {
-            return null;
+        if (!(masked instanceof Map<?, ?> map)) {
+            return new LinkedHashMap<>();
         }
-        return attributes.getRequest().getHeader(CorrelationId.HEADER);
+        LinkedHashMap<String, Object> sanitized = new LinkedHashMap<>();
+        map.forEach((key, value) -> {
+            if (key instanceof String stringKey && value != null) {
+                sanitized.put(stringKey, value);
+            }
+        });
+        return sanitized;
     }
 }

@@ -48,8 +48,6 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 public class HrService {
@@ -257,6 +255,17 @@ public class HrService {
 
     @Transactional
     public AttendanceApprovalResponse reviewAttendance(FernPrincipal principal, Long shiftAssignmentId, String status, String comments) {
+        return reviewAttendance(principal, shiftAssignmentId, status, comments, null);
+    }
+
+    @Transactional
+    public AttendanceApprovalResponse reviewAttendance(
+            FernPrincipal principal,
+            Long shiftAssignmentId,
+            String status,
+            String comments,
+            String correlationId
+    ) {
         ShiftAssignmentRecord assignment = requireShiftAssignment(shiftAssignmentId);
         hrAuthorizer.requireOutletPermission(principal, assignment.outletId(), PermissionCodes.HR_ATTENDANCE_REVIEW);
         AttendanceComputation computation = computeAttendance(shiftAssignmentId, assignment);
@@ -321,7 +330,7 @@ public class HrService {
                     "attendance.approved",
                     clock.instant(),
                     "hr-service",
-                    currentCorrelationId(),
+                    correlationId,
                     UUID.randomUUID().toString(),
                     currentApproval.id(),
                     shiftAssignmentId,
@@ -340,6 +349,7 @@ public class HrService {
         hrAuditService.publish(
                 "APPROVED".equals(status) ? "hr.attendance.approved" : "hr.attendance.rejected",
                 principal,
+                correlationId,
                 assignment.regionId(),
                 assignment.outletId(),
                 status,
@@ -942,11 +952,6 @@ public class HrService {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize payload", exception);
         }
-    }
-
-    private String currentCorrelationId() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        return attributes == null ? null : attributes.getRequest().getHeader(CorrelationId.HEADER);
     }
 
     private record ShiftAssignmentRecord(

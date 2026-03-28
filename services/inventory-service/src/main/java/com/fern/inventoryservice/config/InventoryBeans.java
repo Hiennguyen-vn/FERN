@@ -5,8 +5,7 @@ import com.fern.platform.alerts.KafkaOperationalAlertPublisher;
 import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
-import com.fern.platform.audit.KafkaAuditEventPublisher;
-import com.fern.platform.audit.NoopAuditEventPublisher;
+import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
@@ -18,6 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.client.RestClient;
 
@@ -49,14 +49,10 @@ public class InventoryBeans {
 
     @Bean
     AuditEventPublisher auditEventPublisher(
-            ObjectProvider<KafkaTemplate<String, String>> kafkaTemplateProvider,
+            NamedParameterJdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper
     ) {
-        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateProvider.getIfAvailable();
-        if (kafkaTemplate == null) {
-            return new NoopAuditEventPublisher();
-        }
-        return new KafkaAuditEventPublisher(kafkaTemplate, objectMapper);
+        return new JdbcAuditOutboxEventPublisher(jdbcTemplate, objectMapper, "inventory.outbox_event", true);
     }
 
     @Bean

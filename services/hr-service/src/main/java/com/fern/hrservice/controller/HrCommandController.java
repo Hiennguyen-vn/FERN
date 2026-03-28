@@ -16,11 +16,13 @@ import com.fern.hrservice.dto.HrResponses.ShiftAssignmentResponse;
 import com.fern.hrservice.dto.HrResponses.ShiftScheduleResponse;
 import com.fern.hrservice.service.HrService;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.observability.CorrelationId;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -85,17 +87,19 @@ public class HrCommandController {
     public AttendanceApprovalResponse approveAttendance(
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long shiftAssignmentId,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @RequestBody(required = false) ReviewAttendanceRequest request
     ) {
-        return hrService.reviewAttendance(principal, shiftAssignmentId, "APPROVED", request == null ? null : request.comments());
+        return hrService.reviewAttendance(principal, shiftAssignmentId, "APPROVED", request == null ? null : request.comments(), correlationId);
     }
 
     @PostMapping("/attendance-approvals/{shiftAssignmentId}/reject")
     public AttendanceApprovalResponse rejectAttendance(
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long shiftAssignmentId,
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId,
             @RequestBody(required = false) ReviewAttendanceRequest request
     ) {
-        return hrService.reviewAttendance(principal, shiftAssignmentId, "REJECTED", request == null ? null : request.comments());
+        return hrService.reviewAttendance(principal, shiftAssignmentId, "REJECTED", request == null ? null : request.comments(), correlationId);
     }
 }

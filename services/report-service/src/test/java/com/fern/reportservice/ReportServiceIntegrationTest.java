@@ -74,6 +74,9 @@ class ReportServiceIntegrationTest {
     void setUp() throws IOException {
         jdbcTemplate.execute("""
                 TRUNCATE TABLE
+                    report.outbox_event,
+                    report.company_daily_outlet,
+                    report.region_daily_event,
                     report.export_job,
                     report.company_daily_summary,
                     report.region_daily_summary,
@@ -174,6 +177,12 @@ class ReportServiceIntegrationTest {
 
         assertThat(objectMapper.readTree(secondResponse).get("exportJobId").asLong()).isEqualTo(jobId);
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM report.export_job", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM report.outbox_event
+                WHERE event_type = 'audit.event'
+                  AND payload::text LIKE '%report.export.requested%'
+                """, Integer.class)).isEqualTo(1);
 
         reportService.processQueuedExports();
         reportService.processQueuedExports();
@@ -199,6 +208,12 @@ class ReportServiceIntegrationTest {
         assertThat(csv).contains("9100");
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM report.export_job WHERE export_job_id = ?", String.class, jobId))
                 .isEqualTo("COMPLETED");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM report.outbox_event
+                WHERE event_type = 'audit.event'
+                  AND payload::text LIKE '%report.export.completed%'
+                """, Integer.class)).isEqualTo(1);
     }
 
     @Test

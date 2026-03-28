@@ -58,8 +58,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Service
 public class FinancePayrollService {
@@ -100,6 +98,11 @@ public class FinancePayrollService {
 
     @Transactional
     public PayrollPeriodResponse createPayrollPeriod(FernPrincipal principal, CreatePayrollPeriodRequest request) {
+        return createPayrollPeriod(principal, request, null);
+    }
+
+    @Transactional
+    public PayrollPeriodResponse createPayrollPeriod(FernPrincipal principal, CreatePayrollPeriodRequest request, String correlationId) {
         financeAuthorizer.requireRegionPermission(principal, request.regionId(), PermissionCodes.FINANCE_PAYROLL_PREPARE);
         ensureNoOverlappingPeriods(request.regionId(), request.startDate(), request.endDate());
         Long id = insertForId(jdbcTemplate, """
@@ -118,12 +121,17 @@ public class FinancePayrollService {
                 "note", request.note()
         ));
         PayrollPeriodResponse response = getPayrollPeriod(principal, id);
-        financeAuditService.publish("finance.payroll.period.created", principal, request.regionId(), null, "CREATE", "PAYROLL_PERIOD", id.toString(), null, response, Map.of());
+        financeAuditService.publish("finance.payroll.period.created", principal, correlationId, request.regionId(), null, "CREATE", "PAYROLL_PERIOD", id.toString(), null, response, Map.of());
         return response;
     }
 
     @Transactional
     public PayrollRunResponse createPayrollRun(FernPrincipal principal, CreatePayrollRunRequest request) {
+        return createPayrollRun(principal, request, null);
+    }
+
+    @Transactional
+    public PayrollRunResponse createPayrollRun(FernPrincipal principal, CreatePayrollRunRequest request, String correlationId) {
         PayrollPeriodRecord period = requirePayrollPeriodRecord(request.payrollPeriodId());
         financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PREPARE);
         Long runId = insertForId(jdbcTemplate, """
@@ -139,21 +147,26 @@ public class FinancePayrollService {
                 "processedByUserId", principal == null ? null : principal.userId(),
                 "note", request.note()
         ));
-        recalculateRun(runId, period);
+        recalculateRun(runId, period, correlationId, principal == null ? null : principal.userId());
         PayrollRunResponse response = getPayrollRun(principal, runId);
-        financeAuditService.publish("finance.payroll.draft.created", principal, period.regionId(), null, "CREATE", "PAYROLL_RUN", runId.toString(), null, response, Map.of());
+        financeAuditService.publish("finance.payroll.draft.created", principal, correlationId, period.regionId(), null, "CREATE", "PAYROLL_RUN", runId.toString(), null, response, Map.of());
         return response;
     }
 
     @Transactional
     public PayrollRunResponse submitPayrollRun(FernPrincipal principal, Long runId, String note) {
+        return submitPayrollRun(principal, runId, note, null);
+    }
+
+    @Transactional
+    public PayrollRunResponse submitPayrollRun(FernPrincipal principal, Long runId, String note, String correlationId) {
         PayrollRunRecord run = requirePayrollRunRecord(runId);
         PayrollPeriodRecord period = requirePayrollPeriodRecord(run.payrollPeriodId());
         financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PREPARE);
         if (!"DRAFT".equals(run.status()) && !"REJECTED".equals(run.status())) {
             throw new BadRequestException("Only draft or rejected payroll runs can be submitted");
         }
-        recalculateRun(runId, period);
+        recalculateRun(runId, period, correlationId, principal == null ? null : principal.userId());
         int updated = jdbcTemplate.update("""
                 UPDATE finance.payroll_run
                 SET status = 'SUBMITTED',
@@ -172,12 +185,17 @@ public class FinancePayrollService {
             throw new BadRequestException("Only draft or rejected payroll runs can be submitted");
         }
         PayrollRunResponse response = getPayrollRun(principal, runId);
-        financeAuditService.publish("finance.payroll.submitted", principal, period.regionId(), null, "SUBMIT", "PAYROLL_RUN", runId.toString(), run, response, Map.of());
+        financeAuditService.publish("finance.payroll.submitted", principal, correlationId, period.regionId(), null, "SUBMIT", "PAYROLL_RUN", runId.toString(), run, response, Map.of());
         return response;
     }
 
     @Transactional
     public PayrollRunResponse approvePayrollRun(FernPrincipal principal, Long runId, String note) {
+        return approvePayrollRun(principal, runId, note, null);
+    }
+
+    @Transactional
+    public PayrollRunResponse approvePayrollRun(FernPrincipal principal, Long runId, String note, String correlationId) {
         PayrollRunRecord run = requirePayrollRunRecord(runId);
         PayrollPeriodRecord period = requirePayrollPeriodRecord(run.payrollPeriodId());
         financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_APPROVE);
@@ -202,13 +220,18 @@ public class FinancePayrollService {
             throw new BadRequestException("Only submitted payroll runs can be approved");
         }
         PayrollRunResponse response = getPayrollRun(principal, runId);
-        emitPayrollCalculated(period, response, principal);
-        financeAuditService.publish("finance.payroll.approved", principal, period.regionId(), null, "APPROVE", "PAYROLL_RUN", runId.toString(), run, response, Map.of());
+        emitPayrollCalculated(period, response, principal, correlationId);
+        financeAuditService.publish("finance.payroll.approved", principal, correlationId, period.regionId(), null, "APPROVE", "PAYROLL_RUN", runId.toString(), run, response, Map.of());
         return response;
     }
 
     @Transactional
     public PayrollRunResponse rejectPayrollRun(FernPrincipal principal, Long runId, String note) {
+        return rejectPayrollRun(principal, runId, note, null);
+    }
+
+    @Transactional
+    public PayrollRunResponse rejectPayrollRun(FernPrincipal principal, Long runId, String note, String correlationId) {
         PayrollRunRecord run = requirePayrollRunRecord(runId);
         PayrollPeriodRecord period = requirePayrollPeriodRecord(run.payrollPeriodId());
         financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_APPROVE);
@@ -233,12 +256,17 @@ public class FinancePayrollService {
             throw new BadRequestException("Only submitted payroll runs can be rejected");
         }
         PayrollRunResponse response = getPayrollRun(principal, runId);
-        financeAuditService.publish("finance.payroll.rejected", principal, period.regionId(), null, "REJECT", "PAYROLL_RUN", runId.toString(), run, response, Map.of("reason", note));
+        financeAuditService.publish("finance.payroll.rejected", principal, correlationId, period.regionId(), null, "REJECT", "PAYROLL_RUN", runId.toString(), run, response, Map.of("reason", note));
         return response;
     }
 
     @Transactional
     public PayrollRunResponse markPayrollPaid(FernPrincipal principal, Long runId, MarkPaidRequest request) {
+        return markPayrollPaid(principal, runId, request, null);
+    }
+
+    @Transactional
+    public PayrollRunResponse markPayrollPaid(FernPrincipal principal, Long runId, MarkPaidRequest request, String correlationId) {
         PayrollRunRecord run = requirePayrollRunRecord(runId);
         PayrollPeriodRecord period = requirePayrollPeriodRecord(run.payrollPeriodId());
         financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PAY);
@@ -301,7 +329,7 @@ public class FinancePayrollService {
                         run.runDate(),
                         "PAYROLL",
                         allocation.allocatedAmount(),
-                        currentCorrelationId(),
+                        correlationId,
                         "PAYROLL_RUN",
                         runId.toString()
                 );
@@ -314,8 +342,40 @@ public class FinancePayrollService {
                 WHERE payroll_run_id = :payrollRunId
                 """, params("payrollRunId", runId));
         PayrollRunResponse response = getPayrollRun(principal, runId);
-        emitPayrollPosted(period, response, principal, request.paymentReference(), links);
-        financeAuditService.publish("finance.payroll.paid", principal, period.regionId(), null, "MARK_PAID", "PAYROLL_RUN", runId.toString(), run, response, Map.of("paymentReference", request.paymentReference()));
+        emitPayrollPosted(period, response, principal, request.paymentReference(), links, correlationId);
+        financeAuditService.publish("finance.payroll.paid", principal, correlationId, period.regionId(), null, "MARK_PAID", "PAYROLL_RUN", runId.toString(), run, response, Map.of("paymentReference", request.paymentReference()));
+        return response;
+    }
+
+    @Transactional
+    public PayrollRunResponse cancelPayrollRun(FernPrincipal principal, Long runId, String note) {
+        return cancelPayrollRun(principal, runId, note, null);
+    }
+
+    @Transactional
+    public PayrollRunResponse cancelPayrollRun(FernPrincipal principal, Long runId, String note, String correlationId) {
+        PayrollRunRecord run = requirePayrollRunRecord(runId);
+        PayrollPeriodRecord period = requirePayrollPeriodRecord(run.payrollPeriodId());
+        financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PREPARE);
+        if (!"DRAFT".equals(run.status()) && !"REJECTED".equals(run.status())) {
+            throw new BadRequestException("Only draft or rejected payroll runs can be cancelled");
+        }
+        int updated = jdbcTemplate.update("""
+                UPDATE finance.payroll_run
+                SET status = 'CANCELLED',
+                    note = COALESCE(:note, note),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                  AND status IN ('DRAFT', 'REJECTED')
+                """, params(
+                "note", note,
+                "id", runId
+        ));
+        if (updated != 1) {
+            throw new BadRequestException("Only draft or rejected payroll runs can be cancelled");
+        }
+        PayrollRunResponse response = getPayrollRun(principal, runId);
+        financeAuditService.publish("finance.payroll.cancelled", principal, correlationId, period.regionId(), null, "CANCEL", "PAYROLL_RUN", runId.toString(), run, response, Map.of("reason", note));
         return response;
     }
 
@@ -485,10 +545,10 @@ public class FinancePayrollService {
         return response;
     }
 
-    private void recalculateRun(Long runId, PayrollPeriodRecord period) {
+    private void recalculateRun(Long runId, PayrollPeriodRecord period, String correlationId, Long actorUserId) {
         deleteExistingRunArtifacts(runId);
-        List<EffectiveContract> contracts = fetchEffectiveContracts(period.regionId(), period.startDate(), period.endDate());
-        List<ApprovedAttendance> attendance = fetchApprovedAttendance(period.regionId(), period.startDate(), period.endDate());
+        List<EffectiveContract> contracts = fetchEffectiveContracts(period.regionId(), period.startDate(), period.endDate(), correlationId, actorUserId);
+        List<ApprovedAttendance> attendance = fetchApprovedAttendance(period.regionId(), period.startDate(), period.endDate(), correlationId, actorUserId);
         Map<Long, List<EffectiveContract>> contractsByEmployee = new HashMap<>();
         for (EffectiveContract contract : contracts) {
             contractsByEmployee.computeIfAbsent(contract.employeeId(), ignored -> new ArrayList<>()).add(contract);
@@ -852,11 +912,11 @@ public class FinancePayrollService {
         return record;
     }
 
-    private List<EffectiveContract> fetchEffectiveContracts(Long regionId, LocalDate startDate, LocalDate endDate) {
+    private List<EffectiveContract> fetchEffectiveContracts(Long regionId, LocalDate startDate, LocalDate endDate, String correlationId, Long actorUserId) {
         try {
             EffectiveContract[] response = restClient.get()
                     .uri(hrBaseUrl + "/internal/hr/effective-contracts?regionId=" + regionId + "&startDate=" + startDate + "&endDate=" + endDate)
-                    .headers(headers -> applyInternalHeaders(headers, Set.of(PermissionCodes.HR_INTERNAL_READ)))
+                    .headers(headers -> applyInternalHeaders(headers, Set.of(PermissionCodes.HR_INTERNAL_READ), correlationId, actorUserId))
                     .retrieve()
                     .body(EffectiveContract[].class);
             return response == null ? List.of() : List.of(response);
@@ -865,11 +925,11 @@ public class FinancePayrollService {
         }
     }
 
-    private List<ApprovedAttendance> fetchApprovedAttendance(Long regionId, LocalDate startDate, LocalDate endDate) {
+    private List<ApprovedAttendance> fetchApprovedAttendance(Long regionId, LocalDate startDate, LocalDate endDate, String correlationId, Long actorUserId) {
         try {
             ApprovedAttendance[] response = restClient.get()
                     .uri(hrBaseUrl + "/internal/hr/approved-attendance?regionId=" + regionId + "&startDate=" + startDate + "&endDate=" + endDate)
-                    .headers(headers -> applyInternalHeaders(headers, Set.of(PermissionCodes.HR_INTERNAL_READ)))
+                    .headers(headers -> applyInternalHeaders(headers, Set.of(PermissionCodes.HR_INTERNAL_READ), correlationId, actorUserId))
                     .retrieve()
                     .body(ApprovedAttendance[].class);
             return response == null ? List.of() : List.of(response);
@@ -878,19 +938,18 @@ public class FinancePayrollService {
         }
     }
 
-    private void applyInternalHeaders(org.springframework.http.HttpHeaders headers, Collection<String> permissions) {
+    private void applyInternalHeaders(
+            org.springframework.http.HttpHeaders headers,
+            Collection<String> permissions,
+            String correlationId,
+            Long actorUserId
+    ) {
         headers.set(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer " + serviceTokenSupport.issueToken("finance-service", permissions));
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes == null) {
-            return;
-        }
-        String correlationId = attributes.getRequest().getHeader(CorrelationId.HEADER);
         if (correlationId != null) {
             headers.set(CorrelationId.HEADER, correlationId);
         }
-        String actorUserId = attributes.getRequest().getHeader(FernRequestHeaders.ACTOR_USER_ID);
         if (actorUserId != null) {
-            headers.set(FernRequestHeaders.ACTOR_USER_ID, actorUserId);
+            headers.set(FernRequestHeaders.ACTOR_USER_ID, actorUserId.toString());
         }
     }
 
@@ -925,7 +984,7 @@ public class FinancePayrollService {
         }
     }
 
-    private void emitPayrollCalculated(PayrollPeriodRecord period, PayrollRunResponse run, FernPrincipal principal) {
+    private void emitPayrollCalculated(PayrollPeriodRecord period, PayrollRunResponse run, FernPrincipal principal, String correlationId) {
         List<PayrollCalculatedEmployee> employees = run.employees().stream()
                 .map(item -> new PayrollCalculatedEmployee(item.employeeId(), item.outletId(), item.grossPay(), item.deductionAmount(), item.taxAmount(), item.netPay()))
                 .toList();
@@ -937,7 +996,7 @@ public class FinancePayrollService {
                 "payroll.calculated",
                 clock.instant(),
                 "finance-service",
-                currentCorrelationId(),
+                correlationId,
                 UUID.randomUUID().toString(),
                 run.id(),
                 run.payrollPeriodId(),
@@ -956,14 +1015,15 @@ public class FinancePayrollService {
             PayrollRunResponse run,
             FernPrincipal principal,
             String paymentReference,
-            List<PayrollExpenseLink> links
+            List<PayrollExpenseLink> links,
+            String correlationId
     ) {
         PayrollPostedEvent event = new PayrollPostedEvent(
                 UUID.randomUUID().toString(),
                 "payroll.posted",
                 clock.instant(),
                 "finance-service",
-                currentCorrelationId(),
+                correlationId,
                 UUID.randomUUID().toString(),
                 run.id(),
                 run.payrollPeriodId(),
@@ -1094,11 +1154,6 @@ public class FinancePayrollService {
     private Long nullableLong(ResultSet rs, String column) throws java.sql.SQLException {
         Object value = rs.getObject(column);
         return value == null ? null : ((Number) value).longValue();
-    }
-
-    private String currentCorrelationId() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        return attributes == null ? null : attributes.getRequest().getHeader(CorrelationId.HEADER);
     }
 
     private record PayrollPeriodRecord(Long id, Long regionId, LocalDate startDate, LocalDate endDate, LocalDate payDate, String status) {

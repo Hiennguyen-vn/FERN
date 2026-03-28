@@ -5,8 +5,7 @@ import com.fern.platform.alerts.KafkaOperationalAlertPublisher;
 import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
-import com.fern.platform.audit.KafkaAuditEventPublisher;
-import com.fern.platform.audit.NoopAuditEventPublisher;
+import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
@@ -63,14 +62,10 @@ public class FinanceBeans {
 
     @Bean
     AuditEventPublisher auditEventPublisher(
-            ObjectProvider<KafkaTemplate<String, String>> kafkaTemplateProvider,
+            @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper
     ) {
-        KafkaTemplate<String, String> kafkaTemplate = kafkaTemplateProvider.getIfAvailable();
-        if (kafkaTemplate == null) {
-            return new NoopAuditEventPublisher();
-        }
-        return new KafkaAuditEventPublisher(kafkaTemplate, objectMapper);
+        return new JdbcAuditOutboxEventPublisher(jdbcTemplate, objectMapper, "finance.outbox_event", true);
     }
 
     @Bean

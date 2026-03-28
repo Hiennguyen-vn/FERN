@@ -65,6 +65,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class ReportService {
@@ -78,6 +79,9 @@ public class ReportService {
     private final Clock clock;
     private final ReportExportProperties exportProperties;
     private final OperationalAlertPublisher operationalAlertPublisher;
+    private final ReportAuditService reportAuditService;
+    private final ExportArtifactStore exportArtifactStore;
+    private final TransactionTemplate transactionTemplate;
     private final Counter exportFailureCounter;
     private final AtomicLong projectionLagMillis;
 
@@ -89,6 +93,9 @@ public class ReportService {
             Clock clock,
             ReportExportProperties exportProperties,
             OperationalAlertPublisher operationalAlertPublisher,
+            ReportAuditService reportAuditService,
+            ExportArtifactStore exportArtifactStore,
+            TransactionTemplate transactionTemplate,
             MeterRegistry meterRegistry
     ) {
         this.jdbcTemplate = jdbcTemplate;
@@ -98,6 +105,9 @@ public class ReportService {
         this.clock = clock;
         this.exportProperties = exportProperties;
         this.operationalAlertPublisher = operationalAlertPublisher;
+        this.reportAuditService = reportAuditService;
+        this.exportArtifactStore = exportArtifactStore;
+        this.transactionTemplate = transactionTemplate;
         this.exportFailureCounter = Counter.builder("fern_report_export_failures_total").register(meterRegistry);
         this.projectionLagMillis = meterRegistry.gauge("fern_projection_consumer_lag", new AtomicLong(0));
     }
@@ -170,7 +180,21 @@ public class ReportService {
                     "payload", toJson(payment)
             ));
         }
-        refreshDailySummaries(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), event.regionId(), event.businessDate(), payload);
+        BigDecimal totalSales = extractSnapshotLines(event.saleSnapshot()).stream()
+                .map(line -> decimalValue(line.get("lineTotal")))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        applyDailySummaryDelta(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                event.regionId(),
+                List.of(event.outletId()),
+                event.businessDate(),
+                payload,
+                new SummaryDelta(totalSales, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+        );
         updateProjectionLag(event.occurredAt());
     }
 
@@ -238,7 +262,18 @@ public class ReportService {
                 "referenceId", String.valueOf(event.goodsReceiptId()),
                 "payload", payload
         ));
-        refreshDailySummaries(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), event.regionId(), event.businessDate(), payload);
+        applyDailySummaryDelta(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                event.regionId(),
+                List.of(event.outletId()),
+                event.businessDate(),
+                payload,
+                new SummaryDelta(BigDecimal.ZERO, totalAmount, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+        );
         updateProjectionLag(event.occurredAt());
     }
 
@@ -272,7 +307,18 @@ public class ReportService {
                 "overtimeHours", event.overtimeHours(),
                 "payload", payload
         ));
-        refreshDailySummaries(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), event.regionId(), event.businessDate(), payload);
+        applyDailySummaryDelta(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                event.regionId(),
+                List.of(event.outletId()),
+                event.businessDate(),
+                payload,
+                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+        );
         updateProjectionLag(event.occurredAt());
     }
 
@@ -309,7 +355,25 @@ public class ReportService {
                     "payload", payload
             ));
         }
-        refreshDailySummaries(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), event.regionId(), event.businessDate(), payload);
+        BigDecimal totalPayroll = event.employees().stream()
+                .map(PayrollCalculatedEmployee::grossPay)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<Long> outletIds = event.employees().stream()
+                .map(PayrollCalculatedEmployee::outletId)
+                .distinct()
+                .toList();
+        applyDailySummaryDelta(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                event.regionId(),
+                outletIds,
+                event.businessDate(),
+                payload,
+                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, totalPayroll, 1)
+        );
         updateProjectionLag(event.occurredAt());
     }
 
@@ -352,7 +416,18 @@ public class ReportService {
                 "amount", event.amount(),
                 "payload", payload
         ));
-        refreshDailySummaries(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), event.regionId(), event.businessDate(), payload);
+        applyDailySummaryDelta(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                event.regionId(),
+                List.of(event.outletId()),
+                event.businessDate(),
+                payload,
+                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, event.amount(), BigDecimal.ZERO, 1)
+        );
         updateProjectionLag(event.occurredAt());
     }
 
@@ -388,7 +463,18 @@ public class ReportService {
                 "sourceReferenceType", event.sourceReferenceType(),
                 "sourceReferenceId", event.sourceReferenceId()
         ));
-        refreshDailySummaries(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), event.regionId(), event.businessDate(), payload);
+        applyDailySummaryDelta(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                event.regionId(),
+                List.of(event.outletId()),
+                event.businessDate(),
+                payload,
+                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+        );
         updateProjectionLag(event.occurredAt());
     }
 
@@ -424,7 +510,18 @@ public class ReportService {
                 "sourceReferenceType", event.sourceReferenceType(),
                 "sourceReferenceId", event.sourceReferenceId()
         ));
-        refreshDailySummaries(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), event.regionId(), event.businessDate(), payload);
+        applyDailySummaryDelta(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                event.regionId(),
+                List.of(event.outletId()),
+                event.businessDate(),
+                payload,
+                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+        );
         updateProjectionLag(event.occurredAt());
     }
 
@@ -462,7 +559,18 @@ public class ReportService {
                     "sourceReferenceId", String.valueOf(event.stockCountSessionId())
             ));
         }
-        refreshDailySummaries(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), event.regionId(), event.businessDate(), payload);
+        applyDailySummaryDelta(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                event.regionId(),
+                List.of(event.outletId()),
+                event.businessDate(),
+                payload,
+                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+        );
         updateProjectionLag(event.occurredAt());
     }
 
@@ -508,8 +616,12 @@ public class ReportService {
         return new PayrollRunReportResponse(runId, employees, allocations);
     }
 
-    @Transactional
     public ExportJobResponse createExport(FernPrincipal principal, CreateExportRequest request, String idempotencyKey) {
+        return createExport(principal, request, idempotencyKey, null);
+    }
+
+    @Transactional
+    public ExportJobResponse createExport(FernPrincipal principal, CreateExportRequest request, String idempotencyKey, String correlationId) {
         ExportSpec spec = buildExportSpec(request);
         authorizeExportRequest(principal, spec);
         String normalizedIdempotencyKey = normalizeIdempotencyKey(idempotencyKey);
@@ -523,10 +635,10 @@ public class ReportService {
         jdbcTemplate.update("""
                 INSERT INTO report.export_job (
                     export_job_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                    report_type, format, status, requested_by, requested_at, payload
+                    report_type, format, status, requested_by, requested_at, correlation_id, payload
                 ) VALUES (
                     :exportJobId, :sourceEventId, 'report-service', 'report.export.queued', :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                    :reportType, :format, 'QUEUED', :requestedBy, :requestedAt, CAST(:payload AS jsonb)
+                    :reportType, :format, 'QUEUED', :requestedBy, :requestedAt, :correlationId, CAST(:payload AS jsonb)
                 )
                 """, params(
                 "exportJobId", jobId,
@@ -537,12 +649,37 @@ public class ReportService {
                 "format", spec.format(),
                 "requestedBy", principal == null ? null : principal.username(),
                 "requestedAt", requestedAt,
+                "correlationId", correlationId,
                 "payload", toJson(request)
         ));
-        return getExport(principal, jobId);
+        ExportJobResponse response = getExport(principal, jobId);
+        Map<String, Object> auditPayload = new LinkedHashMap<>();
+        auditPayload.put("dataset", spec.dataset().name());
+        auditPayload.put("format", spec.format());
+        auditPayload.put("fromDate", spec.fromDate());
+        auditPayload.put("toDate", spec.toDate());
+        auditPayload.put("payrollRunId", spec.payrollRunId());
+        reportAuditService.publish(
+                "report.export.requested",
+                principal,
+                correlationId,
+                spec.regionId(),
+                spec.outletId(),
+                "EXPORT_REQUEST",
+                "EXPORT_JOB",
+                String.valueOf(jobId),
+                null,
+                response,
+                auditPayload
+        );
+        return response;
     }
 
     public ExportJobResponse createPayrollExport(FernPrincipal principal, CreatePayrollExportRequest request, String idempotencyKey) {
+        return createPayrollExport(principal, request, idempotencyKey, null);
+    }
+
+    public ExportJobResponse createPayrollExport(FernPrincipal principal, CreatePayrollExportRequest request, String idempotencyKey, String correlationId) {
         return createExport(principal, new CreateExportRequest(
                 Dataset.PAYROLL_SUMMARY.name(),
                 "CSV",
@@ -552,7 +689,7 @@ public class ReportService {
                 request.toDate(),
                 null,
                 null
-        ), idempotencyKey);
+        ), idempotencyKey, correlationId);
     }
 
     public ExportJobResponse getExport(FernPrincipal principal, Long jobId) {
@@ -593,24 +730,8 @@ public class ReportService {
     }
 
     @Scheduled(fixedDelayString = "${fern.report.export.worker-delay-ms:5000}")
-    @Transactional
     public void processQueuedExports() {
-        List<Long> queuedJobIds = jdbcTemplate.query("""
-                SELECT export_job_id
-                FROM report.export_job
-                WHERE status = 'QUEUED'
-                ORDER BY requested_at, export_job_id
-                LIMIT 10
-                """, (rs, rowNum) -> rs.getLong("export_job_id"));
-        for (Long jobId : queuedJobIds) {
-            if (jdbcTemplate.update("""
-                    UPDATE report.export_job
-                    SET status = 'RUNNING', started_at = :startedAt
-                    WHERE export_job_id = :jobId
-                      AND status = 'QUEUED'
-                    """, params("startedAt", clock.instant(), "jobId", jobId)) != 1) {
-                continue;
-            }
+        for (Long jobId : claimQueuedExportJobs()) {
             try {
                 completeExportJob(jobId);
             } catch (RuntimeException exception) {
@@ -623,48 +744,58 @@ public class ReportService {
         ExportJobRecord record = requireExportJob(jobId);
         ExportSpec spec = buildExportSpec(readValue(record.payload(), CreateExportRequest.class), record.dataset(), record.format());
         ExportData data = queryExportData(spec);
-        Path filePath = writeCsv(record.exportJobId(), spec.dataset(), data.columns(), data.rows());
+        ExportArtifactStore.ReportArtifact artifact = exportArtifactStore.writeCsv(
+                exportBaseDir(),
+                record.exportJobId(),
+                spec.dataset().name(),
+                data.columns(),
+                data.rows()
+        );
         List<Map<String, Object>> preview = data.rows().subList(0, Math.min(spec.previewLimit(), data.rows().size()));
         Instant completedAt = clock.instant();
-        jdbcTemplate.update("""
-                UPDATE report.export_job
-                SET status = 'COMPLETED',
-                    file_path = :filePath,
-                    completed_at = :completedAt,
-                    failed_at = NULL,
-                    error_message = NULL,
-                    row_count = :rowCount,
-                    preview_payload = CAST(:previewPayload AS jsonb),
-                    expires_at = :expiresAt,
-                    checksum = :checksum
-                WHERE export_job_id = :jobId
-                  AND status = 'RUNNING'
-                """, params(
-                "filePath", filePath.toString(),
-                "completedAt", completedAt,
-                "rowCount", (long) data.rows().size(),
-                "previewPayload", toJson(preview),
-                "expiresAt", completedAt.plus(exportProperties.getArtifactRetentionDays(), ChronoUnit.DAYS),
-                "checksum", sha256(filePath),
-                "jobId", jobId
-        ));
+        try {
+            completeExportJobRecord(record, spec, artifact, preview, data.rows().size(), completedAt);
+        } catch (RuntimeException exception) {
+            exportArtifactStore.deleteQuietly(artifact.path().toString());
+            throw exception;
+        }
     }
 
     private void failExportJob(Long jobId, RuntimeException exception) {
         exportFailureCounter.increment();
         String errorSummary = ExceptionSummaries.safeSummary(exception);
-        jdbcTemplate.update("""
-                UPDATE report.export_job
-                SET status = 'FAILED',
-                    failed_at = :failedAt,
-                    error_message = :errorMessage
-                WHERE export_job_id = :jobId
-                  AND status = 'RUNNING'
-                """, params(
-                "failedAt", clock.instant(),
-                "errorMessage", errorSummary,
-                "jobId", jobId
-        ));
+        ExportJobRecord record = transactionTemplate.execute(status -> {
+            ExportJobRecord current = requireExportJob(jobId);
+            jdbcTemplate.update("""
+                    UPDATE report.export_job
+                    SET status = 'FAILED',
+                        failed_at = :failedAt,
+                        error_message = :errorMessage
+                    WHERE export_job_id = :jobId
+                      AND status = 'RUNNING'
+                    """, params(
+                    "failedAt", clock.instant(),
+                    "errorMessage", errorSummary,
+                    "jobId", jobId
+            ));
+            return requireExportJob(jobId);
+        });
+        if (record != null && "FAILED".equals(record.status())) {
+            reportAuditService.publish(
+                    "report.export.failed",
+                    null,
+                    record.correlationId(),
+                    extractRegionId(record),
+                    extractOutletId(record),
+                    "EXPORT_FAIL",
+                    "EXPORT_JOB",
+                    String.valueOf(record.exportJobId()),
+                    null,
+                    toExportJobResponse(record),
+                    Map.of("errorMessage", errorSummary, "requestedBy", record.requestedBy())
+            );
+            exportArtifactStore.deleteQuietly(record.filePath());
+        }
         operationalAlertPublisher.publish(
                 "EXPORT_FAILED",
                 "HIGH",
@@ -818,17 +949,20 @@ public class ReportService {
                 """, params("payrollRunId", spec.payrollRunId())));
     }
 
-    private void refreshDailySummaries(
+    private void applyDailySummaryDelta(
             String sourceEventId,
             String sourceService,
             String eventType,
             Instant occurredAt,
             String idempotencyKey,
             Long regionId,
+            List<Long> outletIds,
             LocalDate businessDate,
             String payload
+            ,
+            SummaryDelta delta
     ) {
-        SummaryTotals totals = queryRegionSummaryTotals(regionId, businessDate);
+        long transactionIncrement = registerRegionEvent(regionId, businessDate, sourceEventId);
         jdbcTemplate.update("""
                 INSERT INTO report.region_daily_summary (
                     summary_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
@@ -844,11 +978,11 @@ public class ReportService {
                     occurred_at = EXCLUDED.occurred_at,
                     ingested_at = CURRENT_TIMESTAMP,
                     idempotency_key = EXCLUDED.idempotency_key,
-                    total_sales = EXCLUDED.total_sales,
-                    total_procurement = EXCLUDED.total_procurement,
-                    total_expense = EXCLUDED.total_expense,
-                    total_payroll = EXCLUDED.total_payroll,
-                    transaction_count = EXCLUDED.transaction_count,
+                    total_sales = report.region_daily_summary.total_sales + EXCLUDED.total_sales,
+                    total_procurement = report.region_daily_summary.total_procurement + EXCLUDED.total_procurement,
+                    total_expense = report.region_daily_summary.total_expense + EXCLUDED.total_expense,
+                    total_payroll = report.region_daily_summary.total_payroll + EXCLUDED.total_payroll,
+                    transaction_count = report.region_daily_summary.transaction_count + EXCLUDED.transaction_count,
                     payload = EXCLUDED.payload
                 """, params(
                 "summaryId", idGenerator.nextId(),
@@ -859,14 +993,14 @@ public class ReportService {
                 "idempotencyKey", idempotencyKey + ":region-summary",
                 "regionId", regionId,
                 "businessDate", businessDate,
-                "totalSales", totals.totalSales(),
-                "totalProcurement", totals.totalProcurement(),
-                "totalExpense", totals.totalExpense(),
-                "totalPayroll", totals.totalPayroll(),
-                "transactionCount", totals.transactionCount(),
+                "totalSales", delta.totalSales(),
+                "totalProcurement", delta.totalProcurement(),
+                "totalExpense", delta.totalExpense(),
+                "totalPayroll", delta.totalPayroll(),
+                "transactionCount", transactionIncrement,
                 "payload", payload
         ));
-        CompanySummaryTotals companyTotals = queryCompanySummaryTotals(businessDate);
+        long outletCountIncrement = registerCompanyOutlets(businessDate, outletIds);
         jdbcTemplate.update("""
                 INSERT INTO report.company_daily_summary (
                     summary_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
@@ -882,11 +1016,11 @@ public class ReportService {
                     occurred_at = EXCLUDED.occurred_at,
                     ingested_at = CURRENT_TIMESTAMP,
                     idempotency_key = EXCLUDED.idempotency_key,
-                    total_sales = EXCLUDED.total_sales,
-                    total_procurement = EXCLUDED.total_procurement,
-                    total_expense = EXCLUDED.total_expense,
-                    total_payroll = EXCLUDED.total_payroll,
-                    outlet_count = EXCLUDED.outlet_count,
+                    total_sales = report.company_daily_summary.total_sales + EXCLUDED.total_sales,
+                    total_procurement = report.company_daily_summary.total_procurement + EXCLUDED.total_procurement,
+                    total_expense = report.company_daily_summary.total_expense + EXCLUDED.total_expense,
+                    total_payroll = report.company_daily_summary.total_payroll + EXCLUDED.total_payroll,
+                    outlet_count = report.company_daily_summary.outlet_count + EXCLUDED.outlet_count,
                     payload = EXCLUDED.payload
                 """, params(
                 "summaryId", idGenerator.nextId(),
@@ -896,83 +1030,49 @@ public class ReportService {
                 "occurredAt", occurredAt,
                 "idempotencyKey", idempotencyKey + ":company-summary",
                 "businessDate", businessDate,
-                "totalSales", companyTotals.totalSales(),
-                "totalProcurement", companyTotals.totalProcurement(),
-                "totalExpense", companyTotals.totalExpense(),
-                "totalPayroll", companyTotals.totalPayroll(),
-                "outletCount", companyTotals.outletCount(),
+                "totalSales", delta.totalSales(),
+                "totalProcurement", delta.totalProcurement(),
+                "totalExpense", delta.totalExpense(),
+                "totalPayroll", delta.totalPayroll(),
+                "outletCount", outletCountIncrement,
                 "payload", payload
         ));
     }
 
-    private SummaryTotals queryRegionSummaryTotals(Long regionId, LocalDate businessDate) {
-        return jdbcTemplate.query("""
-                SELECT
-                    COALESCE((SELECT SUM(net_amount) FROM report.sales_fact WHERE region_id = :regionId AND business_date = :businessDate), 0) AS total_sales,
-                    COALESCE((SELECT SUM(fact_amount) FROM report.procurement_fact WHERE region_id = :regionId AND business_date = :businessDate), 0) AS total_procurement,
-                    COALESCE((SELECT SUM(amount) FROM report.expense_fact WHERE region_id = :regionId AND business_date = :businessDate), 0) AS total_expense,
-                    COALESCE((SELECT SUM(gross_pay) FROM report.payroll_fact WHERE region_id = :regionId AND business_date = :businessDate), 0) AS total_payroll,
-                    COALESCE((
-                        SELECT COUNT(DISTINCT source_event_id)
-                        FROM (
-                            SELECT source_event_id FROM report.sales_fact WHERE region_id = :regionId AND business_date = :businessDate
-                            UNION ALL
-                            SELECT source_event_id FROM report.payment_fact WHERE region_id = :regionId AND business_date = :businessDate
-                            UNION ALL
-                            SELECT source_event_id FROM report.inventory_movement_fact WHERE region_id = :regionId AND business_date = :businessDate
-                            UNION ALL
-                            SELECT source_event_id FROM report.procurement_fact WHERE region_id = :regionId AND business_date = :businessDate
-                            UNION ALL
-                            SELECT source_event_id FROM report.attendance_fact WHERE region_id = :regionId AND business_date = :businessDate
-                            UNION ALL
-                            SELECT source_event_id FROM report.payroll_fact WHERE region_id = :regionId AND business_date = :businessDate
-                            UNION ALL
-                            SELECT source_event_id FROM report.expense_fact WHERE region_id = :regionId AND business_date = :businessDate
-                        ) fact_events
-                    ), 0) AS transaction_count
-                """, params("regionId", regionId, "businessDate", businessDate), rs -> rs.next()
-                ? new SummaryTotals(
-                rs.getBigDecimal("total_sales"),
-                rs.getBigDecimal("total_procurement"),
-                rs.getBigDecimal("total_expense"),
-                rs.getBigDecimal("total_payroll"),
-                rs.getLong("transaction_count")
-        ) : new SummaryTotals(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0));
+    private long registerRegionEvent(Long regionId, LocalDate businessDate, String sourceEventId) {
+        return jdbcTemplate.update("""
+                INSERT INTO report.region_daily_event (
+                    region_id, business_date, source_event_id
+                ) VALUES (
+                    :regionId, :businessDate, :sourceEventId
+                )
+                ON CONFLICT DO NOTHING
+                """, params(
+                "regionId", regionId,
+                "businessDate", businessDate,
+                "sourceEventId", sourceEventId
+        ));
     }
 
-    private CompanySummaryTotals queryCompanySummaryTotals(LocalDate businessDate) {
-        return jdbcTemplate.query("""
-                SELECT
-                    COALESCE((SELECT SUM(net_amount) FROM report.sales_fact WHERE business_date = :businessDate), 0) AS total_sales,
-                    COALESCE((SELECT SUM(fact_amount) FROM report.procurement_fact WHERE business_date = :businessDate), 0) AS total_procurement,
-                    COALESCE((SELECT SUM(amount) FROM report.expense_fact WHERE business_date = :businessDate), 0) AS total_expense,
-                    COALESCE((SELECT SUM(gross_pay) FROM report.payroll_fact WHERE business_date = :businessDate), 0) AS total_payroll,
-                    COALESCE((
-                        SELECT COUNT(DISTINCT outlet_id)
-                        FROM (
-                            SELECT outlet_id FROM report.sales_fact WHERE business_date = :businessDate
-                            UNION ALL
-                            SELECT outlet_id FROM report.payment_fact WHERE business_date = :businessDate
-                            UNION ALL
-                            SELECT outlet_id FROM report.inventory_movement_fact WHERE business_date = :businessDate
-                            UNION ALL
-                            SELECT outlet_id FROM report.procurement_fact WHERE business_date = :businessDate
-                            UNION ALL
-                            SELECT outlet_id FROM report.attendance_fact WHERE business_date = :businessDate
-                            UNION ALL
-                            SELECT outlet_id FROM report.payroll_fact WHERE business_date = :businessDate
-                            UNION ALL
-                            SELECT outlet_id FROM report.expense_fact WHERE business_date = :businessDate
-                        ) outlet_events
-                    ), 0) AS outlet_count
-                """, params("businessDate", businessDate), rs -> rs.next()
-                ? new CompanySummaryTotals(
-                rs.getBigDecimal("total_sales"),
-                rs.getBigDecimal("total_procurement"),
-                rs.getBigDecimal("total_expense"),
-                rs.getBigDecimal("total_payroll"),
-                rs.getLong("outlet_count")
-        ) : new CompanySummaryTotals(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0));
+    private long registerCompanyOutlets(LocalDate businessDate, List<Long> outletIds) {
+        if (outletIds == null || outletIds.isEmpty()) {
+            return 0;
+        }
+        long inserted = 0;
+        for (Long outletId : outletIds.stream().filter(item -> item != null).distinct().toList()) {
+            inserted += jdbcTemplate.update("""
+                    INSERT INTO report.company_daily_outlet (
+                        business_date, outlet_id
+                    ) VALUES (
+                        :businessDate, :outletId
+                    )
+                    ON CONFLICT DO NOTHING
+                    """, params(
+                    "businessDate", businessDate,
+                    "outletId", outletId
+            ));
+        }
+        return inserted;
     }
 
     private PayrollSummaryResponse payrollSummaryRowResponse(Long regionId, LocalDate fromDate, LocalDate toDate) {
@@ -1118,10 +1218,91 @@ public class ReportService {
         }
     }
 
+    private Long extractOutletId(ExportJobRecord record) {
+        try {
+            Map<String, Object> payload = objectMapper.readValue(record.payload(), new TypeReference<>() {
+            });
+            Object outlet = payload.get("outletId");
+            return outlet == null ? null : longValue(outlet);
+        } catch (JsonProcessingException exception) {
+            throw new BadRequestException("Unable to deserialize export payload");
+        }
+    }
+
+    private List<Long> claimQueuedExportJobs() {
+        return transactionTemplate.execute(status -> jdbcTemplate.query("""
+                UPDATE report.export_job job
+                SET status = 'RUNNING',
+                    started_at = COALESCE(job.started_at, :startedAt)
+                FROM (
+                    SELECT export_job_id
+                    FROM report.export_job
+                    WHERE status = 'QUEUED'
+                    ORDER BY requested_at, export_job_id
+                    LIMIT 10
+                    FOR UPDATE SKIP LOCKED
+                ) queued
+                WHERE job.export_job_id = queued.export_job_id
+                RETURNING job.export_job_id
+                """, params("startedAt", clock.instant()), (rs, rowNum) -> rs.getLong("export_job_id")));
+    }
+
+    private void completeExportJobRecord(
+            ExportJobRecord record,
+            ExportSpec spec,
+            ExportArtifactStore.ReportArtifact artifact,
+            List<Map<String, Object>> preview,
+            int rowCount,
+            Instant completedAt
+    ) {
+        transactionTemplate.executeWithoutResult(status -> {
+            jdbcTemplate.update("""
+                    UPDATE report.export_job
+                    SET status = 'COMPLETED',
+                        file_path = :filePath,
+                        completed_at = :completedAt,
+                        failed_at = NULL,
+                        error_message = NULL,
+                        row_count = :rowCount,
+                        preview_payload = CAST(:previewPayload AS jsonb),
+                        expires_at = :expiresAt,
+                        checksum = :checksum
+                    WHERE export_job_id = :jobId
+                      AND status = 'RUNNING'
+                    """, params(
+                    "filePath", artifact.path().toString(),
+                    "completedAt", completedAt,
+                    "rowCount", (long) rowCount,
+                    "previewPayload", toJson(preview),
+                    "expiresAt", completedAt.plus(exportProperties.getArtifactRetentionDays(), ChronoUnit.DAYS),
+                    "checksum", artifact.checksum(),
+                    "jobId", record.exportJobId()
+            ));
+            ExportJobRecord completed = requireExportJob(record.exportJobId());
+            reportAuditService.publish(
+                    "report.export.completed",
+                    null,
+                    completed.correlationId(),
+                    spec.regionId(),
+                    spec.outletId(),
+                    "EXPORT_COMPLETE",
+                    "EXPORT_JOB",
+                    String.valueOf(completed.exportJobId()),
+                    record.status(),
+                    toExportJobResponse(completed),
+                    Map.of("rowCount", rowCount, "dataset", spec.dataset().name())
+            );
+        });
+    }
+
+    private Path exportBaseDir() {
+        return Paths.get(exportProperties.getBaseDir()).toAbsolutePath().normalize();
+    }
+
     private ExportJobRecord requireExportJob(Long jobId) {
         ExportJobRecord record = jdbcTemplate.query("""
                 SELECT export_job_id, report_type, format, status, requested_by, requested_at, started_at, completed_at, failed_at,
-                       row_count, file_path, expires_at, error_message, payload::text AS payload, preview_payload::text AS preview_payload
+                       row_count, file_path, expires_at, error_message, correlation_id, payload::text AS payload, preview_payload::text AS preview_payload
                 FROM report.export_job
                 WHERE export_job_id = :jobId
                 """, params("jobId", jobId), rs -> rs.next() ? mapExportJob(rs) : null);
@@ -1134,7 +1315,7 @@ public class ReportService {
     private ExportJobRecord findExportByIdempotencyKey(String idempotencyKey) {
         return jdbcTemplate.query("""
                 SELECT export_job_id, report_type, format, status, requested_by, requested_at, started_at, completed_at, failed_at,
-                       row_count, file_path, expires_at, error_message, payload::text AS payload, preview_payload::text AS preview_payload
+                       row_count, file_path, expires_at, error_message, correlation_id, payload::text AS payload, preview_payload::text AS preview_payload
                 FROM report.export_job
                 WHERE idempotency_key = :idempotencyKey
                 """, params("idempotencyKey", idempotencyKey), rs -> rs.next() ? mapExportJob(rs) : null);
@@ -1155,6 +1336,7 @@ public class ReportService {
                 rs.getString("file_path"),
                 instant(rs, "expires_at"),
                 rs.getString("error_message"),
+                rs.getString("correlation_id"),
                 rs.getString("payload"),
                 rs.getString("preview_payload")
         );
@@ -1203,42 +1385,6 @@ public class ReportService {
         return regionId;
     }
 
-    private Path writeCsv(Long jobId, Dataset dataset, List<String> columns, List<Map<String, Object>> rows) {
-        try {
-            Path baseDir = Paths.get(exportProperties.getBaseDir()).toAbsolutePath().normalize();
-            Files.createDirectories(baseDir);
-            Path path = baseDir.resolve(dataset.name().toLowerCase(Locale.ROOT) + "-" + jobId + ".csv");
-            List<String> lines = new ArrayList<>();
-            lines.add(String.join(",", columns));
-            for (Map<String, Object> row : rows) {
-                List<String> values = new ArrayList<>();
-                for (String column : columns) {
-                    values.add(escapeCsv(row.get(column)));
-                }
-                lines.add(String.join(",", values));
-            }
-            Files.write(path, lines, StandardCharsets.UTF_8);
-            return path;
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to write export artifact", exception);
-        }
-    }
-
-    private String sha256(Path filePath) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] content = Files.readAllBytes(filePath);
-            byte[] hash = digest.digest(content);
-            StringBuilder hex = new StringBuilder();
-            for (byte value : hash) {
-                hex.append(String.format("%02x", value));
-            }
-            return hex.toString();
-        } catch (IOException | NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("Unable to checksum export artifact", exception);
-        }
-    }
-
     private List<Map<String, Object>> extractSnapshotLines(Map<String, Object> saleSnapshot) {
         Object value = saleSnapshot.get("lines");
         if (value == null) {
@@ -1280,19 +1426,6 @@ public class ReportService {
         return idempotencyKey == null || idempotencyKey.isBlank()
                 ? "report-export:" + UUID.randomUUID()
                 : idempotencyKey.trim();
-    }
-
-    private String escapeCsv(Object value) {
-        if (value == null) {
-            return "";
-        }
-        String stringValue = value instanceof Map<?, ?> || value instanceof List<?>
-                ? toJson(value)
-                : value.toString();
-        if (stringValue.contains(",") || stringValue.contains("\"") || stringValue.contains("\n")) {
-            return "\"" + stringValue.replace("\"", "\"\"") + "\"";
-        }
-        return stringValue;
     }
 
     private MapSqlParameterSource params(Object... values) {
@@ -1343,21 +1476,12 @@ public class ReportService {
     private record SummaryRow(BigDecimal grossPay, BigDecimal netPay, BigDecimal taxAmount, long runCount) {
     }
 
-    private record SummaryTotals(
+    private record SummaryDelta(
             BigDecimal totalSales,
             BigDecimal totalProcurement,
             BigDecimal totalExpense,
             BigDecimal totalPayroll,
             long transactionCount
-    ) {
-    }
-
-    private record CompanySummaryTotals(
-            BigDecimal totalSales,
-            BigDecimal totalProcurement,
-            BigDecimal totalExpense,
-            BigDecimal totalPayroll,
-            long outletCount
     ) {
     }
 
@@ -1390,6 +1514,7 @@ public class ReportService {
             String filePath,
             Instant expiresAt,
             String errorMessage,
+            String correlationId,
             String payload,
             String previewPayload
     ) {

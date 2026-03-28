@@ -15,12 +15,15 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -31,6 +34,7 @@ public class NotificationService {
     private final RestClient restClient;
     private final NotificationProperties properties;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
     private final Counter webhookFailureCounter;
     private final Counter dlqMessagesCounter;
 
@@ -41,6 +45,7 @@ public class NotificationService {
             RestClient restClient,
             NotificationProperties properties,
             Clock clock,
+            TransactionTemplate transactionTemplate,
             MeterRegistry meterRegistry
     ) {
         this.jdbcTemplate = jdbcTemplate;
@@ -49,6 +54,7 @@ public class NotificationService {
         this.restClient = restClient;
         this.properties = properties;
         this.clock = clock;
+        this.transactionTemplate = transactionTemplate;
         this.webhookFailureCounter = Counter.builder("fern_notification_webhook_failures_total").register(meterRegistry);
         this.dlqMessagesCounter = Counter.builder("fern_dlq_messages_total").register(meterRegistry);
     }
@@ -115,19 +121,62 @@ public class NotificationService {
     }
 
     @Scheduled(fixedDelayString = "${fern.notification.retry.delay-ms:10000}")
-    @Transactional
     public void deliverPending() {
         if (properties.getOpsWebhook().getUrl() == null || properties.getOpsWebhook().getUrl().isBlank()) {
             return;
         }
-        jdbcTemplate.query("""
-                SELECT notification_job_id, source_event_id, source_service, event_type, idempotency_key, subject, body, status
-                FROM notification.notification_job
-                WHERE status = 'PENDING'
-                  AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP)
-                ORDER BY ingested_at, notification_job_id
-                LIMIT 20
-                """, params(), (rs, rowNum) -> new PendingNotification(
+        claimPendingNotifications().forEach(this::deliverNotification);
+    }
+
+    private void deliverNotification(PendingNotification notification) {
+        int attemptNumber = nextAttemptNumber(notification.notificationJobId());
+        try {
+            ResponseEntity<Void> response = restClient.post()
+                    .uri(properties.getOpsWebhook().getUrl())
+                    .header("Content-Type", "application/json")
+                    .header("X-Fern-Webhook-Secret", properties.getOpsWebhook().getSecret() == null ? "" : properties.getOpsWebhook().getSecret())
+                    .header("X-Fern-Notification-Idempotency-Key", notification.idempotencyKey())
+                    .header("X-Fern-Source-Event-Id", notification.sourceEventId())
+                    .body(notification.body())
+                    .retrieve()
+                    .toBodilessEntity();
+            recordSuccess(notification, attemptNumber, String.valueOf(response.getStatusCode().value()));
+        } catch (RuntimeException exception) {
+            webhookFailureCounter.increment();
+            String errorSummary = ExceptionSummaries.safeSummary(exception);
+            boolean terminalFailure = attemptNumber >= properties.getRetry().getMaxAttempts();
+            recordFailure(notification, attemptNumber, errorSummary, terminalFailure);
+        }
+    }
+
+    private List<PendingNotification> claimPendingNotifications() {
+        Instant now = clock.instant();
+        Instant staleBefore = now.minusMillis(Math.max(properties.getRetry().getDelayMs(), 60000L));
+        return transactionTemplate.execute(status -> jdbcTemplate.query("""
+                UPDATE notification.notification_job job
+                SET status = 'IN_PROGRESS',
+                    claimed_at = :claimedAt
+                FROM (
+                    SELECT notification_job_id
+                    FROM notification.notification_job
+                    WHERE (
+                        status = 'PENDING'
+                        AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP)
+                    ) OR (
+                        status = 'IN_PROGRESS'
+                        AND COALESCE(claimed_at, ingested_at) < :staleBefore
+                    )
+                    ORDER BY COALESCE(scheduled_at, ingested_at), notification_job_id
+                    LIMIT 20
+                    FOR UPDATE SKIP LOCKED
+                ) claimed
+                WHERE job.notification_job_id = claimed.notification_job_id
+                RETURNING job.notification_job_id, job.source_event_id, job.source_service, job.event_type,
+                          job.idempotency_key, job.subject, job.body
+                """, params(
+                "claimedAt", now,
+                "staleBefore", staleBefore
+        ), (rs, rowNum) -> new PendingNotification(
                 rs.getLong("notification_job_id"),
                 rs.getString("source_event_id"),
                 rs.getString("source_service"),
@@ -135,68 +184,69 @@ public class NotificationService {
                 rs.getString("idempotency_key"),
                 rs.getString("subject"),
                 rs.getString("body")
-        )).forEach(notification -> deliverNotification(
-                notification.notificationJobId(),
-                notification.sourceEventId(),
-                notification.sourceService(),
-                notification.eventType(),
-                notification.idempotencyKey(),
-                notification.subject(),
-                notification.body()
-        ));
+        )));
     }
 
-    private void deliverNotification(
-            long notificationJobId,
-            String sourceEventId,
-            String sourceService,
-            String eventType,
-            String idempotencyKey,
-            String subject,
-            String body
-    ) {
-        int attemptNumber = jdbcTemplate.query("""
+    private int nextAttemptNumber(long notificationJobId) {
+        return jdbcTemplate.query("""
                 SELECT COALESCE(MAX(attempt_number), 0) + 1
                 FROM notification.delivery_attempt
                 WHERE notification_job_id = :notificationJobId
                 """, params("notificationJobId", notificationJobId), rs -> rs.next() ? rs.getInt(1) : 1);
-        try {
-            restClient.post()
-                    .uri(properties.getOpsWebhook().getUrl())
-                    .header("Content-Type", "application/json")
-                    .header("X-Fern-Webhook-Secret", properties.getOpsWebhook().getSecret() == null ? "" : properties.getOpsWebhook().getSecret())
-                    .body(body)
-                    .retrieve()
-                    .toBodilessEntity();
-            recordAttempt(notificationJobId, attemptNumber, "SENT", null, "200");
+    }
+
+    private void recordSuccess(PendingNotification notification, int attemptNumber, String responseCode) {
+        transactionTemplate.executeWithoutResult(status -> {
+            recordAttempt(notification.notificationJobId(), attemptNumber, "SENT", null, responseCode);
             jdbcTemplate.update("""
                     UPDATE notification.notification_job
                     SET status = 'SENT',
+                        claimed_at = NULL,
+                        scheduled_at = NULL,
                         sent_at = CURRENT_TIMESTAMP,
                         delivered_at = CURRENT_TIMESTAMP
                     WHERE notification_job_id = :notificationJobId
-                      AND status = 'PENDING'
-                    """, params("notificationJobId", notificationJobId));
-            upsertWebhookLog(sourceEventId, sourceService, eventType, idempotencyKey, "DELIVERED", attemptNumber, body);
-        } catch (RuntimeException exception) {
-            webhookFailureCounter.increment();
-            recordAttempt(notificationJobId, attemptNumber, "FAILED", ExceptionSummaries.safeSummary(exception), null);
-            boolean terminalFailure = attemptNumber >= properties.getRetry().getMaxAttempts();
+                      AND status = 'IN_PROGRESS'
+                    """, params("notificationJobId", notification.notificationJobId()));
+            upsertWebhookLog(
+                    notification.sourceEventId(),
+                    notification.sourceService(),
+                    notification.eventType(),
+                    notification.idempotencyKey(),
+                    "DELIVERED",
+                    attemptNumber,
+                    notification.body()
+            );
+        });
+    }
+
+    private void recordFailure(PendingNotification notification, int attemptNumber, String errorSummary, boolean terminalFailure) {
+        transactionTemplate.executeWithoutResult(status -> {
+            recordAttempt(notification.notificationJobId(), attemptNumber, "FAILED", errorSummary, null);
             jdbcTemplate.update("""
                     UPDATE notification.notification_job
                     SET status = :status,
+                        claimed_at = NULL,
                         scheduled_at = :scheduledAt,
                         delivered_at = CASE WHEN :terminalFailure THEN CURRENT_TIMESTAMP ELSE delivered_at END
                     WHERE notification_job_id = :notificationJobId
-                      AND status = 'PENDING'
+                      AND status = 'IN_PROGRESS'
                     """, params(
                     "status", terminalFailure ? "FAILED" : "PENDING",
                     "scheduledAt", terminalFailure ? null : clock.instant().plusMillis(properties.getRetry().getDelayMs()),
                     "terminalFailure", terminalFailure,
-                    "notificationJobId", notificationJobId
+                    "notificationJobId", notification.notificationJobId()
             ));
-            upsertWebhookLog(sourceEventId, sourceService, eventType, idempotencyKey, terminalFailure ? "FAILED" : "RETRYING", attemptNumber, body);
-        }
+            upsertWebhookLog(
+                    notification.sourceEventId(),
+                    notification.sourceService(),
+                    notification.eventType(),
+                    notification.idempotencyKey(),
+                    terminalFailure ? "FAILED" : "RETRYING",
+                    attemptNumber,
+                    notification.body()
+            );
+        });
     }
 
     private void createNotificationJob(
