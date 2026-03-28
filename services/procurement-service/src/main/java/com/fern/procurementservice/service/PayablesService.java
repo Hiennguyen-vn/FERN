@@ -9,6 +9,7 @@ import com.fern.procurementservice.dto.ProcurementCommands.CreateSupplierPayment
 import com.fern.procurementservice.dto.ProcurementCommands.PaymentAllocationInput;
 import com.fern.procurementservice.dto.ProcurementCommands.SupplierInvoiceLineInput;
 import com.fern.procurementservice.dto.ProcurementResponses.SupplierInvoiceResponse;
+import com.fern.procurementservice.dto.ProcurementResponses.SupplierPaymentAllocationResponse;
 import com.fern.procurementservice.dto.ProcurementResponses.SupplierPaymentResponse;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -16,6 +17,8 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -147,8 +150,16 @@ public class PayablesService {
         return getSupplierInvoice(principal, id);
     }
 
-    @Transactional
     public SupplierPaymentResponse createSupplierPayment(
+            FernPrincipal principal,
+            String idempotencyKey,
+            String correlationId,
+            CreateSupplierPaymentRequest request
+    ) {
+        return transactionTemplate.execute(status -> createSupplierPaymentTx(principal, idempotencyKey, correlationId, request));
+    }
+
+    private SupplierPaymentResponse createSupplierPaymentTx(
             FernPrincipal principal,
             String idempotencyKey,
             String correlationId,
@@ -160,7 +171,9 @@ public class PayablesService {
                 SELECT id FROM procurement.supplier_payment WHERE idempotency_key = :idempotencyKey
                 """, params("idempotencyKey", idempotencyKey), rs -> rs.next() ? rs.getLong("id") : null);
         if (existingPaymentId != null) {
-            return getSupplierPayment(existingPaymentId);
+            SupplierPaymentResponse existingPayment = getSupplierPayment(existingPaymentId);
+            requireMatchingIdempotentSupplierPayment(existingPayment, request);
+            return existingPayment;
         }
         requireActiveApprovedSupplier(request.supplierId());
         BigDecimal allocatedTotal = request.invoiceAllocations().stream()
@@ -191,6 +204,14 @@ public class PayablesService {
             if (!"APPROVED".equals(invoice.status())) {
                 throw new ConflictException("Only approved supplier invoices can be paid");
             }
+            Long lockedDuplicatePaymentId = jdbcTemplate().query("""
+                    SELECT id FROM procurement.supplier_payment WHERE idempotency_key = :idempotencyKey
+                    """, params("idempotencyKey", idempotencyKey), rs -> rs.next() ? rs.getLong("id") : null);
+            if (lockedDuplicatePaymentId != null) {
+                SupplierPaymentResponse existingPayment = getSupplierPayment(lockedDuplicatePaymentId);
+                requireMatchingIdempotentSupplierPayment(existingPayment, request);
+                return existingPayment;
+            }
             BigDecimal openAmount = invoice.totalAmount().subtract(invoiceAllocatedAmount(invoice.id()));
             if (requestedAllocationByInvoice.get(invoice.id()).compareTo(openAmount) > 0) {
                 throw new ConflictException("Allocated amount exceeds the supplier invoice open amount");
@@ -205,7 +226,7 @@ public class PayablesService {
                     :note, :createdByUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, :idempotencyKey
                 )
                 """, params(
-                "paymentNumber", "SP-" + Instant.now(clock).toEpochMilli(),
+                "paymentNumber", nextReferenceNumber("SP"),
                 "supplierId", request.supplierId(),
                 "currencyCode", request.currencyCode(),
                 "paymentMethod", request.paymentMethod(),
@@ -240,8 +261,69 @@ public class PayablesService {
         }
     }
 
+    private void requireMatchingIdempotentSupplierPayment(
+            SupplierPaymentResponse existingPayment,
+            CreateSupplierPaymentRequest request
+    ) {
+        if (!matchesExistingSupplierPayment(existingPayment, request)) {
+            throw new ConflictException("Idempotency-Key cannot be reused with a different supplier payment request");
+        }
+    }
+
+    private boolean matchesExistingSupplierPayment(
+            SupplierPaymentResponse existingPayment,
+            CreateSupplierPaymentRequest request
+    ) {
+        return Objects.equals(existingPayment.supplierId(), request.supplierId())
+                && Objects.equals(existingPayment.currencyCode(), request.currencyCode())
+                && Objects.equals(existingPayment.paymentMethod(), request.paymentMethod())
+                && bigDecimalEquals(existingPayment.amount(), request.amount())
+                && Objects.equals(existingPayment.paymentTime(), request.paymentTime())
+                && Objects.equals(existingPayment.transactionRef(), request.transactionRef())
+                && Objects.equals(existingPayment.note(), request.note())
+                && normalizeSupplierPaymentAllocations(existingPayment.invoiceAllocations())
+                        .equals(normalizeRequestedPaymentAllocations(request.invoiceAllocations()));
+    }
+
+    private List<NormalizedSupplierPaymentAllocation> normalizeSupplierPaymentAllocations(
+            List<SupplierPaymentAllocationResponse> allocations
+    ) {
+        return allocations.stream()
+                .map(allocation -> new NormalizedSupplierPaymentAllocation(
+                        allocation.supplierInvoiceId(),
+                        allocation.allocatedAmount(),
+                        allocation.note()
+                ))
+                .sorted()
+                .toList();
+    }
+
+    private List<NormalizedSupplierPaymentAllocation> normalizeRequestedPaymentAllocations(
+            List<PaymentAllocationInput> allocations
+    ) {
+        return allocations.stream()
+                .map(allocation -> new NormalizedSupplierPaymentAllocation(
+                        allocation.supplierInvoiceId(),
+                        allocation.allocatedAmount(),
+                        allocation.note()
+                ))
+                .sorted()
+                .toList();
+    }
+
+    private boolean bigDecimalEquals(BigDecimal left, BigDecimal right) {
+        if (left == null || right == null) {
+            return left == right;
+        }
+        return left.compareTo(right) == 0;
+    }
+
     private NamedParameterJdbcTemplate jdbcTemplate() {
         return procurementJdbcRepository.jdbcTemplate();
+    }
+
+    private String nextReferenceNumber(String prefix) {
+        return prefix + "-" + UUID.randomUUID();
     }
 
     private MapSqlParameterSource params(Object... values) {
@@ -278,5 +360,33 @@ public class PayablesService {
 
     private BigDecimal invoiceAllocatedAmount(Long supplierInvoiceId) {
         return procurementJdbcRepository.invoiceAllocatedAmount(supplierInvoiceId);
+    }
+
+    private record NormalizedSupplierPaymentAllocation(
+            Long supplierInvoiceId,
+            BigDecimal allocatedAmount,
+            String note
+    ) implements Comparable<NormalizedSupplierPaymentAllocation> {
+        @Override
+        public int compareTo(NormalizedSupplierPaymentAllocation other) {
+            int byInvoiceId = supplierInvoiceId.compareTo(other.supplierInvoiceId);
+            if (byInvoiceId != 0) {
+                return byInvoiceId;
+            }
+            int byAmount = allocatedAmount.compareTo(other.allocatedAmount);
+            if (byAmount != 0) {
+                return byAmount;
+            }
+            if (note == null && other.note == null) {
+                return 0;
+            }
+            if (note == null) {
+                return -1;
+            }
+            if (other.note == null) {
+                return 1;
+            }
+            return note.compareTo(other.note);
+        }
     }
 }

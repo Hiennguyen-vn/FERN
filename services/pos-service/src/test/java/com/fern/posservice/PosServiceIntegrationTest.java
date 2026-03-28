@@ -89,6 +89,7 @@ class PosServiceIntegrationTest {
         registry.add("spring.data.redis.host", FernIntegrationContainers::redisHost);
         registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
         registry.add("fern.outbox.enabled", () -> "false");
+        registry.add("fern.security.jwt.secret", () -> "XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         registry.add("fern.security.jwt.allow-insecure-default-secret", () -> "true");
         registry.add("fern.clients.catalog.base-url", () -> "http://localhost:" + catalogServer.getAddress().getPort());
         registry.add("fern.clients.catalog.connect-timeout", () -> "500ms");

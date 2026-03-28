@@ -10,7 +10,6 @@ import com.fern.platform.security.FernTokenAcceptanceRules;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -20,6 +19,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -31,18 +31,27 @@ import reactor.core.scheduler.Schedulers;
 public class GatewaySecurityFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = List.of("/auth/login", "/auth/refresh", "/actuator/health");
     private static final Logger LOGGER = LoggerFactory.getLogger(GatewaySecurityFilter.class);
+    private static final RedisScript<Long> RATE_LIMIT_SCRIPT = RedisScript.of("""
+            local current = redis.call('INCR', KEYS[1])
+            if current == 1 then
+                redis.call('EXPIRE', KEYS[1], ARGV[1])
+            end
+            return current
+            """, Long.class);
 
     private final FernJwtService jwtService;
     private final ReactiveStringRedisTemplate redisTemplate;
     private final AuditEventPublisher auditEventPublisher;
     private final Counter authFailureCounter;
     private final Counter outboxEnqueueFailureCounter;
+    private final int trustedProxyCount;
 
     public GatewaySecurityFilter(
             FernJwtService jwtService,
             ReactiveStringRedisTemplate redisTemplate,
             AuditEventPublisher auditEventPublisher,
-            MeterRegistry meterRegistry
+            MeterRegistry meterRegistry,
+            @org.springframework.beans.factory.annotation.Value("${fern.security.trusted-proxy-count:0}") int trustedProxyCount
     ) {
         this.jwtService = jwtService;
         this.redisTemplate = redisTemplate;
@@ -52,6 +61,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                 .tag("source", "api-gateway")
                 .tag("event_type", "audit.security")
                 .register(meterRegistry);
+        this.trustedProxyCount = trustedProxyCount;
     }
 
     @Override
@@ -150,28 +160,34 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
         Mono<Long> currentPolicyVersion = redisTemplate.opsForValue()
                 .get(FernTokenAcceptanceRules.POLICY_VERSION_KEY)
                 .map(Long::parseLong)
-                .defaultIfEmpty(claims.policyVersion());
+                .defaultIfEmpty(0L)
+                .onErrorReturn(Long.MAX_VALUE);
 
         Mono<Long> currentScopeVersion = redisTemplate.opsForValue()
                 .get(FernTokenAcceptanceRules.SCOPE_VERSION_KEY)
                 .map(Long::parseLong)
-                .defaultIfEmpty(claims.scopeVersion());
+                .defaultIfEmpty(0L)
+                .onErrorReturn(Long.MAX_VALUE);
 
         return Mono.zip(blacklisted, currentPolicyVersion, currentScopeVersion)
                 .map(tuple -> FernTokenAcceptanceRules.isAccepted(claims, tuple.getT1(), tuple.getT2(), tuple.getT3()));
     }
 
     private Mono<Boolean> checkRateLimit(String key, long limit) {
-        return redisTemplate.opsForValue().increment(key)
-                .flatMap(count -> {
-                    Mono<Boolean> expire = count == 1
-                            ? redisTemplate.expire(key, Duration.ofMinutes(1))
-                            : Mono.just(Boolean.TRUE);
-                    return expire.thenReturn(count <= limit);
-                });
+        return redisTemplate.execute(RATE_LIMIT_SCRIPT, List.of(key), List.of("60"))
+                .next()
+                .defaultIfEmpty(0L)
+                .map(count -> count <= limit)
+                .onErrorReturn(true);
     }
 
     private String clientKey(ServerWebExchange exchange) {
+        String xForwardedFor = exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
+        if (trustedProxyCount > 0 && xForwardedFor != null && !xForwardedFor.isBlank()) {
+            String[] addresses = xForwardedFor.split(",");
+            int clientIndex = Math.max(0, addresses.length - trustedProxyCount);
+            return addresses[clientIndex].trim();
+        }
         if (exchange.getRequest().getRemoteAddress() == null || exchange.getRequest().getRemoteAddress().getAddress() == null) {
             return "unknown";
         }

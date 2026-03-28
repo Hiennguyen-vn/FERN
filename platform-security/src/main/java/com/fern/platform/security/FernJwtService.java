@@ -43,6 +43,9 @@ public class FernJwtService {
         if (FernJwtProperties.INSECURE_DEFAULT_SECRET.equals(properties.getSecret()) && !properties.isAllowInsecureDefaultSecret()) {
             throw new IllegalStateException("FERN_JWT_SECRET must be overridden outside controlled local/test environments");
         }
+        if (properties.getSecret().length() < 32 && !properties.isAllowInsecureDefaultSecret()) {
+            throw new IllegalStateException("FERN_JWT_SECRET must be at least 32 characters");
+        }
     }
 
     public String encode(FernJwtClaims claims, Duration ttl) {

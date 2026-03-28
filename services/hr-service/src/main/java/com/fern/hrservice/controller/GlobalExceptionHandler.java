@@ -8,6 +8,7 @@ import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.observability.CorrelationId;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -15,7 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -49,9 +52,30 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "validation_error", "Request validation failed", request, details);
     }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    ResponseEntity<ApiErrorResponse> handleConstraintViolation(ConstraintViolationException exception, HttpServletRequest request) {
+        Map<String, Object> details = exception.getConstraintViolations().stream()
+                .collect(Collectors.toMap(
+                        violation -> violation.getPropertyPath().toString(),
+                        violation -> violation.getMessage(),
+                        (left, right) -> left
+                ));
+        return build(HttpStatus.BAD_REQUEST, "validation_error", "Request validation failed", request, details);
+    }
+
+    @ExceptionHandler(ServletRequestBindingException.class)
+    ResponseEntity<ApiErrorResponse> handleRequestBinding(ServletRequestBindingException exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "bad_request", exception.getMessage(), request, Map.of());
+    }
+
     @ExceptionHandler(BadRequestException.class)
     ResponseEntity<ApiErrorResponse> handleBadRequest(BadRequestException exception, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "bad_request", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "bad_request", "Request violates data constraints", request, Map.of());
     }
 
     @ExceptionHandler(Exception.class)

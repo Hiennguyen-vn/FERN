@@ -113,6 +113,12 @@ public class ProcurementBeans {
     }
 
     @Bean
+    @Primary
+    DataSourceTransactionManager transactionManager(@Qualifier("dataSource") DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean
     @ConfigurationProperties("fern.master-datasource")
     DataSourceProperties masterDataSourceProperties() {
         return new DataSourceProperties();

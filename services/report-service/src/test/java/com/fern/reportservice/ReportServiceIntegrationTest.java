@@ -52,6 +52,7 @@ class ReportServiceIntegrationTest {
         registry.add("spring.data.redis.port", FernIntegrationContainers::redisPort);
         registry.add("spring.kafka.listener.auto-startup", () -> "false");
         registry.add("spring.task.scheduling.enabled", () -> "false");
+        registry.add("fern.security.jwt.secret", () -> "XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         registry.add("fern.security.jwt.allow-insecure-default-secret", () -> "true");
         registry.add("fern.report.export.base-dir", () -> EXPORT_DIR.toString());
         registry.add("fern.report.export.preview-row-limit", () -> "5");

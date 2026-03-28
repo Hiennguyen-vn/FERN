@@ -3,6 +3,7 @@ package com.fern.hrservice.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -74,7 +75,12 @@ public final class HrCommands {
             @NotNull Long regionId,
             @NotNull Long outletId,
             @NotNull Long shiftAssignmentId,
-            @NotBlank String eventType,
+            @NotBlank
+            @Pattern(
+                    regexp = "CLOCK_IN|CLOCK_OUT|BREAK_START|BREAK_END",
+                    message = "must be one of CLOCK_IN, CLOCK_OUT, BREAK_START, or BREAK_END"
+            )
+            String eventType,
             @NotNull Instant eventTime,
             String sourceSystem
     ) {

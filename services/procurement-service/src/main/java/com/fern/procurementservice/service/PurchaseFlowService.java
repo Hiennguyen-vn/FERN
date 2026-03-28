@@ -16,6 +16,7 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -72,7 +73,7 @@ public class PurchaseFlowService {
                     :subtotalAmount, :taxAmount, :totalAmount, :note, :createdByUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
                 """, params(
-                "poNumber", "PO-" + Instant.now(clock).toEpochMilli(),
+                "poNumber", nextReferenceNumber("PO"),
                 "regionId", outlet.regionId(),
                 "outletId", request.outletId(),
                 "supplierId", supplier.id(),
@@ -227,7 +228,7 @@ public class PurchaseFlowService {
                     :totalAmount, :supplierLotNumber, :note, :createdByUserId, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
                 """, params(
-                "receiptNumber", "GR-" + Instant.now(clock).toEpochMilli(),
+                "receiptNumber", nextReferenceNumber("GR"),
                 "purchaseOrderId", purchaseOrder.id(),
                 "regionId", purchaseOrder.regionId(),
                 "outletId", purchaseOrder.outletId(),
@@ -364,6 +365,10 @@ public class PurchaseFlowService {
 
     private NamedParameterJdbcTemplate jdbcTemplate() {
         return procurementJdbcRepository.jdbcTemplate();
+    }
+
+    private String nextReferenceNumber(String prefix) {
+        return prefix + "-" + UUID.randomUUID();
     }
 
     private MapSqlParameterSource params(Object... values) {

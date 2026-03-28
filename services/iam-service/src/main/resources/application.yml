@@ -3,8 +3,8 @@ spring:
     name: iam-service
   datasource:
     url: ${FERN_IAM_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=iam}
-    username: ${FERN_DB_USERNAME:fern}
-    password: ${FERN_DB_PASSWORD:fern}
+    username: ${FERN_DB_USERNAME:}
+    password: ${FERN_DB_PASSWORD:}
   flyway:
     enabled: true
     schemas: iam
@@ -21,8 +21,11 @@ spring:
     redis:
       host: ${FERN_REDIS_HOST:localhost}
       port: ${FERN_REDIS_PORT:6379}
+      password: ${FERN_REDIS_PASSWORD:}
   kafka:
     bootstrap-servers: ${FERN_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      security.protocol: ${FERN_KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -38,7 +41,7 @@ management:
 fern:
   security:
     jwt:
-      secret: ${FERN_JWT_SECRET:XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv}
+      secret: ${FERN_JWT_SECRET:}
       access-token-ttl-seconds: 900
       refresh-token-ttl-seconds: 604800
   outbox:

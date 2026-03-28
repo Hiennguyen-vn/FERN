@@ -34,6 +34,7 @@ class FinanceServiceIntegrationTest {
         registry.add("fern.projection-datasource.password", FernIntegrationContainers::jdbcPassword);
         registry.add("spring.kafka.listener.auto-startup", () -> "false");
         registry.add("fern.outbox.enabled", () -> "false");
+        registry.add("fern.security.jwt.secret", () -> "test-jwt-secret-that-is-at-least-32-characters-long");
         registry.add("fern.security.jwt.allow-insecure-default-secret", () -> "true");
     }
 

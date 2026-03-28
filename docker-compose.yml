@@ -3,15 +3,15 @@ services:
     image: postgres:17-alpine
     container_name: fern-postgres
     environment:
-      POSTGRES_USER: fern
-      POSTGRES_PASSWORD: fern
+      POSTGRES_USER: ${FERN_DB_USERNAME:-fern}
+      POSTGRES_PASSWORD: ${FERN_DB_PASSWORD:-fern}
       POSTGRES_DB: fern_master
     ports:
       - "${FERN_POSTGRES_HOST_PORT:-55432}:5432"
     volumes:
       - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U fern -d fern_master"]
+      test: ["CMD-SHELL", "pg_isready -U ${FERN_DB_USERNAME:-fern} -d fern_master"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -19,11 +19,11 @@ services:
   redis:
     image: redis:7.4-alpine
     container_name: fern-redis
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${FERN_REDIS_PASSWORD:-localdev}"]
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${FERN_REDIS_PASSWORD:-localdev} ping 2>/dev/null"]
       interval: 10s
       timeout: 5s
       retries: 10

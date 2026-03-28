@@ -58,6 +58,7 @@ class ProcurementServiceIntegrationTest {
         registry.add("fern.master-datasource.password", FernIntegrationContainers::jdbcPassword);
         registry.add("fern.clients.org.base-url", () -> "http://localhost:" + orgServer.getAddress().getPort());
         registry.add("fern.outbox.enabled", () -> "false");
+        registry.add("fern.security.jwt.secret", () -> "XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         registry.add("fern.security.jwt.allow-insecure-default-secret", () -> "true");
     }
 
@@ -802,7 +803,214 @@ class ProcurementServiceIntegrationTest {
 
     @Test
     void shouldSerializeConcurrentSupplierPaymentsAgainstSameInvoice() throws Exception {
-        Long supplierId = createActiveSupplier("SUP-009", "Concurrent Payment Supplier");
+        ApprovedSupplierInvoiceFixture fixture = createApprovedSupplierInvoiceFixture(
+                "SUP-009",
+                "Concurrent Payment Supplier",
+                "INV-009",
+                "gr-post-concurrency"
+        );
+        Long supplierId = fixture.supplierId();
+        Long supplierInvoiceId = fixture.supplierInvoiceId();
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Integer> first = executor.submit(() -> concurrentPaymentStatus(start, ready, supplierId, supplierInvoiceId, "30.00", "supplier-pay-race-1"));
+            Future<Integer> second = executor.submit(() -> concurrentPaymentStatus(start, ready, supplierId, supplierInvoiceId, "30.00", "supplier-pay-race-2"));
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            int firstStatus = first.get(10, TimeUnit.SECONDS);
+            int secondStatus = second.get(10, TimeUnit.SECONDS);
+
+            assertThat(List.of(firstStatus, secondStatus)).containsExactlyInAnyOrder(200, 409);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer paymentCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.supplier_payment
+                WHERE supplier_id = ?
+                """, Integer.class, supplierId);
+        BigDecimal allocatedTotal = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(allocated_amount), 0)
+                FROM procurement.supplier_payment_allocation
+                WHERE supplier_invoice_id = ?
+                """, BigDecimal.class, supplierInvoiceId);
+
+        assertThat(paymentCount).isEqualTo(1);
+        assertThat(allocatedTotal).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void shouldSerializeThreeConcurrentSupplierPaymentsWithoutOverAllocatingInvoice() throws Exception {
+        ApprovedSupplierInvoiceFixture fixture = createApprovedSupplierInvoiceFixture(
+                "SUP-010",
+                "Concurrent Triple Payment Supplier",
+                "INV-010",
+                "gr-post-concurrency-3"
+        );
+        Long supplierId = fixture.supplierId();
+        Long supplierInvoiceId = fixture.supplierInvoiceId();
+
+        ExecutorService executor = Executors.newFixedThreadPool(3);
+        CountDownLatch ready = new CountDownLatch(3);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Integer> first = executor.submit(() -> concurrentPaymentStatus(start, ready, supplierId, supplierInvoiceId, "15.00", "supplier-pay-race-3a"));
+            Future<Integer> second = executor.submit(() -> concurrentPaymentStatus(start, ready, supplierId, supplierInvoiceId, "15.00", "supplier-pay-race-3b"));
+            Future<Integer> third = executor.submit(() -> concurrentPaymentStatus(start, ready, supplierId, supplierInvoiceId, "15.00", "supplier-pay-race-3c"));
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            int firstStatus = first.get(10, TimeUnit.SECONDS);
+            int secondStatus = second.get(10, TimeUnit.SECONDS);
+            int thirdStatus = third.get(10, TimeUnit.SECONDS);
+
+            assertThat(List.of(firstStatus, secondStatus, thirdStatus)).containsExactlyInAnyOrder(200, 200, 409);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer paymentCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.supplier_payment
+                WHERE supplier_id = ?
+                """, Integer.class, supplierId);
+        BigDecimal allocatedTotal = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(allocated_amount), 0)
+                FROM procurement.supplier_payment_allocation
+                WHERE supplier_invoice_id = ?
+                """, BigDecimal.class, supplierInvoiceId);
+
+        assertThat(paymentCount).isEqualTo(2);
+        assertThat(allocatedTotal).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void shouldReturnSameSupplierPaymentForConcurrentRequestsSharingIdempotencyKey() throws Exception {
+        ApprovedSupplierInvoiceFixture fixture = createApprovedSupplierInvoiceFixture(
+                "SUP-011",
+                "Concurrent Idempotent Payment Supplier",
+                "INV-011",
+                "gr-post-concurrency-idempotent"
+        );
+        Long supplierId = fixture.supplierId();
+        Long supplierInvoiceId = fixture.supplierInvoiceId();
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<PaymentCallResult> first = executor.submit(
+                    () -> concurrentPaymentResult(start, ready, supplierId, supplierInvoiceId, "30.00", "supplier-pay-race-same-key")
+            );
+            Future<PaymentCallResult> second = executor.submit(
+                    () -> concurrentPaymentResult(start, ready, supplierId, supplierInvoiceId, "30.00", "supplier-pay-race-same-key")
+            );
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            PaymentCallResult firstResult = first.get(10, TimeUnit.SECONDS);
+            PaymentCallResult secondResult = second.get(10, TimeUnit.SECONDS);
+
+            assertThat(firstResult.status()).isEqualTo(200);
+            assertThat(secondResult.status()).isEqualTo(200);
+            assertThat(objectMapper.readTree(firstResult.body()).get("id").asLong())
+                    .isEqualTo(objectMapper.readTree(secondResult.body()).get("id").asLong());
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer paymentCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.supplier_payment
+                WHERE supplier_id = ?
+                """, Integer.class, supplierId);
+        Integer allocationCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.supplier_payment_allocation
+                WHERE supplier_invoice_id = ?
+                """, Integer.class, supplierInvoiceId);
+        BigDecimal allocatedTotal = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(allocated_amount), 0)
+                FROM procurement.supplier_payment_allocation
+                WHERE supplier_invoice_id = ?
+                """, BigDecimal.class, supplierInvoiceId);
+
+        assertThat(paymentCount).isEqualTo(1);
+        assertThat(allocationCount).isEqualTo(1);
+        assertThat(allocatedTotal).isEqualByComparingTo("30.00");
+    }
+
+    @Test
+    void shouldRejectConcurrentSupplierPaymentReplayWhenIdempotencyPayloadDiffers() throws Exception {
+        ApprovedSupplierInvoiceFixture fixture = createApprovedSupplierInvoiceFixture(
+                "SUP-012",
+                "Concurrent Idempotency Mismatch Supplier",
+                "INV-012",
+                "gr-post-concurrency-idempotent-mismatch"
+        );
+        Long supplierId = fixture.supplierId();
+        Long supplierInvoiceId = fixture.supplierInvoiceId();
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<PaymentCallResult> first = executor.submit(
+                    () -> concurrentPaymentResult(start, ready, supplierId, supplierInvoiceId, "30.00", "30.00", "supplier-pay-race-mismatch-key")
+            );
+            Future<PaymentCallResult> second = executor.submit(
+                    () -> concurrentPaymentResult(start, ready, supplierId, supplierInvoiceId, "20.00", "20.00", "supplier-pay-race-mismatch-key")
+            );
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            PaymentCallResult firstResult = first.get(10, TimeUnit.SECONDS);
+            PaymentCallResult secondResult = second.get(10, TimeUnit.SECONDS);
+
+            assertThat(List.of(firstResult.status(), secondResult.status())).containsExactlyInAnyOrder(200, 409);
+            PaymentCallResult conflictResult = firstResult.status() == 409 ? firstResult : secondResult;
+            assertThat(conflictResult.body()).contains("Idempotency-Key cannot be reused with a different supplier payment request");
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer paymentCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.supplier_payment
+                WHERE supplier_id = ?
+                """, Integer.class, supplierId);
+        Integer allocationCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.supplier_payment_allocation
+                WHERE supplier_invoice_id = ?
+                """, Integer.class, supplierInvoiceId);
+        BigDecimal allocatedTotal = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(allocated_amount), 0)
+                FROM procurement.supplier_payment_allocation
+                WHERE supplier_invoice_id = ?
+                """, BigDecimal.class, supplierInvoiceId);
+
+        assertThat(paymentCount).isEqualTo(1);
+        assertThat(allocationCount).isEqualTo(1);
+        assertThat(allocatedTotal).isIn(new BigDecimal("20.00"), new BigDecimal("30.00"));
+    }
+
+    private ApprovedSupplierInvoiceFixture createApprovedSupplierInvoiceFixture(
+            String supplierCode,
+            String supplierName,
+            String invoiceNumber,
+            String goodsReceiptPostIdempotencyKey
+    ) throws Exception {
+        Long supplierId = createActiveSupplier(supplierCode, supplierName);
 
         String poJson = mockMvc.perform(post("/purchase-orders")
                         .header("Authorization", bearer())
@@ -869,7 +1077,7 @@ class ProcurementServiceIntegrationTest {
                 .andExpect(status().isOk());
         String postedReceiptJson = mockMvc.perform(post("/goods-receipts/{id}/post", goodsReceiptId)
                         .header("Authorization", bearer())
-                        .header("Idempotency-Key", "gr-post-concurrency"))
+                        .header("Idempotency-Key", goodsReceiptPostIdempotencyKey))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         Long goodsReceiptLineId = objectMapper.readTree(postedReceiptJson).get("lines").get(0).get("id").asLong();
@@ -883,7 +1091,7 @@ class ProcurementServiceIntegrationTest {
                                   "regionId": 1,
                                   "outletId": 101,
                                   "currencyCode": "VND",
-                                  "invoiceNumber": "INV-009",
+                                  "invoiceNumber": "%s",
                                   "invoiceDate": "2026-03-27",
                                   "lines": [
                                     {
@@ -898,7 +1106,7 @@ class ProcurementServiceIntegrationTest {
                                     }
                                   ]
                                 }
-                                """.formatted(supplierId, goodsReceiptLineId)))
+                                """.formatted(supplierId, invoiceNumber, goodsReceiptLineId)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         Long supplierInvoiceId = readId(invoiceJson);
@@ -907,37 +1115,7 @@ class ProcurementServiceIntegrationTest {
                         .header("Authorization", bearer()))
                 .andExpect(status().isOk());
 
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch ready = new CountDownLatch(2);
-        CountDownLatch start = new CountDownLatch(1);
-        try {
-            Future<Integer> first = executor.submit(() -> concurrentPaymentStatus(start, ready, supplierId, supplierInvoiceId, "supplier-pay-race-1"));
-            Future<Integer> second = executor.submit(() -> concurrentPaymentStatus(start, ready, supplierId, supplierInvoiceId, "supplier-pay-race-2"));
-
-            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
-            start.countDown();
-
-            int firstStatus = first.get(10, TimeUnit.SECONDS);
-            int secondStatus = second.get(10, TimeUnit.SECONDS);
-
-            assertThat(List.of(firstStatus, secondStatus)).containsExactlyInAnyOrder(200, 409);
-        } finally {
-            executor.shutdownNow();
-        }
-
-        Integer paymentCount = jdbcTemplate.queryForObject("""
-                SELECT COUNT(*)
-                FROM procurement.supplier_payment
-                WHERE supplier_id = ?
-                """, Integer.class, supplierId);
-        BigDecimal allocatedTotal = jdbcTemplate.queryForObject("""
-                SELECT COALESCE(SUM(allocated_amount), 0)
-                FROM procurement.supplier_payment_allocation
-                WHERE supplier_invoice_id = ?
-                """, BigDecimal.class, supplierInvoiceId);
-
-        assertThat(paymentCount).isEqualTo(1);
-        assertThat(allocatedTotal).isEqualByComparingTo("30.00");
+        return new ApprovedSupplierInvoiceFixture(supplierId, supplierInvoiceId);
     }
 
     private Long createActiveSupplier(String supplierCode, String name) throws Exception {
@@ -967,11 +1145,35 @@ class ProcurementServiceIntegrationTest {
             CountDownLatch ready,
             Long supplierId,
             Long supplierInvoiceId,
+            String amount,
+            String idempotencyKey
+    ) throws Exception {
+        return concurrentPaymentResult(start, ready, supplierId, supplierInvoiceId, amount, idempotencyKey).status();
+    }
+
+    private PaymentCallResult concurrentPaymentResult(
+            CountDownLatch start,
+            CountDownLatch ready,
+            Long supplierId,
+            Long supplierInvoiceId,
+            String amount,
+            String idempotencyKey
+    ) throws Exception {
+        return concurrentPaymentResult(start, ready, supplierId, supplierInvoiceId, amount, amount, idempotencyKey);
+    }
+
+    private PaymentCallResult concurrentPaymentResult(
+            CountDownLatch start,
+            CountDownLatch ready,
+            Long supplierId,
+            Long supplierInvoiceId,
+            String amount,
+            String allocatedAmount,
             String idempotencyKey
     ) throws Exception {
         ready.countDown();
         assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
-        return mockMvc.perform(post("/supplier-payments")
+        var response = mockMvc.perform(post("/supplier-payments")
                         .header("Authorization", bearer())
                         .header("Idempotency-Key", idempotencyKey)
                         .contentType("application/json")
@@ -980,19 +1182,25 @@ class ProcurementServiceIntegrationTest {
                                   "supplierId": %d,
                                   "currencyCode": "VND",
                                   "paymentMethod": "BANK_TRANSFER",
-                                  "amount": 30.00,
+                                  "amount": %s,
                                   "paymentTime": "2026-03-27T12:00:00Z",
                                   "invoiceAllocations": [
                                     {
                                       "supplierInvoiceId": %d,
-                                      "allocatedAmount": 30.00
+                                      "allocatedAmount": %s
                                     }
                                   ]
                                 }
-                                """.formatted(supplierId, supplierInvoiceId)))
+                                """.formatted(supplierId, amount, supplierInvoiceId, allocatedAmount)))
                 .andReturn()
-                .getResponse()
-                .getStatus();
+                .getResponse();
+        return new PaymentCallResult(response.getStatus(), response.getContentAsString());
+    }
+
+    private record ApprovedSupplierInvoiceFixture(Long supplierId, Long supplierInvoiceId) {
+    }
+
+    private record PaymentCallResult(int status, String body) {
     }
 
     private static void ensureOrgServerStarted() {

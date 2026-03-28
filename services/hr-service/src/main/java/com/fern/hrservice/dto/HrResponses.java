@@ -1,5 +1,4 @@
 package com.fern.hrservice.dto;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -78,6 +77,19 @@ public final class HrResponses {
             Long id,
             Long employeeId,
             Long shiftAssignmentId,
+            String eventType,
+            Instant eventTime,
+            String sourceSystem
+    ) {
+    }
+
+    public record AttendanceEventListItemResponse(
+            Long id,
+            Long employeeId,
+            Long regionId,
+            Long outletId,
+            Long shiftAssignmentId,
+            LocalDate shiftDate,
             String eventType,
             Instant eventTime,
             String sourceSystem

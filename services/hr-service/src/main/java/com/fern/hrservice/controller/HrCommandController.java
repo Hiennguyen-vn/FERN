@@ -78,9 +78,10 @@ public class HrCommandController {
     @PostMapping("/attendance-events")
     public AttendanceEventResponse recordAttendanceEvent(
             @AuthenticationPrincipal FernPrincipal principal,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody RecordAttendanceEventRequest request
     ) {
-        return hrService.recordAttendanceEvent(principal, request);
+        return hrService.recordAttendanceEvent(principal, idempotencyKey, request);
     }
 
     @PostMapping("/attendance-approvals/{shiftAssignmentId}/approve")

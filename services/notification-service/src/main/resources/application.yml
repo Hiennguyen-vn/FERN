@@ -3,8 +3,8 @@ spring:
     name: notification-service
   datasource:
     url: ${FERN_NOTIFICATION_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=notification}
-    username: ${FERN_DB_USERNAME:fern}
-    password: ${FERN_DB_PASSWORD:fern}
+    username: ${FERN_DB_USERNAME:}
+    password: ${FERN_DB_PASSWORD:}
   flyway:
     enabled: true
     create-schemas: true
@@ -13,6 +13,8 @@ spring:
     locations: classpath:db/migration/postgresql/master
   kafka:
     bootstrap-servers: ${FERN_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      security.protocol: ${FERN_KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
     consumer:
       group-id: ${FERN_NOTIFICATION_CONSUMER_GROUP:notification-service}
       auto-offset-reset: earliest

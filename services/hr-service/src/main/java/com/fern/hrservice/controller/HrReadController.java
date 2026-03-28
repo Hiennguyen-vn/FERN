@@ -2,6 +2,7 @@ package com.fern.hrservice.controller;
 
 import com.fern.hrservice.dto.HrResponses.AssignmentResponse;
 import com.fern.hrservice.dto.HrResponses.AttendanceApprovalResponse;
+import com.fern.hrservice.dto.HrResponses.AttendanceEventListItemResponse;
 import com.fern.hrservice.dto.HrResponses.ContractResponse;
 import com.fern.hrservice.dto.HrResponses.EmployeeResponse;
 import com.fern.hrservice.dto.HrResponses.ShiftAssignmentResponse;
@@ -9,6 +10,7 @@ import com.fern.hrservice.dto.HrResponses.ShiftScheduleResponse;
 import com.fern.hrservice.service.ContractResponseMasker;
 import com.fern.hrservice.service.HrService;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.PageResponse;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -70,5 +72,21 @@ public class HrReadController {
             @RequestParam(required = false) Long outletId
     ) {
         return hrService.listAttendanceApprovals(principal, regionId, outletId);
+    }
+
+    @GetMapping("/attendance-events")
+    public PageResponse<AttendanceEventListItemResponse> listAttendanceEvents(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(required = false) Long employeeId,
+            @RequestParam(required = false) Long shiftAssignmentId,
+            @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) Long outletId,
+            @RequestParam(required = false) java.time.LocalDate fromDate,
+            @RequestParam(required = false) java.time.LocalDate toDate,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "desc") String sort
+    ) {
+        return hrService.listAttendanceEvents(principal, employeeId, shiftAssignmentId, regionId, outletId, fromDate, toDate, page, size, sort);
     }
 }

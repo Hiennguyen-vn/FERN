@@ -43,9 +43,9 @@ public class FernServiceTokenSupport {
 
     private long readVersion(String key) {
         if (redisTemplate == null) {
-            return Long.MAX_VALUE;
+            throw new IllegalStateException("Redis is required for service token issuance");
         }
         String value = redisTemplate.opsForValue().get(key);
-        return value == null ? Long.MAX_VALUE : Long.parseLong(value);
+        return value == null ? 0L : Long.parseLong(value);
     }
 }

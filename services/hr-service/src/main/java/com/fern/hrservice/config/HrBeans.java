@@ -7,6 +7,7 @@ import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import com.zaxxer.hikari.HikariDataSource;
+import java.time.ZoneId;
 import java.time.Clock;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -35,6 +36,11 @@ public class HrBeans {
     @Bean
     Clock clock() {
         return Clock.systemUTC();
+    }
+
+    @Bean
+    ZoneId attendanceBusinessZone(@Value("${fern.attendance.business-zone:Asia/Ho_Chi_Minh}") String zoneId) {
+        return ZoneId.of(zoneId);
     }
 
     @Bean

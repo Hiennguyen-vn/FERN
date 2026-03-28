@@ -86,6 +86,7 @@ class ApiGatewayIntegrationTest {
         registry.add("spring.datasource.username", FernIntegrationContainers::jdbcUsername);
         registry.add("spring.datasource.password", FernIntegrationContainers::jdbcPassword);
         registry.add("spring.task.scheduling.enabled", () -> "false");
+        registry.add("fern.security.jwt.secret", () -> "XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         registry.add("fern.security.jwt.allow-insecure-default-secret", () -> true);
         registry.add("fern.routes.iam", () -> "http://localhost:" + iamServer.getAddress().getPort());
         registry.add("fern.routes.org", () -> "http://localhost:" + orgServer.getAddress().getPort());

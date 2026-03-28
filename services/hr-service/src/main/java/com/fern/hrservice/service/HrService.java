@@ -11,6 +11,7 @@ import com.fern.hrservice.dto.HrCommands.RecordAttendanceEventRequest;
 import com.fern.hrservice.dto.HrResponses.ApprovedAttendanceResponse;
 import com.fern.hrservice.dto.HrResponses.AssignmentResponse;
 import com.fern.hrservice.dto.HrResponses.AttendanceApprovalResponse;
+import com.fern.hrservice.dto.HrResponses.AttendanceEventListItemResponse;
 import com.fern.hrservice.dto.HrResponses.AttendanceEventResponse;
 import com.fern.hrservice.dto.HrResponses.ContractResponse;
 import com.fern.hrservice.dto.HrResponses.EffectiveContractResponse;
@@ -20,6 +21,7 @@ import com.fern.hrservice.dto.HrResponses.ShiftScheduleResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.contracts.AttendanceApprovedEvent;
@@ -35,12 +37,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -51,6 +57,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class HrService {
+    private static final int MAX_PAGE_SIZE = 200;
+    private static final Duration ATTENDANCE_EARLY_WINDOW = Duration.ofHours(4);
+    private static final Duration ATTENDANCE_LATE_WINDOW = Duration.ofHours(8);
+    private static final Duration LATE_GRACE_PERIOD = Duration.ofMinutes(5);
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate masterJdbcTemplate;
     private final HrAuthorizer hrAuthorizer;
@@ -58,6 +69,7 @@ public class HrService {
     private final HrAuditService hrAuditService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final ZoneId attendanceBusinessZone;
 
     public HrService(
             @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
@@ -66,7 +78,8 @@ public class HrService {
             HrOrgClient hrOrgClient,
             HrAuditService hrAuditService,
             ObjectMapper objectMapper,
-            Clock clock
+            Clock clock,
+            ZoneId attendanceBusinessZone
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.masterJdbcTemplate = masterJdbcTemplate;
@@ -75,6 +88,7 @@ public class HrService {
         this.hrAuditService = hrAuditService;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.attendanceBusinessZone = attendanceBusinessZone;
     }
 
     @Transactional("masterTransactionManager")
@@ -211,8 +225,13 @@ public class HrService {
     }
 
     @Transactional
-    public AttendanceEventResponse recordAttendanceEvent(FernPrincipal principal, RecordAttendanceEventRequest request) {
-        ShiftAssignmentRecord assignment = requireShiftAssignment(request.shiftAssignmentId());
+    public AttendanceEventResponse recordAttendanceEvent(
+            FernPrincipal principal,
+            String idempotencyKey,
+            RecordAttendanceEventRequest request
+    ) {
+        requireIdempotencyKey(idempotencyKey);
+        ShiftAssignmentRecord assignment = requireShiftAssignmentForUpdate(request.shiftAssignmentId());
         hrAuthorizer.requireOutletPermission(principal, assignment.outletId(), PermissionCodes.HR_ATTENDANCE_WRITE);
         if (!assignment.employeeId().equals(request.employeeId())) {
             throw new ConflictException("Attendance employee does not match shift assignment");
@@ -220,35 +239,55 @@ public class HrService {
         if (!assignment.regionId().equals(request.regionId()) || !assignment.outletId().equals(request.outletId())) {
             throw new ConflictException("Attendance route does not match shift assignment");
         }
-        Long id = insertForId(jdbcTemplate, """
+        AttendanceEventRecord existingEvent = findAttendanceEventByIdempotencyKey(idempotencyKey).orElse(null);
+        if (existingEvent != null) {
+            requireMatchingIdempotentAttendanceEvent(existingEvent, request);
+            return toAttendanceEventResponse(existingEvent);
+        }
+        List<AttendanceEventRecord> existingEvents = attendanceEventsForShiftAssignment(request.shiftAssignmentId());
+        AttendanceAnalysis existingAnalysis = analyzeAttendance(assignment, existingEvents);
+        if (!existingAnalysis.valid()) {
+            throw new ConflictException(existingAnalysis.validationError());
+        }
+        validateAttendanceEventWindow(assignment, request.eventTime());
+        validateNextAttendanceEvent(existingEvents, request);
+        Long id;
+        try {
+            id = insertForId(jdbcTemplate, """
                 INSERT INTO hr.attendance_event (
-                    employee_id, region_id, outlet_id, shift_assignment_id, event_type, event_time, source_system, created_by_user_id, created_at
+                    employee_id, region_id, outlet_id, shift_assignment_id, event_type, event_time, source_system, created_by_user_id, created_at, idempotency_key
                 ) VALUES (
-                    :employeeId, :regionId, :outletId, :shiftAssignmentId, :eventType, :eventTime, :sourceSystem, :createdByUserId, CURRENT_TIMESTAMP
+                    :employeeId, :regionId, :outletId, :shiftAssignmentId, :eventType, :eventTime, :sourceSystem, :createdByUserId, CURRENT_TIMESTAMP, :idempotencyKey
                 )
                 """, params(
-                "employeeId", request.employeeId(),
-                "regionId", assignment.regionId(),
-                "outletId", assignment.outletId(),
-                "shiftAssignmentId", request.shiftAssignmentId(),
-                "eventType", request.eventType(),
-                "eventTime", request.eventTime(),
-                "sourceSystem", request.sourceSystem(),
-                "createdByUserId", principal == null ? null : principal.userId()
-        ));
+                    "employeeId", request.employeeId(),
+                    "regionId", assignment.regionId(),
+                    "outletId", assignment.outletId(),
+                    "shiftAssignmentId", request.shiftAssignmentId(),
+                    "eventType", request.eventType(),
+                    "eventTime", request.eventTime(),
+                    "sourceSystem", request.sourceSystem(),
+                    "createdByUserId", principal == null ? null : principal.userId(),
+                    "idempotencyKey", idempotencyKey
+            ));
+        } catch (DataIntegrityViolationException exception) {
+            AttendanceEventRecord concurrentExistingEvent = findAttendanceEventByIdempotencyKey(idempotencyKey).orElse(null);
+            if (concurrentExistingEvent != null) {
+                requireMatchingIdempotentAttendanceEvent(concurrentExistingEvent, request);
+                return toAttendanceEventResponse(concurrentExistingEvent);
+            }
+            throw exception;
+        }
+        AttendanceEventRecord recordedEvent = requireAttendanceEventRecord(id);
+        List<AttendanceEventRecord> updatedEvents = new ArrayList<>(existingEvents);
+        updatedEvents.add(recordedEvent);
+        AttendanceAnalysis previewAnalysis = analyzeAttendance(assignment, updatedEvents);
         jdbcTemplate.update("""
                 UPDATE hr.shift_assignment
-                SET attendance_status = 'PRESENT', updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id AND attendance_status = 'PENDING'
-                """, params("id", request.shiftAssignmentId()));
-        AttendanceEventResponse response = new AttendanceEventResponse(
-                id,
-                request.employeeId(),
-                request.shiftAssignmentId(),
-                request.eventType(),
-                request.eventTime(),
-                request.sourceSystem()
-        );
+                SET attendance_status = :attendanceStatus, updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                """, params("id", request.shiftAssignmentId(), "attendanceStatus", previewAnalysis.attendanceStatus()));
+        AttendanceEventResponse response = toAttendanceEventResponse(recordedEvent);
         hrAuditService.publish("hr.attendance.recorded", principal, assignment.regionId(), assignment.outletId(), "CREATE", "ATTENDANCE_EVENT", id.toString(), null, response, Map.of("shiftAssignmentId", request.shiftAssignmentId()));
         return response;
     }
@@ -266,9 +305,12 @@ public class HrService {
             String comments,
             String correlationId
     ) {
-        ShiftAssignmentRecord assignment = requireShiftAssignment(shiftAssignmentId);
+        ShiftAssignmentRecord assignment = requireShiftAssignmentForUpdate(shiftAssignmentId);
         hrAuthorizer.requireOutletPermission(principal, assignment.outletId(), PermissionCodes.HR_ATTENDANCE_REVIEW);
-        AttendanceComputation computation = computeAttendance(shiftAssignmentId, assignment);
+        AttendanceAnalysis computation = analyzeAttendance(assignment, attendanceEventsForShiftAssignment(shiftAssignmentId));
+        if ("APPROVED".equals(status) && !computation.approvable()) {
+            throw new ConflictException(computation.validationError());
+        }
         ensureApprovalRow(shiftAssignmentId);
         ApprovalRow currentApproval = queryApprovalForUpdate(shiftAssignmentId)
                 .orElseThrow(() -> new IllegalStateException("Approval row not found after upsert"));
@@ -426,7 +468,7 @@ public class HrService {
     public AttendanceApprovalResponse getAttendanceApproval(FernPrincipal principal, Long shiftAssignmentId) {
         ShiftAssignmentRecord assignment = requireShiftAssignment(shiftAssignmentId);
         hrAuthorizer.requireOutletPermission(principal, assignment.outletId(), PermissionCodes.HR_ATTENDANCE_REVIEW);
-        AttendanceComputation computation = computeAttendance(shiftAssignmentId, assignment);
+        AttendanceAnalysis computation = analyzeAttendance(assignment, attendanceEventsForShiftAssignment(shiftAssignmentId));
         ApprovalRow approval = queryApproval(shiftAssignmentId)
                 .orElse(new ApprovalRow(null, "PENDING", null, null, null));
         return mapAttendanceApproval(
@@ -483,7 +525,7 @@ public class HrService {
                     rs.getString("approval_status"),
                     null
             );
-            AttendanceComputation computation = computeAttendance(assignment.id(), assignment);
+            AttendanceAnalysis computation = analyzeAttendance(assignment, attendanceEventsForShiftAssignment(assignment.id()));
             return new AttendanceApprovalResponse(
                     nullableLong(rs, "approval_id"),
                     assignment.id(),
@@ -497,6 +539,83 @@ public class HrService {
                     assignment.shiftDate()
             );
         });
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<AttendanceEventListItemResponse> listAttendanceEvents(
+            FernPrincipal principal,
+            Long employeeId,
+            Long shiftAssignmentId,
+            Long regionId,
+            Long outletId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            int page,
+            int size,
+            String sort
+    ) {
+        validatePage(page, size);
+        hrAuthorizer.requirePermission(principal, PermissionCodes.HR_ATTENDANCE_REVIEW);
+        String normalizedSort = normalizeSort(sort);
+        StringBuilder sql = new StringBuilder("""
+                SELECT ae.id,
+                       ae.employee_id,
+                       ae.region_id,
+                       ae.outlet_id,
+                       ae.shift_assignment_id,
+                       s.shift_date,
+                       ae.event_type,
+                       ae.event_time,
+                       ae.source_system
+                FROM hr.attendance_event ae
+                JOIN hr.shift_assignment sa ON sa.id = ae.shift_assignment_id
+                JOIN hr.shift_schedule s ON s.id = sa.shift_schedule_id
+                WHERE 1 = 1
+                """);
+        MapSqlParameterSource parameters = params();
+        if (employeeId != null) {
+            sql.append("\n  AND ae.employee_id = :employeeId");
+            parameters.addValue("employeeId", employeeId);
+        }
+        if (shiftAssignmentId != null) {
+            sql.append("\n  AND ae.shift_assignment_id = :shiftAssignmentId");
+            parameters.addValue("shiftAssignmentId", shiftAssignmentId);
+        }
+        if (regionId != null) {
+            hrAuthorizer.requireRegionPermission(principal, regionId, PermissionCodes.HR_ATTENDANCE_REVIEW);
+            sql.append("\n  AND ae.region_id = :regionId");
+            parameters.addValue("regionId", regionId);
+        }
+        if (outletId != null) {
+            hrAuthorizer.requireOutletPermission(principal, outletId, PermissionCodes.HR_ATTENDANCE_REVIEW);
+            sql.append("\n  AND ae.outlet_id = :outletId");
+            parameters.addValue("outletId", outletId);
+        }
+        if (fromDate != null) {
+            sql.append("\n  AND s.shift_date >= :fromDate");
+            parameters.addValue("fromDate", fromDate);
+        }
+        if (toDate != null) {
+            sql.append("\n  AND s.shift_date <= :toDate");
+            parameters.addValue("toDate", toDate);
+        }
+        applyAttendanceVisibilityScope(principal, regionId, outletId, sql, parameters);
+        sql.append("\nORDER BY ae.event_time ").append(normalizedSort).append(", ae.id ").append(normalizedSort);
+        sql.append("\nLIMIT :limit OFFSET :offset");
+        parameters.addValue("limit", size + 1);
+        parameters.addValue("offset", page * size);
+        List<AttendanceEventListItemResponse> items = jdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> new AttendanceEventListItemResponse(
+                rs.getLong("id"),
+                rs.getLong("employee_id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getLong("shift_assignment_id"),
+                rs.getObject("shift_date", LocalDate.class),
+                rs.getString("event_type"),
+                instant(rs, "event_time"),
+                rs.getString("source_system")
+        ));
+        return toPageResponse(items, page, size);
     }
 
     public List<EffectiveContractResponse> findEffectiveContracts(Long regionId, LocalDate startDate, LocalDate endDate) {
@@ -572,7 +691,7 @@ public class HrService {
                     "APPROVED",
                     null
             );
-            AttendanceComputation computation = computeAttendance(assignment.id(), assignment);
+            AttendanceAnalysis computation = analyzeAttendance(assignment, attendanceEventsForShiftAssignment(assignment.id()));
             EffectiveContractResponse contract = activeContractForDate(assignment.employeeId(), assignment.shiftDate()).orElse(null);
             return new ApprovedAttendanceResponse(
                     rs.getLong("approval_id"),
@@ -700,6 +819,42 @@ public class HrService {
         return response;
     }
 
+    private ShiftAssignmentRecord requireShiftAssignmentForUpdate(Long id) {
+        ShiftAssignmentRecord response = jdbcTemplate.query("""
+                SELECT sa.id,
+                       sa.shift_schedule_id,
+                       sa.employee_id,
+                       s.region_id,
+                       s.outlet_id,
+                       s.shift_date,
+                       s.start_time,
+                       s.end_time,
+                       sa.attendance_status,
+                       sa.approval_status,
+                       sa.note
+                FROM hr.shift_assignment sa
+                JOIN hr.shift_schedule s ON s.id = sa.shift_schedule_id
+                WHERE sa.id = :id
+                FOR UPDATE
+                """, params("id", id), rs -> rs.next() ? new ShiftAssignmentRecord(
+                rs.getLong("id"),
+                rs.getLong("shift_schedule_id"),
+                rs.getLong("employee_id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getObject("shift_date", LocalDate.class),
+                rs.getObject("start_time", LocalTime.class),
+                rs.getObject("end_time", LocalTime.class),
+                rs.getString("attendance_status"),
+                rs.getString("approval_status"),
+                rs.getString("note")
+        ) : null);
+        if (response == null) {
+            throw new ResourceNotFoundException("Shift assignment not found");
+        }
+        return response;
+    }
+
     private ShiftAssignmentResponse requireShiftAssignmentResponse(Long id) {
         return toShiftAssignmentResponse(requireShiftAssignment(id));
     }
@@ -740,35 +895,228 @@ public class HrService {
         }
     }
 
-    private AttendanceComputation computeAttendance(Long shiftAssignmentId, ShiftAssignmentRecord assignment) {
-        List<AttendanceEventRow> events = jdbcTemplate.query("""
-                SELECT event_type, event_time
+    private AttendanceAnalysis analyzeAttendance(ShiftAssignmentRecord assignment, List<AttendanceEventRecord> events) {
+        if (events.isEmpty()) {
+            return new AttendanceAnalysis("ABSENT", zeroHours(), zeroHours(), true, true, null);
+        }
+        AttendancePhase phase = AttendancePhase.EXPECT_CLOCK_IN;
+        Instant lastEventTime = null;
+        Instant clockIn = null;
+        Instant clockOut = null;
+        Instant breakStartedAt = null;
+        Duration breakDuration = Duration.ZERO;
+        for (AttendanceEventRecord event : events) {
+            if (!isWithinAttendanceWindow(assignment, event.eventTime())) {
+                return invalidAttendance("Attendance event time is outside the allowed shift window");
+            }
+            if (lastEventTime != null && !event.eventTime().isAfter(lastEventTime)) {
+                return invalidAttendance("Attendance events must be strictly ordered by event time");
+            }
+            switch (event.eventType()) {
+                case "CLOCK_IN" -> {
+                    if (phase != AttendancePhase.EXPECT_CLOCK_IN) {
+                        return invalidAttendance("Attendance events contain an invalid clock-in sequence");
+                    }
+                    clockIn = event.eventTime();
+                    phase = AttendancePhase.EXPECT_BREAK_OR_CLOCK_OUT;
+                }
+                case "BREAK_START" -> {
+                    if (phase != AttendancePhase.EXPECT_BREAK_OR_CLOCK_OUT) {
+                        return invalidAttendance("Attendance events contain an invalid break-start sequence");
+                    }
+                    breakStartedAt = event.eventTime();
+                    phase = AttendancePhase.EXPECT_BREAK_END;
+                }
+                case "BREAK_END" -> {
+                    if (phase != AttendancePhase.EXPECT_BREAK_END || breakStartedAt == null) {
+                        return invalidAttendance("Attendance events contain an invalid break-end sequence");
+                    }
+                    Duration currentBreak = Duration.between(breakStartedAt, event.eventTime());
+                    if (currentBreak.isNegative() || currentBreak.isZero()) {
+                        return invalidAttendance("Break duration must be greater than zero");
+                    }
+                    breakDuration = breakDuration.plus(currentBreak);
+                    breakStartedAt = null;
+                    phase = AttendancePhase.EXPECT_BREAK_OR_CLOCK_OUT;
+                }
+                case "CLOCK_OUT" -> {
+                    if (phase != AttendancePhase.EXPECT_BREAK_OR_CLOCK_OUT || clockIn == null) {
+                        return invalidAttendance("Attendance events contain an invalid clock-out sequence");
+                    }
+                    clockOut = event.eventTime();
+                    phase = AttendancePhase.COMPLETE;
+                }
+                default -> {
+                    return invalidAttendance("Attendance events contain an unsupported event type");
+                }
+            }
+            lastEventTime = event.eventTime();
+        }
+        if (phase == AttendancePhase.EXPECT_CLOCK_IN) {
+            return new AttendanceAnalysis("ABSENT", zeroHours(), zeroHours(), true, true, null);
+        }
+        if (phase != AttendancePhase.COMPLETE || clockIn == null || clockOut == null) {
+            return new AttendanceAnalysis("PENDING", zeroHours(), zeroHours(), true, false, "Attendance record is incomplete");
+        }
+        Duration workDuration = Duration.between(clockIn, clockOut).minus(breakDuration);
+        if (workDuration.isNegative() || workDuration.isZero()) {
+            return invalidAttendance("Attendance work duration must be greater than zero");
+        }
+        Duration scheduledDuration = scheduledShiftDuration(assignment);
+        BigDecimal workHours = toHours(workDuration);
+        BigDecimal overtimeHours = toHours(workDuration.minus(scheduledDuration).isNegative()
+                ? Duration.ZERO
+                : workDuration.minus(scheduledDuration));
+        Instant shiftStart = shiftStartInstant(assignment);
+        String attendanceStatus = clockIn.isAfter(shiftStart.plus(LATE_GRACE_PERIOD)) ? "LATE" : "PRESENT";
+        return new AttendanceAnalysis(attendanceStatus, workHours, overtimeHours, true, true, null);
+    }
+
+    private AttendanceAnalysis invalidAttendance(String validationError) {
+        return new AttendanceAnalysis("PENDING", zeroHours(), zeroHours(), false, false, validationError);
+    }
+
+    private void validateAttendanceEventWindow(ShiftAssignmentRecord assignment, Instant eventTime) {
+        if (!isWithinAttendanceWindow(assignment, eventTime)) {
+            throw new ConflictException("Attendance event time is outside the allowed shift window");
+        }
+    }
+
+    private boolean isWithinAttendanceWindow(ShiftAssignmentRecord assignment, Instant eventTime) {
+        Instant earliest = shiftStartInstant(assignment).minus(ATTENDANCE_EARLY_WINDOW);
+        Instant latest = shiftEndInstant(assignment).plus(ATTENDANCE_LATE_WINDOW);
+        return !eventTime.isBefore(earliest) && !eventTime.isAfter(latest);
+    }
+
+    private void validateNextAttendanceEvent(List<AttendanceEventRecord> existingEvents, RecordAttendanceEventRequest request) {
+        if (existingEvents.isEmpty()) {
+            if (!"CLOCK_IN".equals(request.eventType())) {
+                throw new ConflictException("The first attendance event must be CLOCK_IN");
+            }
+            return;
+        }
+        AttendanceEventRecord lastEvent = existingEvents.getLast();
+        if (!request.eventTime().isAfter(lastEvent.eventTime())) {
+            throw new ConflictException("Attendance events must be recorded in chronological order");
+        }
+        switch (lastEvent.eventType()) {
+            case "CLOCK_IN", "BREAK_END" -> {
+                if (!List.of("BREAK_START", "CLOCK_OUT").contains(request.eventType())) {
+                    throw new ConflictException("Attendance event sequence is invalid after clock-in");
+                }
+            }
+            case "BREAK_START" -> {
+                if (!"BREAK_END".equals(request.eventType())) {
+                    throw new ConflictException("Attendance event sequence is invalid during a break");
+                }
+            }
+            case "CLOCK_OUT" -> throw new ConflictException("Attendance is already closed for this shift assignment");
+            default -> throw new ConflictException("Attendance events contain an unsupported sequence");
+        }
+    }
+
+    private List<AttendanceEventRecord> attendanceEventsForShiftAssignment(Long shiftAssignmentId) {
+        return jdbcTemplate.query("""
+                SELECT id, employee_id, region_id, outlet_id, shift_assignment_id, event_type, event_time, source_system, idempotency_key
                 FROM hr.attendance_event
                 WHERE shift_assignment_id = :shiftAssignmentId
-                ORDER BY event_time
-                """, params("shiftAssignmentId", shiftAssignmentId), (rs, rowNum) -> new AttendanceEventRow(
+                ORDER BY event_time, id
+                """, params("shiftAssignmentId", shiftAssignmentId), (rs, rowNum) -> mapAttendanceEventRecord(rs));
+    }
+
+    private Optional<AttendanceEventRecord> findAttendanceEventByIdempotencyKey(String idempotencyKey) {
+        return Optional.ofNullable(jdbcTemplate.query("""
+                SELECT id, employee_id, region_id, outlet_id, shift_assignment_id, event_type, event_time, source_system, idempotency_key
+                FROM hr.attendance_event
+                WHERE idempotency_key = :idempotencyKey
+                """, params("idempotencyKey", idempotencyKey), rs -> rs.next() ? mapAttendanceEventRecord(rs) : null));
+    }
+
+    private AttendanceEventRecord requireAttendanceEventRecord(Long id) {
+        AttendanceEventRecord record = jdbcTemplate.query("""
+                SELECT id, employee_id, region_id, outlet_id, shift_assignment_id, event_type, event_time, source_system, idempotency_key
+                FROM hr.attendance_event
+                WHERE id = :id
+                """, params("id", id), rs -> rs.next() ? mapAttendanceEventRecord(rs) : null);
+        if (record == null) {
+            throw new ResourceNotFoundException("Attendance event not found");
+        }
+        return record;
+    }
+
+    private AttendanceEventRecord mapAttendanceEventRecord(ResultSet rs) throws java.sql.SQLException {
+        return new AttendanceEventRecord(
+                rs.getLong("id"),
+                rs.getLong("employee_id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getLong("shift_assignment_id"),
                 rs.getString("event_type"),
-                instant(rs, "event_time")
-        ));
-        Optional<Instant> clockIn = events.stream().filter(item -> "CLOCK_IN".equals(item.eventType())).map(AttendanceEventRow::eventTime).min(Comparator.naturalOrder());
-        Optional<Instant> clockOut = events.stream().filter(item -> "CLOCK_OUT".equals(item.eventType())).map(AttendanceEventRow::eventTime).max(Comparator.naturalOrder());
-        if (clockIn.isEmpty() || clockOut.isEmpty()) {
-            return new AttendanceComputation("ABSENT", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP), BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+                instant(rs, "event_time"),
+                rs.getString("source_system"),
+                rs.getString("idempotency_key")
+        );
+    }
+
+    private AttendanceEventResponse toAttendanceEventResponse(AttendanceEventRecord record) {
+        return new AttendanceEventResponse(
+                record.id(),
+                record.employeeId(),
+                record.shiftAssignmentId(),
+                record.eventType(),
+                record.eventTime(),
+                record.sourceSystem()
+        );
+    }
+
+    private void requireIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new BadRequestException("Idempotency-Key header is required");
         }
-        BigDecimal hours = BigDecimal.valueOf(Duration.between(clockIn.get(), clockOut.get()).toMinutes())
+    }
+
+    private void requireMatchingIdempotentAttendanceEvent(AttendanceEventRecord existingEvent, RecordAttendanceEventRequest request) {
+        if (!matchesExistingAttendanceEvent(existingEvent, request)) {
+            throw new ConflictException("Idempotency-Key cannot be reused with a different attendance event request");
+        }
+    }
+
+    private boolean matchesExistingAttendanceEvent(AttendanceEventRecord existingEvent, RecordAttendanceEventRequest request) {
+        return Objects.equals(existingEvent.employeeId(), request.employeeId())
+                && Objects.equals(existingEvent.regionId(), request.regionId())
+                && Objects.equals(existingEvent.outletId(), request.outletId())
+                && Objects.equals(existingEvent.shiftAssignmentId(), request.shiftAssignmentId())
+                && Objects.equals(existingEvent.eventType(), request.eventType())
+                && Objects.equals(existingEvent.eventTime(), request.eventTime())
+                && Objects.equals(existingEvent.sourceSystem(), request.sourceSystem());
+    }
+
+    private Instant shiftStartInstant(ShiftAssignmentRecord assignment) {
+        return LocalDateTime.of(assignment.shiftDate(), assignment.startTime())
+                .atZone(attendanceBusinessZone)
+                .toInstant();
+    }
+
+    private Instant shiftEndInstant(ShiftAssignmentRecord assignment) {
+        LocalDate shiftEndDate = assignment.endTime().isAfter(assignment.startTime())
+                ? assignment.shiftDate()
+                : assignment.shiftDate().plusDays(1);
+        return LocalDateTime.of(shiftEndDate, assignment.endTime())
+                .atZone(attendanceBusinessZone)
+                .toInstant();
+    }
+
+    private Duration scheduledShiftDuration(ShiftAssignmentRecord assignment) {
+        return Duration.between(shiftStartInstant(assignment), shiftEndInstant(assignment));
+    }
+
+    private BigDecimal toHours(Duration duration) {
+        return BigDecimal.valueOf(duration.toMinutes())
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-        BigDecimal scheduled = BigDecimal.valueOf(Duration.between(
-                LocalDateTime.of(assignment.shiftDate(), assignment.startTime()).toInstant(ZoneOffset.UTC),
-                LocalDateTime.of(assignment.shiftDate(), assignment.endTime()).toInstant(ZoneOffset.UTC)
-        ).toMinutes()).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
-        if (scheduled.signum() < 0) {
-            scheduled = hours;
-        }
-        BigDecimal overtime = hours.subtract(scheduled).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
-        LocalDateTime shiftStart = LocalDateTime.of(assignment.shiftDate(), assignment.startTime());
-        LocalDateTime actualIn = LocalDateTime.ofInstant(clockIn.get(), ZoneOffset.UTC);
-        String attendanceStatus = actualIn.isAfter(shiftStart.plusMinutes(5)) ? "LATE" : "PRESENT";
-        return new AttendanceComputation(attendanceStatus, hours.setScale(2, RoundingMode.HALF_UP), overtime);
+    }
+
+    private BigDecimal zeroHours() {
+        return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
 
     private Optional<EffectiveContractResponse> activeContractForDate(Long employeeId, LocalDate businessDate) {
@@ -846,7 +1194,7 @@ public class HrService {
     private AttendanceApprovalResponse mapAttendanceApproval(
             Long approvalId,
             ShiftAssignmentRecord assignment,
-            AttendanceComputation computation,
+            AttendanceAnalysis computation,
             String status,
             String comments,
             Long approvedByUserId,
@@ -924,6 +1272,67 @@ public class HrService {
         return parameters;
     }
 
+    private void validatePage(int page, int size) {
+        if (page < 0) {
+            throw new BadRequestException("Page cannot be negative");
+        }
+        if (size < 1) {
+            throw new BadRequestException("Page size must be greater than 0");
+        }
+        if (size > MAX_PAGE_SIZE) {
+            throw new BadRequestException("Page size cannot exceed 200");
+        }
+    }
+
+    private String normalizeSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return "DESC";
+        }
+        return switch (sort.trim().toUpperCase()) {
+            case "ASC" -> "ASC";
+            case "DESC" -> "DESC";
+            default -> throw new BadRequestException("Sort must be either asc or desc");
+        };
+    }
+
+    private void applyAttendanceVisibilityScope(
+            FernPrincipal principal,
+            Long regionId,
+            Long outletId,
+            StringBuilder sql,
+            MapSqlParameterSource parameters
+    ) {
+        if (principal == null || principal.scopeRoots().system() || regionId != null || outletId != null) {
+            return;
+        }
+        List<Long> outletScopes = principal.scopeRoots().outlets();
+        List<Long> regionScopes = principal.scopeRoots().regions();
+        if (outletScopes.isEmpty() && regionScopes.isEmpty()) {
+            throw new com.fern.platform.common.ForbiddenException("Attendance events are outside the current scope");
+        }
+        sql.append("\n  AND (");
+        boolean appended = false;
+        if (!outletScopes.isEmpty()) {
+            sql.append("ae.outlet_id IN (:outletScopeIds)");
+            parameters.addValue("outletScopeIds", outletScopes);
+            appended = true;
+        }
+        if (!regionScopes.isEmpty()) {
+            if (appended) {
+                sql.append(" OR ");
+            }
+            sql.append("ae.region_id IN (:regionScopeIds)");
+            parameters.addValue("regionScopeIds", regionScopes);
+        }
+        sql.append(')');
+    }
+
+    private <T> PageResponse<T> toPageResponse(List<T> items, int page, int size) {
+        boolean hasMore = items.size() > size;
+        List<T> pagedItems = hasMore ? List.copyOf(items.subList(0, size)) : items;
+        return new PageResponse<>(pagedItems, page, size, hasMore);
+    }
+
     private String normalize(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value;
     }
@@ -969,12 +1378,36 @@ public class HrService {
     ) {
     }
 
-    private record AttendanceEventRow(String eventType, Instant eventTime) {
+    private record AttendanceEventRecord(
+            Long id,
+            Long employeeId,
+            Long regionId,
+            Long outletId,
+            Long shiftAssignmentId,
+            String eventType,
+            Instant eventTime,
+            String sourceSystem,
+            String idempotencyKey
+    ) {
     }
 
-    private record AttendanceComputation(String attendanceStatus, BigDecimal workHours, BigDecimal overtimeHours) {
+    private record AttendanceAnalysis(
+            String attendanceStatus,
+            BigDecimal workHours,
+            BigDecimal overtimeHours,
+            boolean valid,
+            boolean approvable,
+            String validationError
+    ) {
     }
 
     private record ApprovalRow(Long id, String status, String comments, Long approvedByUserId, Instant approvedAt) {
+    }
+
+    private enum AttendancePhase {
+        EXPECT_CLOCK_IN,
+        EXPECT_BREAK_OR_CLOCK_OUT,
+        EXPECT_BREAK_END,
+        COMPLETE
     }
 }

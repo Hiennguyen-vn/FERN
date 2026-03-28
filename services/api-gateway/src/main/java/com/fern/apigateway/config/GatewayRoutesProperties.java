@@ -1,9 +1,34 @@
 package com.fern.apigateway.config;
 
+import jakarta.annotation.PostConstruct;
+import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "fern.routes")
 public class GatewayRoutesProperties {
+    private static final Logger LOGGER = LoggerFactory.getLogger(GatewayRoutesProperties.class);
+
+    @PostConstruct
+    void validateRoutes() {
+        String activeProfiles = System.getenv("SPRING_PROFILES_ACTIVE");
+        if (activeProfiles != null && activeProfiles.contains("prod")) {
+            Stream.of(iam, org, catalog, audit, pos, inventory, procurement, hr, report, finance)
+                    .filter(uri -> uri != null && uri.startsWith("http://"))
+                    .findFirst()
+                    .ifPresent(uri -> {
+                        throw new IllegalStateException(
+                                "Inter-service routes must use HTTPS in production. Found: " + uri);
+                    });
+        } else {
+            Stream.of(iam, org, catalog, audit, pos, inventory, procurement, hr, report, finance)
+                    .filter(uri -> uri != null && uri.startsWith("http://"))
+                    .findFirst()
+                    .ifPresent(uri -> LOGGER.warn("Inter-service routes use HTTP — ensure HTTPS in production"));
+        }
+    }
+
     private String iam = "http://localhost:8081";
     private String org = "http://localhost:8082";
     private String catalog = "http://localhost:8083";

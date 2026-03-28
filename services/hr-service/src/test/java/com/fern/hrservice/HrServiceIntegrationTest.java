@@ -2,6 +2,10 @@ package com.fern.hrservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fern.hrservice.controller.HrReadController;
 import com.fern.hrservice.controller.InternalHrController;
@@ -19,11 +23,15 @@ import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ScopeRoots;
+import com.fern.platform.security.FernJwtClaims;
+import com.fern.platform.security.FernJwtProperties;
+import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -34,17 +42,21 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 class HrServiceIntegrationTest {
     private static final String TEST_SECRET = "hr-test-secret-key-012345678901234567890123456789";
     private static HttpServer orgServer;
@@ -77,6 +89,9 @@ class HrServiceIntegrationTest {
 
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private MockMvc mockMvc;
 
     @Autowired
     @Qualifier("masterJdbcTemplate")
@@ -182,7 +197,7 @@ class HrServiceIntegrationTest {
 
         FernPrincipal restrictedPrincipal = outletPrincipal(PermissionCodes.HR_ATTENDANCE_WRITE, 201L);
 
-        assertThatThrownBy(() -> hrService.recordAttendanceEvent(restrictedPrincipal, new RecordAttendanceEventRequest(
+        assertThatThrownBy(() -> hrService.recordAttendanceEvent(restrictedPrincipal, "attendance-route-mismatch", new RecordAttendanceEventRequest(
                 employeeId,
                 1L,
                 201L,
@@ -275,7 +290,7 @@ class HrServiceIntegrationTest {
                 "SERVER",
                 null
         )).id();
-        hrService.recordAttendanceEvent(systemPrincipal, new RecordAttendanceEventRequest(
+        hrService.recordAttendanceEvent(systemPrincipal, "attendance-approve-clock-in", new RecordAttendanceEventRequest(
                 employeeId,
                 1L,
                 201L,
@@ -284,7 +299,7 @@ class HrServiceIntegrationTest {
                 Instant.parse("2026-03-28T02:00:00Z"),
                 "POS"
         ));
-        hrService.recordAttendanceEvent(systemPrincipal, new RecordAttendanceEventRequest(
+        hrService.recordAttendanceEvent(systemPrincipal, "attendance-approve-clock-out", new RecordAttendanceEventRequest(
                 employeeId,
                 1L,
                 201L,
@@ -332,6 +347,352 @@ class HrServiceIntegrationTest {
         assertThat(approvalCount).isEqualTo(1);
         assertThat(outboxCount).isEqualTo(1);
         assertThat(approvalStatus).isEqualTo("APPROVED");
+    }
+
+    @Test
+    void shouldReplayConcurrentAttendanceEventWithSameIdempotencyKey() throws Exception {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-001",
+                "Attendance Replay",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "Replay Shift"
+        );
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Long> first = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return hrService.recordAttendanceEvent(
+                        principal,
+                        "attendance-same-key",
+                        attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:00:00Z")
+                ).id();
+            });
+            Future<Long> second = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return hrService.recordAttendanceEvent(
+                        principal,
+                        "attendance-same-key",
+                        attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:00:00Z")
+                ).id();
+            });
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            assertThat(first.get()).isEqualTo(second.get());
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer eventCount = jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT COUNT(*) FROM hr.attendance_event WHERE shift_assignment_id = %d
+                """.formatted(fixture.shiftAssignmentId()), Integer.class);
+        assertThat(eventCount).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRejectAttendanceEventReplayWhenPayloadDiffers() {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-002",
+                "Attendance Replay Conflict",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "Replay Conflict Shift"
+        );
+
+        hrService.recordAttendanceEvent(principal, "attendance-different-payload", attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:00:00Z"));
+
+        assertThatThrownBy(() -> hrService.recordAttendanceEvent(
+                principal,
+                "attendance-different-payload",
+                attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:01:00Z")
+        )).isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Idempotency-Key cannot be reused with a different attendance event request");
+    }
+
+    @Test
+    void shouldRejectClockOutBeforeClockIn() {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-003",
+                "Clock Out First",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "Sequence Shift"
+        );
+
+        assertThatThrownBy(() -> hrService.recordAttendanceEvent(
+                principal,
+                "attendance-clock-out-first",
+                attendanceRequest(fixture, "CLOCK_OUT", "2026-03-28T10:00:00Z")
+        )).isInstanceOf(ConflictException.class)
+                .hasMessageContaining("first attendance event must be CLOCK_IN");
+    }
+
+    @Test
+    void shouldRejectDuplicateClockInSequence() {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-004",
+                "Duplicate Clock In",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "Duplicate Shift"
+        );
+
+        hrService.recordAttendanceEvent(principal, "attendance-duplicate-1", attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:00:00Z"));
+
+        assertThatThrownBy(() -> hrService.recordAttendanceEvent(
+                principal,
+                "attendance-duplicate-2",
+                attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:05:00Z")
+        )).isInstanceOf(ConflictException.class)
+                .hasMessageContaining("invalid after clock-in");
+    }
+
+    @Test
+    void shouldApproveAttendanceWithBreakDeduction() {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE,
+                PermissionCodes.HR_ATTENDANCE_REVIEW
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-005",
+                "Break Deduction",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "Break Shift"
+        );
+
+        hrService.recordAttendanceEvent(principal, "attendance-break-clock-in", attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:10:00Z"));
+        hrService.recordAttendanceEvent(principal, "attendance-break-start", attendanceRequest(fixture, "BREAK_START", "2026-03-28T05:00:00Z"));
+        hrService.recordAttendanceEvent(principal, "attendance-break-end", attendanceRequest(fixture, "BREAK_END", "2026-03-28T05:30:00Z"));
+        hrService.recordAttendanceEvent(principal, "attendance-break-clock-out", attendanceRequest(fixture, "CLOCK_OUT", "2026-03-28T10:10:00Z"));
+
+        var response = hrService.reviewAttendance(outletPrincipal(PermissionCodes.HR_ATTENDANCE_REVIEW, 201L), fixture.shiftAssignmentId(), "APPROVED", "approved");
+
+        assertThat(response.status()).isEqualTo("APPROVED");
+        assertThat(response.attendanceStatus()).isEqualTo("LATE");
+        assertThat(response.workHours()).isEqualByComparingTo("7.50");
+        assertThat(response.overtimeHours()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void shouldApproveOvernightShiftAttendance() {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE,
+                PermissionCodes.HR_ATTENDANCE_REVIEW
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-006",
+                "Overnight Attendance",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(22, 0),
+                LocalTime.of(6, 0),
+                "Overnight Shift"
+        );
+
+        hrService.recordAttendanceEvent(principal, "attendance-overnight-clock-in", attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T15:00:00Z"));
+        hrService.recordAttendanceEvent(principal, "attendance-overnight-clock-out", attendanceRequest(fixture, "CLOCK_OUT", "2026-03-28T23:00:00Z"));
+
+        var response = hrService.reviewAttendance(outletPrincipal(PermissionCodes.HR_ATTENDANCE_REVIEW, 201L), fixture.shiftAssignmentId(), "APPROVED", "approved");
+
+        assertThat(response.attendanceStatus()).isEqualTo("PRESENT");
+        assertThat(response.workHours()).isEqualByComparingTo("8.00");
+        assertThat(response.overtimeHours()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void shouldRejectApproveWhenAttendanceIsIncomplete() {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE,
+                PermissionCodes.HR_ATTENDANCE_REVIEW
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-007",
+                "Incomplete Attendance",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "Incomplete Shift"
+        );
+
+        hrService.recordAttendanceEvent(principal, "attendance-incomplete-clock-in", attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:00:00Z"));
+
+        assertThatThrownBy(() -> hrService.reviewAttendance(
+                outletPrincipal(PermissionCodes.HR_ATTENDANCE_REVIEW, 201L),
+                fixture.shiftAssignmentId(),
+                "APPROVED",
+                "approved"
+        )).isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Attendance record is incomplete");
+    }
+
+    @Test
+    void shouldRequireAttendanceEventIdempotencyHeaderOverHttp() throws Exception {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-008",
+                "Http Idempotency",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "HTTP Shift"
+        );
+
+        mockMvc.perform(post("/attendance-events")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.HR_ATTENDANCE_WRITE), List.of(), List.of(201L), false))
+                        .contentType("application/json")
+                        .content(attendanceEventJson(fixture, "CLOCK_IN", "2026-03-28T02:00:00Z")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("bad_request"));
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidAttendanceEventTypeOverHttp() throws Exception {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-009",
+                "Http Validation",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "HTTP Validation Shift"
+        );
+
+        mockMvc.perform(post("/attendance-events")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.HR_ATTENDANCE_WRITE), List.of(), List.of(201L), false))
+                        .header("Idempotency-Key", "attendance-http-invalid")
+                        .contentType("application/json")
+                        .content(attendanceEventJson(fixture, "INVALID", "2026-03-28T02:00:00Z")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_error"))
+                .andExpect(jsonPath("$.details.eventType").value("must be one of CLOCK_IN, CLOCK_OUT, BREAK_START, or BREAK_END"));
+    }
+
+    @Test
+    void shouldListAttendanceEventsWithPaginationOverHttp() throws Exception {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-010",
+                "Attendance List",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "List Shift"
+        );
+
+        hrService.recordAttendanceEvent(principal, "attendance-list-clock-in", attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:00:00Z"));
+        hrService.recordAttendanceEvent(principal, "attendance-list-clock-out", attendanceRequest(fixture, "CLOCK_OUT", "2026-03-28T10:00:00Z"));
+
+        mockMvc.perform(get("/attendance-events")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.HR_ATTENDANCE_REVIEW), List.of(), List.of(201L), false))
+                        .param("outletId", "201")
+                        .param("shiftAssignmentId", fixture.shiftAssignmentId().toString())
+                        .param("fromDate", "2026-03-28")
+                        .param("toDate", "2026-03-28")
+                        .param("page", "0")
+                        .param("size", "1")
+                        .param("sort", "asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.hasMore").value(true))
+                .andExpect(jsonPath("$.items[0].eventType").value("CLOCK_IN"))
+                .andExpect(jsonPath("$.items[0].shiftAssignmentId").value(fixture.shiftAssignmentId()));
     }
 
     @Test
@@ -408,6 +769,79 @@ class HrServiceIntegrationTest {
         });
     }
 
+    private AttendanceFixture createAttendanceFixture(
+            FernPrincipal principal,
+            String employeeCode,
+            String employeeName,
+            Long regionId,
+            Long outletId,
+            LocalDate shiftDate,
+            LocalTime startTime,
+            LocalTime endTime,
+            String shiftName
+    ) {
+        long employeeId = hrService.createEmployee(principal, new CreateEmployeeRequest(
+                employeeCode,
+                employeeName,
+                null,
+                null,
+                null,
+                null,
+                null,
+                LocalDate.of(2026, 1, 1),
+                null
+        )).id();
+        long scheduleId = hrService.createShiftSchedule(principal, new CreateShiftScheduleRequest(
+                regionId,
+                outletId,
+                shiftDate,
+                shiftName,
+                startTime,
+                endTime,
+                null
+        )).id();
+        long shiftAssignmentId = hrService.createShiftAssignment(principal, new CreateShiftAssignmentRequest(
+                scheduleId,
+                employeeId,
+                "CASHIER",
+                null
+        )).id();
+        return new AttendanceFixture(employeeId, shiftAssignmentId, regionId, outletId);
+    }
+
+    private RecordAttendanceEventRequest attendanceRequest(AttendanceFixture fixture, String eventType, String eventTime) {
+        return new RecordAttendanceEventRequest(
+                fixture.employeeId(),
+                fixture.regionId(),
+                fixture.outletId(),
+                fixture.shiftAssignmentId(),
+                eventType,
+                Instant.parse(eventTime),
+                "POS"
+        );
+    }
+
+    private String attendanceEventJson(AttendanceFixture fixture, String eventType, String eventTime) {
+        return """
+                {
+                  "employeeId": %d,
+                  "regionId": %d,
+                  "outletId": %d,
+                  "shiftAssignmentId": %d,
+                  "eventType": "%s",
+                  "eventTime": "%s",
+                  "sourceSystem": "POS"
+                }
+                """.formatted(
+                fixture.employeeId(),
+                fixture.regionId(),
+                fixture.outletId(),
+                fixture.shiftAssignmentId(),
+                eventType,
+                eventTime
+        );
+    }
+
     private FernPrincipal systemPrincipal(String... permissions) {
         return new FernPrincipal(
                 1L,
@@ -465,5 +899,28 @@ class HrServiceIntegrationTest {
                 null
         ));
         return employeeId;
+    }
+
+    private String bearer(Set<String> permissions, List<Long> regions, List<Long> outlets, boolean systemScoped) {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret(TEST_SECRET);
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, java.time.Clock.systemUTC());
+        String token = jwtService.encode(new FernJwtClaims(
+                1L,
+                "hr-http-tester",
+                Set.of("hr"),
+                permissions,
+                new ScopeRoots(systemScoped, regions, outlets),
+                1L,
+                1L,
+                "hr-test-jti-" + permissions.hashCode() + "-" + regions.hashCode() + "-" + outlets.hashCode() + "-" + systemScoped,
+                Instant.now(),
+                Instant.now().plusSeconds(900)
+        ), jwtService.accessTokenTtl());
+        return "Bearer " + token;
+    }
+
+    private record AttendanceFixture(Long employeeId, Long shiftAssignmentId, Long regionId, Long outletId) {
     }
 }
