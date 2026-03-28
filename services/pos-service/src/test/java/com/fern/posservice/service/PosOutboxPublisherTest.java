@@ -97,4 +97,29 @@ class PosOutboxPublisherTest {
         assertThat(parameters.getValue().getValue("status")).isEqualTo(PosOutboxStatus.FAILED.name());
         assertThat(parameters.getValue().getValue("retryCount")).isEqualTo(3);
     }
+
+    @Test
+    void shouldKeepEventPendingWhenKafkaSendFailsBelowMaxAttempts() {
+        JdbcOutboxPublisherSupport.ClaimedOutboxEvent event = new JdbcOutboxPublisherSupport.ClaimedOutboxEvent(
+                UUID.randomUUID().toString(),
+                "SALE_ORDER",
+                "10",
+                PosEventTypes.SALE_COMPLETED,
+                "101",
+                "{\"id\":10}",
+                0
+        );
+        RuntimeException failure = new RuntimeException("kafka unavailable");
+        when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn((List) List.of(event));
+        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+                .thenReturn(CompletableFuture.failedFuture(failure));
+
+        publisher.publishPending();
+
+        ArgumentCaptor<MapSqlParameterSource> parameters = ArgumentCaptor.forClass(MapSqlParameterSource.class);
+        verify(jdbcTemplate).update(anyString(), parameters.capture());
+        assertThat(parameters.getValue().getValue("status")).isEqualTo(PosOutboxStatus.PENDING.name());
+        assertThat(parameters.getValue().getValue("retryCount")).isEqualTo(1);
+    }
 }
