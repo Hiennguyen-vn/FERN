@@ -480,7 +480,7 @@ http_json PUT "http://localhost:8080/stock-count-sessions/${stock_count_id}/line
 http_json_with_headers POST "http://localhost:8080/stock-count-sessions/${stock_count_id}/post" "" "Bearer ${smoke_access_token}" "Idempotency-Key: smoke-count-post-${RUN_ID}" >/dev/null
 
 inventory_balance_response="$(http_json GET "http://localhost:8080/stock-balances?outletId=${outlet_id}&ingredientId=${ingredient_id}" "" "Bearer ${smoke_access_token}")"
-balance_qty_on_hand="$(printf '%s' "${inventory_balance_response}" | json_get 0.qtyOnHand)"
+balance_qty_on_hand="$(printf '%s' "${inventory_balance_response}" | json_get items.0.qtyOnHand)"
 if ! decimal_equals "48.0000" "${balance_qty_on_hand}"; then
   printf 'Expected seeded inventory qty_on_hand 48.0000, got %s\n' "${balance_qty_on_hand}" >&2
   exit 1
@@ -527,8 +527,8 @@ fi
 for _ in $(seq 1 60); do
   inventory_transactions="$(http_json GET "http://localhost:8080/inventory-transactions?outletId=${outlet_id}&ingredientId=${ingredient_id}&txnType=SALE_USAGE&sourceType=SALE_ORDER&sourceId=${sale_order_id}" "" "Bearer ${smoke_access_token}" 2>/dev/null || true)"
   sale_usage_count="$(printf '%s' "${inventory_transactions}" | python3 -c 'import json,sys
-data=json.load(sys.stdin) if sys.stdin.readable() else []
-print(len(data))
+data=json.load(sys.stdin) if sys.stdin.readable() else {}
+print(len(data.get("items", [])))
 ' 2>/dev/null || true)"
   if [[ "${sale_usage_count}" == "1" ]]; then
     break
@@ -541,7 +541,7 @@ if [[ "${sale_usage_count:-0}" != "1" ]]; then
 fi
 
 inventory_balance_response="$(http_json GET "http://localhost:8080/stock-balances?outletId=${outlet_id}&ingredientId=${ingredient_id}" "" "Bearer ${smoke_access_token}")"
-balance_qty_on_hand="$(printf '%s' "${inventory_balance_response}" | json_get 0.qtyOnHand)"
+balance_qty_on_hand="$(printf '%s' "${inventory_balance_response}" | json_get items.0.qtyOnHand)"
 if ! decimal_equals "38.0000" "${balance_qty_on_hand}"; then
   printf 'Expected post-sale inventory qty_on_hand 38.0000, got %s\n' "${balance_qty_on_hand}" >&2
   exit 1
@@ -589,8 +589,8 @@ supplier_payment_id="$(printf '%s' "${supplier_payment_response}" | json_get id)
 for _ in $(seq 1 60); do
   inventory_transactions="$(http_json GET "http://localhost:8080/inventory-transactions?outletId=${outlet_id}&ingredientId=${ingredient_id}&txnType=PURCHASE_IN&sourceType=GOODS_RECEIPT&sourceId=${goods_receipt_id}" "" "Bearer ${smoke_access_token}" 2>/dev/null || true)"
   purchase_in_count="$(printf '%s' "${inventory_transactions}" | python3 -c 'import json,sys
-data=json.load(sys.stdin) if sys.stdin.readable() else []
-print(len(data))
+data=json.load(sys.stdin) if sys.stdin.readable() else {}
+print(len(data.get("items", [])))
 ' 2>/dev/null || true)"
   if [[ "${purchase_in_count}" == "1" ]]; then
     break
@@ -603,7 +603,7 @@ if [[ "${purchase_in_count:-0}" != "1" ]]; then
 fi
 
 inventory_balance_response="$(http_json GET "http://localhost:8080/stock-balances?outletId=${outlet_id}&ingredientId=${ingredient_id}" "" "Bearer ${smoke_access_token}")"
-balance_qty_on_hand="$(printf '%s' "${inventory_balance_response}" | json_get 0.qtyOnHand)"
+balance_qty_on_hand="$(printf '%s' "${inventory_balance_response}" | json_get items.0.qtyOnHand)"
 if ! decimal_equals "41.0000" "${balance_qty_on_hand}"; then
   printf 'Expected post-procurement inventory qty_on_hand 41.0000, got %s\n' "${balance_qty_on_hand}" >&2
   exit 1

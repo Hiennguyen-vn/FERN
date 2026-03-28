@@ -43,6 +43,7 @@ class AuditServiceIntegrationTest {
         registry.add("spring.kafka.listener.auto-startup", () -> "false");
         registry.add("spring.flyway.create-schemas", () -> "true");
         registry.add("fern.id-generator.node-id", () -> "17");
+        registry.add("fern.security.jwt.allow-insecure-default-secret", () -> "true");
     }
 
     @Autowired
