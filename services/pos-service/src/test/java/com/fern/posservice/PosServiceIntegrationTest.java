@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -28,6 +29,7 @@ import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
 import com.fern.posservice.config.PosOutboxProperties;
+import com.fern.posservice.service.PosOrgClient;
 import com.fern.posservice.service.PosOutboxPublisher;
 import com.fern.posservice.service.PosStore;
 import com.sun.net.httpserver.HttpServer;
@@ -54,6 +56,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -80,6 +83,7 @@ class PosServiceIntegrationTest {
     private static volatile String lastInventoryActorUserId;
     private static volatile int inventoryReleaseRequestCount;
     private static volatile boolean delayInventoryReservationResponse;
+    private static volatile long inventoryReservationDelayMillis;
     private static volatile Long lastReleasedReservationId;
     private static volatile boolean delayCatalogMenuResponse;
     private static volatile int recipeBatchRequestCount;
@@ -125,6 +129,9 @@ class PosServiceIntegrationTest {
     @SpyBean
     private PosStore posStore;
 
+    @SpyBean
+    private PosOrgClient posOrgClient;
+
     @MockBean
     private OperationalAlertPublisher operationalAlertPublisher;
 
@@ -163,6 +170,15 @@ class PosServiceIntegrationTest {
                           "currencyCode": "VND",
                           "priceValue": 30.00,
                           "taxPercent": 5.00
+                        },
+                        {
+                          "productId": 12,
+                          "productCode": "ROUND",
+                          "productName": "Rounded Drink",
+                          "categoryCode": "BEV",
+                          "currencyCode": "VND",
+                          "priceValue": 10.005,
+                          "taxPercent": 7.75
                         }
                       ]
                     }
@@ -258,7 +274,7 @@ class PosServiceIntegrationTest {
             if ("/internal/inventory/sale-reservations".equals(path)) {
                 if (delayInventoryReservationResponse) {
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(inventoryReservationDelayMillis);
                     } catch (InterruptedException exception) {
                         Thread.currentThread().interrupt();
                     }
@@ -358,12 +374,13 @@ class PosServiceIntegrationTest {
         lastInventoryActorUserId = null;
         inventoryReleaseRequestCount = 0;
         delayInventoryReservationResponse = false;
+        inventoryReservationDelayMillis = 1000L;
         lastReleasedReservationId = null;
         delayCatalogMenuResponse = false;
         recipeBatchRequestCount = 0;
         catalogCircuitBreaker.reset();
         inventoryCircuitBreaker.reset();
-        reset(posStore, operationalAlertPublisher);
+        reset(posStore, posOrgClient, operationalAlertPublisher);
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         properties.setAllowInsecureDefaultSecret(true);
@@ -493,6 +510,95 @@ class PosServiceIntegrationTest {
     }
 
     @Test
+    void shouldPersistSaleCompletedOutboxPayloadReadyForReconciliation() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "TAKEAWAY",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000},
+                                    {"productId": 11, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-reconciliation-cash")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 60.00
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-reconciliation-card")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CARD",
+                                  "amount": 26.50,
+                                  "transactionRef": "txn-reconciliation-1"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+
+        mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
+                        .header("Authorization", bearer())
+                        .header(CorrelationId.HEADER, "corr-reconciliation-outbox"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+
+        String payload = jdbcTemplate.queryForObject("""
+                SELECT payload::text
+                FROM pos.outbox_event
+                WHERE aggregate_id = ?
+                  AND event_type = 'pos.sale.completed'
+                """, String.class, orderId.toString());
+        JsonNode event = objectMapper.readTree(payload);
+
+        assertThat(event.path("saleOrderId").asLong()).isEqualTo(orderId);
+        assertThat(event.path("regionId").asLong()).isEqualTo(1L);
+        assertThat(event.path("outletId").asLong()).isEqualTo(101L);
+        assertThat(event.at("/businessDate/0").asInt()).isEqualTo(2026);
+        assertThat(event.at("/businessDate/1").asInt()).isEqualTo(3);
+        assertThat(event.at("/businessDate/2").asInt()).isEqualTo(27);
+        assertThat(event.path("correlationId").asText()).isEqualTo("corr-reconciliation-outbox");
+        assertThat(event.path("payments")).hasSize(2);
+        assertThat(event.at("/saleSnapshot/orderId").asLong()).isEqualTo(orderId);
+        assertThat(event.at("/saleSnapshot/outletId").asLong()).isEqualTo(101L);
+        assertThat(event.at("/saleSnapshot/payments")).hasSize(2);
+        assertThat(event.at("/saleSnapshot/totalAmount").decimalValue()).isEqualByComparingTo("86.50");
+        assertThat(event.at("/saleSnapshot/reservationId").asLong()).isEqualTo(999L);
+    }
+
+    @Test
     void shouldRejectUnsupportedPaymentStatus() throws Exception {
         String sessionJson = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())
@@ -537,14 +643,154 @@ class PosServiceIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("bad_request"))
-                .andExpect(jsonPath("$.message").value("Unsupported payment status"));
+                .andExpect(jsonPath("$.code").value("validation_error"))
+                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.details.status").value("Status must be SUCCESS, FAILED, or CANCELLED"));
 
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM pos.sale_payment WHERE sale_order_id = ?",
                 Integer.class,
                 orderId
         )).isZero();
+    }
+
+    @Test
+    void shouldDefaultPaymentStatusToSuccessWhenStatusMissingOrBlank() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String firstOrderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "TAKEAWAY",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long firstOrderId = readId(firstOrderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", firstOrderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-status-missing")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 55.00
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+
+        String secondOrderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "TAKEAWAY",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long secondOrderId = readId(secondOrderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", secondOrderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-status-blank")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CARD",
+                                  "amount": 55.00,
+                                  "status": "   "
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+
+        List<String> storedStatuses = jdbcTemplate.query("""
+                SELECT status
+                FROM pos.sale_payment
+                WHERE sale_order_id IN (?, ?)
+                ORDER BY sale_order_id
+                """, (rs, rowNum) -> rs.getString("status"), firstOrderId, secondOrderId);
+        assertThat(storedStatuses).containsExactly("SUCCESS", "SUCCESS");
+    }
+
+    @Test
+    void shouldDefaultPaymentStatusToSuccessWhenStatusExplicitlyNull() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "TAKEAWAY",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-status-null")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CARD",
+                                  "amount": 55.00,
+                                  "status": null
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM pos.sale_payment
+                WHERE sale_order_id = ?
+                """, String.class, orderId)).isEqualTo("SUCCESS");
     }
 
     @Test
@@ -622,6 +868,7 @@ class PosServiceIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
+                .andExpect(header().string("X-Session-Existed", "false"))
                 .andReturn().getResponse().getContentAsString();
         Long firstSessionId = readId(firstResponse);
 
@@ -637,10 +884,143 @@ class PosServiceIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
+                .andExpect(header().string("X-Session-Existed", "true"))
                 .andExpect(jsonPath("$.status").value("OPEN"))
                 .andReturn().getResponse().getContentAsString();
 
         assertThat(readId(secondResponse)).isEqualTo(firstSessionId);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pos.pos_session", Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRejectBlankOrTooLongTerminalId() throws Exception {
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "terminalId": "   ",
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_error"))
+                .andExpect(jsonPath("$.details.terminalId")
+                        .value("Terminal ID must be 1-64 chars of letters, numbers, underscores, or hyphens"));
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "terminalId": "%s",
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """.formatted("T".repeat(65))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_error"))
+                .andExpect(jsonPath("$.details.terminalId")
+                        .value("Terminal ID must be 1-64 chars of letters, numbers, underscores, or hyphens"));
+    }
+
+    @Test
+    void shouldAcceptTerminalIdWithUnderscoreAndDigits() throws Exception {
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "terminalId": "TERM-A_01",
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.terminalId").value("TERM-A_01"));
+    }
+
+    @Test
+    void shouldAllowNullTerminalIdAndPersistNoTerminal() throws Exception {
+        String response = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        Long sessionId = readId(response);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT terminal_id
+                FROM pos.pos_session
+                WHERE id = ?
+                """, String.class, sessionId)).isNull();
+    }
+
+    @Test
+    void shouldRejectOpenSessionWhenAnotherCashierAlreadyOwnsIt() throws Exception {
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "terminalId": "TERM-A",
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Session-Existed", "false"));
+
+        String secondCashierToken = issueToken(
+                2L,
+                "pos-cashier-2",
+                Set.of(
+                        "pos.session.read",
+                        "pos.session.open",
+                        "pos.session.close",
+                        "pos.session.reconcile",
+                        "pos.order.read",
+                        "pos.order.create",
+                        "pos.order.update",
+                        "pos.order.cancel",
+                        "pos.order.complete",
+                        "catalog.internal.resolve"
+                ),
+                List.of(1L),
+                List.of(101L)
+        );
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", "Bearer " + secondCashierToken)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "terminalId": "TERM-A",
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isConflict());
+
         assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pos.pos_session", Integer.class)).isEqualTo(1);
     }
 
@@ -923,6 +1303,93 @@ class PosServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectPaymentReplayWhenIdempotencyKeyTargetsDifferentOrder() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String firstOrderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long firstOrderId = readId(firstOrderJson);
+
+        String secondOrderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "TAKEAWAY",
+                                  "lines": [
+                                    {"productId": 11, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long secondOrderId = readId(secondOrderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", firstOrderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-replay-cross-order")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CARD",
+                                  "amount": 30.00,
+                                  "transactionRef": "txn-replay-cross-order-1"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PARTIALLY_PAID"));
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", secondOrderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-replay-cross-order")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 31.50
+                                }
+                                """))
+                .andExpect(status().isConflict());
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM pos.sale_payment
+                WHERE idempotency_key = 'pay-replay-cross-order'
+                """, Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT payment_status
+                FROM pos.sale_order
+                WHERE id = ?
+                """, String.class, secondOrderId)).isEqualTo("UNPAID");
+    }
+
+    @Test
     void shouldReturnSameOrderStateForConcurrentPaymentsSharingIdempotencyKey() throws Exception {
         String sessionJson = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())
@@ -1042,11 +1509,8 @@ class PosServiceIntegrationTest {
         CountDownLatch paymentPaused = new CountDownLatch(1);
         CountDownLatch allowPaymentToContinue = new CountDownLatch(1);
         AtomicBoolean intercepted = new AtomicBoolean(false);
-        org.mockito.stubbing.Answer<OrderRecord> originalRequireOrderForUpdate =
-                invocation -> (OrderRecord) invocation.callRealMethod();
-
         org.mockito.Mockito.doAnswer(invocation -> {
-            OrderRecord record = originalRequireOrderForUpdate.answer(invocation);
+            Object record = invocation.callRealMethod();
             if (Objects.equals(invocation.getArgument(0), orderId) && intercepted.compareAndSet(false, true)) {
                 paymentPaused.countDown();
                 assertThat(allowPaymentToContinue.await(5, TimeUnit.SECONDS)).isTrue();
@@ -1131,11 +1595,8 @@ class PosServiceIntegrationTest {
         CountDownLatch paymentPaused = new CountDownLatch(1);
         CountDownLatch allowPaymentToContinue = new CountDownLatch(1);
         AtomicBoolean intercepted = new AtomicBoolean(false);
-        org.mockito.stubbing.Answer<OrderRecord> originalRequireOrderForUpdate =
-                invocation -> (OrderRecord) invocation.callRealMethod();
-
         org.mockito.Mockito.doAnswer(invocation -> {
-            OrderRecord record = originalRequireOrderForUpdate.answer(invocation);
+            Object record = invocation.callRealMethod();
             if (Objects.equals(invocation.getArgument(0), orderId) && intercepted.compareAndSet(false, true)) {
                 paymentPaused.countDown();
                 assertThat(allowPaymentToContinue.await(5, TimeUnit.SECONDS)).isTrue();
@@ -1192,6 +1653,135 @@ class PosServiceIntegrationTest {
                 """, String.class, orderId);
         assertThat(paymentCount).isEqualTo(1);
         assertThat(productCode).isEqualTo("LATTE");
+    }
+
+    @Test
+    @Tag("security-gap")
+    void shouldRejectReadingSessionAndOrderOutsideRouteScopeById() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        String inScopeToken = issueToken(
+                Set.of("pos.session.read", "pos.order.read"),
+                List.of(1L),
+                List.of(101L)
+        );
+        String outOfScopeToken = issueToken(
+                Set.of("pos.session.read", "pos.order.read"),
+                List.of(999L),
+                List.of(999L)
+        );
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/pos-sessions/{id}", sessionId)
+                        .header("Authorization", "Bearer " + inScopeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(sessionId));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/pos-sessions/{id}", sessionId)
+                        .header("Authorization", "Bearer " + outOfScopeToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/sale-orders/{id}", orderId)
+                        .header("Authorization", "Bearer " + inScopeToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/sale-orders/{id}", orderId)
+                        .header("Authorization", "Bearer " + outOfScopeToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Tag("security-gap")
+    void shouldIssueExplicitAudienceForPosDownstreamServiceTokens() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pos-security-gap-payment")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CARD",
+                                  "amount": 55.00,
+                                  "transactionRef": "txn-security-gap"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+
+        FernJwtClaims catalogClaims = jwtService.decode(lastCatalogAuthorization.substring("Bearer ".length()));
+        FernJwtClaims inventoryClaims = jwtService.decode(lastInventoryAuthorization.substring("Bearer ".length()));
+
+        assertThat(catalogClaims.issuer()).isEqualTo("pos-service");
+        assertThat(catalogClaims.audience()).containsExactly("catalog-service");
+        assertThat(inventoryClaims.issuer()).isEqualTo("pos-service");
+        assertThat(inventoryClaims.audience()).containsExactly("inventory-service");
     }
 
     @Test
@@ -1366,6 +1956,7 @@ class PosServiceIntegrationTest {
                 .andExpect(jsonPath("$.paymentStatus").value("PAID"));
 
         delayInventoryReservationResponse = true;
+        inventoryReservationDelayMillis = 1000L;
         try {
             mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
                             .header("Authorization", bearer()))
@@ -1451,7 +2042,8 @@ class PosServiceIntegrationTest {
 
         mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
                         .header("Authorization", bearer()))
-                .andExpect(status().isConflict());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
 
         Integer snapshotCount = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*)
@@ -1467,6 +2059,81 @@ class PosServiceIntegrationTest {
 
         assertThat(snapshotCount).isEqualTo(1);
         assertThat(outboxCount).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRejectClosingSessionWhileOrderCompletionIsInProgress() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "pay-completing-session-close")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 55.00
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        delayInventoryReservationResponse = true;
+        inventoryReservationDelayMillis = 300L;
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<Integer> completionFuture = executor.submit(() -> mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
+                            .header("Authorization", bearer()))
+                    .andReturn().getResponse().getStatus());
+
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            String orderStatus = null;
+            while (System.nanoTime() < deadline) {
+                orderStatus = jdbcTemplate.queryForObject("SELECT status FROM pos.sale_order WHERE id = ?", String.class, orderId);
+                if ("COMPLETING".equals(orderStatus)) {
+                    break;
+                }
+                Thread.sleep(25);
+            }
+            assertThat(orderStatus).isEqualTo("COMPLETING");
+
+            mockMvc.perform(post("/pos-sessions/{id}/close", sessionId)
+                            .header("Authorization", bearer()))
+                    .andExpect(status().isConflict());
+
+            assertThat(completionFuture.get(5, TimeUnit.SECONDS)).isEqualTo(200);
+        } finally {
+            delayInventoryReservationResponse = false;
+            executor.shutdownNow();
+        }
     }
 
     @Test
@@ -1652,6 +2319,152 @@ class PosServiceIntegrationTest {
     }
 
     @Test
+    void shouldReturnInternalErrorAndAvoidWritesWhenOrgServiceIsUnavailable() throws Exception {
+        doThrow(new IllegalStateException("org-service is unavailable while resolving outlet 101"))
+                .when(posOrgClient)
+                .requireOutlet(101L);
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("internal_error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM pos.pos_session", Integer.class)).isZero();
+    }
+
+    @Test
+    void shouldAllowAddingPaymentWhileInventoryDependencyIsUnavailable() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        inventoryCircuitBreaker.transitionToOpenState();
+        try {
+            mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                            .header("Authorization", bearer())
+                            .header("Idempotency-Key", "pay-while-inventory-open")
+                            .contentType("application/json")
+                            .content("""
+                                    {
+                                      "paymentMethod": "CASH",
+                                      "amount": 30.00
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.paymentStatus").value("PARTIALLY_PAID"));
+        } finally {
+            inventoryCircuitBreaker.reset();
+        }
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM pos.sale_payment
+                WHERE sale_order_id = ?
+                """, Integer.class, orderId)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT payment_status
+                FROM pos.sale_order
+                WHERE id = ?
+                """, String.class, orderId)).isEqualTo("PARTIALLY_PAID");
+    }
+
+    @Test
+    void shouldRoundFractionalPricesAndTaxesHalfUp() throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long sessionId = readId(sessionJson);
+
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 12, "qty": 3.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.subtotal").value(30.02))
+                .andExpect(jsonPath("$.taxAmount").value(2.33))
+                .andExpect(jsonPath("$.totalAmount").value(32.35))
+                .andExpect(jsonPath("$.lines[0].taxAmount").value(2.33))
+                .andExpect(jsonPath("$.lines[0].lineTotal").value(32.35))
+                .andReturn().getResponse().getContentAsString();
+        Long orderId = readId(orderJson);
+
+        BigDecimal storedSubtotal = jdbcTemplate.queryForObject("""
+                SELECT subtotal
+                FROM pos.sale_order
+                WHERE id = ?
+                """, BigDecimal.class, orderId);
+        BigDecimal storedTax = jdbcTemplate.queryForObject("""
+                SELECT tax_amount
+                FROM pos.sale_order
+                WHERE id = ?
+                """, BigDecimal.class, orderId);
+        BigDecimal storedTotal = jdbcTemplate.queryForObject("""
+                SELECT total_amount
+                FROM pos.sale_order
+                WHERE id = ?
+                """, BigDecimal.class, orderId);
+
+        assertThat(storedSubtotal).isEqualByComparingTo("30.02");
+        assertThat(storedTax).isEqualByComparingTo("2.33");
+        assertThat(storedTotal).isEqualByComparingTo("32.35");
+    }
+
+    @Test
     void shouldPublishFailedPaymentAlertWithCorrelationId() throws Exception {
         String sessionJson = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())
@@ -1711,6 +2524,48 @@ class PosServiceIntegrationTest {
                 eq(orderId.toString()),
                 anyMap()
         );
+    }
+
+    @Test
+    void shouldNotRepublishOutboxEventAfterRetryLimitIsReached() {
+        String eventId = UUID.randomUUID().toString();
+        jdbcTemplate.update("""
+                INSERT INTO pos.outbox_event (
+                    id, aggregate_type, aggregate_id, event_type, partition_key, payload, status, retry_count, created_at
+                ) VALUES (
+                    CAST(? AS uuid), 'SALE_ORDER', '10', 'pos.sale.completed', '101', CAST(? AS jsonb), 'PENDING', 3, CURRENT_TIMESTAMP
+                )
+                """, eventId, "{\"saleOrderId\":10,\"outletId\":101}");
+
+        KafkaTemplate<String, String> kafkaTemplate = mock(KafkaTemplate.class);
+        PosOutboxProperties properties = new PosOutboxProperties();
+        properties.setMaxAttempts(3);
+        properties.setReclaimAfter(Duration.ofMinutes(1));
+        PosOutboxPublisher publisher = new PosOutboxPublisher(
+                new NamedParameterJdbcTemplate(jdbcTemplate),
+                kafkaTemplate,
+                properties,
+                Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC),
+                new NoopOperationalAlertPublisher(),
+                new SimpleMeterRegistry()
+        );
+
+        publisher.publishPending();
+
+        verify(kafkaTemplate, times(0)).send(anyString(), anyString(), anyString());
+        String status = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM pos.outbox_event
+                WHERE id = CAST(? AS uuid)
+                """, String.class, eventId);
+        Integer retryCount = jdbcTemplate.queryForObject("""
+                SELECT retry_count
+                FROM pos.outbox_event
+                WHERE id = CAST(? AS uuid)
+                """, Integer.class, eventId);
+
+        assertThat(status).isEqualTo("PENDING");
+        assertThat(retryCount).isEqualTo(3);
     }
 
     @Test
@@ -1774,6 +2629,52 @@ class PosServiceIntegrationTest {
                 WHERE id = CAST(? AS uuid)
                 """, String.class, eventId);
         assertThat(status).isEqualTo("PUBLISHED");
+    }
+
+    @Test
+    void shouldReclaimStaleInProgressSaleCompletedOutboxEvent() {
+        String eventId = UUID.randomUUID().toString();
+        jdbcTemplate.update("""
+                INSERT INTO pos.outbox_event (
+                    id, aggregate_type, aggregate_id, event_type, partition_key, payload, status, retry_count, created_at, last_attempt_at
+                ) VALUES (
+                    CAST(? AS uuid), 'SALE_ORDER', '10', 'pos.sale.completed', '101', CAST(? AS jsonb),
+                    'IN_PROGRESS', 1, TIMESTAMPTZ '2026-03-27T09:00:00Z', TIMESTAMPTZ '2026-03-27T09:30:00Z'
+                )
+                """, eventId, "{\"saleOrderId\":10,\"outletId\":101}");
+
+        KafkaTemplate<String, String> kafkaTemplate = mock(KafkaTemplate.class);
+        when(kafkaTemplate.send(eq("pos.sale.completed"), eq("101"), anyString()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        PosOutboxProperties properties = new PosOutboxProperties();
+        properties.setMaxAttempts(3);
+        properties.setReclaimAfter(Duration.ofMinutes(1));
+        PosOutboxPublisher publisher = new PosOutboxPublisher(
+                new NamedParameterJdbcTemplate(jdbcTemplate),
+                kafkaTemplate,
+                properties,
+                Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC),
+                new NoopOperationalAlertPublisher(),
+                new SimpleMeterRegistry()
+        );
+
+        publisher.publishPending();
+
+        verify(kafkaTemplate).send(eq("pos.sale.completed"), eq("101"), anyString());
+        String status = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM pos.outbox_event
+                WHERE id = CAST(? AS uuid)
+                """, String.class, eventId);
+        Integer retryCount = jdbcTemplate.queryForObject("""
+                SELECT retry_count
+                FROM pos.outbox_event
+                WHERE id = CAST(? AS uuid)
+                """, Integer.class, eventId);
+
+        assertThat(status).isEqualTo("PUBLISHED");
+        assertThat(retryCount).isEqualTo(1);
     }
 
     private Long readId(String json) throws Exception {

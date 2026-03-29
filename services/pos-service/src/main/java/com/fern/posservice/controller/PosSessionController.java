@@ -8,6 +8,7 @@ import com.fern.posservice.service.PosSessionService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,11 +28,14 @@ public class PosSessionController {
     }
 
     @PostMapping
-    public PosSessionResponse openSession(
+    public ResponseEntity<PosSessionResponse> openSession(
             @AuthenticationPrincipal FernPrincipal principal,
             @Valid @RequestBody OpenSessionRequest request
     ) {
-        return posSessionService.openSession(principal, request);
+        var result = posSessionService.openSession(principal, request);
+        return ResponseEntity.ok()
+                .header("X-Session-Existed", Boolean.toString(result.sessionExisted()))
+                .body(result.session());
     }
 
     @GetMapping("/{id}")

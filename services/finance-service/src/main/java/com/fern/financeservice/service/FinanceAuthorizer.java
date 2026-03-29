@@ -29,10 +29,6 @@ public class FinanceAuthorizer {
     }
 
     public void requireSystemOrPermission(FernPrincipal principal, String permission) {
-        if (principal != null && principal.scopeRoots().system()) {
-            requirePermission(principal, permission);
-            return;
-        }
-        requirePermission(principal, permission);
+        requireSystemPermission(principal, permission);
     }
 }

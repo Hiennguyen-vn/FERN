@@ -5,6 +5,7 @@ import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ScopeRoots;
 import java.time.Instant;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public record FernJwtClaims(
@@ -18,8 +19,14 @@ public record FernJwtClaims(
         String jti,
         Instant authTime,
         Instant expiresAt,
-        FernPrincipalType principalType
+        FernPrincipalType principalType,
+        String issuer,
+        Set<String> audience
 ) {
+    public FernJwtClaims {
+        audience = audience == null ? Set.of() : Set.copyOf(new LinkedHashSet<>(audience));
+    }
+
     public FernJwtClaims(
             Long userId,
             String username,
@@ -32,7 +39,23 @@ public record FernJwtClaims(
             Instant authTime,
             Instant expiresAt
     ) {
-        this(userId, username, roles, permissions, scopeRoots, policyVersion, scopeVersion, jti, authTime, expiresAt, FernPrincipalType.USER);
+        this(userId, username, roles, permissions, scopeRoots, policyVersion, scopeVersion, jti, authTime, expiresAt, FernPrincipalType.USER, null, Set.of());
+    }
+
+    public FernJwtClaims(
+            Long userId,
+            String username,
+            Set<String> roles,
+            Set<String> permissions,
+            ScopeRoots scopeRoots,
+            long policyVersion,
+            long scopeVersion,
+            String jti,
+            Instant authTime,
+            Instant expiresAt,
+            FernPrincipalType principalType
+    ) {
+        this(userId, username, roles, permissions, scopeRoots, policyVersion, scopeVersion, jti, authTime, expiresAt, principalType, null, Set.of());
     }
 
     public FernPrincipal toPrincipal() {
@@ -52,6 +75,16 @@ public record FernJwtClaims(
         Number policyVersion = jwt.getClaim("policy_version");
         Number scopeVersion = jwt.getClaim("scope_version");
         String principalType = jwt.getClaimAsString("principal_type");
+        String issuer = jwt.getClaimAsString("iss");
+        Object audienceClaim = jwt.getClaim("aud");
+        List<String> audience;
+        if (audienceClaim instanceof List<?> values) {
+            audience = values.stream().map(String::valueOf).toList();
+        } else if (audienceClaim instanceof String value) {
+            audience = List.of(value);
+        } else {
+            audience = List.of();
+        }
 
         return new FernJwtClaims(
                 userId == null ? null : userId.longValue(),
@@ -64,7 +97,9 @@ public record FernJwtClaims(
                 jwt.getId(),
                 authTime == null ? Instant.now() : Instant.ofEpochSecond(authTime.longValue()),
                 jwt.getExpiresAt(),
-                principalType == null ? FernPrincipalType.USER : FernPrincipalType.valueOf(principalType)
+                principalType == null ? FernPrincipalType.USER : FernPrincipalType.valueOf(principalType),
+                issuer,
+                Set.copyOf(audience == null ? List.of() : audience)
         );
     }
 }

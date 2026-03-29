@@ -1,0 +1,66 @@
+{
+  "name": "inventory_event_storm",
+  "behavior": "inventory_event_storm",
+  "workload_model": {
+    "sale_completed_events_per_minute": 900,
+    "goods_receipt_posted_events_per_minute": 300,
+    "inventory_command_posts_per_minute": 100
+  },
+  "request_mix": {
+    "sale_complete_ingress": 65,
+    "goods_receipt_ingress": 25,
+    "manual_adjustment_or_count": 10
+  },
+  "timing": {
+    "business_date": "2026-03-28",
+    "ramp_up": "10m",
+    "steady_duration": "30m",
+    "ramp_down": "5m"
+  },
+  "pass_fail": {
+    "mutation_throughput_gte_ratio": 0.95,
+    "duplicate_inventory_mutations_eq": 0,
+    "consumer_lag_recovery_within": "10m"
+  },
+  "metrics": [
+    "Kafka lag and rebalance counts",
+    "stock balance and inventory ledger consistency",
+    "DB lock wait and deadlocks on inventory tables"
+  ],
+  "bottleneck_hypothesis": [
+    "row lock contention on outlet_id + item_id stock balance rows",
+    "unique inbox dedup constraints become hot",
+    "consumer lag grows faster than drain rate"
+  ],
+  "observability_assertions": [
+    "consumer lag drains back to baseline within 10m",
+    "stock_balance and inventory_ledger totals remain aligned",
+    "no large deadlock burst on inventory tables"
+  ],
+  "k6": {
+    "options": {
+      "scenarios": {
+        "sale_terminals": {
+          "executor": "constant-vus",
+          "vus": 90,
+          "duration": "40m"
+        },
+        "procurement_buyers": {
+          "executor": "constant-vus",
+          "vus": 30,
+          "duration": "40m",
+          "startTime": "2m"
+        },
+        "inventory_operators": {
+          "executor": "constant-vus",
+          "vus": 10,
+          "duration": "40m",
+          "startTime": "2m"
+        }
+      },
+      "thresholds": {
+        "http_req_failed": ["rate<0.02"]
+      }
+    }
+  }
+}

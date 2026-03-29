@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -281,6 +282,44 @@ public class NotificationService {
             String body,
             String payload
     ) {
+        lockNotificationJobKeys(sourceEventId, idempotencyKey);
+        NotificationJobRecord existing = findNotificationJob(sourceEventId, idempotencyKey);
+        if (existing != null) {
+            requireMatchingNotificationJob(existing, sourceService, eventType, idempotencyKey, notificationType, channel, subject, body, payload);
+            if ("FAILED".equals(existing.status())) {
+                jdbcTemplate.update("""
+                        UPDATE notification.notification_job
+                        SET source_service = :sourceService,
+                            event_type = :eventType,
+                            occurred_at = :occurredAt,
+                            ingested_at = CURRENT_TIMESTAMP,
+                            notification_type = :notificationType,
+                            channel = :channel,
+                            recipient = :recipient,
+                            subject = :subject,
+                            body = :body,
+                            status = 'PENDING',
+                            scheduled_at = CURRENT_TIMESTAMP,
+                            claimed_at = NULL,
+                            sent_at = NULL,
+                            delivered_at = NULL,
+                            payload = CAST(:payload AS jsonb)
+                        WHERE notification_job_id = :notificationJobId
+                        """, params(
+                        "notificationJobId", existing.notificationJobId(),
+                        "sourceService", sourceService,
+                        "eventType", eventType,
+                        "occurredAt", occurredAt,
+                        "notificationType", notificationType,
+                        "channel", channel,
+                        "recipient", properties.getOpsWebhook().getUrl(),
+                        "subject", subject,
+                        "body", body,
+                        "payload", payload
+                ));
+            }
+            return;
+        }
         jdbcTemplate.update("""
                 INSERT INTO notification.notification_job (
                     notification_job_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
@@ -289,7 +328,6 @@ public class NotificationService {
                     :notificationJobId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
                     :notificationType, :channel, :recipient, :subject, :body, 'PENDING', CURRENT_TIMESTAMP, CAST(:payload AS jsonb)
                 )
-                ON CONFLICT DO NOTHING
                 """, params(
                 "notificationJobId", idGenerator.nextId(),
                 "sourceEventId", sourceEventId,
@@ -304,6 +342,77 @@ public class NotificationService {
                 "body", body,
                 "payload", payload
         ));
+    }
+
+    private void lockNotificationJobKeys(String sourceEventId, String idempotencyKey) {
+        List<String> lockKeys = new ArrayList<>();
+        if (sourceEventId != null && !sourceEventId.isBlank()) {
+            lockKeys.add("source:" + sourceEventId);
+        }
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            lockKeys.add("idempotency:" + idempotencyKey);
+        }
+        lockKeys.stream()
+                .distinct()
+                .sorted()
+                .forEach(lockKey -> jdbcTemplate.query(
+                        "SELECT pg_advisory_xact_lock(hashtext(:lockKey))",
+                        params("lockKey", lockKey),
+                        rs -> null
+                ));
+    }
+
+    private NotificationJobRecord findNotificationJob(String sourceEventId, String idempotencyKey) {
+        return jdbcTemplate.query("""
+                SELECT notification_job_id, source_event_id, idempotency_key, source_service, event_type,
+                       notification_type, channel, recipient, subject, body, status, payload::text AS payload
+                FROM notification.notification_job
+                WHERE source_event_id = :sourceEventId
+                   OR idempotency_key = :idempotencyKey
+                ORDER BY notification_job_id
+                LIMIT 1
+                """, params("sourceEventId", sourceEventId, "idempotencyKey", idempotencyKey), rs -> rs.next()
+                ? new NotificationJobRecord(
+                        rs.getLong("notification_job_id"),
+                        rs.getString("source_event_id"),
+                        rs.getString("idempotency_key"),
+                        rs.getString("source_service"),
+                        rs.getString("event_type"),
+                        rs.getString("notification_type"),
+                        rs.getString("channel"),
+                        rs.getString("recipient"),
+                        rs.getString("subject"),
+                        rs.getString("body"),
+                        rs.getString("status"),
+                        rs.getString("payload")
+                )
+                : null);
+    }
+
+    private void requireMatchingNotificationJob(
+            NotificationJobRecord existing,
+            String sourceService,
+            String eventType,
+            String idempotencyKey,
+            String notificationType,
+            String channel,
+            String subject,
+            String body,
+            String payload
+    ) {
+        if (!equalsNullable(existing.idempotencyKey(), idempotencyKey)
+                || !equalsNullable(existing.sourceService(), sourceService)
+                || !equalsNullable(existing.eventType(), eventType)
+                || !equalsNullable(existing.notificationType(), notificationType)
+                || !equalsNullable(existing.channel(), channel)
+                || !equalsNullable(existing.recipient(), properties.getOpsWebhook().getUrl())
+                || !equalsNullable(existing.subject(), subject)) {
+            throw new IllegalStateException("Notification idempotency conflict for source event " + existing.sourceEventId());
+        }
+    }
+
+    private boolean equalsNullable(Object left, Object right) {
+        return java.util.Objects.equals(left, right);
     }
 
     private void recordAttempt(long notificationJobId, int attemptNumber, String status, String errorMessage, String responseCode) {
@@ -451,6 +560,22 @@ public class NotificationService {
             long webhookEndpointId,
             String endpointUrl,
             String secret
+    ) {
+    }
+
+    private record NotificationJobRecord(
+            long notificationJobId,
+            String sourceEventId,
+            String idempotencyKey,
+            String sourceService,
+            String eventType,
+            String notificationType,
+            String channel,
+            String recipient,
+            String subject,
+            String body,
+            String status,
+            String payload
     ) {
     }
 }

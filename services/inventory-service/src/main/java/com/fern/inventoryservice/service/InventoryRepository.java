@@ -12,7 +12,6 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -124,25 +123,34 @@ public class InventoryRepository {
     }
 
     boolean beginInbox(String sourceEventId, String sourceService, String eventType, String partitionKey, Object payload) {
-        try {
-            jdbcTemplate.update("""
+        return Boolean.TRUE.equals(jdbcTemplate.query("""
+                WITH claimed AS (
                     INSERT INTO inventory.inbox_event (
                         id, source_event_id, source_service, event_type, partition_key, payload, status, received_at
                     ) VALUES (
                         :id, :sourceEventId, :sourceService, :eventType, :partitionKey, CAST(:payload AS jsonb), 'RECEIVED', CURRENT_TIMESTAMP
                     )
-                    """, params(
-                    "id", UUID.randomUUID(),
-                    "sourceEventId", sourceEventId,
-                    "sourceService", sourceService,
-                    "eventType", eventType,
-                    "partitionKey", partitionKey,
-                    "payload", toJson(payload)
-            ));
-            return true;
-        } catch (DataIntegrityViolationException exception) {
-            return false;
-        }
+                    ON CONFLICT (source_event_id) DO UPDATE
+                    SET source_service = EXCLUDED.source_service,
+                        event_type = EXCLUDED.event_type,
+                        partition_key = EXCLUDED.partition_key,
+                        payload = EXCLUDED.payload,
+                        status = 'RECEIVED',
+                        received_at = CURRENT_TIMESTAMP,
+                        processed_at = NULL,
+                        error_message = NULL
+                    WHERE inventory.inbox_event.status = 'FAILED'
+                    RETURNING 1
+                )
+                SELECT EXISTS(SELECT 1 FROM claimed)
+                """, params(
+                "id", UUID.randomUUID(),
+                "sourceEventId", sourceEventId,
+                "sourceService", sourceService,
+                "eventType", eventType,
+                "partitionKey", partitionKey,
+                "payload", toJson(payload)
+        ), rs -> rs.next() && rs.getBoolean(1)));
     }
 
     void markInboxProcessed(String sourceEventId) {
@@ -169,12 +177,14 @@ public class InventoryRepository {
                 """, params("operation", operation, "idempotencyKey", idempotencyKey), rs -> rs.next() ? rs.getLong("resource_id") : null);
     }
 
-    void recordIdempotentResource(String operation, String idempotencyKey, Long resourceId) {
-        jdbcTemplate.update("""
+    Long claimIdempotentResource(String operation, String idempotencyKey, Long resourceId) {
+        return jdbcTemplate.query("""
                 INSERT INTO inventory.idempotency_request (operation, idempotency_key, resource_id, created_at)
                 VALUES (:operation, :idempotencyKey, :resourceId, CURRENT_TIMESTAMP)
-                ON CONFLICT (operation, idempotency_key) DO NOTHING
-                """, params("operation", operation, "idempotencyKey", idempotencyKey, "resourceId", resourceId));
+                ON CONFLICT (operation, idempotency_key) DO UPDATE
+                SET resource_id = inventory.idempotency_request.resource_id
+                RETURNING resource_id
+                """, params("operation", operation, "idempotencyKey", idempotencyKey, "resourceId", resourceId), rs -> rs.next() ? rs.getLong("resource_id") : null);
     }
 
     BigDecimal currentUnitCost(Long outletId, Long ingredientId) {

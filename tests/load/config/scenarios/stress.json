@@ -1,0 +1,74 @@
+{
+  "name": "stress",
+  "behavior": "stateful_pos",
+  "workload_model": {
+    "outlets": 30,
+    "terminals_per_outlet": 4,
+    "completed_orders_per_minute_per_terminal": 6,
+    "requests_per_minute_per_terminal": 30
+  },
+  "request_mix": {
+    "create_or_update_order": 40,
+    "add_payment": 25,
+    "complete_order": 20,
+    "read_order_or_session": 10,
+    "read_stock_or_side_effect": 5
+  },
+  "payment_mix": {
+    "cash_ratio": 0.25,
+    "card_ratio": 0.75,
+    "partial_first_payment_ratio": 0.10,
+    "retry_same_key_ratio": 0.03
+  },
+  "timing": {
+    "business_date": "2026-03-28",
+    "step_duration": "10m",
+    "max_duration": "90m"
+  },
+  "pass_fail": {
+    "record_knee_point": true,
+    "maintain_design_target_until": "initial target breach"
+  },
+  "metrics": [
+    "pool pending and timeout growth",
+    "DB CPU and lock wait",
+    "queue backlog and consumer lag",
+    "GC pause and thread growth"
+  ],
+  "bottleneck_hypothesis": [
+    "connection pool exhaustion",
+    "DB saturation",
+    "queue backlog that does not recover",
+    "timeout cascade between POS and downstream services"
+  ],
+  "observability_assertions": [
+    "identify first service to breach SLO",
+    "capture leading metric at the knee point",
+    "archive Prometheus and DB snapshots around the break point"
+  ],
+  "k6": {
+    "options": {
+      "scenarios": {
+        "cashiers": {
+          "executor": "ramping-vus",
+          "startVUs": 96,
+          "stages": [
+            { "duration": "10m", "target": 120 },
+            { "duration": "10m", "target": 138 },
+            { "duration": "10m", "target": 159 },
+            { "duration": "10m", "target": 183 },
+            { "duration": "10m", "target": 210 },
+            { "duration": "10m", "target": 240 },
+            { "duration": "10m", "target": 276 },
+            { "duration": "10m", "target": 317 },
+            { "duration": "10m", "target": 0 }
+          ],
+          "gracefulRampDown": "30s"
+        }
+      },
+      "thresholds": {
+        "http_req_failed": ["rate<0.05"]
+      }
+    }
+  }
+}

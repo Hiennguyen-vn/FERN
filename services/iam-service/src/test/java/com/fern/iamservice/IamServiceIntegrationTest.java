@@ -18,8 +18,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.iamservice.repository.AuthSessionRepository;
 import com.fern.platform.audit.AuditEvent;
 import com.fern.platform.audit.AuditEventPublisher;
+import com.fern.platform.audit.SecurityEvent;
 import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.common.ScopeRoots;
+import com.fern.platform.observability.CorrelationId;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
@@ -510,12 +512,162 @@ class IamServiceIntegrationTest {
         assertThat(authSessionRepository.findAllByUserIdAndRevokedAtIsNull(userId)).isEmpty();
     }
 
+    @Test
+    void shouldRejectOldAccessTokenAfterRoleRevoked() throws Exception {
+        String adminToken = issueBootstrapAdminToken();
+        Long userId = createUser(adminToken, "role-revoke-user", "Role123!").get("id").asLong();
+
+        mockMvc.perform(post("/users/%d/roles".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"roleCodes":["bootstrap_admin"]}
+                                """))
+                .andExpect(status().isOk());
+
+        String staleToken = login("role-revoke-user", "Role123!").get("accessToken").asText();
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + staleToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.effectivePermissions").isArray());
+
+        adminToken = issueBootstrapAdminToken();
+        mockMvc.perform(post("/users/%d/roles".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"roleCodes":[]}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + staleToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRejectOldAccessTokenAfterScopeChanged() throws Exception {
+        String adminToken = issueBootstrapAdminToken();
+        Long userId = createUser(adminToken, "scope-revoke-user", "Scope123!").get("id").asLong();
+
+        mockMvc.perform(post("/users/%d/roles".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"roleCodes":["bootstrap_admin"]}
+                                """))
+                .andExpect(status().isOk());
+
+        adminToken = issueBootstrapAdminToken();
+        mockMvc.perform(post("/users/%d/scopes".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"regionIds":[1],"outletIds":[101]}
+                                """))
+                .andExpect(status().isOk());
+
+        String staleToken = login("scope-revoke-user", "Scope123!").get("accessToken").asText();
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + staleToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeRoots.regions[0]").value(1));
+
+        adminToken = issueBootstrapAdminToken();
+        mockMvc.perform(post("/users/%d/scopes".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"regionIds":[2],"outletIds":[201]}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + staleToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldIgnoreExpiredPermissionOverrideInEffectiveAccess() throws Exception {
+        String adminToken = issueBootstrapAdminToken();
+        Long userId = createUser(adminToken, "expired-override-user", "Override123!").get("id").asLong();
+
+        mockMvc.perform(put("/users/%d/permission-overrides".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "overrides": [
+                                    {
+                                      "permissionCode": "audit.read",
+                                      "overrideMode": "GRANT",
+                                      "reason": "Emergency access already expired",
+                                      "expiresAt": "2020-01-01T00:00:00Z"
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.overrides[0].permissionCode").value("audit.read"));
+
+        adminToken = issueBootstrapAdminToken();
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='audit.read')]").doesNotExist())
+                .andExpect(jsonPath("$.grantedPermissions[?(@=='audit.read')]").doesNotExist());
+    }
+
+    @Test
+    void shouldPublishLogoutSecurityEventWithCorrelationAndClientMetadata() throws Exception {
+        JsonNode login = loginAsBootstrapAdmin();
+        String accessToken = login.get("accessToken").asText();
+        String refreshToken = login.get("refreshToken").asText();
+        reset(auditEventPublisher);
+
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .header(CorrelationId.HEADER, "corr-logout-audit")
+                        .header("User-Agent", "qa-smoke-suite/1.0")
+                        .with(request -> {
+                            request.setRemoteAddr("10.20.30.40");
+                            return request;
+                        })
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"%s"}
+                                """.formatted(refreshToken)))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<SecurityEvent> securityCaptor = ArgumentCaptor.forClass(SecurityEvent.class);
+        verify(auditEventPublisher).publishSecurityEvent(securityCaptor.capture());
+        SecurityEvent event = securityCaptor.getValue();
+        assertThat(event.eventType()).isEqualTo("iam.auth.logout");
+        assertThat(event.correlationId()).isEqualTo("corr-logout-audit");
+        assertThat(event.ipAddress()).isEqualTo("10.20.30.40");
+        assertThat(event.userAgent()).isEqualTo("qa-smoke-suite/1.0");
+        assertThat(event.payload()).containsEntry("username", "bootstrap-admin");
+    }
+
     private JsonNode loginAsBootstrapAdmin() throws Exception {
         MvcResult loginResult = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"bootstrap-admin","password":"Admin123!"}
                                 """))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(loginResult.getResponse().getContentAsString());
+    }
+
+    private JsonNode login(String username, String password) throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"%s","password":"%s"}
+                                """.formatted(username, password)))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(loginResult.getResponse().getContentAsString());

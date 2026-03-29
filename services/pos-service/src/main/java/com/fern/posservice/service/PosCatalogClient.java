@@ -50,6 +50,7 @@ public class PosCatalogClient {
                 .headers(headers -> internalClientSupport.applyInternalHeaders(
                         headers,
                         principal,
+                        PosServiceNames.CATALOG_SERVICE,
                         Set.of(PermissionCodes.CATALOG_INTERNAL_RESOLVE)
                 ))
                 .retrieve()
@@ -70,6 +71,7 @@ public class PosCatalogClient {
                 .headers(headers -> internalClientSupport.applyInternalHeaders(
                         headers,
                         principal,
+                        PosServiceNames.CATALOG_SERVICE,
                         Set.of(PermissionCodes.CATALOG_INTERNAL_RESOLVE)
                 ))
                 .retrieve()

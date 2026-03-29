@@ -12,9 +12,15 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -24,6 +30,7 @@ import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +46,14 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JOSEObjectType;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -49,6 +64,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext
 class ApiGatewayIntegrationTest {
+    private static final String TEST_SECRET = "XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv";
     private static HttpServer iamServer;
     private static HttpServer orgServer;
     private static HttpServer catalogServer;
@@ -292,22 +308,7 @@ class ApiGatewayIntegrationTest {
 
     @Test
     void shouldRejectBlacklistedToken() {
-        FernJwtProperties properties = new FernJwtProperties();
-        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
-        properties.setAllowInsecureDefaultSecret(true);
-        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
-        String token = jwtService.encode(new FernJwtClaims(
-                1L,
-                "bootstrap-admin",
-                Set.of("bootstrap_admin"),
-                Set.of("org.region.read"),
-                new ScopeRoots(java.util.List.of(1L), java.util.List.of()),
-                1L,
-                1L,
-                "blacklisted-jti",
-                Instant.now(),
-                Instant.now().plusSeconds(900)
-        ), jwtService.accessTokenTtl());
+        String token = gatewayToken("bootstrap-admin", Set.of("org.region.read"), 1L, 1L, "blacklisted-jti");
 
         redisTemplate.opsForValue().set("fern:versions:policy", "1");
         redisTemplate.opsForValue().set("fern:versions:scope", "1");
@@ -318,6 +319,112 @@ class ApiGatewayIntegrationTest {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchange()
                 .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void shouldRejectStalePolicyTokenAndPublishSecurityEvent() {
+        String token = gatewayToken("stale-policy-user", Set.of("org.region.read"), 1L, 1L, "stale-policy-jti");
+
+        redisTemplate.opsForValue().set("fern:versions:policy", "2");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        webTestClient.get()
+                .uri("/regions/1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        waitForRows("SECURITY_EVENT", 1);
+        String payload = jdbcTemplate.queryForObject("""
+                SELECT payload::text
+                FROM gateway.outbox_event
+                WHERE aggregate_type = 'SECURITY_EVENT'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """, String.class);
+        assertThat(payload)
+                .contains("gateway.auth.token_rejected")
+                .contains("stale-policy-user")
+                .contains("/regions/1");
+    }
+
+    @Test
+    void shouldRejectStaleScopeTokenAndPublishSecurityEvent() {
+        String token = gatewayToken("stale-scope-user", Set.of("org.region.read"), 3L, 1L, "stale-scope-jti");
+
+        redisTemplate.opsForValue().set("fern:versions:policy", "3");
+        redisTemplate.opsForValue().set("fern:versions:scope", "2");
+
+        webTestClient.get()
+                .uri("/regions/1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        waitForRows("SECURITY_EVENT", 1);
+        String payload = jdbcTemplate.queryForObject("""
+                SELECT payload::text
+                FROM gateway.outbox_event
+                WHERE aggregate_type = 'SECURITY_EVENT'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """, String.class);
+        assertThat(payload)
+                .contains("gateway.auth.token_rejected")
+                .contains("stale-scope-user")
+                .contains("/regions/1");
+    }
+
+    @Test
+    @Tag("security-gap")
+    void shouldRejectGatewayTokenMissingIssuer() {
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        webTestClient.get()
+                .uri("/regions/1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + rawGatewayToken(null, Set.of("api-gateway"), true, false))
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        waitForRows("SECURITY_EVENT", 1);
+        String payload = jdbcTemplate.queryForObject("""
+                SELECT payload::text
+                FROM gateway.outbox_event
+                WHERE aggregate_type = 'SECURITY_EVENT'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """, String.class);
+        assertThat(payload)
+                .contains("gateway.auth.invalid_bearer_token")
+                .contains("Invalid bearer token")
+                .contains("/regions/1");
+    }
+
+    @Test
+    @Tag("security-gap")
+    void shouldRejectGatewayTokenMissingAudience() {
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        webTestClient.get()
+                .uri("/regions/1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + rawGatewayToken(FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER, Set.of(), false, true))
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        waitForRows("SECURITY_EVENT", 1);
+        String payload = jdbcTemplate.queryForObject("""
+                SELECT payload::text
+                FROM gateway.outbox_event
+                WHERE aggregate_type = 'SECURITY_EVENT'
+                ORDER BY created_at DESC
+                LIMIT 1
+                """, String.class);
+        assertThat(payload)
+                .contains("gateway.auth.invalid_bearer_token")
+                .contains("Invalid bearer token")
+                .contains("/regions/1");
     }
 
     @Test
@@ -556,6 +663,67 @@ class ApiGatewayIntegrationTest {
                 status,
                 retryCount
         );
+    }
+
+    private String gatewayToken(String username, Set<String> permissions, long policyVersion, long scopeVersion, String jti) {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret(TEST_SECRET);
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        return jwtService.encode(new FernJwtClaims(
+                1L,
+                username,
+                Set.of("bootstrap_admin"),
+                permissions,
+                new ScopeRoots(java.util.List.of(1L), java.util.List.of()),
+                policyVersion,
+                scopeVersion,
+                jti,
+                Instant.now(),
+                Instant.now().plusSeconds(900)
+        ), jwtService.accessTokenTtl());
+    }
+
+    private String rawGatewayToken(String issuer, Set<String> audience, boolean omitIssuer, boolean omitAudience) {
+        Instant now = Instant.now();
+        JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
+                .subject("gateway-gap-user")
+                .jwtID(UUID.randomUUID().toString())
+                .issueTime(Date.from(now))
+                .expirationTime(Date.from(now.plusSeconds(900)))
+                .claim("user_id", 1L)
+                .claim("roles", List.of("bootstrap_admin"))
+                .claim("permissions", List.of("org.region.read"))
+                .claim("scope_roots", new LinkedHashMap<>(Map.of(
+                        "system", false,
+                        "regions", List.of(1L),
+                        "outlets", List.of()
+                )))
+                .claim("policy_version", 1L)
+                .claim("scope_version", 1L)
+                .claim("auth_time", now.getEpochSecond())
+                .claim("principal_type", "USER");
+        if (!omitIssuer) {
+            builder.issuer(issuer);
+        }
+        if (!omitAudience) {
+            builder.audience(new ArrayList<>(audience));
+        }
+        return sign(builder.build());
+    }
+
+    private String sign(JWTClaimsSet claimsSet) {
+        try {
+            JWSSigner signer = new MACSigner(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
+            SignedJWT jwt = new SignedJWT(
+                    new JWSHeader.Builder(JWSAlgorithm.HS256).type(JOSEObjectType.JWT).build(),
+                    claimsSet
+            );
+            jwt.sign(signer);
+            return jwt.serialize();
+        } catch (JOSEException exception) {
+            throw new IllegalStateException("Unable to sign raw gateway token", exception);
+        }
     }
 
     private void waitForRows(String aggregateType, int expectedRows) {

@@ -1,0 +1,70 @@
+{
+  "name": "payment_burst",
+  "behavior": "payment_burst",
+  "workload_model": {
+    "outlets": 20,
+    "terminals_per_outlet": 6,
+    "payment_requests_per_minute_per_terminal": 12
+  },
+  "request_mix": {
+    "add_payment": 70,
+    "complete_order": 15,
+    "retry_same_key": 10,
+    "read_order_or_payment": 5
+  },
+  "payment_mix": {
+    "cash_ratio": 0.15,
+    "card_ratio": 0.85,
+    "partial_first_payment_ratio": 0.10,
+    "retry_same_key_ratio": 0.10
+  },
+  "timing": {
+    "business_date": "2026-03-28",
+    "ramp_up": "5m",
+    "steady_duration": "10m",
+    "recovery_duration": "10m",
+    "ramp_down": "3m"
+  },
+  "pass_fail": {
+    "payment_error_rate_lt": 0.01,
+    "duplicate_payment_rows_eq": 0,
+    "recovery_to_baseline_within": "10m"
+  },
+  "metrics": [
+    "payment endpoint p95 and p99",
+    "idempotency conflict counts",
+    "thread count and pool pending",
+    "order/payment duplicate checks"
+  ],
+  "bottleneck_hypothesis": [
+    "idempotency-key index hot spot",
+    "payment to order aggregate lock contention",
+    "thread and pool exhaustion causing timeout cascades"
+  ],
+  "observability_assertions": [
+    "no duplicate sale_payment rows for the same idempotency key",
+    "p99 returns to baseline after the recovery window",
+    "live thread count does not trend upward after burst completion"
+  ],
+  "k6": {
+    "options": {
+      "scenarios": {
+        "cashiers": {
+          "executor": "ramping-vus",
+          "startVUs": 24,
+          "stages": [
+            { "duration": "5m", "target": 120 },
+            { "duration": "10m", "target": 120 },
+            { "duration": "10m", "target": 60 },
+            { "duration": "3m", "target": 0 }
+          ],
+          "gracefulRampDown": "30s"
+        }
+      },
+      "thresholds": {
+        "http_req_failed": ["rate<0.01"],
+        "http_req_duration{kind:add_payment}": ["p(95)<500", "p(99)<1200"]
+      }
+    }
+  }
+}

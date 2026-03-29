@@ -19,6 +19,7 @@ record OrderRecord(
         BigDecimal totalAmount,
         String note,
         Instant createdAt,
-        Instant completedAt
+        Instant completedAt,
+        Long reservationId
 ) {
 }

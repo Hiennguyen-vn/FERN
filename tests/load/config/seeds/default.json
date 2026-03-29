@@ -1,0 +1,21 @@
+{
+  "generated": false,
+  "run_id": "replace-me",
+  "region": {
+    "id": 0,
+    "code": "LOAD-REGION"
+  },
+  "catalog": {
+    "ingredient_id": 0,
+    "product_id": 0,
+    "supplier_id": 0,
+    "base_uom_code": "G",
+    "yield_uom_code": "CUP",
+    "expected_total_amount": 60500
+  },
+  "outlets": [],
+  "notes": [
+    "Populate this file via tests/load/scripts/seed-staging.sh or replace it with a generated fixture file.",
+    "Each outlet entry must contain outlet_id, region_id, and per-terminal user credentials."
+  ]
+}

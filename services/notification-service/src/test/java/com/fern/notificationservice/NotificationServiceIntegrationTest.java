@@ -13,7 +13,9 @@ import java.net.InetSocketAddress;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -35,6 +37,7 @@ class NotificationServiceIntegrationTest {
     private static final AtomicInteger webhookStatus = new AtomicInteger(200);
     private static final AtomicInteger webhookDelayMs = new AtomicInteger();
     private static final AtomicInteger webhookRequestCount = new AtomicInteger();
+    private static final Queue<Integer> webhookStatusSequence = new ConcurrentLinkedQueue<>();
     private static final CopyOnWriteArrayList<String> webhookBodies = new CopyOnWriteArrayList<>();
 
     @DynamicPropertySource
@@ -88,6 +91,7 @@ class NotificationServiceIntegrationTest {
         webhookStatus.set(200);
         webhookDelayMs.set(0);
         webhookRequestCount.set(0);
+        webhookStatusSequence.clear();
         webhookBodies.clear();
     }
 
@@ -207,6 +211,222 @@ class NotificationServiceIntegrationTest {
     }
 
     @Test
+    void shouldReplayFailedOperationalAlertWhenEventIsRedelivered() throws Exception {
+        webhookStatus.set(500);
+        OperationalAlertEvent event = new OperationalAlertEvent(
+                "ops-alert-replay-failed",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:40:00Z"),
+                "report-service",
+                "corr-replay-failed",
+                "ops-idem-replay-failed",
+                "EXPORT_FAILED",
+                "HIGH",
+                "Replay failed alert",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "301",
+                Map.of("jobId", 301)
+        );
+        String payload = objectMapper.writeValueAsString(event);
+
+        notificationService.ingestOperationalAlert(payload, event);
+        notificationService.deliverPending();
+        jdbcTemplate.update("""
+                UPDATE notification.notification_job
+                SET scheduled_at = CURRENT_TIMESTAMP - INTERVAL '1 second'
+                WHERE source_event_id = 'ops-alert-replay-failed'
+                """);
+        notificationService.deliverPending();
+
+        assertThat(jobStatus("ops-alert-replay-failed")).isEqualTo("FAILED");
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.delivery_attempt", Integer.class)).isEqualTo(2);
+
+        webhookStatus.set(200);
+        notificationService.ingestOperationalAlert(payload, event);
+
+        assertThat(jobStatus("ops-alert-replay-failed")).isEqualTo("PENDING");
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.notification_job", Integer.class)).isEqualTo(1);
+
+        notificationService.deliverPending();
+
+        assertThat(jobStatus("ops-alert-replay-failed")).isEqualTo("SENT");
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.delivery_attempt", Integer.class)).isEqualTo(3);
+        assertThat(webhookRequestCount.get()).isEqualTo(3);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT delivery_status
+                FROM notification.webhook_delivery_log
+                WHERE source_event_id = 'ops-alert-replay-failed'
+                """, String.class)).isEqualTo("DELIVERED");
+    }
+
+    @Test
+    void shouldReplayFailedDlqNotificationWhenMessageIsRedelivered() {
+        webhookStatus.set(500);
+
+        notificationService.ingestDlqMessage("inventory.dlq", 3, 77L, "{\"payload\":\"replay-me\"}");
+        notificationService.deliverPending();
+        jdbcTemplate.update("""
+                UPDATE notification.notification_job
+                SET scheduled_at = CURRENT_TIMESTAMP - INTERVAL '1 second'
+                WHERE source_event_id = 'inventory.dlq:3:77'
+                """);
+        notificationService.deliverPending();
+
+        assertThat(jobStatus("inventory.dlq:3:77")).isEqualTo("FAILED");
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.delivery_attempt", Integer.class)).isEqualTo(2);
+
+        webhookStatus.set(200);
+        notificationService.ingestDlqMessage("inventory.dlq", 3, 77L, "{\"payload\":\"replay-me\"}");
+
+        assertThat(jobStatus("inventory.dlq:3:77")).isEqualTo("PENDING");
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.notification_job", Integer.class)).isEqualTo(1);
+
+        notificationService.deliverPending();
+
+        assertThat(jobStatus("inventory.dlq:3:77")).isEqualTo("SENT");
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.delivery_attempt", Integer.class)).isEqualTo(3);
+        assertThat(webhookRequestCount.get()).isEqualTo(3);
+    }
+
+    @Test
+    void shouldTreatOperationalAlertReplayWithNewEventIdButSameIdempotencyKeyAsSameJob() throws Exception {
+        OperationalAlertEvent first = new OperationalAlertEvent(
+                "ops-alert-idem-source-1",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:45:00Z"),
+                "report-service",
+                "corr-idem-source-1",
+                "ops-idem-source-shared",
+                "EXPORT_FAILED",
+                "HIGH",
+                "Idempotent alert replay",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "401",
+                Map.of("jobId", 401)
+        );
+        OperationalAlertEvent replay = new OperationalAlertEvent(
+                "ops-alert-idem-source-2",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:45:05Z"),
+                "report-service",
+                "corr-idem-source-2",
+                "ops-idem-source-shared",
+                "EXPORT_FAILED",
+                "HIGH",
+                "Idempotent alert replay",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "401",
+                Map.of("jobId", 401)
+        );
+
+        notificationService.ingestOperationalAlert(objectMapper.writeValueAsString(first), first);
+        notificationService.ingestOperationalAlert(objectMapper.writeValueAsString(replay), replay);
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.notification_job", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM notification.notification_job
+                WHERE idempotency_key = 'ops-idem-source-shared'
+                """, Integer.class)).isEqualTo(1);
+
+        notificationService.deliverPending();
+
+        assertThat(webhookRequestCount.get()).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.delivery_attempt", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM notification.webhook_delivery_log
+                WHERE idempotency_key = 'ops-idem-source-shared'
+                """, Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void shouldReplayFailedOperationalAlertWhenEventIdChangesButIdempotencyKeyMatches() throws Exception {
+        webhookStatus.set(500);
+        OperationalAlertEvent first = new OperationalAlertEvent(
+                "ops-alert-idem-failed-1",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:50:00Z"),
+                "report-service",
+                "corr-idem-failed-1",
+                "ops-idem-failed-shared",
+                "EXPORT_FAILED",
+                "HIGH",
+                "Replay after failure",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "402",
+                Map.of("jobId", 402)
+        );
+        OperationalAlertEvent replay = new OperationalAlertEvent(
+                "ops-alert-idem-failed-2",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:50:05Z"),
+                "report-service",
+                "corr-idem-failed-2",
+                "ops-idem-failed-shared",
+                "EXPORT_FAILED",
+                "HIGH",
+                "Replay after failure",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "402",
+                Map.of("jobId", 402)
+        );
+
+        notificationService.ingestOperationalAlert(objectMapper.writeValueAsString(first), first);
+        notificationService.deliverPending();
+        jdbcTemplate.update("""
+                UPDATE notification.notification_job
+                SET scheduled_at = CURRENT_TIMESTAMP - INTERVAL '1 second'
+                WHERE idempotency_key = 'ops-idem-failed-shared'
+                """);
+        notificationService.deliverPending();
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM notification.notification_job
+                WHERE idempotency_key = 'ops-idem-failed-shared'
+                """, String.class)).isEqualTo("FAILED");
+
+        webhookStatus.set(200);
+        notificationService.ingestOperationalAlert(objectMapper.writeValueAsString(replay), replay);
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM notification.notification_job
+                WHERE idempotency_key = 'ops-idem-failed-shared'
+                """, Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM notification.notification_job
+                WHERE idempotency_key = 'ops-idem-failed-shared'
+                """, String.class)).isEqualTo("PENDING");
+
+        notificationService.deliverPending();
+
+        assertThat(webhookRequestCount.get()).isEqualTo(3);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM notification.notification_job
+                WHERE idempotency_key = 'ops-idem-failed-shared'
+                """, String.class)).isEqualTo("SENT");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM notification.webhook_delivery_log
+                WHERE idempotency_key = 'ops-idem-failed-shared'
+                """, Integer.class)).isEqualTo(1);
+    }
+
+    @Test
     void shouldClaimPendingNotificationOnceAcrossConcurrentSchedulers() throws Exception {
         webhookDelayMs.set(200);
         OperationalAlertEvent event = new OperationalAlertEvent(
@@ -259,6 +479,107 @@ class NotificationServiceIntegrationTest {
     }
 
     @Test
+    void shouldReclaimStaleInProgressNotificationAfterCrashAndDeliverOnce() throws Exception {
+        OperationalAlertEvent event = new OperationalAlertEvent(
+                "ops-alert-stale-claim",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:20:00Z"),
+                "report-service",
+                "corr-stale-claim",
+                "ops-idem-stale-claim",
+                "EXPORT_FAILED",
+                "HIGH",
+                "Stale claim recovery test",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "101",
+                Map.of("jobId", 101)
+        );
+        String payload = objectMapper.writeValueAsString(event);
+        notificationService.ingestOperationalAlert(payload, event);
+        jdbcTemplate.update("""
+                UPDATE notification.notification_job
+                SET status = 'IN_PROGRESS',
+                    claimed_at = CURRENT_TIMESTAMP - INTERVAL '2 minutes'
+                WHERE source_event_id = 'ops-alert-stale-claim'
+                """);
+
+        notificationService.deliverPending();
+
+        assertThat(webhookRequestCount.get()).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM notification.notification_job
+                WHERE source_event_id = 'ops-alert-stale-claim'
+                """, String.class)).isEqualTo("SENT");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM notification.delivery_attempt
+                WHERE notification_job_id = (
+                    SELECT notification_job_id
+                    FROM notification.notification_job
+                    WHERE source_event_id = 'ops-alert-stale-claim'
+                )
+                """, Integer.class)).isEqualTo(1);
+    }
+
+    @Test
+    void shouldContinueDeliveringRemainingBatchWhenFirstNotificationFails() throws Exception {
+        webhookStatusSequence.add(500);
+        webhookStatusSequence.add(200);
+        OperationalAlertEvent first = new OperationalAlertEvent(
+                "ops-alert-batch-fail-1",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:25:00Z"),
+                "report-service",
+                "corr-batch-fail-1",
+                "ops-idem-batch-fail-1",
+                "EXPORT_FAILED",
+                "HIGH",
+                "First alert should retry",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "201",
+                Map.of("jobId", 201)
+        );
+        OperationalAlertEvent second = new OperationalAlertEvent(
+                "ops-alert-batch-fail-2",
+                "ops.alert.raised",
+                Instant.parse("2026-03-27T09:26:00Z"),
+                "report-service",
+                "corr-batch-fail-2",
+                "ops-idem-batch-fail-2",
+                "EXPORT_FAILED",
+                "HIGH",
+                "Second alert should still send",
+                1L,
+                101L,
+                "EXPORT_JOB",
+                "202",
+                Map.of("jobId", 202)
+        );
+        notificationService.ingestOperationalAlert(objectMapper.writeValueAsString(first), first);
+        notificationService.ingestOperationalAlert(objectMapper.writeValueAsString(second), second);
+
+        notificationService.deliverPending();
+
+        assertThat(webhookRequestCount.get()).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM notification.notification_job
+                WHERE source_event_id = 'ops-alert-batch-fail-1'
+                """, String.class)).isEqualTo("PENDING");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM notification.notification_job
+                WHERE source_event_id = 'ops-alert-batch-fail-2'
+                """, String.class)).isEqualTo("SENT");
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM notification.delivery_attempt", Integer.class)).isEqualTo(2);
+    }
+
+    @Test
     void shouldResolveWebhookEndpointIdForDeliveryLogs() throws Exception {
         OperationalAlertEvent event = new OperationalAlertEvent(
                 "ops-alert-endpoint-id",
@@ -293,6 +614,14 @@ class NotificationServiceIntegrationTest {
         )).isEqualTo(expectedWebhookEndpointId);
     }
 
+    private String jobStatus(String sourceEventId) {
+        return jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM notification.notification_job
+                WHERE source_event_id = ?
+                """, String.class, sourceEventId);
+    }
+
     private static void await(CountDownLatch latch) {
         try {
             latch.await();
@@ -320,7 +649,8 @@ class NotificationServiceIntegrationTest {
                 webhookRequestCount.incrementAndGet();
                 byte[] requestBody = exchange.getRequestBody().readAllBytes();
                 webhookBodies.add(new String(requestBody));
-                int status = webhookStatus.get();
+                Integer sequencedStatus = webhookStatusSequence.poll();
+                int status = sequencedStatus == null ? webhookStatus.get() : sequencedStatus;
                 byte[] response = (status >= 400 ? "{\"status\":\"failed\"}" : "{\"status\":\"ok\"}").getBytes();
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
                 exchange.sendResponseHeaders(status, response.length);

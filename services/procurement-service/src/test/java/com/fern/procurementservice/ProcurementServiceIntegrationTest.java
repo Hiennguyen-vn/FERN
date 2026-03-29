@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -44,6 +45,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 class ProcurementServiceIntegrationTest {
     private static HttpServer orgServer;
+    private static volatile String lastOrgAuthorization;
 
     @DynamicPropertySource
     static void configure(DynamicPropertyRegistry registry) {
@@ -80,6 +82,7 @@ class ProcurementServiceIntegrationTest {
         }
         orgServer = HttpServer.create(new InetSocketAddress(0), 0);
         orgServer.createContext("/outlets", exchange -> {
+            lastOrgAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
             String path = exchange.getRequestURI().getPath();
             int status = 404;
             byte[] body = "{}".getBytes();
@@ -110,6 +113,7 @@ class ProcurementServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        lastOrgAuthorization = null;
         jdbcTemplate.execute("""
                 TRUNCATE TABLE
                     procurement.supplier_payment_allocation,
@@ -802,6 +806,164 @@ class ProcurementServiceIntegrationTest {
     }
 
     @Test
+    void shouldTrackPartialGoodsReceiptsAcrossMultipleBatchesForSamePurchaseOrder() throws Exception {
+        IssuedPurchaseOrderFixture fixture = createIssuedPurchaseOrderFixture(
+                "SUP-013",
+                "Partial Receipt Supplier",
+                "5.0000"
+        );
+
+        Long firstReceiptId = createGoodsReceipt(
+                fixture.purchaseOrderId(),
+                fixture.purchaseOrderLineId(),
+                "2.0000",
+                "2026-03-27T09:00:00Z"
+        );
+        receiveGoodsReceipt(firstReceiptId);
+        postGoodsReceipt(firstReceiptId, "gr-partial-batch-1");
+
+        BigDecimal qtyReceivedAfterFirst = jdbcTemplate.queryForObject("""
+                SELECT qty_received
+                FROM procurement.purchase_order_line
+                WHERE id = ?
+                """, BigDecimal.class, fixture.purchaseOrderLineId());
+        String lineStatusAfterFirst = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM procurement.purchase_order_line
+                WHERE id = ?
+                """, String.class, fixture.purchaseOrderLineId());
+        String headerStatusAfterFirst = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM procurement.purchase_order
+                WHERE id = ?
+                """, String.class, fixture.purchaseOrderId());
+
+        assertThat(qtyReceivedAfterFirst).isEqualByComparingTo("2.0000");
+        assertThat(lineStatusAfterFirst).isEqualTo("PARTIALLY_RECEIVED");
+        assertThat(headerStatusAfterFirst).isEqualTo("PARTIALLY_RECEIVED");
+
+        Long secondReceiptId = createGoodsReceipt(
+                fixture.purchaseOrderId(),
+                fixture.purchaseOrderLineId(),
+                "3.0000",
+                "2026-03-27T11:00:00Z"
+        );
+        receiveGoodsReceipt(secondReceiptId);
+        postGoodsReceipt(secondReceiptId, "gr-partial-batch-2");
+
+        BigDecimal qtyReceivedAfterSecond = jdbcTemplate.queryForObject("""
+                SELECT qty_received
+                FROM procurement.purchase_order_line
+                WHERE id = ?
+                """, BigDecimal.class, fixture.purchaseOrderLineId());
+        String lineStatusAfterSecond = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM procurement.purchase_order_line
+                WHERE id = ?
+                """, String.class, fixture.purchaseOrderLineId());
+        String headerStatusAfterSecond = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM procurement.purchase_order
+                WHERE id = ?
+                """, String.class, fixture.purchaseOrderId());
+        Integer postedEventCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.outbox_event
+                WHERE event_type = 'procurement.goods_receipt.posted'
+                """, Integer.class);
+
+        assertThat(qtyReceivedAfterSecond).isEqualByComparingTo("5.0000");
+        assertThat(lineStatusAfterSecond).isEqualTo("COMPLETED");
+        assertThat(headerStatusAfterSecond).isEqualTo("COMPLETED");
+        assertThat(postedEventCount).isEqualTo(2);
+    }
+
+    @Test
+    void shouldReturnSameGoodsReceiptWhenPostRequestIsRetriedWithSameIdempotencyKey() throws Exception {
+        IssuedPurchaseOrderFixture fixture = createIssuedPurchaseOrderFixture(
+                "SUP-014",
+                "Goods Receipt Retry Supplier",
+                "5.0000"
+        );
+
+        Long goodsReceiptId = createGoodsReceipt(
+                fixture.purchaseOrderId(),
+                fixture.purchaseOrderLineId(),
+                "3.0000",
+                "2026-03-27T10:00:00Z"
+        );
+        receiveGoodsReceipt(goodsReceiptId);
+
+        String firstPostBody = postGoodsReceipt(goodsReceiptId, "gr-post-retry-same-key");
+        String secondPostBody = postGoodsReceipt(goodsReceiptId, "gr-post-retry-same-key");
+
+        JsonNode firstPost = objectMapper.readTree(firstPostBody);
+        JsonNode secondPost = objectMapper.readTree(secondPostBody);
+        Integer postedEventCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.outbox_event
+                WHERE event_type = 'procurement.goods_receipt.posted'
+                """, Integer.class);
+        BigDecimal qtyReceived = jdbcTemplate.queryForObject("""
+                SELECT qty_received
+                FROM procurement.purchase_order_line
+                WHERE id = ?
+                """, BigDecimal.class, fixture.purchaseOrderLineId());
+
+        assertThat(secondPost.get("id").asLong()).isEqualTo(firstPost.get("id").asLong());
+        assertThat(secondPost.get("status").asText()).isEqualTo("POSTED");
+        assertThat(secondPost.get("postedAt").asText()).isEqualTo(firstPost.get("postedAt").asText());
+        assertThat(postedEventCount).isEqualTo(1);
+        assertThat(qtyReceived).isEqualByComparingTo("3.0000");
+    }
+
+    @Test
+    void shouldRejectPostGoodsReceiptReplayWhenIdempotencyKeyTargetsDifferentReceipt() throws Exception {
+        IssuedPurchaseOrderFixture fixture = createIssuedPurchaseOrderFixture(
+                "SUP-014B",
+                "Goods Receipt Retry Mismatch Supplier",
+                "5.0000"
+        );
+
+        Long firstReceiptId = createGoodsReceipt(
+                fixture.purchaseOrderId(),
+                fixture.purchaseOrderLineId(),
+                "2.0000",
+                "2026-03-27T10:00:00Z"
+        );
+        Long secondReceiptId = createGoodsReceipt(
+                fixture.purchaseOrderId(),
+                fixture.purchaseOrderLineId(),
+                "1.0000",
+                "2026-03-27T11:00:00Z"
+        );
+        receiveGoodsReceipt(firstReceiptId);
+        receiveGoodsReceipt(secondReceiptId);
+
+        mockMvc.perform(post("/goods-receipts/{id}/post", firstReceiptId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "gr-post-retry-mismatch-key"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(firstReceiptId));
+
+        mockMvc.perform(post("/goods-receipts/{id}/post", secondReceiptId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "gr-post-retry-mismatch-key"))
+                .andExpect(status().isConflict());
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM procurement.goods_receipt
+                WHERE id = ?
+                """, String.class, secondReceiptId)).isEqualTo("RECEIVED");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.outbox_event
+                WHERE event_type = 'procurement.goods_receipt.posted'
+                """, Integer.class)).isEqualTo(1);
+    }
+
+    @Test
     void shouldSerializeConcurrentSupplierPaymentsAgainstSameInvoice() throws Exception {
         ApprovedSupplierInvoiceFixture fixture = createApprovedSupplierInvoiceFixture(
                 "SUP-009",
@@ -1004,6 +1166,176 @@ class ProcurementServiceIntegrationTest {
         assertThat(allocatedTotal).isIn(new BigDecimal("20.00"), new BigDecimal("30.00"));
     }
 
+    @Test
+    @Tag("security-gap")
+    void shouldRejectReadingProcurementObjectsOutsideOutletScopeById() throws Exception {
+        Long supplierId = createActiveSupplier("SUP-GAP-001", "Scoped Procurement Supplier");
+
+        String poJson = mockMvc.perform(post("/purchase-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "supplierId": %d,
+                                  "orderDate": "2026-03-27",
+                                  "expectedDeliveryDate": "2026-03-29",
+                                  "lines": [
+                                    {
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyOrdered": 5.0000,
+                                      "expectedUnitPrice": 12.50,
+                                      "taxPercent": 10.00
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long purchaseOrderId = readId(poJson);
+        Long poLineId = objectMapper.readTree(poJson).get("lines").get(0).get("id").asLong();
+
+        mockMvc.perform(post("/purchase-orders/{id}/submit", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/purchase-orders/{id}/approve", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/purchase-orders/{id}/issue", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+
+        String receiptJson = mockMvc.perform(post("/goods-receipts")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "purchaseOrderId": %d,
+                                  "receiptTime": "2026-03-27T10:00:00Z",
+                                  "businessDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "purchaseOrderLineId": %d,
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyReceived": 3.0000,
+                                      "unitCost": 12.50
+                                    }
+                                  ]
+                                }
+                                """.formatted(purchaseOrderId, poLineId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long goodsReceiptId = readId(receiptJson);
+        mockMvc.perform(post("/goods-receipts/{id}/receive", goodsReceiptId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        String postedReceiptJson = mockMvc.perform(post("/goods-receipts/{id}/post", goodsReceiptId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "gr-post-gap-001"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long goodsReceiptLineId = objectMapper.readTree(postedReceiptJson).get("lines").get(0).get("id").asLong();
+
+        String invoiceJson = mockMvc.perform(post("/supplier-invoices")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "supplierId": %d,
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "invoiceNumber": "INV-GAP-001",
+                                  "invoiceDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "lineType": "STOCK",
+                                      "goodsReceiptLineId": %d,
+                                      "description": "Scoped milk delivery",
+                                      "qtyInvoiced": 3.0000,
+                                      "unitPrice": 12.50,
+                                      "taxPercent": 10.00,
+                                      "taxAmount": 3.75,
+                                      "lineTotal": 41.25
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId, goodsReceiptLineId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long supplierInvoiceId = readId(invoiceJson);
+
+        String inScopeBearer = "Bearer " + issueToken(
+                Set.of("procurement.po.read", "procurement.gr.read", "procurement.invoice.read"),
+                List.of(),
+                List.of(101L)
+        );
+        String outOfScopeBearer = "Bearer " + issueToken(
+                Set.of("procurement.po.read", "procurement.gr.read", "procurement.invoice.read"),
+                List.of(),
+                List.of(999L)
+        );
+
+        mockMvc.perform(get("/purchase-orders/{id}", purchaseOrderId).header("Authorization", inScopeBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(purchaseOrderId));
+        mockMvc.perform(get("/purchase-orders/{id}", purchaseOrderId).header("Authorization", outOfScopeBearer))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/goods-receipts/{id}", goodsReceiptId).header("Authorization", inScopeBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(goodsReceiptId));
+        mockMvc.perform(get("/goods-receipts/{id}", goodsReceiptId).header("Authorization", outOfScopeBearer))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/supplier-invoices/{id}", supplierInvoiceId).header("Authorization", inScopeBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(supplierInvoiceId));
+        mockMvc.perform(get("/supplier-invoices/{id}", supplierInvoiceId).header("Authorization", outOfScopeBearer))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Tag("security-gap")
+    void shouldIssueProcurementServiceTokenForOrgAudience() throws Exception {
+        Long supplierId = createActiveSupplier("SUP-GAP-ORG", "Org Audience Supplier");
+
+        mockMvc.perform(post("/purchase-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "supplierId": %d,
+                                  "orderDate": "2026-03-27",
+                                  "expectedDeliveryDate": "2026-03-29",
+                                  "lines": [
+                                    {
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyOrdered": 1.0000,
+                                      "expectedUnitPrice": 12.50,
+                                      "taxPercent": 10.00
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId)))
+                .andExpect(status().isOk());
+
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        FernJwtClaims claims = jwtService.decode(lastOrgAuthorization.substring("Bearer ".length()));
+
+        assertThat(claims.issuer()).isEqualTo("procurement-service");
+        assertThat(claims.audience()).containsExactly("org-service");
+    }
+
     private ApprovedSupplierInvoiceFixture createApprovedSupplierInvoiceFixture(
             String supplierCode,
             String supplierName,
@@ -1118,6 +1450,56 @@ class ProcurementServiceIntegrationTest {
         return new ApprovedSupplierInvoiceFixture(supplierId, supplierInvoiceId);
     }
 
+    private IssuedPurchaseOrderFixture createIssuedPurchaseOrderFixture(
+            String supplierCode,
+            String supplierName,
+            String qtyOrdered
+    ) throws Exception {
+        Long supplierId = createActiveSupplier(supplierCode, supplierName);
+
+        String poJson = mockMvc.perform(post("/purchase-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "supplierId": %d,
+                                  "orderDate": "2026-03-27",
+                                  "expectedDeliveryDate": "2026-03-29",
+                                  "lines": [
+                                    {
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyOrdered": %s,
+                                      "expectedUnitPrice": 12.50,
+                                      "taxPercent": 10.00
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId, qtyOrdered)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long purchaseOrderId = readId(poJson);
+
+        mockMvc.perform(post("/purchase-orders/{id}/submit", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/purchase-orders/{id}/approve", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        String issuedPoJson = mockMvc.perform(post("/purchase-orders/{id}/issue", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        return new IssuedPurchaseOrderFixture(
+                supplierId,
+                purchaseOrderId,
+                objectMapper.readTree(issuedPoJson).get("lines").get(0).get("id").asLong()
+        );
+    }
+
     private Long createActiveSupplier(String supplierCode, String name) throws Exception {
         String supplierJson = mockMvc.perform(post("/suppliers")
                         .header("Authorization", bearer())
@@ -1138,6 +1520,52 @@ class ProcurementServiceIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
         return supplierId;
+    }
+
+    private Long createGoodsReceipt(
+            Long purchaseOrderId,
+            Long purchaseOrderLineId,
+            String qtyReceived,
+            String receiptTime
+    ) throws Exception {
+        String receiptJson = mockMvc.perform(post("/goods-receipts")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "purchaseOrderId": %d,
+                                  "receiptTime": "%s",
+                                  "businessDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "purchaseOrderLineId": %d,
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyReceived": %s,
+                                      "unitCost": 12.50
+                                    }
+                                  ]
+                                }
+                                """.formatted(purchaseOrderId, receiptTime, purchaseOrderLineId, qtyReceived)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return readId(receiptJson);
+    }
+
+    private void receiveGoodsReceipt(Long goodsReceiptId) throws Exception {
+        mockMvc.perform(post("/goods-receipts/{id}/receive", goodsReceiptId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RECEIVED"));
+    }
+
+    private String postGoodsReceipt(Long goodsReceiptId, String idempotencyKey) throws Exception {
+        return mockMvc.perform(post("/goods-receipts/{id}/post", goodsReceiptId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", idempotencyKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("POSTED"))
+                .andReturn().getResponse().getContentAsString();
     }
 
     private Integer concurrentPaymentStatus(
@@ -1198,6 +1626,9 @@ class ProcurementServiceIntegrationTest {
     }
 
     private record ApprovedSupplierInvoiceFixture(Long supplierId, Long supplierInvoiceId) {
+    }
+
+    private record IssuedPurchaseOrderFixture(Long supplierId, Long purchaseOrderId, Long purchaseOrderLineId) {
     }
 
     private record PaymentCallResult(int status, String body) {

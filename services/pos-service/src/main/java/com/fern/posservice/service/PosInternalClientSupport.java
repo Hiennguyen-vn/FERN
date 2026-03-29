@@ -19,8 +19,11 @@ public class PosInternalClientSupport {
         this.serviceTokenSupport = serviceTokenSupport;
     }
 
-    public void applyInternalHeaders(HttpHeaders headers, FernPrincipal actor, Set<String> permissions) {
-        headers.set(HttpHeaders.AUTHORIZATION, "Bearer " + serviceTokenSupport.issueToken(PosServiceNames.POS_SERVICE, permissions));
+    public void applyInternalHeaders(HttpHeaders headers, FernPrincipal actor, String targetService, Set<String> permissions) {
+        headers.set(
+                HttpHeaders.AUTHORIZATION,
+                "Bearer " + serviceTokenSupport.issueToken(PosServiceNames.POS_SERVICE, targetService, permissions)
+        );
         if (actor != null && actor.userId() != null) {
             headers.set(FernRequestHeaders.ACTOR_USER_ID, actor.userId().toString());
         }

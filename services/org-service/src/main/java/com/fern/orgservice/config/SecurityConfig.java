@@ -2,8 +2,10 @@ package com.fern.orgservice.config;
 
 import com.fern.platform.observability.ServletCorrelationIdFilter;
 import com.fern.platform.security.FernJwtAuthenticationFilter;
+import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.security.RedisFernTokenAcceptanceValidator;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -20,7 +22,9 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             FernJwtService jwtService,
-            StringRedisTemplate redisTemplate
+            StringRedisTemplate redisTemplate,
+            FernJwtProperties jwtProperties,
+            @Value("${spring.application.name}") String serviceName
     ) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
@@ -34,7 +38,10 @@ public class SecurityConfig {
                 )
                 .addFilterBefore(new ServletCorrelationIdFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(
-                        new FernJwtAuthenticationFilter(jwtService, new RedisFernTokenAcceptanceValidator(redisTemplate)),
+                        new FernJwtAuthenticationFilter(
+                                jwtService,
+                                new RedisFernTokenAcceptanceValidator(redisTemplate, serviceName, jwtProperties.getUserTokenIssuer())
+                        ),
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .build();

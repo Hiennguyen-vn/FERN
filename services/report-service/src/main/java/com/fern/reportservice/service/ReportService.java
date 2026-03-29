@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.BadRequestException;
+import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
@@ -55,11 +56,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -112,284 +113,326 @@ public class ReportService {
         this.projectionLagMillis = meterRegistry.gauge("fern_projection_consumer_lag", new AtomicLong(0));
     }
 
-    @Transactional
     public void ingestPosSaleCompleted(String payload, PosSaleCompletedEvent event) {
-        if (!beginLanding(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), "pos.sale.completed", payload)) {
-            return;
-        }
-        int lineNumber = 0;
-        for (Map<String, Object> line : extractSnapshotLines(event.saleSnapshot())) {
-            lineNumber++;
-            jdbcTemplate.update("""
-                    INSERT INTO report.sales_fact (
-                        fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                        region_id, outlet_id, sale_order_id, product_id, line_number, business_date,
-                        qty, gross_amount, discount_amount, tax_amount, net_amount, payload
-                    ) VALUES (
-                        :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                        :regionId, :outletId, :saleOrderId, :productId, :lineNumber, :businessDate,
-                        :qty, :grossAmount, :discountAmount, :taxAmount, :netAmount, CAST(:payload AS jsonb)
-                    )
-                    ON CONFLICT DO NOTHING
-                    """, params(
-                    "factId", idGenerator.nextId(),
-                    "sourceEventId", event.eventId(),
-                    "sourceService", event.sourceService(),
-                    "eventType", event.eventType(),
-                    "occurredAt", event.occurredAt(),
-                    "idempotencyKey", event.idempotencyKey() + ":sale:" + lineNumber,
-                    "regionId", event.regionId(),
-                    "outletId", event.outletId(),
-                    "saleOrderId", event.saleOrderId(),
-                    "productId", longValue(line.get("productId")),
-                    "lineNumber", lineNumber,
-                    "businessDate", event.businessDate(),
-                    "qty", decimalValue(line.get("qty")),
-                    "grossAmount", decimalValue(line.get("lineTotal")),
-                    "discountAmount", decimalValue(line.get("discountAmount")),
-                    "taxAmount", decimalValue(line.get("taxAmount")),
-                    "netAmount", decimalValue(line.get("lineTotal")),
-                    "payload", toJson(line)
-            ));
-        }
-        for (SalePaymentSnapshot payment : event.payments()) {
-            jdbcTemplate.update("""
-                    INSERT INTO report.payment_fact (
-                        fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                        region_id, outlet_id, sale_order_id, payment_id, business_date, payment_method, payment_status, amount, payload
-                    ) VALUES (
-                        :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                        :regionId, :outletId, :saleOrderId, :paymentId, :businessDate, :paymentMethod, :paymentStatus, :amount, CAST(:payload AS jsonb)
-                    )
-                    ON CONFLICT DO NOTHING
-                    """, params(
-                    "factId", idGenerator.nextId(),
-                    "sourceEventId", event.eventId(),
-                    "sourceService", event.sourceService(),
-                    "eventType", event.eventType(),
-                    "occurredAt", event.occurredAt(),
-                    "idempotencyKey", event.idempotencyKey() + ":payment:" + payment.paymentId(),
-                    "regionId", event.regionId(),
-                    "outletId", event.outletId(),
-                    "saleOrderId", event.saleOrderId(),
-                    "paymentId", payment.paymentId(),
-                    "businessDate", event.businessDate(),
-                    "paymentMethod", payment.paymentMethod(),
-                    "paymentStatus", payment.status(),
-                    "amount", payment.amount(),
-                    "payload", toJson(payment)
-            ));
-        }
-        BigDecimal totalSales = extractSnapshotLines(event.saleSnapshot()).stream()
-                .map(line -> decimalValue(line.get("lineTotal")))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        applyDailySummaryDelta(
+        ingestWithLanding(
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
                 event.occurredAt(),
                 event.idempotencyKey(),
-                event.regionId(),
-                List.of(event.outletId()),
-                event.businessDate(),
+                "pos.sale.completed",
                 payload,
-                new SummaryDelta(totalSales, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                () -> {
+                    int lineNumber = 0;
+                    for (Map<String, Object> line : extractSnapshotLines(event.saleSnapshot())) {
+                        lineNumber++;
+                        jdbcTemplate.update("""
+                                INSERT INTO report.sales_fact (
+                                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                                    region_id, outlet_id, sale_order_id, product_id, line_number, business_date,
+                                    qty, gross_amount, discount_amount, tax_amount, net_amount, payload
+                                ) VALUES (
+                                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                                    :regionId, :outletId, :saleOrderId, :productId, :lineNumber, :businessDate,
+                                    :qty, :grossAmount, :discountAmount, :taxAmount, :netAmount, CAST(:payload AS jsonb)
+                                )
+                                ON CONFLICT DO NOTHING
+                                """, params(
+                                "factId", idGenerator.nextId(),
+                                "sourceEventId", event.eventId(),
+                                "sourceService", event.sourceService(),
+                                "eventType", event.eventType(),
+                                "occurredAt", event.occurredAt(),
+                                "idempotencyKey", event.idempotencyKey() + ":sale:" + lineNumber,
+                                "regionId", event.regionId(),
+                                "outletId", event.outletId(),
+                                "saleOrderId", event.saleOrderId(),
+                                "productId", longValue(line.get("productId")),
+                                "lineNumber", lineNumber,
+                                "businessDate", event.businessDate(),
+                                "qty", decimalValue(line.get("qty")),
+                                "grossAmount", decimalValue(line.get("lineTotal")),
+                                "discountAmount", decimalValue(line.get("discountAmount")),
+                                "taxAmount", decimalValue(line.get("taxAmount")),
+                                "netAmount", decimalValue(line.get("lineTotal")),
+                                "payload", toJson(line)
+                        ));
+                    }
+                    for (SalePaymentSnapshot payment : event.payments()) {
+                        jdbcTemplate.update("""
+                                INSERT INTO report.payment_fact (
+                                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                                    region_id, outlet_id, sale_order_id, payment_id, business_date, payment_method, payment_status, amount, payload
+                                ) VALUES (
+                                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                                    :regionId, :outletId, :saleOrderId, :paymentId, :businessDate, :paymentMethod, :paymentStatus, :amount, CAST(:payload AS jsonb)
+                                )
+                                ON CONFLICT DO NOTHING
+                                """, params(
+                                "factId", idGenerator.nextId(),
+                                "sourceEventId", event.eventId(),
+                                "sourceService", event.sourceService(),
+                                "eventType", event.eventType(),
+                                "occurredAt", event.occurredAt(),
+                                "idempotencyKey", event.idempotencyKey() + ":payment:" + payment.paymentId(),
+                                "regionId", event.regionId(),
+                                "outletId", event.outletId(),
+                                "saleOrderId", event.saleOrderId(),
+                                "paymentId", payment.paymentId(),
+                                "businessDate", event.businessDate(),
+                                "paymentMethod", payment.paymentMethod(),
+                                "paymentStatus", payment.status(),
+                                "amount", payment.amount(),
+                                "payload", toJson(payment)
+                        ));
+                    }
+                    BigDecimal totalSales = extractSnapshotLines(event.saleSnapshot()).stream()
+                            .map(line -> decimalValue(line.get("lineTotal")))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    applyDailySummaryDelta(
+                            event.eventId(),
+                            event.sourceService(),
+                            event.eventType(),
+                            event.occurredAt(),
+                            event.idempotencyKey(),
+                            event.regionId(),
+                            List.of(event.outletId()),
+                            event.businessDate(),
+                            payload,
+                            new SummaryDelta(totalSales, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                    );
+                    updateProjectionLag(event.occurredAt());
+                }
         );
-        updateProjectionLag(event.occurredAt());
     }
 
-    @Transactional
     public void ingestGoodsReceiptPosted(String payload, ProcurementGoodsReceiptPostedEvent event) {
-        if (!beginLanding(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), "procurement.goods_receipt.posted", payload)) {
-            return;
-        }
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        for (var line : event.lines()) {
-            BigDecimal lineAmount = line.qtyReceived().multiply(line.unitCost());
-            totalAmount = totalAmount.add(lineAmount);
-            jdbcTemplate.update("""
-                    INSERT INTO report.inventory_movement_fact (
-                        fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                        region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost, payload, source_reference_type, source_reference_id
-                    ) VALUES (
-                        :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                        :regionId, :outletId, :ingredientId, :businessDate, :movementType, :qtyChange, :unitCost, CAST(:payload AS jsonb), :sourceReferenceType, :sourceReferenceId
-                    )
-                    ON CONFLICT DO NOTHING
-                    """, params(
-                    "factId", idGenerator.nextId(),
-                    "sourceEventId", event.eventId(),
-                    "sourceService", event.sourceService(),
-                    "eventType", event.eventType(),
-                    "occurredAt", event.occurredAt(),
-                    "idempotencyKey", event.idempotencyKey() + ":movement:" + line.sourceLineId(),
-                    "regionId", event.regionId(),
-                    "outletId", event.outletId(),
-                    "ingredientId", line.ingredientId(),
-                    "businessDate", event.businessDate(),
-                    "movementType", "PURCHASE_IN",
-                    "qtyChange", line.qtyReceived(),
-                    "unitCost", line.unitCost(),
-                    "payload", toJson(line),
-                    "sourceReferenceType", "GOODS_RECEIPT_LINE",
-                    "sourceReferenceId", String.valueOf(line.sourceLineId())
-            ));
-        }
-        jdbcTemplate.update("""
-                INSERT INTO report.procurement_fact (
-                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                    region_id, outlet_id, goods_receipt_id, purchase_order_id, business_date, fact_amount, fact_type, reference_type, reference_id, payload
-                ) VALUES (
-                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                    :regionId, :outletId, :goodsReceiptId, :purchaseOrderId, :businessDate, :factAmount, :factType, :referenceType, :referenceId, CAST(:payload AS jsonb)
-                )
-                ON CONFLICT DO NOTHING
-                """, params(
-                "factId", idGenerator.nextId(),
-                "sourceEventId", event.eventId(),
-                "sourceService", event.sourceService(),
-                "eventType", event.eventType(),
-                "occurredAt", event.occurredAt(),
-                "idempotencyKey", event.idempotencyKey(),
-                "regionId", event.regionId(),
-                "outletId", event.outletId(),
-                "goodsReceiptId", event.goodsReceiptId(),
-                "purchaseOrderId", event.purchaseOrderId(),
-                "businessDate", event.businessDate(),
-                "factAmount", totalAmount,
-                "factType", "GOODS_RECEIPT",
-                "referenceType", "GOODS_RECEIPT",
-                "referenceId", String.valueOf(event.goodsReceiptId()),
-                "payload", payload
-        ));
-        applyDailySummaryDelta(
+        ingestWithLanding(
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
                 event.occurredAt(),
                 event.idempotencyKey(),
-                event.regionId(),
-                List.of(event.outletId()),
-                event.businessDate(),
+                "procurement.goods_receipt.posted",
                 payload,
-                new SummaryDelta(BigDecimal.ZERO, totalAmount, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                () -> {
+                    BigDecimal totalAmount = BigDecimal.ZERO;
+                    for (var line : event.lines()) {
+                        BigDecimal lineAmount = line.qtyReceived().multiply(line.unitCost());
+                        totalAmount = totalAmount.add(lineAmount);
+                        jdbcTemplate.update("""
+                                INSERT INTO report.inventory_movement_fact (
+                                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                                    region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost, payload, source_reference_type, source_reference_id
+                                ) VALUES (
+                                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                                    :regionId, :outletId, :ingredientId, :businessDate, :movementType, :qtyChange, :unitCost, CAST(:payload AS jsonb), :sourceReferenceType, :sourceReferenceId
+                                )
+                                ON CONFLICT DO NOTHING
+                                """, params(
+                                "factId", idGenerator.nextId(),
+                                "sourceEventId", event.eventId(),
+                                "sourceService", event.sourceService(),
+                                "eventType", event.eventType(),
+                                "occurredAt", event.occurredAt(),
+                                "idempotencyKey", event.idempotencyKey() + ":movement:" + line.sourceLineId(),
+                                "regionId", event.regionId(),
+                                "outletId", event.outletId(),
+                                "ingredientId", line.ingredientId(),
+                                "businessDate", event.businessDate(),
+                                "movementType", "PURCHASE_IN",
+                                "qtyChange", line.qtyReceived(),
+                                "unitCost", line.unitCost(),
+                                "payload", toJson(line),
+                                "sourceReferenceType", "GOODS_RECEIPT_LINE",
+                                "sourceReferenceId", String.valueOf(line.sourceLineId())
+                        ));
+                    }
+                    jdbcTemplate.update("""
+                            INSERT INTO report.procurement_fact (
+                                fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                                region_id, outlet_id, goods_receipt_id, purchase_order_id, business_date, fact_amount, fact_type, reference_type, reference_id, payload
+                            ) VALUES (
+                                :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                                :regionId, :outletId, :goodsReceiptId, :purchaseOrderId, :businessDate, :factAmount, :factType, :referenceType, :referenceId, CAST(:payload AS jsonb)
+                            )
+                            ON CONFLICT DO NOTHING
+                            """, params(
+                            "factId", idGenerator.nextId(),
+                            "sourceEventId", event.eventId(),
+                            "sourceService", event.sourceService(),
+                            "eventType", event.eventType(),
+                            "occurredAt", event.occurredAt(),
+                            "idempotencyKey", event.idempotencyKey(),
+                            "regionId", event.regionId(),
+                            "outletId", event.outletId(),
+                            "goodsReceiptId", event.goodsReceiptId(),
+                            "purchaseOrderId", event.purchaseOrderId(),
+                            "businessDate", event.businessDate(),
+                            "factAmount", totalAmount,
+                            "factType", "GOODS_RECEIPT",
+                            "referenceType", "GOODS_RECEIPT",
+                            "referenceId", String.valueOf(event.goodsReceiptId()),
+                            "payload", payload
+                    ));
+                    applyDailySummaryDelta(
+                            event.eventId(),
+                            event.sourceService(),
+                            event.eventType(),
+                            event.occurredAt(),
+                            event.idempotencyKey(),
+                            event.regionId(),
+                            List.of(event.outletId()),
+                            event.businessDate(),
+                            payload,
+                            new SummaryDelta(BigDecimal.ZERO, totalAmount, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                    );
+                    updateProjectionLag(event.occurredAt());
+                }
         );
-        updateProjectionLag(event.occurredAt());
     }
 
-    @Transactional
     public void ingestAttendanceApproved(String payload, AttendanceApprovedEvent event) {
-        if (!beginLanding(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), "attendance.approved", payload)) {
-            return;
-        }
-        jdbcTemplate.update("""
-                INSERT INTO report.attendance_fact (
-                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                    region_id, outlet_id, employee_id, business_date, attendance_status, work_hours, overtime_hours, payload
-                ) VALUES (
-                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                    :regionId, :outletId, :employeeId, :businessDate, :attendanceStatus, :workHours, :overtimeHours, CAST(:payload AS jsonb)
-                )
-                ON CONFLICT DO NOTHING
-                """, params(
-                "factId", idGenerator.nextId(),
-                "sourceEventId", event.eventId(),
-                "sourceService", event.sourceService(),
-                "eventType", event.eventType(),
-                "occurredAt", event.occurredAt(),
-                "idempotencyKey", event.idempotencyKey(),
-                "regionId", event.regionId(),
-                "outletId", event.outletId(),
-                "employeeId", event.employeeId(),
-                "businessDate", event.businessDate(),
-                "attendanceStatus", event.attendanceStatus(),
-                "workHours", event.workHours(),
-                "overtimeHours", event.overtimeHours(),
-                "payload", payload
-        ));
-        applyDailySummaryDelta(
+        ingestWithLanding(
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
                 event.occurredAt(),
                 event.idempotencyKey(),
-                event.regionId(),
-                List.of(event.outletId()),
-                event.businessDate(),
+                "attendance.approved",
                 payload,
-                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                () -> {
+                    jdbcTemplate.update("""
+                            INSERT INTO report.attendance_fact (
+                                fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                                region_id, outlet_id, employee_id, business_date, attendance_status, work_hours, overtime_hours, payload
+                            ) VALUES (
+                                :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                                :regionId, :outletId, :employeeId, :businessDate, :attendanceStatus, :workHours, :overtimeHours, CAST(:payload AS jsonb)
+                            )
+                            ON CONFLICT DO NOTHING
+                            """, params(
+                            "factId", idGenerator.nextId(),
+                            "sourceEventId", event.eventId(),
+                            "sourceService", event.sourceService(),
+                            "eventType", event.eventType(),
+                            "occurredAt", event.occurredAt(),
+                            "idempotencyKey", event.idempotencyKey(),
+                            "regionId", event.regionId(),
+                            "outletId", event.outletId(),
+                            "employeeId", event.employeeId(),
+                            "businessDate", event.businessDate(),
+                            "attendanceStatus", event.attendanceStatus(),
+                            "workHours", event.workHours(),
+                            "overtimeHours", event.overtimeHours(),
+                            "payload", payload
+                    ));
+                    applyDailySummaryDelta(
+                            event.eventId(),
+                            event.sourceService(),
+                            event.eventType(),
+                            event.occurredAt(),
+                            event.idempotencyKey(),
+                            event.regionId(),
+                            List.of(event.outletId()),
+                            event.businessDate(),
+                            payload,
+                            new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                    );
+                    updateProjectionLag(event.occurredAt());
+                }
         );
-        updateProjectionLag(event.occurredAt());
     }
 
-    @Transactional
     public void ingestPayrollCalculated(String payload, PayrollCalculatedEvent event) {
-        if (!beginLanding(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), "payroll.calculated", payload)) {
-            return;
-        }
-        for (PayrollCalculatedEmployee employee : event.employees()) {
-            jdbcTemplate.update("""
-                    INSERT INTO report.payroll_fact (
-                        fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                        region_id, outlet_id, employee_id, payroll_run_id, business_date, gross_pay, net_pay, tax_amount, payload
-                    ) VALUES (
-                        :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                        :regionId, :outletId, :employeeId, :payrollRunId, :businessDate, :grossPay, :netPay, :taxAmount, CAST(:payload AS jsonb)
-                    )
-                    ON CONFLICT DO NOTHING
-                    """, params(
-                    "factId", idGenerator.nextId(),
-                    "sourceEventId", event.eventId(),
-                    "sourceService", event.sourceService(),
-                    "eventType", event.eventType(),
-                    "occurredAt", event.occurredAt(),
-                    "idempotencyKey", event.idempotencyKey() + ":" + employee.employeeId(),
-                    "regionId", event.regionId(),
-                    "outletId", employee.outletId(),
-                    "employeeId", employee.employeeId(),
-                    "payrollRunId", event.payrollRunId(),
-                    "businessDate", event.businessDate(),
-                    "grossPay", employee.grossPay(),
-                    "netPay", employee.netPay(),
-                    "taxAmount", employee.taxAmount(),
-                    "payload", payload
-            ));
-        }
-        BigDecimal totalPayroll = event.employees().stream()
-                .map(PayrollCalculatedEmployee::grossPay)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<Long> outletIds = event.employees().stream()
-                .map(PayrollCalculatedEmployee::outletId)
-                .distinct()
-                .toList();
-        applyDailySummaryDelta(
+        ingestWithLanding(
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
                 event.occurredAt(),
                 event.idempotencyKey(),
-                event.regionId(),
-                outletIds,
-                event.businessDate(),
+                "payroll.calculated",
                 payload,
-                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, totalPayroll, 1)
+                () -> {
+                    for (PayrollCalculatedEmployee employee : event.employees()) {
+                        jdbcTemplate.update("""
+                                INSERT INTO report.payroll_fact (
+                                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                                    region_id, outlet_id, employee_id, payroll_run_id, business_date, gross_pay, net_pay, tax_amount, payload
+                                ) VALUES (
+                                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                                    :regionId, :outletId, :employeeId, :payrollRunId, :businessDate, :grossPay, :netPay, :taxAmount, CAST(:payload AS jsonb)
+                                )
+                                ON CONFLICT DO NOTHING
+                                """, params(
+                                "factId", idGenerator.nextId(),
+                                "sourceEventId", event.eventId(),
+                                "sourceService", event.sourceService(),
+                                "eventType", event.eventType(),
+                                "occurredAt", event.occurredAt(),
+                                "idempotencyKey", event.idempotencyKey() + ":" + employee.employeeId(),
+                                "regionId", event.regionId(),
+                                "outletId", employee.outletId(),
+                                "employeeId", employee.employeeId(),
+                                "payrollRunId", event.payrollRunId(),
+                                "businessDate", event.businessDate(),
+                                "grossPay", employee.grossPay(),
+                                "netPay", employee.netPay(),
+                                "taxAmount", employee.taxAmount(),
+                                "payload", payload
+                        ));
+                    }
+                    BigDecimal totalPayroll = event.employees().stream()
+                            .map(PayrollCalculatedEmployee::grossPay)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    List<Long> outletIds = event.employees().stream()
+                            .map(PayrollCalculatedEmployee::outletId)
+                            .distinct()
+                            .toList();
+                    applyDailySummaryDelta(
+                            event.eventId(),
+                            event.sourceService(),
+                            event.eventType(),
+                            event.occurredAt(),
+                            event.idempotencyKey(),
+                            event.regionId(),
+                            outletIds,
+                            event.businessDate(),
+                            payload,
+                            new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, totalPayroll, 1)
+                    );
+                    updateProjectionLag(event.occurredAt());
+                }
         );
-        updateProjectionLag(event.occurredAt());
     }
 
-    @Transactional
     public void ingestPayrollPosted(String payload, PayrollPostedEvent event) {
-        if (!beginLanding(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), "payroll.posted", payload)) {
-            return;
-        }
-        updateProjectionLag(event.occurredAt());
+        ingestWithLanding(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                "payroll.posted",
+                payload,
+                () -> updateProjectionLag(event.occurredAt())
+        );
     }
 
-    @Transactional
     public void ingestExpensePosted(String payload, ExpensePostedEvent event) {
-        if (!beginLanding(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), "finance.expense.posted", payload)) {
-            return;
-        }
+        ingestWithLanding(
+                event.eventId(),
+                event.sourceService(),
+                event.eventType(),
+                event.occurredAt(),
+                event.idempotencyKey(),
+                "finance.expense.posted",
+                payload,
+                () -> persistExpensePosted(payload, event)
+        );
+    }
+
+    void persistExpensePosted(String payload, ExpensePostedEvent event) {
         jdbcTemplate.update("""
                 INSERT INTO report.expense_fact (
                     fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
@@ -431,147 +474,168 @@ public class ReportService {
         updateProjectionLag(event.occurredAt());
     }
 
-    @Transactional
     public void ingestInventoryAdjustmentPosted(String payload, InventoryAdjustmentPostedEvent event) {
-        if (!beginLanding(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), "inventory.adjustment.posted", payload)) {
-            return;
-        }
-        jdbcTemplate.update("""
-                INSERT INTO report.inventory_movement_fact (
-                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                    region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost, payload, source_reference_type, source_reference_id
-                ) VALUES (
-                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                    :regionId, :outletId, :ingredientId, :businessDate, :movementType, :qtyChange, :unitCost, CAST(:payload AS jsonb), :sourceReferenceType, :sourceReferenceId
-                )
-                ON CONFLICT DO NOTHING
-                """, params(
-                "factId", idGenerator.nextId(),
-                "sourceEventId", event.eventId(),
-                "sourceService", event.sourceService(),
-                "eventType", event.eventType(),
-                "occurredAt", event.occurredAt(),
-                "idempotencyKey", event.idempotencyKey(),
-                "regionId", event.regionId(),
-                "outletId", event.outletId(),
-                "ingredientId", event.ingredientId(),
-                "businessDate", event.businessDate(),
-                "movementType", event.qtyChange().signum() >= 0 ? "STOCK_ADJUSTMENT_IN" : "STOCK_ADJUSTMENT_OUT",
-                "qtyChange", event.qtyChange(),
-                "unitCost", event.unitCost(),
-                "payload", payload,
-                "sourceReferenceType", event.sourceReferenceType(),
-                "sourceReferenceId", event.sourceReferenceId()
-        ));
-        applyDailySummaryDelta(
+        ingestWithLanding(
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
                 event.occurredAt(),
                 event.idempotencyKey(),
-                event.regionId(),
-                List.of(event.outletId()),
-                event.businessDate(),
+                "inventory.adjustment.posted",
                 payload,
-                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                () -> {
+                    jdbcTemplate.update("""
+                            INSERT INTO report.inventory_movement_fact (
+                                fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                                region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost, payload, source_reference_type, source_reference_id
+                            ) VALUES (
+                                :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                                :regionId, :outletId, :ingredientId, :businessDate, :movementType, :qtyChange, :unitCost, CAST(:payload AS jsonb), :sourceReferenceType, :sourceReferenceId
+                            )
+                            ON CONFLICT DO NOTHING
+                            """, params(
+                            "factId", idGenerator.nextId(),
+                            "sourceEventId", event.eventId(),
+                            "sourceService", event.sourceService(),
+                            "eventType", event.eventType(),
+                            "occurredAt", event.occurredAt(),
+                            "idempotencyKey", event.idempotencyKey(),
+                            "regionId", event.regionId(),
+                            "outletId", event.outletId(),
+                            "ingredientId", event.ingredientId(),
+                            "businessDate", event.businessDate(),
+                            "movementType", event.qtyChange().signum() >= 0 ? "STOCK_ADJUSTMENT_IN" : "STOCK_ADJUSTMENT_OUT",
+                            "qtyChange", event.qtyChange(),
+                            "unitCost", event.unitCost(),
+                            "payload", payload,
+                            "sourceReferenceType", event.sourceReferenceType(),
+                            "sourceReferenceId", event.sourceReferenceId()
+                    ));
+                    applyDailySummaryDelta(
+                            event.eventId(),
+                            event.sourceService(),
+                            event.eventType(),
+                            event.occurredAt(),
+                            event.idempotencyKey(),
+                            event.regionId(),
+                            List.of(event.outletId()),
+                            event.businessDate(),
+                            payload,
+                            new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                    );
+                    updateProjectionLag(event.occurredAt());
+                }
         );
-        updateProjectionLag(event.occurredAt());
     }
 
-    @Transactional
     public void ingestWasteRecordPosted(String payload, WasteRecordPostedEvent event) {
-        if (!beginLanding(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), "inventory.waste.posted", payload)) {
-            return;
-        }
-        jdbcTemplate.update("""
-                INSERT INTO report.inventory_movement_fact (
-                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                    region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost, payload, source_reference_type, source_reference_id
-                ) VALUES (
-                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                    :regionId, :outletId, :ingredientId, :businessDate, :movementType, :qtyChange, :unitCost, CAST(:payload AS jsonb), :sourceReferenceType, :sourceReferenceId
-                )
-                ON CONFLICT DO NOTHING
-                """, params(
-                "factId", idGenerator.nextId(),
-                "sourceEventId", event.eventId(),
-                "sourceService", event.sourceService(),
-                "eventType", event.eventType(),
-                "occurredAt", event.occurredAt(),
-                "idempotencyKey", event.idempotencyKey(),
-                "regionId", event.regionId(),
-                "outletId", event.outletId(),
-                "ingredientId", event.ingredientId(),
-                "businessDate", event.businessDate(),
-                "movementType", "WASTE_OUT",
-                "qtyChange", event.qtyChange(),
-                "unitCost", event.unitCost(),
-                "payload", payload,
-                "sourceReferenceType", event.sourceReferenceType(),
-                "sourceReferenceId", event.sourceReferenceId()
-        ));
-        applyDailySummaryDelta(
+        ingestWithLanding(
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
                 event.occurredAt(),
                 event.idempotencyKey(),
-                event.regionId(),
-                List.of(event.outletId()),
-                event.businessDate(),
+                "inventory.waste.posted",
                 payload,
-                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                () -> {
+                    jdbcTemplate.update("""
+                            INSERT INTO report.inventory_movement_fact (
+                                fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                                region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost, payload, source_reference_type, source_reference_id
+                            ) VALUES (
+                                :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                                :regionId, :outletId, :ingredientId, :businessDate, :movementType, :qtyChange, :unitCost, CAST(:payload AS jsonb), :sourceReferenceType, :sourceReferenceId
+                            )
+                            ON CONFLICT DO NOTHING
+                            """, params(
+                            "factId", idGenerator.nextId(),
+                            "sourceEventId", event.eventId(),
+                            "sourceService", event.sourceService(),
+                            "eventType", event.eventType(),
+                            "occurredAt", event.occurredAt(),
+                            "idempotencyKey", event.idempotencyKey(),
+                            "regionId", event.regionId(),
+                            "outletId", event.outletId(),
+                            "ingredientId", event.ingredientId(),
+                            "businessDate", event.businessDate(),
+                            "movementType", "WASTE_OUT",
+                            "qtyChange", event.qtyChange(),
+                            "unitCost", event.unitCost(),
+                            "payload", payload,
+                            "sourceReferenceType", event.sourceReferenceType(),
+                            "sourceReferenceId", event.sourceReferenceId()
+                    ));
+                    applyDailySummaryDelta(
+                            event.eventId(),
+                            event.sourceService(),
+                            event.eventType(),
+                            event.occurredAt(),
+                            event.idempotencyKey(),
+                            event.regionId(),
+                            List.of(event.outletId()),
+                            event.businessDate(),
+                            payload,
+                            new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                    );
+                    updateProjectionLag(event.occurredAt());
+                }
         );
-        updateProjectionLag(event.occurredAt());
     }
 
-    @Transactional
     public void ingestStockCountPosted(String payload, StockCountPostedEvent event) {
-        if (!beginLanding(event.eventId(), event.sourceService(), event.eventType(), event.occurredAt(), event.idempotencyKey(), "inventory.stock_count.posted", payload)) {
-            return;
-        }
-        for (StockCountPostedLine line : event.lines()) {
-            jdbcTemplate.update("""
-                    INSERT INTO report.inventory_movement_fact (
-                        fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                        region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost, payload, source_reference_type, source_reference_id
-                    ) VALUES (
-                        :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                        :regionId, :outletId, :ingredientId, :businessDate, :movementType, :qtyChange, :unitCost, CAST(:payload AS jsonb), :sourceReferenceType, :sourceReferenceId
-                    )
-                    ON CONFLICT DO NOTHING
-                    """, params(
-                    "factId", idGenerator.nextId(),
-                    "sourceEventId", event.eventId(),
-                    "sourceService", event.sourceService(),
-                    "eventType", event.eventType(),
-                    "occurredAt", event.occurredAt(),
-                    "idempotencyKey", event.idempotencyKey() + ":line:" + line.ingredientId(),
-                    "regionId", event.regionId(),
-                    "outletId", event.outletId(),
-                    "ingredientId", line.ingredientId(),
-                    "businessDate", event.businessDate(),
-                    "movementType", line.varianceQty().signum() >= 0 ? "STOCK_ADJUSTMENT_IN" : "STOCK_ADJUSTMENT_OUT",
-                    "qtyChange", line.varianceQty(),
-                    "unitCost", line.unitCost(),
-                    "payload", toJson(line),
-                    "sourceReferenceType", "STOCK_COUNT_SESSION",
-                    "sourceReferenceId", String.valueOf(event.stockCountSessionId())
-            ));
-        }
-        applyDailySummaryDelta(
+        ingestWithLanding(
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
                 event.occurredAt(),
                 event.idempotencyKey(),
-                event.regionId(),
-                List.of(event.outletId()),
-                event.businessDate(),
+                "inventory.stock_count.posted",
                 payload,
-                new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                () -> {
+                    for (StockCountPostedLine line : event.lines()) {
+                        jdbcTemplate.update("""
+                                INSERT INTO report.inventory_movement_fact (
+                                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                                    region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost, payload, source_reference_type, source_reference_id
+                                ) VALUES (
+                                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                                    :regionId, :outletId, :ingredientId, :businessDate, :movementType, :qtyChange, :unitCost, CAST(:payload AS jsonb), :sourceReferenceType, :sourceReferenceId
+                                )
+                                ON CONFLICT DO NOTHING
+                                """, params(
+                                "factId", idGenerator.nextId(),
+                                "sourceEventId", event.eventId(),
+                                "sourceService", event.sourceService(),
+                                "eventType", event.eventType(),
+                                "occurredAt", event.occurredAt(),
+                                "idempotencyKey", event.idempotencyKey() + ":line:" + line.ingredientId(),
+                                "regionId", event.regionId(),
+                                "outletId", event.outletId(),
+                                "ingredientId", line.ingredientId(),
+                                "businessDate", event.businessDate(),
+                                "movementType", line.varianceQty().signum() >= 0 ? "STOCK_ADJUSTMENT_IN" : "STOCK_ADJUSTMENT_OUT",
+                                "qtyChange", line.varianceQty(),
+                                "unitCost", line.unitCost(),
+                                "payload", toJson(line),
+                                "sourceReferenceType", "STOCK_COUNT_SESSION",
+                                "sourceReferenceId", String.valueOf(event.stockCountSessionId())
+                        ));
+                    }
+                    applyDailySummaryDelta(
+                            event.eventId(),
+                            event.sourceService(),
+                            event.eventType(),
+                            event.occurredAt(),
+                            event.idempotencyKey(),
+                            event.regionId(),
+                            List.of(event.outletId()),
+                            event.businessDate(),
+                            payload,
+                            new SummaryDelta(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 1)
+                    );
+                    updateProjectionLag(event.occurredAt());
+                }
         );
-        updateProjectionLag(event.occurredAt());
     }
 
     public PayrollSummaryResponse payrollSummary(FernPrincipal principal, Long regionId, LocalDate fromDate, LocalDate toDate) {
@@ -628,11 +692,12 @@ public class ReportService {
         ExportJobRecord existing = findExportByIdempotencyKey(normalizedIdempotencyKey);
         if (existing != null) {
             authorizeExportRecord(principal, existing);
+            requireMatchingIdempotentExport(existing, spec);
             return toExportJobResponse(existing);
         }
         long jobId = idGenerator.nextId();
         Instant requestedAt = clock.instant();
-        jdbcTemplate.update("""
+        Long claimedJobId = jdbcTemplate.query("""
                 INSERT INTO report.export_job (
                     export_job_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
                     report_type, format, status, requested_by, requested_at, correlation_id, payload
@@ -640,6 +705,9 @@ public class ReportService {
                     :exportJobId, :sourceEventId, 'report-service', 'report.export.queued', :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
                     :reportType, :format, 'QUEUED', :requestedBy, :requestedAt, :correlationId, CAST(:payload AS jsonb)
                 )
+                ON CONFLICT (idempotency_key) DO UPDATE
+                SET idempotency_key = report.export_job.idempotency_key
+                RETURNING export_job_id
                 """, params(
                 "exportJobId", jobId,
                 "sourceEventId", "report-export-" + jobId,
@@ -651,7 +719,16 @@ public class ReportService {
                 "requestedAt", requestedAt,
                 "correlationId", correlationId,
                 "payload", toJson(request)
-        ));
+        ), rs -> rs.next() ? rs.getLong("export_job_id") : null);
+        if (!Long.valueOf(jobId).equals(claimedJobId)) {
+            ExportJobRecord concurrentExisting = findExportByIdempotencyKey(normalizedIdempotencyKey);
+            if (concurrentExisting == null) {
+                throw new IllegalStateException("Export job not found after idempotent upsert");
+            }
+            authorizeExportRecord(principal, concurrentExisting);
+            requireMatchingIdempotentExport(concurrentExisting, spec);
+            return toExportJobResponse(concurrentExisting);
+        }
         ExportJobResponse response = getExport(principal, jobId);
         Map<String, Object> auditPayload = new LinkedHashMap<>();
         auditPayload.put("dataset", spec.dataset().name());
@@ -1105,6 +1182,31 @@ public class ReportService {
         ) : new SummaryRow(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0));
     }
 
+    private void ingestWithLanding(
+            String sourceEventId,
+            String sourceService,
+            String eventType,
+            Instant occurredAt,
+            String idempotencyKey,
+            String topic,
+            String payload,
+            Runnable work
+    ) {
+        if (!Boolean.TRUE.equals(transactionTemplate.execute(status ->
+                beginLanding(sourceEventId, sourceService, eventType, occurredAt, idempotencyKey, topic, payload)))) {
+            return;
+        }
+        try {
+            transactionTemplate.executeWithoutResult(status -> {
+                work.run();
+                markLandingProcessed(sourceEventId);
+            });
+        } catch (RuntimeException exception) {
+            transactionTemplate.executeWithoutResult(status -> markLandingFailed(sourceEventId, exception));
+            throw exception;
+        }
+    }
+
     private boolean beginLanding(
             String sourceEventId,
             String sourceService,
@@ -1114,26 +1216,139 @@ public class ReportService {
             String topic,
             String payload
     ) {
-        try {
-            jdbcTemplate.update("""
-                    INSERT INTO raw_events.event_landing (
-                        landing_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key, kafka_topic, payload
-                    ) VALUES (
-                        :landingId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey, :kafkaTopic, CAST(:payload AS jsonb)
-                    )
-                    """, params(
-                    "landingId", idGenerator.nextId(),
-                    "sourceEventId", sourceEventId,
-                    "sourceService", sourceService,
-                    "eventType", eventType,
-                    "occurredAt", occurredAt,
-                    "idempotencyKey", idempotencyKey,
-                    "kafkaTopic", topic,
-                    "payload", payload
-            ));
-            return true;
-        } catch (DataIntegrityViolationException exception) {
+        lockLandingKeys(sourceEventId, idempotencyKey);
+        LandingRecord existing = findLandingRecord(sourceEventId, idempotencyKey);
+        if (existing != null) {
+            requireMatchingLanding(existing, sourceService, eventType, occurredAt, idempotencyKey, topic, payload);
+            if (sourceEventId.equals(existing.sourceEventId()) && "FAILED".equals(existing.status())) {
+                jdbcTemplate.update("""
+                        UPDATE raw_events.event_landing
+                        SET source_service = :sourceService,
+                            event_type = :eventType,
+                            occurred_at = :occurredAt,
+                            ingested_at = CURRENT_TIMESTAMP,
+                            idempotency_key = :idempotencyKey,
+                            kafka_topic = :kafkaTopic,
+                            payload = CAST(:payload AS jsonb),
+                            status = 'RECEIVED',
+                            processed_at = NULL,
+                            error_message = NULL
+                        WHERE source_event_id = :sourceEventId
+                        """, params(
+                        "sourceEventId", existing.sourceEventId(),
+                        "sourceService", sourceService,
+                        "eventType", eventType,
+                        "occurredAt", occurredAt,
+                        "idempotencyKey", idempotencyKey,
+                        "kafkaTopic", topic,
+                        "payload", payload
+                ));
+                return true;
+            }
             return false;
+        }
+        jdbcTemplate.update("""
+                INSERT INTO raw_events.event_landing (
+                    landing_id, source_event_id, source_service, event_type, occurred_at, ingested_at,
+                    idempotency_key, kafka_topic, payload, status
+                ) VALUES (
+                    :landingId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP,
+                    :idempotencyKey, :kafkaTopic, CAST(:payload AS jsonb), 'RECEIVED'
+                )
+                """, params(
+                "landingId", idGenerator.nextId(),
+                "sourceEventId", sourceEventId,
+                "sourceService", sourceService,
+                "eventType", eventType,
+                "occurredAt", occurredAt,
+                "idempotencyKey", idempotencyKey,
+                "kafkaTopic", topic,
+                "payload", payload
+        ));
+        return true;
+    }
+
+    private void markLandingProcessed(String sourceEventId) {
+        jdbcTemplate.update("""
+                UPDATE raw_events.event_landing
+                SET status = 'PROCESSED',
+                    processed_at = CURRENT_TIMESTAMP,
+                    error_message = NULL
+                WHERE source_event_id = :sourceEventId
+                """, params("sourceEventId", sourceEventId));
+    }
+
+    private void markLandingFailed(String sourceEventId, RuntimeException exception) {
+        jdbcTemplate.update("""
+                UPDATE raw_events.event_landing
+                SET status = 'FAILED',
+                    error_message = :errorMessage
+                WHERE source_event_id = :sourceEventId
+                """, params(
+                "sourceEventId", sourceEventId,
+                "errorMessage", ExceptionSummaries.safeSummary(exception)
+        ));
+    }
+
+    private void lockLandingKeys(String sourceEventId, String idempotencyKey) {
+        List<String> lockKeys = new ArrayList<>();
+        if (sourceEventId != null && !sourceEventId.isBlank()) {
+            lockKeys.add("source:" + sourceEventId);
+        }
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            lockKeys.add("idempotency:" + idempotencyKey);
+        }
+        lockKeys.stream()
+                .distinct()
+                .sorted()
+                .forEach(lockKey -> jdbcTemplate.query(
+                        "SELECT pg_advisory_xact_lock(hashtext(:lockKey))",
+                        params("lockKey", lockKey),
+                        rs -> null
+                ));
+    }
+
+    private LandingRecord findLandingRecord(String sourceEventId, String idempotencyKey) {
+        return jdbcTemplate.query("""
+                SELECT source_event_id, source_service, event_type, occurred_at, idempotency_key, kafka_topic,
+                       payload::text AS payload, status
+                FROM raw_events.event_landing
+                WHERE source_event_id = :sourceEventId
+                   OR idempotency_key = :idempotencyKey
+                ORDER BY landing_id
+                LIMIT 1
+                """, params(
+                "sourceEventId", sourceEventId,
+                "idempotencyKey", idempotencyKey
+        ), rs -> rs.next()
+                ? new LandingRecord(
+                        rs.getString("source_event_id"),
+                        rs.getString("source_service"),
+                        rs.getString("event_type"),
+                        instant(rs, "occurred_at"),
+                        rs.getString("idempotency_key"),
+                        rs.getString("kafka_topic"),
+                        rs.getString("payload"),
+                        rs.getString("status"))
+                : null);
+    }
+
+    private void requireMatchingLanding(
+            LandingRecord existing,
+            String sourceService,
+            String eventType,
+            Instant occurredAt,
+            String idempotencyKey,
+            String topic,
+            String payload
+    ) {
+        if (!Objects.equals(existing.sourceService(), sourceService)
+                || !Objects.equals(existing.eventType(), eventType)
+                || !Objects.equals(existing.occurredAt(), occurredAt)
+                || !Objects.equals(existing.idempotencyKey(), idempotencyKey)
+                || !Objects.equals(existing.kafkaTopic(), topic)
+                || !jsonEquals(existing.payload(), payload)) {
+            throw new IllegalStateException("Report landing idempotency conflict");
         }
     }
 
@@ -1321,6 +1536,13 @@ public class ReportService {
                 """, params("idempotencyKey", idempotencyKey), rs -> rs.next() ? mapExportJob(rs) : null);
     }
 
+    private void requireMatchingIdempotentExport(ExportJobRecord existing, ExportSpec requestedSpec) {
+        ExportSpec existingSpec = buildExportSpec(readValue(existing.payload(), CreateExportRequest.class), existing.dataset(), existing.format());
+        if (!existingSpec.equals(requestedSpec)) {
+            throw new ConflictException("Idempotency-Key is already used for a different export request");
+        }
+    }
+
     private ExportJobRecord mapExportJob(ResultSet rs) throws java.sql.SQLException {
         return new ExportJobRecord(
                 rs.getLong("export_job_id"),
@@ -1459,6 +1681,14 @@ public class ReportService {
         }
     }
 
+    private boolean jsonEquals(String left, String right) {
+        try {
+            return objectMapper.readTree(left).equals(objectMapper.readTree(right));
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to compare report landing payload", exception);
+        }
+    }
+
     private enum Dataset {
         SALES_FACT,
         PAYMENT_FACT,
@@ -1498,6 +1728,18 @@ public class ReportService {
     }
 
     private record ExportData(List<String> columns, List<Map<String, Object>> rows) {
+    }
+
+    private record LandingRecord(
+            String sourceEventId,
+            String sourceService,
+            String eventType,
+            Instant occurredAt,
+            String idempotencyKey,
+            String kafkaTopic,
+            String payload,
+            String status
+    ) {
     }
 
     private record ExportJobRecord(

@@ -2,6 +2,7 @@ package com.fern.reportservice.controller;
 
 import com.fern.platform.common.ApiErrorResponse;
 import com.fern.platform.common.BadRequestException;
+import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ResourceNotFoundException;
@@ -46,6 +47,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestException.class)
     ResponseEntity<ApiErrorResponse> handleBadRequest(BadRequestException exception, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "bad_request", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    ResponseEntity<ApiErrorResponse> handleConflict(ConflictException exception, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "conflict", exception.getMessage(), request, Map.of());
     }
 
     @ExceptionHandler(Exception.class)

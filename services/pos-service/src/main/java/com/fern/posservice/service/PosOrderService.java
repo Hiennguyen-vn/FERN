@@ -171,12 +171,24 @@ public class PosOrderService {
         transactionTemplate.executeWithoutResult(status -> {
             OrderRecord currentOrder = store.requireOrderForUpdate(id);
             ensureOrderOpen(currentOrder);
-            Long existingPaymentId = jdbcTemplate.query("""
-                    SELECT id
+            ExistingPayment existingPayment = jdbcTemplate.query("""
+                    SELECT id, sale_order_id, payment_method, amount, status, payment_time, transaction_ref, note
                     FROM pos.sale_payment
                     WHERE idempotency_key = :idempotencyKey
-                    """, PosSql.params("idempotencyKey", idempotencyKey), rs -> rs.next() ? rs.getLong("id") : null);
-            if (existingPaymentId != null) {
+                    """, PosSql.params("idempotencyKey", idempotencyKey), rs -> rs.next()
+                    ? new ExistingPayment(
+                            rs.getLong("id"),
+                            rs.getLong("sale_order_id"),
+                            rs.getString("payment_method"),
+                            rs.getBigDecimal("amount"),
+                            rs.getString("status"),
+                            PosSql.instant(rs, "payment_time"),
+                            rs.getString("transaction_ref"),
+                            rs.getString("note")
+                    )
+                    : null);
+            if (existingPayment != null) {
+                requireMatchingIdempotentPayment(existingPayment, id, request);
                 return;
             }
             SalePaymentStatus paymentStatus = resolvePaymentStatus(request.status());
@@ -241,33 +253,89 @@ public class PosOrderService {
         }
     }
 
+    private void requireMatchingIdempotentPayment(
+            ExistingPayment existingPayment,
+            Long saleOrderId,
+            AddPaymentRequest request
+    ) {
+        if (!matchesExistingPayment(existingPayment, saleOrderId, request)) {
+            throw new ConflictException("Idempotency-Key cannot be reused with a different sale payment request");
+        }
+    }
+
+    private boolean matchesExistingPayment(
+            ExistingPayment existingPayment,
+            Long saleOrderId,
+            AddPaymentRequest request
+    ) {
+        return Objects.equals(existingPayment.saleOrderId(), saleOrderId)
+                && Objects.equals(existingPayment.paymentMethod(), request.paymentMethod())
+                && bigDecimalEquals(existingPayment.amount(), request.amount())
+                && Objects.equals(existingPayment.status(), resolvePaymentStatus(request.status()).name())
+                && matchesExistingPaymentTime(existingPayment.paymentTime(), request.paymentTime())
+                && Objects.equals(existingPayment.transactionRef(), request.transactionRef())
+                && Objects.equals(existingPayment.note(), request.note());
+    }
+
+    private boolean matchesExistingPaymentTime(Instant existingPaymentTime, Instant requestedPaymentTime) {
+        if (requestedPaymentTime == null) {
+            return true;
+        }
+        return Objects.equals(existingPaymentTime, requestedPaymentTime);
+    }
+
+    private boolean bigDecimalEquals(BigDecimal left, BigDecimal right) {
+        if (left == null || right == null) {
+            return left == right;
+        }
+        return left.compareTo(right) == 0;
+    }
+
     public SaleOrderResponse completeOrder(FernPrincipal principal, Long id, String correlationId) {
         OrderRecord order = store.requireOrder(id);
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_COMPLETE);
-        ensureOrderOpen(order);
+        if (isCompletionReplay(order)) {
+            return getOrder(principal, id);
+        }
+        ensureOrderOpenForCompletion(order);
         if (store.successfulPaymentTotal(id).compareTo(order.totalAmount()) < 0) {
             throw new ConflictException("Order cannot be completed until payment covers the full total");
         }
-        SessionRecord session = store.requireSession(order.posSessionId());
-        List<SaleOrderLineResponse> orderLines = store.queryOrderLines(id);
-        PricingSnapshot pricingSnapshot = pricingSnapshotFromStoredOrder(order, orderLines);
-        List<RecipeSnapshot> recipeSnapshots = pricingService.resolveRecipeSnapshots(principal, pricingSnapshot.lines(), session.businessDate());
-        List<RecipeUsageItem> usageItems = pricingService.flattenUsage(pricingSnapshot.lines(), recipeSnapshots);
-        SaleReservationResponse reservation = inventoryClient.reserveInventory(
-                principal,
-                order.outletId(),
-                session.businessDate(),
-                id,
-                usageItems
+        CompletionPreflight preflight = Objects.requireNonNull(
+                transactionTemplate.execute(status -> prepareCompletionPreflight(principal, id))
         );
+        SaleReservationResponse reservation = null;
         try {
+            reservation = inventoryClient.reserveInventory(
+                    principal,
+                    preflight.order().outletId(),
+                    preflight.session().businessDate(),
+                    id,
+                    preflight.usageItems()
+            );
             List<SalePaymentResponse> payments = store.queryPayments(id);
-            Map<String, Object> saleSnapshot = buildSaleSnapshot(order, pricingSnapshot, payments, recipeSnapshots, reservation.reservationId());
+            Map<String, Object> saleSnapshot = buildSaleSnapshot(
+                    preflight.order(),
+                    preflight.pricingSnapshot(),
+                    payments,
+                    preflight.recipeSnapshots(),
+                    reservation.reservationId()
+            );
             Instant completedAt = clock.instant();
+            CompletionPreflight finalizedPreflight = preflight;
+            FernPrincipal completedBy = principal;
+            List<SalePaymentResponse> finalizedPayments = payments;
+            Map<String, Object> finalizedSaleSnapshot = saleSnapshot;
+            Instant finalizedCompletedAt = completedAt;
+            Long finalizedOrderId = id;
+            SaleReservationResponse completedReservation = reservation;
             transactionTemplate.executeWithoutResult(status -> {
-                OrderRecord currentOrder = store.requireOrderForUpdate(id);
-                ensureOrderOpen(currentOrder);
-                if (store.successfulPaymentTotal(id).compareTo(currentOrder.totalAmount()) < 0) {
+                OrderRecord currentOrder = store.requireOrderForUpdate(finalizedOrderId);
+                if (isCompletionReplay(currentOrder)) {
+                    return;
+                }
+                ensureOrderCompleting(currentOrder);
+                if (store.successfulPaymentTotal(finalizedOrderId).compareTo(currentOrder.totalAmount()) < 0) {
                     throw new ConflictException("Order cannot be completed until payment covers the full total");
                 }
                 SessionRecord currentSession = store.requireSession(currentOrder.posSessionId());
@@ -276,7 +344,7 @@ public class PosOrderService {
                         VALUES (:saleOrderId, CAST(:orderSnapshot AS jsonb), CURRENT_TIMESTAMP)
                         ON CONFLICT (sale_order_id) DO UPDATE
                         SET order_snapshot = EXCLUDED.order_snapshot
-                        """, PosSql.params("saleOrderId", id, "orderSnapshot", toJson(saleSnapshot)));
+                        """, PosSql.params("saleOrderId", finalizedOrderId, "orderSnapshot", toJson(finalizedSaleSnapshot)));
                 jdbcTemplate.update("""
                         UPDATE pos.sale_order
                         SET status = :status,
@@ -292,29 +360,32 @@ public class PosOrderService {
                         """, PosSql.params(
                         "status", SaleOrderStatus.COMPLETED.name(),
                         "paymentStatus", SaleOrderPaymentStatus.PAID.name(),
-                        "subtotal", pricingSnapshot.subtotal(),
-                        "taxAmount", pricingSnapshot.taxAmount(),
-                        "totalAmount", pricingSnapshot.totalAmount(),
-                        "completedAt", completedAt,
-                        "completedByUserId", principal.userId(),
-                        "reservationId", reservation.reservationId(),
-                        "id", id
+                        "subtotal", finalizedPreflight.pricingSnapshot().subtotal(),
+                        "taxAmount", finalizedPreflight.pricingSnapshot().taxAmount(),
+                        "totalAmount", finalizedPreflight.pricingSnapshot().totalAmount(),
+                        "completedAt", finalizedCompletedAt,
+                        "completedByUserId", completedBy.userId(),
+                        "reservationId", completedReservation.reservationId(),
+                        "id", finalizedOrderId
                 ));
                 enqueueSaleCompletedEvent(
                         currentOrder,
                         currentSession,
-                        pricingSnapshot,
-                        payments,
-                        saleSnapshot,
-                        usageItems,
-                        reservation,
-                        principal,
-                        completedAt,
+                        finalizedPreflight.pricingSnapshot(),
+                        finalizedPayments,
+                        finalizedSaleSnapshot,
+                        finalizedPreflight.usageItems(),
+                        completedReservation,
+                        completedBy,
+                        finalizedCompletedAt,
                         correlationId
                 );
             });
         } catch (RuntimeException exception) {
-            releaseReservationAfterFailure(principal, reservation, exception);
+            if (reservation != null) {
+                releaseReservationAfterFailure(principal, reservation, exception);
+            }
+            revertCompletingOrder(id);
             throw exception;
         }
         return getOrder(principal, id);
@@ -416,6 +487,81 @@ public class PosOrderService {
         );
     }
 
+    private CompletionPreflight prepareCompletionPreflight(FernPrincipal principal, Long orderId) {
+        OrderRecord currentOrder = store.requireOrderForCompletionPreflight(orderId);
+        if (isCompletionReplay(currentOrder)) {
+            return new CompletionPreflight(
+                    currentOrder,
+                    store.requireSession(currentOrder.posSessionId()),
+                    pricingSnapshotFromStoredOrder(currentOrder, store.queryOrderLines(orderId)),
+                    List.of(),
+                    List.of()
+            );
+        }
+        ensureOrderOpenForCompletion(currentOrder);
+        if (store.successfulPaymentTotal(orderId).compareTo(currentOrder.totalAmount()) < 0) {
+            throw new ConflictException("Order cannot be completed until payment covers the full total");
+        }
+        SessionRecord currentSession = store.requireSession(currentOrder.posSessionId());
+        List<SaleOrderLineResponse> orderLines = store.queryOrderLines(orderId);
+        PricingSnapshot pricingSnapshot = pricingSnapshotFromStoredOrder(currentOrder, orderLines);
+        List<RecipeSnapshot> recipeSnapshots = pricingService.resolveRecipeSnapshots(
+                principal,
+                pricingSnapshot.lines(),
+                currentSession.businessDate()
+        );
+        List<RecipeUsageItem> usageItems = pricingService.flattenUsage(pricingSnapshot.lines(), recipeSnapshots);
+        jdbcTemplate.update("""
+                UPDATE pos.sale_order
+                SET status = :status,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id
+                  AND status = :currentStatus
+                """, PosSql.params(
+                "status", SaleOrderStatus.COMPLETING.name(),
+                "id", orderId,
+                "currentStatus", SaleOrderStatus.OPEN.name()
+        ));
+        OrderRecord markedOrder = store.requireOrder(orderId);
+        return new CompletionPreflight(markedOrder, currentSession, pricingSnapshot, recipeSnapshots, usageItems);
+    }
+
+    private void revertCompletingOrder(Long orderId) {
+        transactionTemplate.executeWithoutResult(status -> {
+            int updated = jdbcTemplate.update("""
+                    UPDATE pos.sale_order
+                    SET status = :status,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                      AND status = :currentStatus
+                    """, PosSql.params(
+                    "status", SaleOrderStatus.OPEN.name(),
+                    "id", orderId,
+                    "currentStatus", SaleOrderStatus.COMPLETING.name()
+            ));
+            if (updated == 1) {
+                store.refreshPaymentStatus(orderId);
+            }
+        });
+    }
+
+    private boolean isCompletionReplay(OrderRecord order) {
+        return SaleOrderStatus.COMPLETED.name().equals(order.status()) && order.reservationId() != null;
+    }
+
+    private void ensureOrderOpenForCompletion(OrderRecord order) {
+        if (SaleOrderStatus.COMPLETING.name().equals(order.status())) {
+            throw new ConflictException("Order completion is already in progress");
+        }
+        ensureOrderOpen(order);
+    }
+
+    private void ensureOrderCompleting(OrderRecord order) {
+        if (!SaleOrderStatus.COMPLETING.name().equals(order.status())) {
+            throw new ConflictException("Order completion is not in progress");
+        }
+    }
+
     private List<PricedLine> toPricedLines(List<SaleOrderLineResponse> lines) {
         return lines.stream()
                 .map(line -> new PricedLine(
@@ -474,6 +620,27 @@ public class PosOrderService {
         if (!SaleOrderStatus.OPEN.name().equals(order.status())) {
             throw new ConflictException("Only open orders can be modified");
         }
+    }
+
+    private record CompletionPreflight(
+            OrderRecord order,
+            SessionRecord session,
+            PricingSnapshot pricingSnapshot,
+            List<RecipeSnapshot> recipeSnapshots,
+            List<RecipeUsageItem> usageItems
+    ) {
+    }
+
+    private record ExistingPayment(
+            Long id,
+            Long saleOrderId,
+            String paymentMethod,
+            BigDecimal amount,
+            String status,
+            Instant paymentTime,
+            String transactionRef,
+            String note
+    ) {
     }
 
     private void ensureNoSuccessfulPayments(Long orderId) {

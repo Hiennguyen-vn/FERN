@@ -14,10 +14,37 @@ public final class FernTokenAcceptanceRules {
             long currentPolicyVersion,
             long currentScopeVersion
     ) {
-        if (blacklisted) {
+        return isAccepted(claims, blacklisted, currentPolicyVersion, currentScopeVersion, FernTokenAcceptanceKnowledge.noop());
+    }
+
+    public static boolean isAccepted(
+            FernJwtClaims claims,
+            boolean blacklisted,
+            long currentPolicyVersion,
+            long currentScopeVersion,
+            FernTokenAcceptanceKnowledge knowledge
+    ) {
+        return isAccepted(claims, blacklisted, currentPolicyVersion, currentScopeVersion, knowledge, true);
+    }
+
+    public static boolean isAccepted(
+            FernJwtClaims claims,
+            boolean blacklisted,
+            long currentPolicyVersion,
+            long currentScopeVersion,
+            FernTokenAcceptanceKnowledge knowledge,
+            boolean authoritativeObservation
+    ) {
+        FernTokenAcceptanceKnowledge effectiveKnowledge = knowledge == null
+                ? FernTokenAcceptanceKnowledge.noop()
+                : knowledge;
+        effectiveKnowledge.observe(claims, blacklisted, currentPolicyVersion, currentScopeVersion, authoritativeObservation);
+        if (blacklisted || effectiveKnowledge.isKnownBlacklisted(claims.jti())) {
             return false;
         }
-        return currentPolicyVersion <= claims.policyVersion()
-                && currentScopeVersion <= claims.scopeVersion();
+        long minimumPolicyVersion = Math.max(currentPolicyVersion, effectiveKnowledge.minimumPolicyVersion());
+        long minimumScopeVersion = Math.max(currentScopeVersion, effectiveKnowledge.minimumScopeVersion());
+        return minimumPolicyVersion <= claims.policyVersion()
+                && minimumScopeVersion <= claims.scopeVersion();
     }
 }

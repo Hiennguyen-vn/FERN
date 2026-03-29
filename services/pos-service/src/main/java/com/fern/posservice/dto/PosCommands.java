@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -16,6 +18,11 @@ public final class PosCommands {
         public record OpenSessionRequest(
                         @NotNull Long regionId,
                         @NotNull Long outletId,
+                        @Size(max = 64, message = "Terminal ID must be 1-64 chars of letters, numbers, underscores, or hyphens")
+                        @Pattern(
+                                regexp = "^[A-Za-z0-9_-]+$",
+                                message = "Terminal ID must be 1-64 chars of letters, numbers, underscores, or hyphens"
+                        )
                         String terminalId,
                         @NotNull String currencyCode,
                         @NotNull LocalDate businessDate,
@@ -51,6 +58,10 @@ public final class PosCommands {
                         Instant paymentTime,
                         String transactionRef,
                         String note,
+                        @Pattern(
+                                regexp = "(?i)^\\s*(SUCCESS|FAILED|CANCELLED)?\\s*$",
+                                message = "Status must be SUCCESS, FAILED, or CANCELLED"
+                        )
                         String status) {
         }
 }

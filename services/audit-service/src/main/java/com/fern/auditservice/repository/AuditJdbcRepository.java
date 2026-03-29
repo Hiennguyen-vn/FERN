@@ -40,6 +40,13 @@ public class AuditJdbcRepository {
     }
 
     public void insertAuditEvent(AuditEvent event) {
+        String idempotencyKey = fallbackIdempotency(event.idempotencyKey(), event.eventId());
+        lockIngestionKeys(event.eventId(), idempotencyKey);
+        StoredAuditEvent existing = findStoredAuditEvent(event.eventId(), idempotencyKey);
+        if (existing != null) {
+            requireMatchingAuditEvent(existing, event, idempotencyKey);
+            return;
+        }
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("auditEventId", idGenerator.nextId())
                 .addValue("sourceEventId", event.eventId())
@@ -47,7 +54,7 @@ public class AuditJdbcRepository {
                 .addValue("module", moduleFromPayload(event.payload(), event.sourceService()))
                 .addValue("eventType", event.eventType())
                 .addValue("occurredAt", timestamp(event.occurredAt()))
-                .addValue("idempotencyKey", fallbackIdempotency(event.idempotencyKey(), event.eventId()))
+                .addValue("idempotencyKey", idempotencyKey)
                 .addValue("correlationId", event.correlationId())
                 .addValue("regionId", event.regionId())
                 .addValue("outletId", event.outletId())
@@ -100,11 +107,17 @@ public class AuditJdbcRepository {
                     CAST(:newValueJson AS jsonb),
                     CAST(:payloadJson AS jsonb)
                 )
-                ON CONFLICT DO NOTHING
                 """.formatted(AUDIT_EVENT_TABLE), params);
     }
 
     public void insertSecurityEvent(SecurityEvent event) {
+        String idempotencyKey = fallbackIdempotency(event.idempotencyKey(), event.eventId());
+        lockIngestionKeys(event.eventId(), idempotencyKey);
+        StoredSecurityEvent existing = findStoredSecurityEvent(event.eventId(), idempotencyKey);
+        if (existing != null) {
+            requireMatchingSecurityEvent(existing, event, idempotencyKey);
+            return;
+        }
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("securityEventId", idGenerator.nextId())
                 .addValue("sourceEventId", event.eventId())
@@ -112,7 +125,7 @@ public class AuditJdbcRepository {
                 .addValue("module", moduleFromPayload(event.payload(), event.sourceService()))
                 .addValue("eventType", event.eventType())
                 .addValue("occurredAt", timestamp(event.occurredAt()))
-                .addValue("idempotencyKey", fallbackIdempotency(event.idempotencyKey(), event.eventId()))
+                .addValue("idempotencyKey", idempotencyKey)
                 .addValue("correlationId", event.correlationId())
                 .addValue("userId", event.userId())
                 .addValue("outcome", event.outcome())
@@ -153,11 +166,17 @@ public class AuditJdbcRepository {
                     :userAgent,
                     CAST(:payloadJson AS jsonb)
                 )
-                ON CONFLICT DO NOTHING
                 """.formatted(SECURITY_EVENT_TABLE), params);
     }
 
     public void insertRequestTrace(RequestTraceEvent event) {
+        String idempotencyKey = fallbackIdempotency(event.idempotencyKey(), event.eventId());
+        lockIngestionKeys(event.eventId(), idempotencyKey);
+        StoredRequestTrace existing = findStoredRequestTrace(event.eventId(), idempotencyKey);
+        if (existing != null) {
+            requireMatchingRequestTrace(existing, event, idempotencyKey);
+            return;
+        }
         MapSqlParameterSource params = new MapSqlParameterSource()
                 .addValue("requestTraceId", idGenerator.nextId())
                 .addValue("sourceEventId", event.eventId())
@@ -165,7 +184,7 @@ public class AuditJdbcRepository {
                 .addValue("module", moduleFromPayload(event.payload(), event.sourceService()))
                 .addValue("eventType", event.eventType())
                 .addValue("occurredAt", timestamp(event.occurredAt()))
-                .addValue("idempotencyKey", fallbackIdempotency(event.idempotencyKey(), event.eventId()))
+                .addValue("idempotencyKey", idempotencyKey)
                 .addValue("correlationId", event.correlationId())
                 .addValue("requestId", event.requestId())
                 .addValue("endpoint", event.endpoint())
@@ -215,7 +234,6 @@ public class AuditJdbcRepository {
                     :userId,
                     CAST(:payloadJson AS jsonb)
                 )
-                ON CONFLICT DO NOTHING
                 """.formatted(REQUEST_TRACE_TABLE), params);
     }
 
@@ -654,6 +672,187 @@ public class AuditJdbcRepository {
         return timestamp == null ? null : timestamp.toInstant();
     }
 
+    private void lockIngestionKeys(String sourceEventId, String idempotencyKey) {
+        List<String> lockKeys = new ArrayList<>();
+        if (hasText(sourceEventId)) {
+            lockKeys.add("source:" + sourceEventId);
+        }
+        if (hasText(idempotencyKey)) {
+            lockKeys.add("idempotency:" + idempotencyKey);
+        }
+        lockKeys.stream()
+                .distinct()
+                .sorted()
+                .forEach(lockKey -> jdbcTemplate.query(
+                        "SELECT pg_advisory_xact_lock(hashtext(:lockKey))",
+                        new MapSqlParameterSource("lockKey", lockKey),
+                        resultSet -> null
+                ));
+    }
+
+    private StoredAuditEvent findStoredAuditEvent(String sourceEventId, String idempotencyKey) {
+        return jdbcTemplate.query("""
+                SELECT source_event_id, source_service, module, event_type, occurred_at, idempotency_key, correlation_id,
+                       region_id, outlet_id, user_id, action, resource_type, resource_id, outcome,
+                       CAST(old_value AS text) AS old_value_json,
+                       CAST(new_value AS text) AS new_value_json,
+                       CAST(payload AS text) AS payload_json
+                FROM audit.audit_event
+                WHERE source_event_id = :sourceEventId
+                   OR idempotency_key = :idempotencyKey
+                ORDER BY audit_event_id
+                LIMIT 1
+                """, new MapSqlParameterSource()
+                .addValue("sourceEventId", sourceEventId)
+                .addValue("idempotencyKey", idempotencyKey), resultSet -> resultSet.next()
+                ? new StoredAuditEvent(
+                        resultSet.getString("source_event_id"),
+                        resultSet.getString("source_service"),
+                        resultSet.getString("module"),
+                        instant(resultSet, "occurred_at"),
+                        resultSet.getString("event_type"),
+                        resultSet.getString("idempotency_key"),
+                        resultSet.getString("correlation_id"),
+                        nullableLong(resultSet, "region_id"),
+                        nullableLong(resultSet, "outlet_id"),
+                        nullableLong(resultSet, "user_id"),
+                        resultSet.getString("action"),
+                        resultSet.getString("resource_type"),
+                        resultSet.getString("resource_id"),
+                        resultSet.getString("outcome"),
+                        resultSet.getString("old_value_json"),
+                        resultSet.getString("new_value_json"),
+                        resultSet.getString("payload_json")
+                )
+                : null);
+    }
+
+    private StoredSecurityEvent findStoredSecurityEvent(String sourceEventId, String idempotencyKey) {
+        return jdbcTemplate.query("""
+                SELECT source_event_id, source_service, module, event_type, occurred_at, idempotency_key, correlation_id,
+                       user_id, outcome, failure_reason, ip_address, user_agent, CAST(payload AS text) AS payload_json
+                FROM audit.security_event
+                WHERE source_event_id = :sourceEventId
+                   OR idempotency_key = :idempotencyKey
+                ORDER BY security_event_id
+                LIMIT 1
+                """, new MapSqlParameterSource()
+                .addValue("sourceEventId", sourceEventId)
+                .addValue("idempotencyKey", idempotencyKey), resultSet -> resultSet.next()
+                ? new StoredSecurityEvent(
+                        resultSet.getString("source_event_id"),
+                        resultSet.getString("source_service"),
+                        resultSet.getString("module"),
+                        instant(resultSet, "occurred_at"),
+                        resultSet.getString("event_type"),
+                        resultSet.getString("idempotency_key"),
+                        resultSet.getString("correlation_id"),
+                        nullableLong(resultSet, "user_id"),
+                        resultSet.getString("outcome"),
+                        resultSet.getString("failure_reason"),
+                        resultSet.getString("ip_address"),
+                        resultSet.getString("user_agent"),
+                        resultSet.getString("payload_json")
+                )
+                : null);
+    }
+
+    private StoredRequestTrace findStoredRequestTrace(String sourceEventId, String idempotencyKey) {
+        return jdbcTemplate.query("""
+                SELECT source_event_id, source_service, module, event_type, occurred_at, idempotency_key, correlation_id,
+                       request_id, endpoint, method, status_code, duration_ms, region_id, outlet_id, user_id,
+                       CAST(payload AS text) AS payload_json
+                FROM audit.request_trace
+                WHERE source_event_id = :sourceEventId
+                   OR idempotency_key = :idempotencyKey
+                ORDER BY request_trace_id
+                LIMIT 1
+                """, new MapSqlParameterSource()
+                .addValue("sourceEventId", sourceEventId)
+                .addValue("idempotencyKey", idempotencyKey), resultSet -> resultSet.next()
+                ? new StoredRequestTrace(
+                        resultSet.getString("source_event_id"),
+                        resultSet.getString("source_service"),
+                        resultSet.getString("module"),
+                        instant(resultSet, "occurred_at"),
+                        resultSet.getString("event_type"),
+                        resultSet.getString("idempotency_key"),
+                        resultSet.getString("correlation_id"),
+                        resultSet.getString("request_id"),
+                        resultSet.getString("endpoint"),
+                        resultSet.getString("method"),
+                        resultSet.getObject("status_code", Integer.class),
+                        nullableLong(resultSet, "duration_ms"),
+                        nullableLong(resultSet, "region_id"),
+                        nullableLong(resultSet, "outlet_id"),
+                        nullableLong(resultSet, "user_id"),
+                        resultSet.getString("payload_json")
+                )
+                : null);
+    }
+
+    private void requireMatchingAuditEvent(StoredAuditEvent existing, AuditEvent event, String idempotencyKey) {
+        if (!java.util.Objects.equals(existing.sourceService(), event.sourceService())
+                || !java.util.Objects.equals(existing.module(), moduleFromPayload(event.payload(), event.sourceService()))
+                || !java.util.Objects.equals(existing.eventType(), event.eventType())
+                || !java.util.Objects.equals(existing.occurredAt(), event.occurredAt())
+                || !java.util.Objects.equals(existing.idempotencyKey(), idempotencyKey)
+                || !java.util.Objects.equals(existing.correlationId(), event.correlationId())
+                || !java.util.Objects.equals(existing.regionId(), event.regionId())
+                || !java.util.Objects.equals(existing.outletId(), event.outletId())
+                || !java.util.Objects.equals(existing.userId(), event.userId())
+                || !java.util.Objects.equals(existing.action(), event.action())
+                || !java.util.Objects.equals(existing.resourceType(), event.resourceType())
+                || !java.util.Objects.equals(existing.resourceId(), event.resourceId())
+                || !java.util.Objects.equals(existing.outcome(), event.outcome())
+                || !jsonEquals(existing.oldValueJson(), event.oldValue())
+                || !jsonEquals(existing.newValueJson(), event.newValue())
+                || !jsonEquals(existing.payloadJson(), event.payload())) {
+            throw new IllegalStateException("Audit idempotency conflict for source event " + existing.sourceEventId());
+        }
+    }
+
+    private void requireMatchingSecurityEvent(StoredSecurityEvent existing, SecurityEvent event, String idempotencyKey) {
+        if (!java.util.Objects.equals(existing.sourceService(), event.sourceService())
+                || !java.util.Objects.equals(existing.module(), moduleFromPayload(event.payload(), event.sourceService()))
+                || !java.util.Objects.equals(existing.eventType(), event.eventType())
+                || !java.util.Objects.equals(existing.occurredAt(), event.occurredAt())
+                || !java.util.Objects.equals(existing.idempotencyKey(), idempotencyKey)
+                || !java.util.Objects.equals(existing.correlationId(), event.correlationId())
+                || !java.util.Objects.equals(existing.userId(), event.userId())
+                || !java.util.Objects.equals(existing.outcome(), event.outcome())
+                || !java.util.Objects.equals(existing.failureReason(), event.failureReason())
+                || !java.util.Objects.equals(existing.ipAddress(), event.ipAddress())
+                || !java.util.Objects.equals(existing.userAgent(), event.userAgent())
+                || !jsonEquals(existing.payloadJson(), event.payload())) {
+            throw new IllegalStateException("Security event idempotency conflict for source event " + existing.sourceEventId());
+        }
+    }
+
+    private void requireMatchingRequestTrace(StoredRequestTrace existing, RequestTraceEvent event, String idempotencyKey) {
+        if (!java.util.Objects.equals(existing.sourceService(), event.sourceService())
+                || !java.util.Objects.equals(existing.module(), moduleFromPayload(event.payload(), event.sourceService()))
+                || !java.util.Objects.equals(existing.eventType(), event.eventType())
+                || !java.util.Objects.equals(existing.occurredAt(), event.occurredAt())
+                || !java.util.Objects.equals(existing.idempotencyKey(), idempotencyKey)
+                || !java.util.Objects.equals(existing.correlationId(), event.correlationId())
+                || !java.util.Objects.equals(existing.requestId(), event.requestId())
+                || !java.util.Objects.equals(existing.endpoint(), event.endpoint())
+                || !java.util.Objects.equals(existing.method(), event.method())
+                || !java.util.Objects.equals(existing.statusCode(), event.statusCode())
+                || !java.util.Objects.equals(existing.durationMs(), event.durationMs())
+                || !java.util.Objects.equals(existing.regionId(), event.regionId())
+                || !java.util.Objects.equals(existing.outletId(), event.outletId())
+                || !java.util.Objects.equals(existing.userId(), event.userId())
+                || !jsonEquals(existing.payloadJson(), event.payload())) {
+            throw new IllegalStateException("Request trace idempotency conflict for source event " + existing.sourceEventId());
+        }
+    }
+
+    private boolean jsonEquals(String existingJson, Object incomingValue) {
+        return java.util.Objects.equals(fromJson(existingJson), incomingValue);
+    }
+
     private Long nullableLong(ResultSet resultSet, String columnName) throws SQLException {
         long value = resultSet.getLong(columnName);
         return resultSet.wasNull() ? null : value;
@@ -707,6 +906,64 @@ public class AuditJdbcRepository {
     }
 
     private record QueryParts(String sql, MapSqlParameterSource params) {
+    }
+
+    private record StoredAuditEvent(
+            String sourceEventId,
+            String sourceService,
+            String module,
+            Instant occurredAt,
+            String eventType,
+            String idempotencyKey,
+            String correlationId,
+            Long regionId,
+            Long outletId,
+            Long userId,
+            String action,
+            String resourceType,
+            String resourceId,
+            String outcome,
+            String oldValueJson,
+            String newValueJson,
+            String payloadJson
+    ) {
+    }
+
+    private record StoredSecurityEvent(
+            String sourceEventId,
+            String sourceService,
+            String module,
+            Instant occurredAt,
+            String eventType,
+            String idempotencyKey,
+            String correlationId,
+            Long userId,
+            String outcome,
+            String failureReason,
+            String ipAddress,
+            String userAgent,
+            String payloadJson
+    ) {
+    }
+
+    private record StoredRequestTrace(
+            String sourceEventId,
+            String sourceService,
+            String module,
+            Instant occurredAt,
+            String eventType,
+            String idempotencyKey,
+            String correlationId,
+            String requestId,
+            String endpoint,
+            String method,
+            Integer statusCode,
+            Long durationMs,
+            Long regionId,
+            Long outletId,
+            Long userId,
+            String payloadJson
+    ) {
     }
 
     @FunctionalInterface

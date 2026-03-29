@@ -52,6 +52,7 @@ public class PosInventoryClient {
                 .headers(headers -> internalClientSupport.applyInternalHeaders(
                         headers,
                         principal,
+                        PosServiceNames.INVENTORY_SERVICE,
                         Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)
                 ))
                 .body(new SaleReservationRequest(
@@ -79,6 +80,7 @@ public class PosInventoryClient {
                     .headers(headers -> internalClientSupport.applyInternalHeaders(
                             headers,
                             principal,
+                            PosServiceNames.INVENTORY_SERVICE,
                             Set.of(PermissionCodes.INVENTORY_INTERNAL_RELEASE)
                     ))
                     .retrieve()

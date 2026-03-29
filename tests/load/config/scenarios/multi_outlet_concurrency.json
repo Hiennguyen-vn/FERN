@@ -1,0 +1,71 @@
+{
+  "name": "multi_outlet_concurrency",
+  "behavior": "stateful_pos",
+  "workload_model": {
+    "outlets": 60,
+    "terminals_per_outlet": 3,
+    "completed_orders_per_minute_per_terminal": 3.5,
+    "requests_per_minute_per_terminal": 18,
+    "hot_outlet_ratio": 0.2,
+    "hot_outlet_traffic_ratio": 0.5
+  },
+  "request_mix": {
+    "create_or_update_order": 35,
+    "add_payment": 25,
+    "complete_order": 20,
+    "read_order_or_session": 10,
+    "read_stock_or_side_effect": 10
+  },
+  "payment_mix": {
+    "cash_ratio": 0.30,
+    "card_ratio": 0.70,
+    "partial_first_payment_ratio": 0.15,
+    "retry_same_key_ratio": 0.01
+  },
+  "timing": {
+    "business_date": "2026-03-28",
+    "ramp_up": "20m",
+    "steady_duration": "60m",
+    "ramp_down": "5m"
+  },
+  "pass_fail": {
+    "throughput_gte_ratio": 0.95,
+    "hot_vs_cold_error_rate_ratio_lte": 2.0,
+    "global_p99_vs_cold_path_ratio_lte": 1.5
+  },
+  "metrics": [
+    "per-outlet latency and error-rate distribution",
+    "shared dependency latency",
+    "Redis and DB pool saturation",
+    "duplicate order_number and session_code counts"
+  ],
+  "bottleneck_hypothesis": [
+    "hotspot lock contention by outlet_id",
+    "shared org/catalog/inventory dependencies saturate",
+    "Redis token issuance and validation become a bottleneck"
+  ],
+  "observability_assertions": [
+    "latency distribution does not collapse onto a few hot outlets",
+    "partition-level backlog does not stay skewed indefinitely",
+    "duplicate order_number and session_code remain zero"
+  ],
+  "k6": {
+    "options": {
+      "scenarios": {
+        "cashiers": {
+          "executor": "ramping-vus",
+          "startVUs": 36,
+          "stages": [
+            { "duration": "20m", "target": 180 },
+            { "duration": "60m", "target": 180 },
+            { "duration": "5m", "target": 0 }
+          ],
+          "gracefulRampDown": "30s"
+        }
+      },
+      "thresholds": {
+        "http_req_failed": ["rate<0.01"]
+      }
+    }
+  }
+}

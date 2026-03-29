@@ -29,6 +29,9 @@ class FinanceServiceIntegrationTest {
         registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("public"));
         registry.add("spring.datasource.username", FernIntegrationContainers::jdbcUsername);
         registry.add("spring.datasource.password", FernIntegrationContainers::jdbcPassword);
+        registry.add("fern.master-datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("public"));
+        registry.add("fern.master-datasource.username", FernIntegrationContainers::jdbcUsername);
+        registry.add("fern.master-datasource.password", FernIntegrationContainers::jdbcPassword);
         registry.add("fern.projection-datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("public"));
         registry.add("fern.projection-datasource.username", FernIntegrationContainers::jdbcUsername);
         registry.add("fern.projection-datasource.password", FernIntegrationContainers::jdbcPassword);

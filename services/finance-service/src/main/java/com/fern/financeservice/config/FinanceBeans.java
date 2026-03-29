@@ -11,6 +11,9 @@ import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import com.zaxxer.hikari.HikariDataSource;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import java.time.Duration;
 import java.time.Clock;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -26,6 +29,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.client.RestClient;
 
@@ -36,6 +40,24 @@ public class FinanceBeans {
 
     @Value("${fern.datasource.min-idle:1}")
     private int minIdle;
+
+    @Value("${fern.clients.hr.connect-timeout-ms:5000}")
+    private int hrConnectTimeoutMs = 5000;
+
+    @Value("${fern.clients.hr.read-timeout-ms:10000}")
+    private int hrReadTimeoutMs = 10000;
+
+    @Value("${fern.clients.hr.circuit-breaker.failure-rate-threshold:50}")
+    private float hrFailureRateThreshold = 50;
+
+    @Value("${fern.clients.hr.circuit-breaker.sliding-window-size:10}")
+    private int hrSlidingWindowSize = 10;
+
+    @Value("${fern.clients.hr.circuit-breaker.minimum-number-of-calls:5}")
+    private int hrMinimumNumberOfCalls = 5;
+
+    @Value("${fern.clients.hr.circuit-breaker.wait-duration-open-seconds:30}")
+    private long hrWaitDurationOpenSeconds = 30;
 
     @Bean
     Clock clock() {
@@ -85,9 +107,19 @@ public class FinanceBeans {
     @Bean
     RestClient restClient() {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(5000);
-        requestFactory.setReadTimeout(10000);
+        requestFactory.setConnectTimeout(hrConnectTimeoutMs);
+        requestFactory.setReadTimeout(hrReadTimeoutMs);
         return RestClient.builder().requestFactory(requestFactory).build();
+    }
+
+    @Bean
+    CircuitBreaker hrCircuitBreaker() {
+        return CircuitBreaker.of("hr-client", CircuitBreakerConfig.custom()
+                .failureRateThreshold(hrFailureRateThreshold)
+                .slidingWindowSize(hrSlidingWindowSize)
+                .minimumNumberOfCalls(hrMinimumNumberOfCalls)
+                .waitDurationInOpenState(Duration.ofSeconds(hrWaitDurationOpenSeconds))
+                .build());
     }
 
     @Bean
@@ -119,13 +151,35 @@ public class FinanceBeans {
     }
 
     @Bean
+    @Primary
+    DataSourceTransactionManager transactionManager(@Qualifier("dataSource") DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean
+    TransactionTemplate transactionTemplate(@Qualifier("transactionManager") DataSourceTransactionManager transactionManager) {
+        return new TransactionTemplate(transactionManager);
+    }
+
+    @Bean
+    @ConfigurationProperties("fern.master-datasource")
+    DataSourceProperties masterDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean
     @ConfigurationProperties("fern.projection-datasource")
     DataSourceProperties projectionDataSourceProperties() {
         return new DataSourceProperties();
     }
 
     @Bean
-    DataSource masterDataSource(@Qualifier("projectionDataSourceProperties") DataSourceProperties projectionDataSourceProperties) {
+    DataSource masterDataSource(@Qualifier("masterDataSourceProperties") DataSourceProperties masterDataSourceProperties) {
+        return tunePool(masterDataSourceProperties.initializeDataSourceBuilder().build());
+    }
+
+    @Bean
+    DataSource projectionDataSource(@Qualifier("projectionDataSourceProperties") DataSourceProperties projectionDataSourceProperties) {
         return tunePool(projectionDataSourceProperties.initializeDataSourceBuilder().build());
     }
 
@@ -135,13 +189,25 @@ public class FinanceBeans {
     }
 
     @Bean
-    NamedParameterJdbcTemplate projectionJdbcTemplate(@Qualifier("masterDataSource") DataSource masterDataSource) {
-        return new NamedParameterJdbcTemplate(masterDataSource);
+    NamedParameterJdbcTemplate projectionJdbcTemplate(@Qualifier("projectionDataSource") DataSource projectionDataSource) {
+        return new NamedParameterJdbcTemplate(projectionDataSource);
     }
 
     @Bean
     DataSourceTransactionManager masterTransactionManager(@Qualifier("masterDataSource") DataSource masterDataSource) {
         return new DataSourceTransactionManager(masterDataSource);
+    }
+
+    @Bean
+    DataSourceTransactionManager projectionTransactionManager(@Qualifier("projectionDataSource") DataSource projectionDataSource) {
+        return new DataSourceTransactionManager(projectionDataSource);
+    }
+
+    @Bean
+    TransactionTemplate projectionTransactionTemplate(
+            @Qualifier("projectionTransactionManager") DataSourceTransactionManager projectionTransactionManager
+    ) {
+        return new TransactionTemplate(projectionTransactionManager);
     }
 
     @Bean(initMethod = "migrate")
@@ -165,9 +231,9 @@ public class FinanceBeans {
     }
 
     @Bean(initMethod = "migrate")
-    Flyway financeProjectionFlyway(@Qualifier("masterDataSource") DataSource masterDataSource) {
+    Flyway financeProjectionFlyway(@Qualifier("projectionDataSource") DataSource projectionDataSource) {
         return Flyway.configure()
-                .dataSource(masterDataSource)
+                .dataSource(projectionDataSource)
                 .schemas("finance_projection")
                 .defaultSchema("finance_projection")
                 .locations("classpath:db/migration/postgresql/master_projection")

@@ -1,0 +1,30 @@
+{
+  "name": "staging",
+  "mode": "kubernetes",
+  "base_urls": {
+    "gateway": "https://staging-gateway.example.com",
+    "iam": "https://staging-iam.example.com",
+    "prometheus": "https://prometheus.example.com"
+  },
+  "prometheus": {
+    "query_endpoint": "/api/v1/query",
+    "range_endpoint": "/api/v1/query_range"
+  },
+  "kubernetes": {
+    "namespace": "fern-staging",
+    "deployments": {
+      "pos_service": "pos-service",
+      "inventory_service": "inventory-service",
+      "report_service": "report-service",
+      "org_service": "org-service"
+    }
+  },
+  "database": {
+    "master_uri_env": "LOAD_PSQL_URI_MASTER",
+    "operational_uri_env": "LOAD_PSQL_URI_OPERATIONAL"
+  },
+  "notes": [
+    "Override values with LOAD_* environment variables in CI or local shells.",
+    "Prometheus and database queries are best-effort and should tolerate missing series."
+  ]
+}

@@ -103,6 +103,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - [Development Workflow](docs/development-workflow.md) - Development processes and guidelines
 - [Deployment Guide](deployment/DEPLOYMENT.md) - Deployment procedures
 - [Infrastructure Setup](infrastructure/INFRASTRUCTURE.md) - Infrastructure configuration
+- [Load Test Harness](tests/load/README.md) - Staging-first k6 scenarios, fixtures, and orchestration scripts
 
 ## Getting Started
 

@@ -1,0 +1,77 @@
+{
+  "name": "failover_under_load",
+  "behavior": "stateful_pos",
+  "workload_model": {
+    "outlets": 24,
+    "terminals_per_outlet": 4,
+    "completed_orders_per_minute_per_terminal": 4.2,
+    "requests_per_minute_per_terminal": 21
+  },
+  "request_mix": {
+    "create_or_update_order": 40,
+    "add_payment": 25,
+    "complete_order": 20,
+    "read_order_or_session": 10,
+    "read_stock_or_side_effect": 5
+  },
+  "payment_mix": {
+    "cash_ratio": 0.20,
+    "card_ratio": 0.80,
+    "partial_first_payment_ratio": 0.15,
+    "retry_same_key_ratio": 0.05
+  },
+  "timing": {
+    "business_date": "2026-03-28",
+    "ramp_up": "10m",
+    "steady_duration": "15m",
+    "post_recovery_duration": "20m",
+    "ramp_down": "5m"
+  },
+  "chaos_action": {
+    "name": "rolling_restart_inventory_service",
+    "delay_from_start": "15m",
+    "resume_after": "0s"
+  },
+  "pass_fail": {
+    "write_error_rate_during_failover_lt": 0.02,
+    "retry_storm_recovery_within": "5m",
+    "projection_and_backlog_recovery_within": "15m",
+    "post_recovery_p99_lte_ratio": 1.20
+  },
+  "metrics": [
+    "retry spike and timeout count",
+    "backlog growth and drain",
+    "duplicate business keys",
+    "post-recovery p99"
+  ],
+  "bottleneck_hypothesis": [
+    "synchronized client retries amplify load",
+    "timeout and circuit-breaker tuning is not fail-fast enough",
+    "reconnect causes duplicate consume or publish"
+  ],
+  "observability_assertions": [
+    "retry count peaks and declines instead of looping",
+    "backlog drains after recovery",
+    "duplicate business keys remain zero",
+    "p99 returns within 120% of baseline after 10m"
+  ],
+  "k6": {
+    "options": {
+      "scenarios": {
+        "cashiers": {
+          "executor": "ramping-vus",
+          "startVUs": 20,
+          "stages": [
+            { "duration": "10m", "target": 96 },
+            { "duration": "35m", "target": 96 },
+            { "duration": "5m", "target": 0 }
+          ],
+          "gracefulRampDown": "30s"
+        }
+      },
+      "thresholds": {
+        "http_req_failed": ["rate<0.03"]
+      }
+    }
+  }
+}

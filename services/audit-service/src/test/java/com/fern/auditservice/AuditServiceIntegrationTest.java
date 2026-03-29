@@ -1,6 +1,7 @@
 package com.fern.auditservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -14,6 +15,7 @@ import com.fern.auditservice.service.AuditIngestionService;
 import com.fern.auditservice.service.AuditQueryService;
 import com.fern.platform.audit.AuditEvent;
 import com.fern.platform.audit.RequestTraceEvent;
+import com.fern.platform.audit.SecurityEvent;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.testsupport.FernIntegrationContainers;
@@ -167,6 +169,152 @@ class AuditServiceIntegrationTest {
                 .findFirst()
                 .orElseThrow();
         assertThat(trace.id()).isNotNull();
+    }
+
+    @Test
+    void shouldRejectAuditEventWhenIdempotencyKeyIsReusedForDifferentPayload() {
+        AuditEvent first = new AuditEvent(
+                "audit-conflict-1",
+                "inventory.adjustment.posted",
+                Instant.parse("2026-03-27T12:00:00Z"),
+                "inventory-service",
+                "corr-audit-conflict",
+                9L,
+                1L,
+                101L,
+                "POST",
+                "STOCK_ADJUSTMENT",
+                "501",
+                "SUCCESS",
+                Map.of("status", "DRAFT"),
+                Map.of("status", "POSTED"),
+                "idem-audit-conflict",
+                Map.of("module", "inventory", "resourceId", 501)
+        );
+        AuditEvent conflictingReplay = new AuditEvent(
+                "audit-conflict-2",
+                "inventory.adjustment.posted",
+                Instant.parse("2026-03-27T12:00:00Z"),
+                "inventory-service",
+                "corr-audit-conflict",
+                9L,
+                1L,
+                101L,
+                "POST",
+                "STOCK_ADJUSTMENT",
+                "999",
+                "SUCCESS",
+                Map.of("status", "DRAFT"),
+                Map.of("status", "POSTED"),
+                "idem-audit-conflict",
+                Map.of("module", "inventory", "resourceId", 999)
+        );
+
+        auditIngestionService.ingestAuditEvent(first);
+
+        assertThatThrownBy(() -> auditIngestionService.ingestAuditEvent(conflictingReplay))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Audit idempotency conflict");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit.audit_event WHERE idempotency_key = :idempotencyKey",
+                Map.of("idempotencyKey", "idem-audit-conflict"),
+                Integer.class
+        )).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRejectSecurityEventWhenIdempotencyKeyIsReusedForDifferentPayload() {
+        SecurityEvent first = new SecurityEvent(
+                "security-conflict-1",
+                "auth.login.failed",
+                Instant.parse("2026-03-27T12:05:00Z"),
+                "iam-service",
+                "corr-security-conflict",
+                44L,
+                "FAILURE",
+                "bad_credentials",
+                "127.0.0.1",
+                "curl/8.7",
+                "idem-security-conflict",
+                Map.of("module", "iam", "username", "alice")
+        );
+        SecurityEvent conflictingReplay = new SecurityEvent(
+                "security-conflict-2",
+                "auth.login.failed",
+                Instant.parse("2026-03-27T12:05:00Z"),
+                "iam-service",
+                "corr-security-conflict",
+                44L,
+                "FAILURE",
+                "account_locked",
+                "127.0.0.1",
+                "curl/8.7",
+                "idem-security-conflict",
+                Map.of("module", "iam", "username", "alice")
+        );
+
+        auditIngestionService.ingestSecurityEvent(first);
+
+        assertThatThrownBy(() -> auditIngestionService.ingestSecurityEvent(conflictingReplay))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Security event idempotency conflict");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit.security_event WHERE idempotency_key = :idempotencyKey",
+                Map.of("idempotencyKey", "idem-security-conflict"),
+                Integer.class
+        )).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRejectRequestTraceWhenIdempotencyKeyIsReusedForDifferentPayload() {
+        RequestTraceEvent first = new RequestTraceEvent(
+                "trace-conflict-1",
+                "request.trace.recorded",
+                Instant.parse("2026-03-27T12:10:00Z"),
+                "api-gateway",
+                "corr-trace-conflict",
+                "req-conflict-1",
+                "/audit/events",
+                "GET",
+                200,
+                15L,
+                5L,
+                1L,
+                101L,
+                "idem-trace-conflict",
+                Map.of("module", "gateway", "path", "/audit/events")
+        );
+        RequestTraceEvent conflictingReplay = new RequestTraceEvent(
+                "trace-conflict-2",
+                "request.trace.recorded",
+                Instant.parse("2026-03-27T12:10:00Z"),
+                "api-gateway",
+                "corr-trace-conflict",
+                "req-conflict-1",
+                "/audit/events",
+                "POST",
+                200,
+                15L,
+                5L,
+                1L,
+                101L,
+                "idem-trace-conflict",
+                Map.of("module", "gateway", "path", "/audit/events")
+        );
+
+        auditIngestionService.ingestRequestTrace(first);
+
+        assertThatThrownBy(() -> auditIngestionService.ingestRequestTrace(conflictingReplay))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Request trace idempotency conflict");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit.request_trace WHERE idempotency_key = :idempotencyKey",
+                Map.of("idempotencyKey", "idem-trace-conflict"),
+                Integer.class
+        )).isEqualTo(1);
     }
 
     @Test

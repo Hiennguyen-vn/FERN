@@ -277,6 +277,9 @@ public class PurchaseFlowService {
                 SELECT id FROM procurement.goods_receipt WHERE posted_idempotency_key = :idempotencyKey
                 """, params("idempotencyKey", idempotencyKey), rs -> rs.next() ? rs.getLong("id") : null);
         if (duplicateId != null) {
+            if (!duplicateId.equals(id)) {
+                throw new ConflictException("Idempotency-Key cannot be reused with a different goods receipt post request");
+            }
             return getGoodsReceipt(principal, duplicateId);
         }
         ensureStatus(record.status(), "RECEIVED", "Only received goods receipts can be posted");

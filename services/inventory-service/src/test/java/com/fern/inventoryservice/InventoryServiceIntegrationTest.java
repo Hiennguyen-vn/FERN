@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.inventoryservice.service.InventoryEventConsumerService;
 import com.fern.inventoryservice.service.StockReservationService;
 import com.fern.platform.common.FernPrincipal;
@@ -32,6 +33,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -74,6 +76,9 @@ class InventoryServiceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private StockReservationService stockReservationService;
@@ -397,6 +402,113 @@ class InventoryServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectPostingDifferentStockAdjustmentWithSameIdempotencyKey() throws Exception {
+        Long firstAdjustmentId = createStockAdjustment("IN", "5.0000", "FIRST");
+        Long secondAdjustmentId = createStockAdjustment("IN", "4.0000", "SECOND");
+
+        postStockAdjustment(firstAdjustmentId, "adj-cross-resource");
+
+        mockMvc.perform(post("/stock-adjustments/{id}/post", secondAdjustmentId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "adj-cross-resource"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Idempotency-Key is already used for a different stock adjustment"));
+
+        Integer firstTransactionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'STOCK_ADJUSTMENT' AND source_reference_id = ?
+                """, Integer.class, firstAdjustmentId.toString());
+        Integer secondTransactionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'STOCK_ADJUSTMENT' AND source_reference_id = ?
+                """, Integer.class, secondAdjustmentId.toString());
+        String secondStatus = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM inventory.stock_adjustment
+                WHERE id = ?
+                """, String.class, secondAdjustmentId);
+
+        assertThat(firstTransactionCount).isEqualTo(1);
+        assertThat(secondTransactionCount).isZero();
+        assertThat(secondStatus).isEqualTo("DRAFT");
+    }
+
+    @Test
+    void shouldRejectPostingDifferentWasteRecordWithSameIdempotencyKey() throws Exception {
+        Long firstWasteId = createWasteRecord("2.0000", "FIRST");
+        Long secondWasteId = createWasteRecord("1.5000", "SECOND");
+
+        postWasteRecord(firstWasteId, "waste-cross-resource");
+
+        mockMvc.perform(post("/waste-records/{id}/post", secondWasteId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "waste-cross-resource"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Idempotency-Key is already used for a different waste record"));
+
+        Integer firstTransactionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'WASTE_RECORD' AND source_reference_id = ?
+                """, Integer.class, firstWasteId.toString());
+        Integer secondTransactionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'WASTE_RECORD' AND source_reference_id = ?
+                """, Integer.class, secondWasteId.toString());
+        String secondStatus = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM inventory.waste_record
+                WHERE id = ?
+                """, String.class, secondWasteId);
+
+        assertThat(firstTransactionCount).isEqualTo(1);
+        assertThat(secondTransactionCount).isZero();
+        assertThat(secondStatus).isEqualTo("DRAFT");
+    }
+
+    @Test
+    void shouldRejectPostingDifferentStockCountSessionWithSameIdempotencyKey() throws Exception {
+        Long firstSessionId = createStockCountSession();
+        startStockCountSession(firstSessionId);
+        updateStockCountLines(firstSessionId, "21.0000");
+
+        Long secondSessionId = createStockCountSession();
+        startStockCountSession(secondSessionId);
+        updateStockCountLines(secondSessionId, "23.0000");
+
+        postStockCountSession(firstSessionId, "count-cross-resource");
+
+        mockMvc.perform(post("/stock-count-sessions/{id}/post", secondSessionId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "count-cross-resource"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Idempotency-Key is already used for a different stock count session"));
+
+        Integer firstTransactionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'STOCK_COUNT_SESSION' AND source_reference_id = ?
+                """, Integer.class, firstSessionId.toString());
+        Integer secondTransactionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'STOCK_COUNT_SESSION' AND source_reference_id = ?
+                """, Integer.class, secondSessionId.toString());
+        String secondStatus = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM inventory.stock_count_session
+                WHERE id = ?
+                """, String.class, secondSessionId);
+
+        assertThat(firstTransactionCount).isEqualTo(1);
+        assertThat(secondTransactionCount).isZero();
+        assertThat(secondStatus).isEqualTo("COUNTING");
+    }
+
+    @Test
     void shouldRejectUpdatingStockCountLinesAfterSessionPosted() throws Exception {
         String sessionResponse = mockMvc.perform(post("/stock-count-sessions")
                         .header("Authorization", bearer())
@@ -446,6 +558,355 @@ class InventoryServiceIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldKeepStockBalanceSnapshotAlignedWithLedgerAfterMixedSources() throws Exception {
+        Long adjustmentId = createStockAdjustment("IN", "4.0000", "ledger-correction");
+        postStockAdjustment(adjustmentId, "adj-ledger-check");
+
+        Long wasteId = createWasteRecord("2.0000", "SPILL");
+        postWasteRecord(wasteId, "waste-ledger-check");
+
+        SaleReservationResponse reservation = stockReservationService.reserveSale(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        101L,
+                        LocalDate.of(2026, 3, 27),
+                        5301L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("3.0000")))
+                )
+        );
+        inventoryEventConsumerService.consumeSaleCompleted(new PosSaleCompletedEvent(
+                "sale-event-ledger-check",
+                "pos.sale.completed",
+                Instant.parse("2026-03-27T10:00:00Z"),
+                "pos-service",
+                "corr-sale-ledger-check",
+                "idem-sale-ledger-check",
+                5301L,
+                7301L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 27),
+                Instant.parse("2026-03-27T10:00:00Z"),
+                1L,
+                reservation.reservationId(),
+                List.of(),
+                java.util.Map.of(),
+                List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("3.0000")))
+        ));
+        inventoryEventConsumerService.consumeGoodsReceiptPosted(goodsReceiptEvent(
+                "receipt-event-ledger-check",
+                "idem-gr-ledger-check",
+                9301L,
+                new BigDecimal("6.0000"),
+                Instant.parse("2026-03-27T11:00:00Z")
+        ));
+
+        BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        BigDecimal qtyReserved = jdbcTemplate.queryForObject("""
+                SELECT qty_reserved
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        BigDecimal qtyAvailable = jdbcTemplate.queryForObject("""
+                SELECT qty_available
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        BigDecimal ledgerDelta = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(qty_change), 0)
+                FROM inventory.inventory_transaction
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+
+        assertThat(qtyOnHand).isEqualByComparingTo("25.0000");
+        assertThat(qtyOnHand).isEqualByComparingTo(new BigDecimal("20.0000").add(ledgerDelta));
+        assertThat(qtyReserved).isEqualByComparingTo("0.0000");
+        assertThat(qtyAvailable).isEqualByComparingTo(qtyOnHand.subtract(qtyReserved));
+    }
+
+    @Test
+    void shouldPreserveLaterGoodsReceiptWhenPostingStockCountStartedBeforeReceipt() throws Exception {
+        Long sessionId = createStockCountSession();
+        startStockCountSession(sessionId);
+
+        inventoryEventConsumerService.consumeGoodsReceiptPosted(goodsReceiptEvent(
+                "receipt-event-during-count",
+                "idem-gr-during-count",
+                9302L,
+                new BigDecimal("5.0000"),
+                Instant.parse("2026-03-27T10:30:00Z")
+        ));
+
+        mockMvc.perform(put("/stock-count-sessions/{id}/lines", sessionId)
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "lines": [
+                                    {"ingredientId": 200, "actualQty": 20.0000}
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lines[0].systemQty").value(20.0000))
+                .andExpect(jsonPath("$.lines[0].actualQty").value(20.0000));
+
+        mockMvc.perform(post("/stock-count-sessions/{id}/post", sessionId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "count-after-gr"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("POSTED"));
+
+        BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        Integer goodsReceiptTxnCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE txn_type = 'PURCHASE_IN'
+                  AND source_reference_id = '9302'
+                """, Integer.class);
+        Integer stockCountTxnCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'STOCK_COUNT_SESSION'
+                  AND source_reference_id = ?
+                """, Integer.class, sessionId.toString());
+
+        assertThat(qtyOnHand).isEqualByComparingTo("25.0000");
+        assertThat(goodsReceiptTxnCount).isEqualTo(1);
+        assertThat(stockCountTxnCount).isZero();
+    }
+
+    @Test
+    void shouldProcessConcurrentAdjustmentAndWasteForSameItemWithoutBreakingBalance() throws Exception {
+        Long adjustmentId = createStockAdjustment("IN", "7.0000", "CONCURRENT_IN");
+        Long wasteId = createWasteRecord("4.0000", "CONCURRENT_WASTE");
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Integer> adjustmentPost = executor.submit(
+                    () -> concurrentInventoryPostStatus(start, ready, "/stock-adjustments/%d/post".formatted(adjustmentId), "adj-concurrent")
+            );
+            Future<Integer> wastePost = executor.submit(
+                    () -> concurrentInventoryPostStatus(start, ready, "/waste-records/%d/post".formatted(wasteId), "waste-concurrent")
+            );
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            assertThat(adjustmentPost.get(10, TimeUnit.SECONDS)).isEqualTo(200);
+            assertThat(wastePost.get(10, TimeUnit.SECONDS)).isEqualTo(200);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        BigDecimal ledgerDelta = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(qty_change), 0)
+                FROM inventory.inventory_transaction
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        Integer adjustmentTxnCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'STOCK_ADJUSTMENT' AND source_reference_id = ?
+                """, Integer.class, adjustmentId.toString());
+        Integer wasteTxnCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'WASTE_RECORD' AND source_reference_id = ?
+                """, Integer.class, wasteId.toString());
+
+        assertThat(qtyOnHand).isEqualByComparingTo("23.0000");
+        assertThat(qtyOnHand).isEqualByComparingTo(new BigDecimal("20.0000").add(ledgerDelta));
+        assertThat(adjustmentTxnCount).isEqualTo(1);
+        assertThat(wasteTxnCount).isEqualTo(1);
+    }
+
+    @Test
+    void shouldPreventConcurrentStockAdjustmentPostsFromDifferentResourcesSharingIdempotencyKey() throws Exception {
+        Long firstAdjustmentId = createStockAdjustment("IN", "7.0000", "CONCURRENT_FIRST");
+        Long secondAdjustmentId = createStockAdjustment("IN", "6.0000", "CONCURRENT_SECOND");
+
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            CountDownLatch ready = new CountDownLatch(2);
+            CountDownLatch start = new CountDownLatch(1);
+            Future<Integer> firstPost = executor.submit(
+                    () -> concurrentInventoryPostStatus(
+                            start,
+                            ready,
+                            "/stock-adjustments/%d/post".formatted(firstAdjustmentId),
+                            "adj-concurrent-shared-key"
+                    )
+            );
+            Future<Integer> secondPost = executor.submit(
+                    () -> concurrentInventoryPostStatus(
+                            start,
+                            ready,
+                            "/stock-adjustments/%d/post".formatted(secondAdjustmentId),
+                            "adj-concurrent-shared-key"
+                    )
+            );
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            assertThat(List.of(firstPost.get(10, TimeUnit.SECONDS), secondPost.get(10, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(200, 409);
+        }
+
+        Integer transactionCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'STOCK_ADJUSTMENT'
+                  AND source_reference_id IN (?, ?)
+                """, Integer.class, firstAdjustmentId.toString(), secondAdjustmentId.toString());
+        Integer postedCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.stock_adjustment
+                WHERE id IN (?, ?)
+                  AND status = 'POSTED'
+                """, Integer.class, firstAdjustmentId, secondAdjustmentId);
+        Integer draftCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.stock_adjustment
+                WHERE id IN (?, ?)
+                  AND status = 'DRAFT'
+                """, Integer.class, firstAdjustmentId, secondAdjustmentId);
+        Integer idempotencyCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.idempotency_request
+                WHERE operation = 'stock-adjustment-post'
+                  AND idempotency_key = 'adj-concurrent-shared-key'
+                """, Integer.class);
+
+        assertThat(transactionCount).isEqualTo(1);
+        assertThat(postedCount).isEqualTo(1);
+        assertThat(draftCount).isEqualTo(1);
+        assertThat(idempotencyCount).isEqualTo(1);
+    }
+
+    @Test
+    void shouldConsumeConcurrentReplayOfSameGoodsReceiptEventOnlyOnce() throws Exception {
+        ProcurementGoodsReceiptPostedEvent event = goodsReceiptEvent(
+                "receipt-event-concurrent-replay",
+                "idem-gr-concurrent-replay",
+                9303L,
+                new BigDecimal("6.0000"),
+                Instant.parse("2026-03-27T11:30:00Z")
+        );
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<?> first = executor.submit(() -> {
+                ready.countDown();
+                assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+                inventoryEventConsumerService.consumeGoodsReceiptPosted(event);
+                return null;
+            });
+            Future<?> second = executor.submit(() -> {
+                ready.countDown();
+                assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+                inventoryEventConsumerService.consumeGoodsReceiptPosted(event);
+                return null;
+            });
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            first.get(10, TimeUnit.SECONDS);
+            second.get(10, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer inboxCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inbox_event
+                WHERE source_event_id = 'receipt-event-concurrent-replay'
+                """, Integer.class);
+        Integer purchaseInCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE txn_type = 'PURCHASE_IN' AND source_reference_id = '9303'
+                """, Integer.class);
+        BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+
+        assertThat(inboxCount).isEqualTo(1);
+        assertThat(purchaseInCount).isEqualTo(1);
+        assertThat(qtyOnHand).isEqualByComparingTo("26.0000");
+    }
+
+    @Test
+    void shouldIgnoreBurstDuplicateGoodsReceiptReplayWithoutDriftingStockBalance() throws Exception {
+        ProcurementGoodsReceiptPostedEvent event = goodsReceiptEvent(
+                "receipt-event-burst-replay",
+                "idem-gr-burst-replay",
+                9304L,
+                new BigDecimal("4.0000"),
+                Instant.parse("2026-03-27T12:00:00Z")
+        );
+
+        try (ExecutorService executor = Executors.newFixedThreadPool(5)) {
+            CountDownLatch ready = new CountDownLatch(5);
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<Object>> futures = java.util.stream.IntStream.range(0, 5)
+                    .mapToObj(index -> executor.submit(() -> {
+                        ready.countDown();
+                        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+                        inventoryEventConsumerService.consumeGoodsReceiptPosted(event);
+                        return (Object) null;
+                    }))
+                    .toList();
+
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            for (Future<Object> future : futures) {
+                future.get(10, TimeUnit.SECONDS);
+            }
+        }
+
+        Integer inboxCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inbox_event
+                WHERE source_event_id = 'receipt-event-burst-replay'
+                """, Integer.class);
+        Integer purchaseInCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE txn_type = 'PURCHASE_IN' AND source_reference_id = '9304'
+                """, Integer.class);
+        BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+
+        assertThat(inboxCount).isEqualTo(1);
+        assertThat(purchaseInCount).isEqualTo(1);
+        assertThat(qtyOnHand).isEqualByComparingTo("24.0000");
     }
 
     @Test
@@ -722,6 +1183,21 @@ class InventoryServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectStockBalanceQueryOutsideOutletScope() throws Exception {
+        mockMvc.perform(get("/stock-balances")
+                        .header("Authorization", bearerForOutlets(List.of(101L)))
+                        .param("outletId", "201")
+                        .param("size", "20"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/inventory-transactions")
+                        .header("Authorization", bearerForOutlets(List.of(101L)))
+                        .param("outletId", "201")
+                        .param("size", "20"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldUseConfiguredReservationTtl() {
         Instant before = Instant.now();
         SaleReservationResponse reservation = stockReservationService.reserveSale(
@@ -811,6 +1287,29 @@ class InventoryServiceIntegrationTest {
         return "Bearer " + token;
     }
 
+    private String bearerForOutlets(List<Long> outletIds) {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        String scopedToken = jwtService.encode(new FernJwtClaims(
+                1L,
+                "inventory-scoped-user",
+                Set.of("outlet_manager"),
+                Set.of(
+                        PermissionCodes.INVENTORY_BALANCE_READ,
+                        PermissionCodes.INVENTORY_LEDGER_READ
+                ),
+                new ScopeRoots(List.of(1L), outletIds),
+                1L,
+                1L,
+                "inventory-scoped-jti-" + outletIds,
+                Instant.now(),
+                Instant.now().plusSeconds(900)
+        ), jwtService.accessTokenTtl());
+        return "Bearer " + scopedToken;
+    }
+
     private String concurrentReservationOutcome(
             CountDownLatch start,
             CountDownLatch ready,
@@ -833,6 +1332,152 @@ class InventoryServiceIntegrationTest {
             assertThat(exception.getMessage()).isEqualTo("Insufficient available stock for ingredient 200");
             return "CONFLICT";
         }
+    }
+
+    private Long createStockAdjustment(String direction, String qty, String reason) throws Exception {
+        String adjustmentResponse = mockMvc.perform(post("/stock-adjustments")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "ingredientId": 200,
+                                  "adjustmentDirection": "%s",
+                                  "qty": %s,
+                                  "businessDate": "2026-03-27",
+                                  "reason": "%s"
+                                }
+                                """.formatted(direction, qty, reason)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return readId(adjustmentResponse);
+    }
+
+    private void postStockAdjustment(Long adjustmentId, String idempotencyKey) throws Exception {
+        mockMvc.perform(post("/stock-adjustments/{id}/post", adjustmentId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", idempotencyKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("POSTED"));
+    }
+
+    private Long createWasteRecord(String qty, String reason) throws Exception {
+        String wasteResponse = mockMvc.perform(post("/waste-records")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "ingredientId": 200,
+                                  "qty": %s,
+                                  "businessDate": "2026-03-27",
+                                  "reason": "%s"
+                                }
+                                """.formatted(qty, reason)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return readId(wasteResponse);
+    }
+
+    private void postWasteRecord(Long wasteId, String idempotencyKey) throws Exception {
+        mockMvc.perform(post("/waste-records/{id}/post", wasteId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", idempotencyKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("POSTED"));
+    }
+
+    private Long createStockCountSession() throws Exception {
+        String sessionResponse = mockMvc.perform(post("/stock-count-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "countDate": "2026-03-27",
+                                  "ingredientIds": [200]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return readId(sessionResponse);
+    }
+
+    private void startStockCountSession(Long sessionId) throws Exception {
+        mockMvc.perform(post("/stock-count-sessions/{id}/start", sessionId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COUNTING"));
+    }
+
+    private void updateStockCountLines(Long sessionId, String actualQty) throws Exception {
+        mockMvc.perform(put("/stock-count-sessions/{id}/lines", sessionId)
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "lines": [
+                                    {"ingredientId": 200, "actualQty": %s}
+                                  ]
+                                }
+                                """.formatted(actualQty)))
+                .andExpect(status().isOk());
+    }
+
+    private void postStockCountSession(Long sessionId, String idempotencyKey) throws Exception {
+        mockMvc.perform(post("/stock-count-sessions/{id}/post", sessionId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", idempotencyKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("POSTED"));
+    }
+
+    private int concurrentInventoryPostStatus(
+            CountDownLatch start,
+            CountDownLatch ready,
+            String path,
+            String idempotencyKey
+    ) throws Exception {
+        ready.countDown();
+        assertThat(start.await(5, TimeUnit.SECONDS)).isTrue();
+        return mockMvc.perform(post(path)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", idempotencyKey))
+                .andReturn()
+                .getResponse()
+                .getStatus();
+    }
+
+    private ProcurementGoodsReceiptPostedEvent goodsReceiptEvent(
+            String eventId,
+            String idempotencyKey,
+            Long goodsReceiptId,
+            BigDecimal qtyReceived,
+            Instant occurredAt
+    ) {
+        return new ProcurementGoodsReceiptPostedEvent(
+                eventId,
+                "procurement.goods_receipt.posted",
+                occurredAt,
+                "procurement-service",
+                "corr-" + eventId,
+                idempotencyKey,
+                goodsReceiptId,
+                8301L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 27),
+                occurredAt,
+                2L,
+                List.of(new com.fern.platform.contracts.GoodsReceiptPostedLine(200L, qtyReceived, new BigDecimal("10000.00"), 3301L))
+        );
+    }
+
+    private Long readId(String json) throws Exception {
+        return objectMapper.readTree(json).get("id").asLong();
     }
 
     private FernPrincipal servicePrincipal(Set<String> permissions) {

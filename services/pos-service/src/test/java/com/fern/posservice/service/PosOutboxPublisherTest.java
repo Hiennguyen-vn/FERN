@@ -3,6 +3,7 @@ package com.fern.posservice.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -121,5 +122,38 @@ class PosOutboxPublisherTest {
         verify(jdbcTemplate).update(anyString(), parameters.capture());
         assertThat(parameters.getValue().getValue("status")).isEqualTo(PosOutboxStatus.PENDING.name());
         assertThat(parameters.getValue().getValue("retryCount")).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRequeueEventWhenKafkaSendSucceedsButMarkPublishedFails() {
+        JdbcOutboxPublisherSupport.ClaimedOutboxEvent event = new JdbcOutboxPublisherSupport.ClaimedOutboxEvent(
+                UUID.randomUUID().toString(),
+                "SALE_ORDER",
+                "10",
+                PosEventTypes.SALE_COMPLETED,
+                "101",
+                "{\"id\":10}",
+                0
+        );
+        when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn((List) List.of(event));
+        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+        when(jdbcTemplate.update(anyString(), any(MapSqlParameterSource.class)))
+                .thenAnswer(invocation -> {
+                    MapSqlParameterSource parameters = invocation.getArgument(1);
+                    if (parameters.hasValue("publishedStatus")) {
+                        throw new RuntimeException("mark published failed");
+                    }
+                    return 1;
+                });
+
+        publisher.publishPending();
+
+        ArgumentCaptor<MapSqlParameterSource> parameters = ArgumentCaptor.forClass(MapSqlParameterSource.class);
+        verify(jdbcTemplate, times(2)).update(anyString(), parameters.capture());
+        MapSqlParameterSource failureParameters = parameters.getAllValues().getLast();
+        assertThat(failureParameters.getValue("status")).isEqualTo(PosOutboxStatus.PENDING.name());
+        assertThat(failureParameters.getValue("retryCount")).isEqualTo(1);
     }
 }

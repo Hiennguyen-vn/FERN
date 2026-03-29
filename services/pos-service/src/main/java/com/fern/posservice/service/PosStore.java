@@ -66,10 +66,14 @@ public class PosStore {
         return requireOrder(id, true);
     }
 
+    public OrderRecord requireOrderForCompletionPreflight(Long id) {
+        return requireOrder(id, true);
+    }
+
     private OrderRecord requireOrder(Long id, boolean forUpdate) {
         OrderRecord record = jdbcTemplate.query("""
                 SELECT id, order_number, region_id, outlet_id, pos_session_id, currency_code, order_type, status, payment_status,
-                       subtotal, discount_amount, tax_amount, total_amount, note, created_at, completed_at
+                       subtotal, discount_amount, tax_amount, total_amount, note, created_at, completed_at, reservation_id
                 FROM pos.sale_order
                 WHERE id = :id
                 %s
@@ -89,7 +93,8 @@ public class PosStore {
                 rs.getBigDecimal("total_amount"),
                 rs.getString("note"),
                 PosSql.instant(rs, "created_at"),
-                PosSql.instant(rs, "completed_at")
+                PosSql.instant(rs, "completed_at"),
+                rs.getObject("reservation_id", Long.class)
         ) : null);
         if (record == null) {
             throw new ResourceNotFoundException("Sale order not found");
@@ -211,6 +216,14 @@ public class PosStore {
     }
 
     public SaleOrderResponse mapOrder(OrderRecord order) {
+        return mapOrder(order, queryOrderLines(order.id()), queryPayments(order.id()));
+    }
+
+    public SaleOrderResponse mapOrder(
+            OrderRecord order,
+            List<SaleOrderLineResponse> lines,
+            List<SalePaymentResponse> payments
+    ) {
         return new SaleOrderResponse(
                 order.id(),
                 order.orderNumber(),
@@ -228,8 +241,8 @@ public class PosStore {
                 order.note(),
                 order.createdAt(),
                 order.completedAt(),
-                queryOrderLines(order.id()),
-                queryPayments(order.id())
+                lines,
+                payments
         );
     }
 }

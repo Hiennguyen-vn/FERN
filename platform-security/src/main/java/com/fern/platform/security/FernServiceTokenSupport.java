@@ -22,6 +22,10 @@ public class FernServiceTokenSupport {
     }
 
     public String issueToken(String serviceName, Collection<String> permissions) {
+        return issueToken(serviceName, serviceName, permissions);
+    }
+
+    public String issueToken(String serviceName, String audience, Collection<String> permissions) {
         Instant now = clock.instant();
         return jwtService.encode(
                 new FernJwtClaims(
@@ -35,7 +39,9 @@ public class FernServiceTokenSupport {
                         UUID.randomUUID().toString(),
                         now,
                         now.plus(jwtService.serviceTokenTtl()),
-                        FernPrincipalType.SERVICE
+                        FernPrincipalType.SERVICE,
+                        serviceName,
+                        Set.of(audience)
                 ),
                 jwtService.serviceTokenTtl()
         );

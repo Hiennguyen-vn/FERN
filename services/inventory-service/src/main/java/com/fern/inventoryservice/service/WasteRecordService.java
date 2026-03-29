@@ -87,7 +87,14 @@ public class WasteRecordService {
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_WASTE_WRITE);
         Long duplicateId = inventoryRepository.findIdempotentResourceId("waste-record-post", idempotencyKey);
         if (duplicateId != null) {
+            if (!duplicateId.equals(id)) {
+                throw new ConflictException("Idempotency-Key is already used for a different waste record");
+            }
             return getWasteRecord(duplicateId);
+        }
+        Long claimedId = inventoryRepository.claimIdempotentResource("waste-record-post", idempotencyKey, id);
+        if (!id.equals(claimedId)) {
+            throw new ConflictException("Idempotency-Key is already used for a different waste record");
         }
         ensureStatus(record.status(), WasteRecordStatus.DRAFT.name(), "Only draft waste records can be posted");
         BigDecimal signedQty = record.qty().negate();
@@ -126,7 +133,6 @@ public class WasteRecordService {
         if (updated != 1) {
             throw new ConflictException("Only draft waste records can be posted");
         }
-        inventoryRepository.recordIdempotentResource("waste-record-post", idempotencyKey, id);
         enqueueWasteRecordPosted(record, principal, signedQty, unitCost);
         return getWasteRecord(id);
     }

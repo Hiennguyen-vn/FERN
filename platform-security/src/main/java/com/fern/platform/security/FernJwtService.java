@@ -5,8 +5,10 @@ import com.fern.platform.common.ScopeRoots;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -51,6 +53,8 @@ public class FernJwtService {
     public String encode(FernJwtClaims claims, Duration ttl) {
         Instant now = clock.instant();
         Instant expiresAt = now.plus(ttl);
+        String issuer = resolveIssuer(claims);
+        Set<String> audience = resolveAudience(claims);
 
         Map<String, Object> scopeRoots = new HashMap<>();
         scopeRoots.put("system", claims.scopeRoots().system());
@@ -62,6 +66,8 @@ public class FernJwtService {
                 .id(claims.jti())
                 .issuedAt(now)
                 .expiresAt(expiresAt)
+                .issuer(issuer)
+                .audience(audience.stream().toList())
                 .claim("roles", claims.roles())
                 .claim("permissions", claims.permissions())
                 .claim("scope_roots", scopeRoots)
@@ -92,5 +98,25 @@ public class FernJwtService {
 
     public Duration serviceTokenTtl() {
         return Duration.ofSeconds(properties.getServiceTokenTtlSeconds());
+    }
+
+    private String resolveIssuer(FernJwtClaims claims) {
+        if (claims.issuer() != null && !claims.issuer().isBlank()) {
+            return claims.issuer();
+        }
+        if (claims.principalType() == FernPrincipalType.SERVICE) {
+            return claims.username();
+        }
+        return properties.getUserTokenIssuer();
+    }
+
+    private Set<String> resolveAudience(FernJwtClaims claims) {
+        if (claims.audience() != null && !claims.audience().isEmpty()) {
+            return claims.audience();
+        }
+        if (claims.principalType() == FernPrincipalType.SERVICE) {
+            return Set.of(claims.username());
+        }
+        return Set.copyOf(new LinkedHashSet<>(properties.getUserTokenAudiences()));
     }
 }

@@ -128,6 +128,19 @@ class OrgServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectInternalScopeExpansionWhenServiceTokenAudienceIsWrong() throws Exception {
+        String wrongAudienceToken = issueServiceToken(currentScopeVersion(), "inventory-service", Set.of("inventory-service"));
+
+        mockMvc.perform(post("/internal/scopes/expand")
+                        .header("Authorization", "Bearer " + wrongAudienceToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"regionIds":[1],"outletIds":[]}
+                                """))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void shouldNotClaimSameOutboxEventAcrossConcurrentPublishers() throws Exception {
         String eventId = UUID.randomUUID().toString();
         jdbcTemplate.update("""
@@ -188,7 +201,7 @@ class OrgServiceIntegrationTest {
     }
 
     private String issueServiceToken(long scopeVersion) {
-        return issueToken(scopeVersion, com.fern.platform.common.FernPrincipalType.SERVICE, true);
+        return issueServiceToken(scopeVersion, "inventory-service", Set.of("org-service"));
     }
 
     private String issueToken(
@@ -213,6 +226,29 @@ class OrgServiceIntegrationTest {
                 Instant.now().plusSeconds(900),
                 principalType
         ), jwtService.accessTokenTtl());
+    }
+
+    private String issueServiceToken(long scopeVersion, String callerService, Set<String> audience) {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        Instant now = Instant.now();
+        return jwtService.encode(new FernJwtClaims(
+                null,
+                callerService,
+                Set.of(),
+                Set.of("org.region.read", "org.region.write", "org.outlet.read", "org.outlet.write", "org.scope.resolve"),
+                new com.fern.platform.common.ScopeRoots(true, List.of(), List.of()),
+                1L,
+                scopeVersion,
+                "org-test-jti-service-" + callerService + "-" + scopeVersion,
+                now,
+                now.plus(jwtService.serviceTokenTtl()),
+                com.fern.platform.common.FernPrincipalType.SERVICE,
+                callerService,
+                audience
+        ), jwtService.serviceTokenTtl());
     }
 
     private long currentScopeVersion() {

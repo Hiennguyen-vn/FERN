@@ -44,6 +44,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -406,6 +407,91 @@ class HrServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectConcurrentAttendanceReplayWhenIdempotencyKeyTargetsDifferentShiftAssignments() throws Exception {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE
+        );
+        AttendanceFixture firstFixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-REPLAY-001",
+                "Attendance Replay One",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "Replay Key Shift One"
+        );
+        AttendanceFixture secondFixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-REPLAY-002",
+                "Attendance Replay Two",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(10, 0),
+                LocalTime.of(18, 0),
+                "Replay Key Shift Two"
+        );
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Object> first = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                try {
+                    return hrService.recordAttendanceEvent(
+                            principal,
+                            "attendance-shared-conflict",
+                            attendanceRequest(firstFixture, "CLOCK_IN", "2026-03-28T02:00:00Z")
+                    ).id();
+                } catch (Throwable throwable) {
+                    return throwable;
+                }
+            });
+            Future<Object> second = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                try {
+                    return hrService.recordAttendanceEvent(
+                            principal,
+                            "attendance-shared-conflict",
+                            attendanceRequest(secondFixture, "CLOCK_IN", "2026-03-28T03:00:00Z")
+                    ).id();
+                } catch (Throwable throwable) {
+                    return throwable;
+                }
+            });
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            List<Object> results = List.of(first.get(), second.get());
+            assertThat(results.stream().filter(Long.class::isInstance).count()).isEqualTo(1);
+            Throwable failure = results.stream()
+                    .filter(Throwable.class::isInstance)
+                    .map(Throwable.class::cast)
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(failure).isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("Idempotency-Key cannot be reused with a different attendance event request");
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer idempotencyCount = jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT COUNT(*)
+                FROM hr.attendance_event
+                WHERE idempotency_key = 'attendance-shared-conflict'
+                """, Integer.class);
+        assertThat(idempotencyCount).isEqualTo(1);
+    }
+
+    @Test
     void shouldRejectAttendanceEventReplayWhenPayloadDiffers() {
         FernPrincipal principal = systemPrincipal(
                 PermissionCodes.HR_EMPLOYEE_READ,
@@ -693,6 +779,70 @@ class HrServiceIntegrationTest {
                 .andExpect(jsonPath("$.hasMore").value(true))
                 .andExpect(jsonPath("$.items[0].eventType").value("CLOCK_IN"))
                 .andExpect(jsonPath("$.items[0].shiftAssignmentId").value(fixture.shiftAssignmentId()));
+    }
+
+    @Test
+    @Tag("security-gap")
+    void shouldRejectReadingShiftAssignmentAndApprovalOutsideOutletScopeById() throws Exception {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE,
+                PermissionCodes.HR_ATTENDANCE_REVIEW
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-011",
+                "Scoped Attendance",
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "Scoped Shift"
+        );
+
+        hrService.recordAttendanceEvent(principal, "attendance-scope-clock-in", attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:00:00Z"));
+        hrService.recordAttendanceEvent(principal, "attendance-scope-clock-out", attendanceRequest(fixture, "CLOCK_OUT", "2026-03-28T10:00:00Z"));
+        hrService.reviewAttendance(
+                outletPrincipal(PermissionCodes.HR_ATTENDANCE_REVIEW, 201L),
+                fixture.shiftAssignmentId(),
+                "APPROVED",
+                "approved"
+        );
+
+        String inScopeBearer = bearer(
+                Set.of(PermissionCodes.HR_SHIFT_READ, PermissionCodes.HR_ATTENDANCE_REVIEW),
+                List.of(),
+                List.of(201L),
+                false
+        );
+        String outOfScopeBearer = bearer(
+                Set.of(PermissionCodes.HR_SHIFT_READ, PermissionCodes.HR_ATTENDANCE_REVIEW),
+                List.of(),
+                List.of(202L),
+                false
+        );
+
+        mockMvc.perform(get("/shift-assignments/{id}", fixture.shiftAssignmentId())
+                        .header("Authorization", inScopeBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(fixture.shiftAssignmentId()));
+
+        mockMvc.perform(get("/shift-assignments/{id}", fixture.shiftAssignmentId())
+                        .header("Authorization", outOfScopeBearer))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/attendance-approvals/{shiftAssignmentId}", fixture.shiftAssignmentId())
+                        .header("Authorization", inScopeBearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shiftAssignmentId").value(fixture.shiftAssignmentId()));
+
+        mockMvc.perform(get("/attendance-approvals/{shiftAssignmentId}", fixture.shiftAssignmentId())
+                        .header("Authorization", outOfScopeBearer))
+                .andExpect(status().isForbidden());
     }
 
     @Test

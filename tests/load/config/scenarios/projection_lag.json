@@ -1,0 +1,76 @@
+{
+  "name": "projection_lag",
+  "behavior": "stateful_pos",
+  "workload_model": {
+    "outlets": 24,
+    "terminals_per_outlet": 4,
+    "completed_orders_per_minute_per_terminal": 5,
+    "requests_per_minute_per_terminal": 24,
+    "projection_events_per_minute": 1000
+  },
+  "request_mix": {
+    "create_or_update_order": 40,
+    "add_payment": 25,
+    "complete_order": 20,
+    "read_order_or_session": 10,
+    "read_stock_or_side_effect": 5
+  },
+  "payment_mix": {
+    "cash_ratio": 0.20,
+    "card_ratio": 0.80,
+    "partial_first_payment_ratio": 0.15,
+    "retry_same_key_ratio": 0.02
+  },
+  "timing": {
+    "business_date": "2026-03-28",
+    "ramp_up": "10m",
+    "steady_duration": "30m",
+    "delayed_consumer_duration": "15m",
+    "ramp_down": "5m"
+  },
+  "chaos_action": {
+    "name": "pause_projection_consumer",
+    "delay_from_start": "10m",
+    "resume_after": "15m"
+  },
+  "pass_fail": {
+    "projection_lag_p95_seconds_lt": 30,
+    "degraded_projection_lag_p95_seconds_lt": 180,
+    "catch_up_within": "15m",
+    "eventual_consistency_window": "3m"
+  },
+  "metrics": [
+    "fern_projection_consumer_lag",
+    "raw event landing growth",
+    "summary drift between source facts and projections"
+  ],
+  "bottleneck_hypothesis": [
+    "raw landing insert throughput is insufficient",
+    "projection aggregation queries are too expensive",
+    "duplicate and delayed event handling churns summaries"
+  ],
+  "observability_assertions": [
+    "raw event count equals consumed event count after catch-up",
+    "region and company summaries converge back to source totals",
+    "projection lag alert fires during injected delay"
+  ],
+  "k6": {
+    "options": {
+      "scenarios": {
+        "cashiers": {
+          "executor": "ramping-vus",
+          "startVUs": 20,
+          "stages": [
+            { "duration": "10m", "target": 96 },
+            { "duration": "45m", "target": 96 },
+            { "duration": "5m", "target": 0 }
+          ],
+          "gracefulRampDown": "30s"
+        }
+      },
+      "thresholds": {
+        "http_req_failed": ["rate<0.02"]
+      }
+    }
+  }
+}

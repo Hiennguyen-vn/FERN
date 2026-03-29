@@ -4,7 +4,9 @@ import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.SecurityEvent;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.observability.CorrelationId;
+import com.fern.platform.security.FernJwtClaimValidationRules;
 import com.fern.platform.security.FernJwtClaims;
+import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.security.FernTokenAcceptanceRules;
 import io.micrometer.core.instrument.Counter;
@@ -45,12 +47,16 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
     private final Counter authFailureCounter;
     private final Counter outboxEnqueueFailureCounter;
     private final int trustedProxyCount;
+    private final String currentServiceName;
+    private final String expectedUserIssuer;
 
     public GatewaySecurityFilter(
             FernJwtService jwtService,
             ReactiveStringRedisTemplate redisTemplate,
             AuditEventPublisher auditEventPublisher,
             MeterRegistry meterRegistry,
+            FernJwtProperties jwtProperties,
+            @org.springframework.beans.factory.annotation.Value("${spring.application.name}") String currentServiceName,
             @org.springframework.beans.factory.annotation.Value("${fern.security.trusted-proxy-count:0}") int trustedProxyCount
     ) {
         this.jwtService = jwtService;
@@ -62,6 +68,8 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                 .tag("event_type", "audit.security")
                 .register(meterRegistry);
         this.trustedProxyCount = trustedProxyCount;
+        this.currentServiceName = currentServiceName;
+        this.expectedUserIssuer = jwtProperties.getUserTokenIssuer();
     }
 
     @Override
@@ -98,6 +106,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
         FernJwtClaims claims;
         try {
             claims = jwtService.decode(authorization.substring(7));
+            FernJwtClaimValidationRules.validateIssuerAndAudience(claims, currentServiceName, expectedUserIssuer);
         } catch (Exception exception) {
             authFailureCounter.increment();
             return enqueueSecurityEvent(

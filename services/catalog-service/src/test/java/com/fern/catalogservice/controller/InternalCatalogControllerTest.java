@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
@@ -169,5 +170,24 @@ class InternalCatalogControllerTest {
 
         assertThat(actual).isSameAs(response);
         verify(promotionService).resolveApplicablePromotion("SAVE20", 101L, null, BigDecimal.valueOf(200_000), explicitDate);
+    }
+
+    @Test
+    void shouldDeriveBusinessDateFromClockZoneNearUtcMidnight() {
+        Clock localClock = Clock.fixed(Instant.parse("2026-03-27T17:30:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
+        InternalCatalogController zoneAwareController = new InternalCatalogController(
+                catalogAuthorizer,
+                catalogResolutionService,
+                promotionService,
+                localClock
+        );
+        MenuResponse response = new MenuResponse(101L, LocalDate.of(2026, 3, 28), List.of());
+        when(catalogResolutionService.resolveMenu(101L, LocalDate.of(2026, 3, 28), PriceType.RETAIL, null, null))
+                .thenReturn(response);
+
+        MenuResponse actual = zoneAwareController.resolveMenu(null, 101L, null, null, PriceType.RETAIL, null);
+
+        assertThat(actual).isSameAs(response);
+        verify(catalogResolutionService).resolveMenu(101L, LocalDate.of(2026, 3, 28), PriceType.RETAIL, null, null);
     }
 }

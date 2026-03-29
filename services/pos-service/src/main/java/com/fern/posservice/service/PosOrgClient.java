@@ -32,7 +32,11 @@ public class PosOrgClient {
                     .uri("/outlets/{id}", outletId)
                     .header(
                             HttpHeaders.AUTHORIZATION,
-                            "Bearer " + serviceTokenSupport.issueToken(PosServiceNames.POS_SERVICE, Set.of(PermissionCodes.ORG_OUTLET_READ))
+                            "Bearer " + serviceTokenSupport.issueToken(
+                                    PosServiceNames.POS_SERVICE,
+                                    "org-service",
+                                    Set.of(PermissionCodes.ORG_OUTLET_READ)
+                            )
                     )
                     .retrieve()
                     .body(OutletRoute.class);

@@ -134,7 +134,9 @@ class CatalogServiceIntegrationTest {
                 "catalog-service-test-jti",
                 Instant.now(),
                 Instant.now().plusSeconds(300),
-                FernPrincipalType.SERVICE
+                FernPrincipalType.SERVICE,
+                "pos-service",
+                Set.of("catalog-service")
         ), jwtService.serviceTokenTtl());
     }
 
@@ -795,6 +797,151 @@ class CatalogServiceIntegrationTest {
                 .andExpect(jsonPath("$[0].versionNo").value("v2"))
                 .andExpect(jsonPath("$[0].ingredients[0].qty").value(12.0000))
                 .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void shouldResolveExactEffectiveDateBoundaryAcrossDayChange() throws Exception {
+        seedReferenceData();
+        Long productId = createProduct("PROD-BOUNDARY", "Boundary Coffee", "BEV", "ACTIVE");
+
+        mockMvc.perform(post("/product-prices")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": %d,
+                                  "scopeType": "GLOBAL",
+                                  "priceType": "RETAIL",
+                                  "currencyCode": "VND",
+                                  "priceValue": 42000.00,
+                                  "effectiveFrom": "2026-03-01",
+                                  "effectiveTo": "2026-03-31"
+                                }
+                                """.formatted(productId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/product-prices")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": %d,
+                                  "scopeType": "GLOBAL",
+                                  "priceType": "RETAIL",
+                                  "currencyCode": "VND",
+                                  "priceValue": 45000.00,
+                                  "effectiveFrom": "2026-04-01"
+                                }
+                                """.formatted(productId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/tax-rates")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": %d,
+                                  "taxPercent": 8.00,
+                                  "effectiveFrom": "2026-03-01",
+                                  "effectiveTo": "2026-03-31"
+                                }
+                                """.formatted(productId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/tax-rates")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": %d,
+                                  "taxPercent": 10.00,
+                                  "effectiveFrom": "2026-04-01"
+                                }
+                                """.formatted(productId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/product-availability")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": %d,
+                                  "outletId": 101,
+                                  "available": true
+                                }
+                                """.formatted(productId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/internal/catalog/price-resolution")
+                        .header("Authorization", serviceBearer())
+                        .param("productId", String.valueOf(productId))
+                        .param("outletId", "101")
+                        .param("at", "2026-03-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priceValue").value(42000.00))
+                .andExpect(jsonPath("$.taxPercent").value(8.00));
+
+        mockMvc.perform(get("/internal/catalog/price-resolution")
+                        .header("Authorization", serviceBearer())
+                        .param("productId", String.valueOf(productId))
+                        .param("outletId", "101")
+                        .param("at", "2026-04-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priceValue").value(45000.00))
+                .andExpect(jsonPath("$.taxPercent").value(10.00));
+    }
+
+    @Test
+    void shouldExcludeSoftDeletedProductFromMenuAndPriceResolution() throws Exception {
+        seedReferenceData();
+        Long productId = createProduct("PROD-DELETED", "Deleted Drink", "BEV", "ACTIVE");
+
+        mockMvc.perform(post("/product-prices")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": %d,
+                                  "scopeType": "GLOBAL",
+                                  "priceType": "RETAIL",
+                                  "currencyCode": "VND",
+                                  "priceValue": 39000.00,
+                                  "effectiveFrom": "2026-03-01"
+                                }
+                                """.formatted(productId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(put("/product-availability")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "productId": %d,
+                                  "outletId": 101,
+                                  "available": true
+                                }
+                                """.formatted(productId)))
+                .andExpect(status().isOk());
+
+        jdbcTemplate.update("""
+                UPDATE catalog.product
+                SET deleted_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """, productId);
+
+        mockMvc.perform(get("/internal/catalog/menu")
+                        .header("Authorization", serviceBearer())
+                        .param("outletId", "101")
+                        .param("at", "2026-03-15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(0));
+
+        mockMvc.perform(get("/internal/catalog/price-resolution")
+                        .header("Authorization", serviceBearer())
+                        .param("productId", String.valueOf(productId))
+                        .param("outletId", "101")
+                        .param("at", "2026-03-15"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

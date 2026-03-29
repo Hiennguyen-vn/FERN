@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fern.platform.common.ExceptionSummaries;
+import com.fern.platform.common.ConflictException;
 import com.fern.platform.observability.CorrelationId;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -58,11 +59,25 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.details.name").value("must not be blank"));
     }
 
+    @Test
+    void shouldReturnConflictError() throws Exception {
+        mockMvc.perform(get("/conflict").header(CorrelationId.HEADER, "corr-report-conflict"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("conflict"))
+                .andExpect(jsonPath("$.message").value("conflicting export request"))
+                .andExpect(jsonPath("$.correlationId").value("corr-report-conflict"));
+    }
+
     @RestController
     static class ThrowingController {
         @GetMapping("/boom")
         String boom() {
             throw new RuntimeException("secret production detail");
+        }
+
+        @GetMapping("/conflict")
+        String conflict() {
+            throw new ConflictException("conflicting export request");
         }
 
         @PostMapping("/validate")

@@ -10,6 +10,7 @@ import com.fern.financeservice.controller.FinanceReadController;
 import com.fern.financeservice.service.FinancePayrollService;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ScopeRoots;
@@ -29,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -52,6 +54,9 @@ class FinanceSecurityIntegrationTest {
         registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("public"));
         registry.add("spring.datasource.username", FernIntegrationContainers::jdbcUsername);
         registry.add("spring.datasource.password", FernIntegrationContainers::jdbcPassword);
+        registry.add("fern.master-datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("public"));
+        registry.add("fern.master-datasource.username", FernIntegrationContainers::jdbcUsername);
+        registry.add("fern.master-datasource.password", FernIntegrationContainers::jdbcPassword);
         registry.add("fern.projection-datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("public"));
         registry.add("fern.projection-datasource.username", FernIntegrationContainers::jdbcUsername);
         registry.add("fern.projection-datasource.password", FernIntegrationContainers::jdbcPassword);
@@ -403,6 +408,133 @@ class FinanceSecurityIntegrationTest {
     }
 
     @Test
+    @Tag("security-gap")
+    void shouldRejectUserTokenWithWrongIssuerOverHttp() throws Exception {
+        long periodId = seedPayrollPeriod(1L, "PP-WRONG-ISSUER-001");
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        mockMvc.perform(get("/payroll-periods/{id}", periodId)
+                        .header("Authorization", "Bearer " + userTokenWithIdentity(
+                                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                                new ScopeRoots(false, List.of(1L), List.of()),
+                                "rogue-issuer",
+                                Set.of("finance-service")
+                        )))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Tag("security-gap")
+    void shouldRejectUserTokenWithWrongAudienceOverHttp() throws Exception {
+        long periodId = seedPayrollPeriod(1L, "PP-WRONG-AUD-001");
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        mockMvc.perform(get("/payroll-periods/{id}", periodId)
+                        .header("Authorization", "Bearer " + userTokenWithIdentity(
+                                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                                new ScopeRoots(false, List.of(1L), List.of()),
+                                "iam-service",
+                                Set.of("hr-service")
+                        )))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Tag("security-gap")
+    void shouldIssueFinanceServiceTokenForHrAudience() {
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        FernJwtClaims claims = jwtService.decode(serviceTokenSupport.issueToken(
+                "finance-service",
+                "hr-service",
+                Set.of(PermissionCodes.HR_INTERNAL_READ)
+        ));
+
+        assertThat(claims.principalType()).isEqualTo(FernPrincipalType.SERVICE);
+        assertThat(claims.issuer()).isEqualTo("finance-service");
+        assertThat(claims.audience()).containsExactly("hr-service");
+    }
+
+    @Test
+    void shouldRejectBlacklistedUserTokenOverHttp() throws Exception {
+        long periodId = seedPayrollPeriod(1L, "PP-BLACKLIST-001");
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+        String token = userToken(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                new ScopeRoots(false, List.of(1L), List.of())
+        );
+        FernJwtClaims claims = jwtService.decode(token);
+        redisTemplate.opsForValue().set("fern:iam:blacklist:" + claims.jti(), "1");
+
+        mockMvc.perform(get("/payroll-periods/{id}", periodId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRejectStaleUserScopeTokenOverHttp() throws Exception {
+        long periodId = seedPayrollPeriod(1L, "PP-STALE-USER-001");
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "2");
+        String staleToken = userTokenWithVersions(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                new ScopeRoots(false, List.of(1L), List.of()),
+                1L,
+                1L
+        );
+
+        mockMvc.perform(get("/payroll-periods/{id}", periodId)
+                        .header("Authorization", "Bearer " + staleToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRejectOutletScopedUserFromRegionPayrollApiOverHttp() throws Exception {
+        long periodId = seedPayrollPeriod(1L, "PP-HTTP-001");
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        mockMvc.perform(get("/payroll-periods/{id}", periodId)
+                        .header("Authorization", "Bearer " + userToken(
+                                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                                new ScopeRoots(false, List.of(), List.of(301L))
+                        )))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/payroll-periods")
+                        .param("regionId", "1")
+                        .header("Authorization", "Bearer " + userToken(
+                                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                                new ScopeRoots(false, List.of(), List.of(301L))
+                        )))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRejectReadingPayrollObjectOutsideRegionalScopeOverHttp() throws Exception {
+        long regionOnePeriodId = seedPayrollPeriod(1L, "PP-REGION-001");
+        long regionTwoPeriodId = seedPayrollPeriod(2L, "PP-REGION-002");
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+        String regionOneToken = userToken(
+                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                new ScopeRoots(false, List.of(1L), List.of())
+        );
+
+        mockMvc.perform(get("/payroll-periods/{id}", regionOnePeriodId)
+                        .header("Authorization", "Bearer " + regionOneToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/payroll-periods/{id}", regionTwoPeriodId)
+                        .header("Authorization", "Bearer " + regionOneToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldHidePayrollEmployeesWithoutDetailPermission() {
         long runId = seedPayrollRunWithEmployeeResult();
         FernPrincipal principal = principal(
@@ -462,6 +594,52 @@ class FinanceSecurityIntegrationTest {
         );
     }
 
+    private String userToken(Set<String> permissions, ScopeRoots scopeRoots) {
+        return userTokenWithVersions(permissions, scopeRoots, 1L, 1L);
+    }
+
+    private String userTokenWithVersions(Set<String> permissions, ScopeRoots scopeRoots, long policyVersion, long scopeVersion) {
+        Instant now = Instant.now();
+        return jwtService.encode(
+                new FernJwtClaims(
+                        100L,
+                        "finance-http-user",
+                        Set.of("finance"),
+                        permissions,
+                        scopeRoots,
+                        policyVersion,
+                        scopeVersion,
+                        UUID.randomUUID().toString(),
+                        now,
+                        now.plus(jwtService.accessTokenTtl()),
+                        com.fern.platform.common.FernPrincipalType.USER
+                ),
+                jwtService.accessTokenTtl()
+        );
+    }
+
+    private String userTokenWithIdentity(Set<String> permissions, ScopeRoots scopeRoots, String issuer, Set<String> audience) {
+        Instant now = Instant.now();
+        return jwtService.encode(
+                new FernJwtClaims(
+                        100L,
+                        "finance-http-user",
+                        Set.of("finance"),
+                        permissions,
+                        scopeRoots,
+                        1L,
+                        1L,
+                        UUID.randomUUID().toString(),
+                        now,
+                        now.plus(jwtService.accessTokenTtl()),
+                        FernPrincipalType.USER,
+                        issuer,
+                        audience
+                ),
+                jwtService.accessTokenTtl()
+        );
+    }
+
     private FernPrincipal principal(Set<String> permissions, ScopeRoots scopeRoots) {
         return new FernPrincipal(
                 100L,
@@ -472,6 +650,23 @@ class FinanceSecurityIntegrationTest {
                 1L,
                 1L,
                 UUID.randomUUID().toString()
+        );
+    }
+
+    private long seedPayrollPeriod(Long regionId, String referenceCode) {
+        return jdbcTemplate.queryForObject("""
+                INSERT INTO finance.payroll_period (
+                    region_id, reference_code, name, start_date, end_date, pay_date, status, created_at, updated_at
+                ) VALUES (
+                    :regionId, :referenceCode, :name, DATE '2026-03-01', DATE '2026-03-31', DATE '2026-04-05', 'DRAFT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                RETURNING id
+                """,
+                new MapSqlParameterSource()
+                        .addValue("regionId", regionId)
+                        .addValue("referenceCode", referenceCode)
+                        .addValue("name", "Period " + referenceCode),
+                Long.class
         );
     }
 

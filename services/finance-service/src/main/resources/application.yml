@@ -48,6 +48,14 @@ fern:
     publish-delay-ms: 5000
   clients:
     hr-base-url: ${FERN_HR_BASE_URL:http://localhost:8089}
+    hr:
+      connect-timeout-ms: ${FERN_HR_CONNECT_TIMEOUT_MS:5000}
+      read-timeout-ms: ${FERN_HR_READ_TIMEOUT_MS:10000}
+      circuit-breaker:
+        failure-rate-threshold: ${FERN_HR_CB_FAILURE_RATE_THRESHOLD:50}
+        sliding-window-size: ${FERN_HR_CB_SLIDING_WINDOW_SIZE:10}
+        minimum-number-of-calls: ${FERN_HR_CB_MINIMUM_NUMBER_OF_CALLS:5}
+        wait-duration-open-seconds: ${FERN_HR_CB_WAIT_DURATION_OPEN_SECONDS:30}
   id-generator:
     node-id: ${FERN_ID_GENERATOR_NODE_ID:9}
     epoch-millis: ${FERN_ID_GENERATOR_EPOCH_MILLIS:1767225600000}

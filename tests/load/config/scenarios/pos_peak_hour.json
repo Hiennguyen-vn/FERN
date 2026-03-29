@@ -1,0 +1,78 @@
+{
+  "name": "pos_peak_hour",
+  "behavior": "stateful_pos",
+  "workload_model": {
+    "outlets": 30,
+    "terminals_per_outlet": 4,
+    "completed_orders_per_minute_per_terminal": 6,
+    "requests_per_minute_per_terminal": 30
+  },
+  "request_mix": {
+    "open_or_list_session": 8,
+    "create_or_update_order": 42,
+    "add_payment": 30,
+    "complete_order": 20
+  },
+  "payment_mix": {
+    "cash_ratio": 0.35,
+    "card_ratio": 0.65,
+    "partial_first_payment_ratio": 0.20,
+    "retry_same_key_ratio": 0.02
+  },
+  "timing": {
+    "business_date": "2026-03-28",
+    "ramp_up": "15m",
+    "steady_duration": "45m",
+    "ramp_down": "5m"
+  },
+  "pass_fail": {
+    "create_order_p95_ms": 250,
+    "create_order_p99_ms": 600,
+    "add_payment_p95_ms": 300,
+    "add_payment_p99_ms": 800,
+    "complete_order_p95_ms": 800,
+    "complete_order_p99_ms": 1500,
+    "application_error_rate_lt": 0.005,
+    "outbox_oldest_age_seconds_lt": 60
+  },
+  "metrics": [
+    "http throughput, error-rate, p50/p95/p99",
+    "hikaricp active/idle/pending/timeout",
+    "DB lock wait and deadlock counts",
+    "fern_payment_failures_total",
+    "outbox pending rows and oldest age"
+  ],
+  "bottleneck_hypothesis": [
+    "POS DB pool exhaustion from transaction fan-out",
+    "pricing and inventory reserve inflate p99",
+    "row lock contention on sale_order and sale_payment"
+  ],
+  "observability_assertions": [
+    "hikaricp_connections_pending does not remain above zero for 30s continuously",
+    "no DB deadlocks",
+    "fern_payment_failures_total only grows during injected failure tests",
+    "outbox pending oldest age remains below 60s"
+  ],
+  "k6": {
+    "options": {
+      "scenarios": {
+        "cashiers": {
+          "executor": "ramping-vus",
+          "startVUs": 24,
+          "stages": [
+            { "duration": "15m", "target": 120 },
+            { "duration": "45m", "target": 120 },
+            { "duration": "5m", "target": 0 }
+          ],
+          "gracefulRampDown": "30s"
+        }
+      },
+      "thresholds": {
+        "http_req_failed": ["rate<0.005"],
+        "http_req_duration{kind:create_order}": ["p(95)<250", "p(99)<600"],
+        "http_req_duration{kind:add_payment}": ["p(95)<300", "p(99)<800"],
+        "http_req_duration{kind:complete_order}": ["p(95)<800", "p(99)<1500"]
+      }
+    }
+  }
+}

@@ -17,6 +17,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class PosSessionService {
+    private static final String PAYMENT_METHOD_CASH = "CASH";
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final PosAuthorizer posAuthorizer;
     private final PosStore store;
@@ -43,7 +45,7 @@ public class PosSessionService {
         this.transactionTemplate = transactionTemplate;
     }
 
-    public PosSessionResponse openSession(FernPrincipal principal, OpenSessionRequest request) {
+    public PosSessionOpenResult openSession(FernPrincipal principal, OpenSessionRequest request) {
         posAuthorizer.requireRoutePermission(principal, request.regionId(), request.outletId(), PermissionCodes.POS_SESSION_OPEN);
         PosOrgClient.OutletRoute outlet = posOrgClient.requireOutlet(request.outletId());
         if (!outlet.regionId().equals(request.regionId())) {
@@ -52,15 +54,18 @@ public class PosSessionService {
         return transactionTemplate.execute(status -> openSessionTx(principal, request, outlet));
     }
 
-    private PosSessionResponse openSessionTx(
+    private PosSessionOpenResult openSessionTx(
             FernPrincipal principal,
             OpenSessionRequest request,
             PosOrgClient.OutletRoute outlet
     ) {
         lockOpenSessionScope(request.outletId());
-        Long existingOpenSessionId = findOpenSessionId(request.outletId(), request.terminalId());
-        if (existingOpenSessionId != null) {
-            return getSession(principal, existingOpenSessionId);
+        SessionRecord existingOpenSession = findOpenSession(request.outletId(), request.terminalId());
+        if (existingOpenSession != null) {
+            if (!java.util.Objects.equals(existingOpenSession.cashierUserId(), principal.userId())) {
+                throw new ConflictException("Another cashier already has an open session for this outlet and terminal");
+            }
+            return new PosSessionOpenResult(getSession(principal, existingOpenSession.id()), true);
         }
         Long id = PosSql.insertForId(jdbcTemplate, """
                 INSERT INTO pos.pos_session (
@@ -82,7 +87,7 @@ public class PosSessionService {
                 "status", PosSessionStatus.OPEN.name(),
                 "note", request.note()
         ));
-        return getSession(principal, id);
+        return new PosSessionOpenResult(getSession(principal, id), false);
     }
 
     @Transactional(readOnly = true)
@@ -145,9 +150,13 @@ public class PosSessionService {
                 SELECT EXISTS (
                     SELECT 1
                     FROM pos.sale_order
-                    WHERE pos_session_id = :sessionId AND status = :status
+                    WHERE pos_session_id = :sessionId AND status IN (:openStatus, :completingStatus)
                 )
-                """, PosSql.params("sessionId", id, "status", SaleOrderStatus.OPEN.name()), Boolean.class));
+                """, PosSql.params(
+                "sessionId", id,
+                "openStatus", SaleOrderStatus.OPEN.name(),
+                "completingStatus", SaleOrderStatus.COMPLETING.name()
+        ), Boolean.class));
         if (openOrders) {
             throw new ConflictException("Cannot close a POS session while open orders still exist");
         }
@@ -180,11 +189,12 @@ public class PosSessionService {
                 JOIN pos.sale_order sale_order ON sale_order.id = payment.sale_order_id
                 WHERE payment.pos_session_id = :sessionId
                   AND payment.status = :paymentStatus
-                  AND payment.payment_method = 'CASH'
+                  AND payment.payment_method = :paymentMethod
                   AND sale_order.status = :orderStatus
                 """, PosSql.params(
                 "sessionId", id,
                 "paymentStatus", SalePaymentStatus.SUCCESS.name(),
+                "paymentMethod", PAYMENT_METHOD_CASH,
                 "orderStatus", SaleOrderStatus.COMPLETED.name()
         ), BigDecimal.class);
         BigDecimal discrepancy = request.countedCashAmount().subtract(expectedCash);
@@ -223,9 +233,10 @@ public class PosSessionService {
         }
     }
 
-    private Long findOpenSessionId(Long outletId, String terminalId) {
+    private SessionRecord findOpenSession(Long outletId, String terminalId) {
         return jdbcTemplate.query("""
-                SELECT id
+                SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
+                       status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
                 FROM pos.pos_session
                 WHERE outlet_id = :outletId
                   AND status = :status
@@ -239,7 +250,25 @@ public class PosSessionService {
                 "outletId", outletId,
                 "terminalId", terminalId,
                 "status", PosSessionStatus.OPEN.name()
-        ), rs -> rs.next() ? rs.getLong("id") : null);
+        ), rs -> rs.next() ? new SessionRecord(
+                rs.getLong("id"),
+                rs.getString("session_code"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getString("terminal_id"),
+                rs.getString("currency_code"),
+                rs.getObject("cashier_user_id", Long.class),
+                rs.getObject("manager_user_id", Long.class),
+                rs.getObject("business_date", LocalDate.class),
+                rs.getString("status"),
+                rs.getString("note"),
+                PosSql.instant(rs, "opened_at"),
+                PosSql.instant(rs, "closed_at"),
+                PosSql.instant(rs, "reconciled_at"),
+                rs.getBigDecimal("expected_cash_amount"),
+                rs.getBigDecimal("counted_cash_amount"),
+                rs.getBigDecimal("discrepancy_amount")
+        ) : null);
     }
 
     private void lockOpenSessionScope(Long outletId) {

@@ -184,7 +184,14 @@ public class StockCountService {
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_STOCK_COUNT_POST);
         Long duplicateId = inventoryRepository.findIdempotentResourceId("stock-count-post", idempotencyKey);
         if (duplicateId != null) {
+            if (!duplicateId.equals(id)) {
+                throw new ConflictException("Idempotency-Key is already used for a different stock count session");
+            }
             return getStockCountSession(duplicateId);
+        }
+        Long claimedId = inventoryRepository.claimIdempotentResource("stock-count-post", idempotencyKey, id);
+        if (!id.equals(claimedId)) {
+            throw new ConflictException("Idempotency-Key is already used for a different stock count session");
         }
         ensureStatus(record.status(), StockCountSessionStatus.COUNTING.name(), "Only counting stock sessions can be posted");
         List<StockCountLineRecord> lines = queryStockCountLines(id);
@@ -247,7 +254,6 @@ public class StockCountService {
         if (updated != 1) {
             throw new ConflictException("Only counting stock sessions can be posted");
         }
-        inventoryRepository.recordIdempotentResource("stock-count-post", idempotencyKey, id);
         enqueueStockCountPosted(record, principal, queryStockCountLines(id));
         return getStockCountSession(id);
     }

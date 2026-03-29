@@ -90,7 +90,14 @@ public class StockAdjustmentService {
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_ADJUSTMENT_WRITE);
         Long duplicateId = inventoryRepository.findIdempotentResourceId("stock-adjustment-post", idempotencyKey);
         if (duplicateId != null) {
+            if (!duplicateId.equals(id)) {
+                throw new ConflictException("Idempotency-Key is already used for a different stock adjustment");
+            }
             return getStockAdjustment(duplicateId);
+        }
+        Long claimedId = inventoryRepository.claimIdempotentResource("stock-adjustment-post", idempotencyKey, id);
+        if (!id.equals(claimedId)) {
+            throw new ConflictException("Idempotency-Key is already used for a different stock adjustment");
         }
         ensureStatus(record.status(), StockAdjustmentStatus.DRAFT.name(), "Only draft stock adjustments can be posted");
         BigDecimal signedQty = AdjustmentDirection.IN.name().equals(record.adjustmentDirection()) ? record.qty() : record.qty().negate();
@@ -131,7 +138,6 @@ public class StockAdjustmentService {
         if (updated != 1) {
             throw new ConflictException("Only draft stock adjustments can be posted");
         }
-        inventoryRepository.recordIdempotentResource("stock-adjustment-post", idempotencyKey, id);
         enqueueInventoryAdjustmentPosted(record, principal, signedQty, unitCost);
         return getStockAdjustment(id);
     }

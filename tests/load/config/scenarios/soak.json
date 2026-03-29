@@ -1,0 +1,70 @@
+{
+  "name": "soak",
+  "behavior": "stateful_pos",
+  "workload_model": {
+    "outlets": 30,
+    "terminals_per_outlet": 3,
+    "completed_orders_per_minute_per_terminal": 3,
+    "requests_per_minute_per_terminal": 15
+  },
+  "request_mix": {
+    "create_or_update_order": 38,
+    "add_payment": 27,
+    "complete_order": 20,
+    "read_order_or_session": 10,
+    "read_stock_or_side_effect": 5
+  },
+  "payment_mix": {
+    "cash_ratio": 0.30,
+    "card_ratio": 0.70,
+    "partial_first_payment_ratio": 0.15,
+    "retry_same_key_ratio": 0.01
+  },
+  "timing": {
+    "business_date": "2026-03-28",
+    "ramp_up": "30m",
+    "steady_duration": "24h",
+    "ramp_down": "10m"
+  },
+  "pass_fail": {
+    "throughput_degradation_lte_ratio": 0.10,
+    "p99_drift_lte_ratio": 1.25,
+    "heap_post_gc_growth_lte_ratio": 1.20,
+    "live_thread_growth_lte_ratio": 1.15
+  },
+  "metrics": [
+    "heap used after GC",
+    "live threads",
+    "Hikari active/idle patterns",
+    "file descriptor and connection counts"
+  ],
+  "bottleneck_hypothesis": [
+    "memory leak in HTTP, Kafka, or client buffers",
+    "thread leak from retry or scheduler paths",
+    "connection leak"
+  ],
+  "observability_assertions": [
+    "heap sawtooth remains stable",
+    "Hikari patterns return to baseline after each demand cycle",
+    "descriptor and TCP counts do not grow monotonically"
+  ],
+  "k6": {
+    "options": {
+      "scenarios": {
+        "cashiers": {
+          "executor": "ramping-vus",
+          "startVUs": 18,
+          "stages": [
+            { "duration": "30m", "target": 90 },
+            { "duration": "24h", "target": 90 },
+            { "duration": "10m", "target": 0 }
+          ],
+          "gracefulRampDown": "30s"
+        }
+      },
+      "thresholds": {
+        "http_req_failed": ["rate<0.01"]
+      }
+    }
+  }
+}

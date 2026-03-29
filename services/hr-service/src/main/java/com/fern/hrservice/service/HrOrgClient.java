@@ -34,7 +34,11 @@ public class HrOrgClient {
                     .uri("/outlets/{id}", outletId)
                     .header(
                             HttpHeaders.AUTHORIZATION,
-                            "Bearer " + serviceTokenSupport.issueToken(HR_SERVICE, Set.of(PermissionCodes.ORG_OUTLET_READ))
+                            "Bearer " + serviceTokenSupport.issueToken(
+                                    HR_SERVICE,
+                                    "org-service",
+                                    Set.of(PermissionCodes.ORG_OUTLET_READ)
+                            )
                     )
                     .retrieve()
                     .body(OutletRoute.class);
