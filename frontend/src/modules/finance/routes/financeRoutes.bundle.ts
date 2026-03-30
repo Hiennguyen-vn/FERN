@@ -1,0 +1,6 @@
+export { PaymentRequestsPage } from './PaymentRequestsPage'
+export { PayrollApprovalDetailPage } from './PayrollApprovalDetailPage'
+export { PayrollApprovalPage } from './PayrollApprovalPage'
+export { PayrollPaidPage } from './PayrollPaidPage'
+export { SupplierDetailPage } from './SupplierDetailPage'
+export { SuppliersPage } from './SuppliersPage'

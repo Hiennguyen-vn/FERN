@@ -1,0 +1,105 @@
+import { Link } from 'react-router-dom'
+import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { usePrincipal } from '@core/auth/auth.selectors'
+import { Button, Card, EmptyState, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
+import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { ExportJobTable } from '../components/ExportJobTable'
+import { ReportSummaryCards } from '../components/ReportSummaryCards'
+import { useReportDashboard } from '../hooks/useReportDashboard'
+import { canSeeReportsNavigation } from '../services/reportsUiPolicy.service'
+
+const reportSurfaces = [
+  {
+    description: 'Async export-aware daily summary with region/company filters.',
+    title: 'Revenue report',
+    to: '/reports/revenue',
+  },
+  {
+    description: 'Stock snapshot and inventory movement breakdown by outlet.',
+    title: 'Inventory report',
+    to: '/reports/inventory',
+  },
+  {
+    description: 'Payroll summary, run inspection, and export workflow.',
+    title: 'Payroll report',
+    to: '/reports/payroll',
+  },
+  {
+    description: 'Open the async export center for previews and downloads.',
+    title: 'Export jobs',
+    to: '/reports/export-jobs',
+  },
+]
+
+export function ReportsDashboardPage() {
+  usePageTitle('Reports')
+  const principal = usePrincipal()
+  const dashboard = useReportDashboard()
+
+  if (!canSeeReportsNavigation(principal)) {
+    return (
+      <DashboardLayout
+        title="Reports"
+        description="Summary-first reporting workspace with export-aware flows."
+      >
+        <PermissionDeniedInline message="Bạn cần report.read, report.export, report.payroll.read hoặc report.payroll.export để mở reports workspace." />
+      </DashboardLayout>
+    )
+  }
+
+  return (
+    <DashboardLayout
+      title="Reports"
+      description="Command center cho revenue, inventory, payroll reports và async export jobs."
+      actions={
+        <Button asChild size="sm" variant="secondary">
+          <Link to="/reports/export-jobs">Open export jobs</Link>
+        </Button>
+      }
+    >
+      <ReadonlyBanner message="Mỗi report surface ưu tiên bộ lọc ổn định, summary dễ đọc và async export integration thay vì dashboard trang trí." />
+
+      <ReportSummaryCards items={dashboard.summaryCards} />
+
+      <div className="card-grid dashboard-module-grid">
+        {reportSurfaces.map((surface) => (
+          <Card className="dashboard-module-card" key={surface.to} title={surface.title}>
+            <p className="muted-text">{surface.description}</p>
+            <Button asChild size="sm" variant="secondary">
+              <Link to={surface.to}>Open</Link>
+            </Button>
+          </Card>
+        ))}
+      </div>
+
+      <section className="page-stack">
+        <div className="page-header">
+          <div>
+            <h2>Recent export activity</h2>
+            <p className="muted-text">Recent jobs are stored client-side and refreshed from backend detail endpoints.</p>
+          </div>
+        </div>
+        {dashboard.isLoading ? (
+          <Card title="Loading export activity">
+            <p className="muted-text">Refreshing recent export jobs for the reports dashboard...</p>
+          </Card>
+        ) : null}
+        {dashboard.error ? (
+          <Card title="Recent export activity unavailable">
+            <p className="error-text">{dashboard.error instanceof Error ? dashboard.error.message : 'Failed to load recent export activity.'}</p>
+            <Button onClick={() => void dashboard.refresh()} size="sm" variant="secondary">
+              Retry
+            </Button>
+          </Card>
+        ) : null}
+        {!dashboard.isLoading && !dashboard.error && dashboard.jobs.length === 0 ? (
+          <EmptyState
+            description="Chạy revenue, inventory hoặc payroll report để tạo export job đầu tiên cho reports workspace."
+            title="No recent export jobs"
+          />
+        ) : null}
+        {dashboard.jobs.length > 0 ? <ExportJobTable jobs={dashboard.jobs} /> : null}
+      </section>
+    </DashboardLayout>
+  )
+}

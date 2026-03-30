@@ -1,0 +1,6 @@
+export { AvailabilityPage } from './OutletAvailabilityPage'
+export { IngredientsPage } from './IngredientsPage'
+export { PricingPage } from './PricingPage'
+export { ProductDetailPage } from './ProductDetailPage'
+export { ProductsPage } from './ProductsPage'
+export { RecipesPage } from './RecipesPage'

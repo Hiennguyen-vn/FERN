@@ -44,6 +44,7 @@
         <flyway.version>11.7.2</flyway.version>
         <surefire.excludedGroups>security-gap</surefire.excludedGroups>
         <surefire.groups></surefire.groups>
+        <surefire.argLine></surefire.argLine>
     </properties>
 
     <dependencyManagement>
@@ -98,6 +99,7 @@
                 <configuration>
                     <excludedGroups>${surefire.excludedGroups}</excludedGroups>
                     <groups>${surefire.groups}</groups>
+                    <argLine>${surefire.argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
                 </configuration>
             </plugin>
         </plugins>

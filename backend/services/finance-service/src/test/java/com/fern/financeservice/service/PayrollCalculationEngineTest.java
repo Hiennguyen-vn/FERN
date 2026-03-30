@@ -150,6 +150,15 @@ class PayrollCalculationEngineTest {
         assertThat(computation.netPay()).isEqualByComparingTo("0.45");
     }
 
+    @Test
+    void shouldPayMonthlyEmployeesPerAttendanceDayRegardlessOfWorkedHours() {
+        PayrollPeriodRecord period = new PayrollPeriodRecord(1L, 10L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 5), LocalDate.of(2026, 3, 7), "DRAFT");
+        EffectiveContract contract = new EffectiveContract(701L, 501L, 10L, "FULL_TIME", "MONTHLY", new BigDecimal("1000.00"), "TAX-001", LocalDate.of(2026, 1, 1), null);
+
+        assertThat(payrollCalculationEngine.basePayForDay(contract, period, new BigDecimal("1.0"))).isEqualByComparingTo("200.00000000");
+        assertThat(payrollCalculationEngine.basePayForDay(contract, period, new BigDecimal("8.0"))).isEqualByComparingTo("200.00000000");
+    }
+
     private JsonNode json(String value) throws Exception {
         return objectMapper.readTree(value);
     }

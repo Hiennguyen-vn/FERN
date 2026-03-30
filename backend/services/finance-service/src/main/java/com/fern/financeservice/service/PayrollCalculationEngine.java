@@ -121,15 +121,18 @@ public class PayrollCalculationEngine {
 
     public BigDecimal basePayForDay(EffectiveContract contract, PayrollPeriodRecord period, BigDecimal workHours) {
         return switch (contract.salaryType()) {
-            case "MONTHLY" -> {
-                long activeDays = period.startDate().until(period.endDate().plusDays(1), ChronoUnit.DAYS);
-                BigDecimal dailyRate = contract.baseSalary().divide(BigDecimal.valueOf(Math.max(activeDays, 1L)), 8, RoundingMode.HALF_UP);
-                yield dailyRate;
-            }
+            // Monthly staff earn one full daily slice for each attended business day.
+            // Partial-day attendance still affects work/overtime hours and allocation, but not base pay.
+            case "MONTHLY" -> monthlyBasePayForAttendanceDay(contract, period);
             case "DAILY" -> contract.baseSalary();
             case "HOURLY" -> contract.baseSalary().multiply(workHours);
             default -> BigDecimal.ZERO;
         };
+    }
+
+    private BigDecimal monthlyBasePayForAttendanceDay(EffectiveContract contract, PayrollPeriodRecord period) {
+        long activeDays = period.startDate().until(period.endDate().plusDays(1), ChronoUnit.DAYS);
+        return contract.baseSalary().divide(BigDecimal.valueOf(Math.max(activeDays, 1L)), 8, RoundingMode.HALF_UP);
     }
 
     public BigDecimal overtimePay(EffectiveContract contract, PayrollPeriodRecord period, BigDecimal overtimeHours, JsonNode overtimePolicy) {
