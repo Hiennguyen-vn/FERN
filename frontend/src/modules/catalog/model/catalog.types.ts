@@ -223,6 +223,7 @@ export interface CategoryUpsertRequest {
   name: string
   description?: string | null
   active?: boolean
+  status?: 'ACTIVE' | 'INACTIVE'
 }
 
 export interface UnitOfMeasureUpsertRequest {

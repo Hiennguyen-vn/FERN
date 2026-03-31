@@ -1881,6 +1881,24 @@ class PosServiceIntegrationTest {
     }
 
     @Test
+    void shouldListSessionsWithoutOptionalFilters() throws Exception {
+        String outletOnlyToken = issueToken(
+                POS_FULL_ACCESS_PERMISSIONS,
+                new ScopeRoots(false, List.of(), List.of(101L)),
+                new ScopeRoots(false, List.of(), List.of(101L))
+        );
+
+        Long sessionId = openSession(bearer(outletOnlyToken), 1L, 101L);
+
+        mockMvc.perform(get("/pos-sessions")
+                        .header("Authorization", bearer(outletOnlyToken))
+                        .param("outletId", "101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(sessionId))
+                .andExpect(jsonPath("$[0].outletId").value(101));
+    }
+
+    @Test
     void shouldAllowSessionOpenWhenOutletScopeMatchesEvenIfRegionRootDiffers() throws Exception {
         String mixedScopeToken = issueToken(
                 POS_FULL_ACCESS_PERMISSIONS,

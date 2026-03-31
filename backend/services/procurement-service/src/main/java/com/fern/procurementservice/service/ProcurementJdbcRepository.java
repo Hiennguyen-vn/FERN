@@ -412,6 +412,15 @@ class ProcurementJdbcRepository {
         return response;
     }
 
+    List<Long> listSupplierPaymentIds(int limit) {
+        return jdbcTemplate.queryForList("""
+                SELECT id
+                FROM procurement.supplier_payment
+                ORDER BY payment_time DESC, id DESC
+                LIMIT :limit
+                """, params("limit", limit), Long.class);
+    }
+
     void replacePurchaseOrderLines(Long purchaseOrderId, List<PurchaseOrderLineInput> lines) {
         jdbcTemplate.update("DELETE FROM procurement.purchase_order_line WHERE purchase_order_id = :purchaseOrderId", params("purchaseOrderId", purchaseOrderId));
         int lineNumber = 1;

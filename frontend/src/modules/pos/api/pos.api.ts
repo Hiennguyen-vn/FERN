@@ -19,6 +19,7 @@ export async function listPosSessions(filters: PosSessionFilters) {
   const { data } = await gatewayClient.get<PosSession[]>('/pos-sessions', {
     params: {
       outletId: filters.outletId,
+      terminalId: filters.terminalId || undefined,
       businessDate: filters.businessDate || undefined,
       status: filters.status || undefined,
     },
@@ -52,7 +53,8 @@ export async function reconcilePosSession(sessionId: number, payload: ReconcileP
 }
 
 export async function createSaleOrder(payload: CreateSaleOrderPayload) {
-  const { data } = await gatewayClient.post<SaleOrder>('/sale-orders', payload)
+  const { currencyCode: _currencyCode, ...requestBody } = payload
+  const { data } = await gatewayClient.post<SaleOrder>('/sale-orders', requestBody)
   return data
 }
 

@@ -37,6 +37,15 @@ const PRODUCT_AVAILABILITY_BASE = '/product-availability'
 const TAX_RATE_BASE = '/tax-rates'
 const PROMOTION_BASE = '/catalog/promotions'
 
+function normalizeCategoryPayload(body: CategoryUpsertRequest) {
+  const { status, active, ...rest } = body
+
+  return {
+    ...rest,
+    active: active ?? (status ? status === 'ACTIVE' : true),
+  }
+}
+
 // ─── Products ─────────────────────────────────────────────────────────────────
 export const catalogApi = {
   // Products
@@ -53,15 +62,15 @@ export const catalogApi = {
   listProductCategories: () =>
     httpClient.get<Category[]>(PRODUCT_CATEGORY_BASE).then((r) => r.data),
   createProductCategory: (body: CategoryUpsertRequest) =>
-    httpClient.post<Category>(PRODUCT_CATEGORY_BASE, body).then((r) => r.data),
+    httpClient.post<Category>(PRODUCT_CATEGORY_BASE, normalizeCategoryPayload(body)).then((r) => r.data),
   updateProductCategory: (code: string, body: CategoryUpsertRequest) =>
-    httpClient.put<Category>(`${PRODUCT_CATEGORY_BASE}/${code}`, body).then((r) => r.data),
+    httpClient.put<Category>(`${PRODUCT_CATEGORY_BASE}/${code}`, normalizeCategoryPayload(body)).then((r) => r.data),
   listIngredientCategories: () =>
     httpClient.get<Category[]>(INGREDIENT_CATEGORY_BASE).then((r) => r.data),
   createIngredientCategory: (body: CategoryUpsertRequest) =>
-    httpClient.post<Category>(INGREDIENT_CATEGORY_BASE, body).then((r) => r.data),
+    httpClient.post<Category>(INGREDIENT_CATEGORY_BASE, normalizeCategoryPayload(body)).then((r) => r.data),
   updateIngredientCategory: (code: string, body: CategoryUpsertRequest) =>
-    httpClient.put<Category>(`${INGREDIENT_CATEGORY_BASE}/${code}`, body).then((r) => r.data),
+    httpClient.put<Category>(`${INGREDIENT_CATEGORY_BASE}/${code}`, normalizeCategoryPayload(body)).then((r) => r.data),
 
   // Units of measure
   listUnitsOfMeasure: () =>

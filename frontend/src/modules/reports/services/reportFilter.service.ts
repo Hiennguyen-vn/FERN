@@ -13,8 +13,17 @@ export function requiresPayrollRunId(dataset: ExportDataset): boolean {
 }
 
 export function normalizeExportPayload(payload: CreateExportPayload): CreateExportPayload {
+  const filters = payload.filters ?? {}
+
   return {
     ...payload,
+    fromDate: payload.fromDate ?? filters.fromDate,
     format: payload.format || 'CSV',
+    limit: payload.limit ?? filters.limit,
+    outletId: payload.outletId ?? filters.outletId,
+    payrollRunId: payload.payrollRunId ?? filters.payrollRunId,
+    regionId: payload.regionId ?? filters.regionId,
+    toDate: payload.toDate ?? filters.toDate,
+    filters: undefined,
   }
 }

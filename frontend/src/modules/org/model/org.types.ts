@@ -24,3 +24,37 @@ export interface OrgOutlet {
   createdAt: string
   updatedAt: string
 }
+
+export interface CreateRegionPayload {
+  code: string
+  parentRegionId?: number | null
+  currencyCode: string
+  name: string
+  taxCode?: string | null
+  timezoneName: string
+}
+
+export interface UpdateRegionPayload {
+  parentRegionId?: number | null
+  currencyCode?: string
+  name?: string
+  taxCode?: string | null
+  timezoneName?: string
+}
+
+export interface CreateOutletPayload {
+  regionId: number
+  code: string
+  name: string
+  address?: string | null
+  phone?: string | null
+  email?: string | null
+}
+
+export interface UpdateOutletPayload {
+  code?: string
+  name?: string
+  address?: string | null
+  phone?: string | null
+  email?: string | null
+}

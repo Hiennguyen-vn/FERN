@@ -21,6 +21,11 @@ export const hrApi = {
     return gatewayClient.get<HrContract[]>(`/employees/${employeeId}/contracts`).then((response) => response.data)
   },
 
+  async getEmployeeContract(employeeId: number, contractId: number) {
+    const contracts = await hrApi.listEmployeeContracts(employeeId)
+    return contracts.find((contract) => contract.id === contractId) ?? null
+  },
+
   listEmployeeAssignments(employeeId: number) {
     return gatewayClient.get<HrAssignment[]>(`/employees/${employeeId}/assignments`).then((response) => response.data)
   },

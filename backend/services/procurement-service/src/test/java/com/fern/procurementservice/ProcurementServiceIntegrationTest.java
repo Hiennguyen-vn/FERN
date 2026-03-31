@@ -245,6 +245,138 @@ class ProcurementServiceIntegrationTest {
     }
 
     @Test
+    void shouldListSupplierPayments() throws Exception {
+        Long supplierId = createActiveSupplier("SUP-LIST", "List Payments Supplier");
+
+        String poJson = mockMvc.perform(post("/purchase-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "supplierId": %d,
+                                  "orderDate": "2026-03-27",
+                                  "expectedDeliveryDate": "2026-03-29",
+                                  "lines": [
+                                    {
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyOrdered": 5.0000,
+                                      "expectedUnitPrice": 12.50,
+                                      "taxPercent": 10.00
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long purchaseOrderId = readId(poJson);
+
+        mockMvc.perform(post("/purchase-orders/{id}/submit", purchaseOrderId).header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/purchase-orders/{id}/approve", purchaseOrderId).header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        String issuedPoJson = mockMvc.perform(post("/purchase-orders/{id}/issue", purchaseOrderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long poLineId = objectMapper.readTree(issuedPoJson).get("lines").get(0).get("id").asLong();
+
+        String receiptJson = mockMvc.perform(post("/goods-receipts")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "purchaseOrderId": %d,
+                                  "receiptTime": "2026-03-27T10:00:00Z",
+                                  "businessDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "purchaseOrderLineId": %d,
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyReceived": 3.0000,
+                                      "unitCost": 12.50
+                                    }
+                                  ]
+                                }
+                                """.formatted(purchaseOrderId, poLineId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long goodsReceiptId = readId(receiptJson);
+
+        mockMvc.perform(post("/goods-receipts/{id}/receive", goodsReceiptId).header("Authorization", bearer()))
+                .andExpect(status().isOk());
+        String postedReceiptJson = mockMvc.perform(post("/goods-receipts/{id}/post", goodsReceiptId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "gr-post-list-payments"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long goodsReceiptLineId = objectMapper.readTree(postedReceiptJson).get("lines").get(0).get("id").asLong();
+
+        String invoiceJson = mockMvc.perform(post("/supplier-invoices")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "supplierId": %d,
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "invoiceNumber": "INV-LIST-001",
+                                  "invoiceDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "lineType": "STOCK",
+                                      "goodsReceiptLineId": %d,
+                                      "description": "Milk delivery",
+                                      "qtyInvoiced": 3.0000,
+                                      "unitPrice": 12.50,
+                                      "taxPercent": 10.00,
+                                      "taxAmount": 3.75,
+                                      "lineTotal": 41.25
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId, goodsReceiptLineId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long supplierInvoiceId = readId(invoiceJson);
+
+        mockMvc.perform(post("/supplier-invoices/{id}/approve", supplierInvoiceId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/supplier-payments")
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "supplier-pay-list-001")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "supplierId": %d,
+                                  "currencyCode": "VND",
+                                  "paymentMethod": "BANK_TRANSFER",
+                                  "amount": 41.25,
+                                  "paymentTime": "2026-03-27T12:00:00Z",
+                                  "invoiceAllocations": [
+                                    {
+                                      "supplierInvoiceId": %d,
+                                      "allocatedAmount": 41.25
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId, supplierInvoiceId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/supplier-payments")
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].supplierId").value(supplierId))
+                .andExpect(jsonPath("$[0].invoiceAllocations[0].supplierInvoiceId").value(supplierInvoiceId));
+    }
+
+    @Test
     void shouldRunSupplierPoGrInvoicePaymentFlow() throws Exception {
         Long supplierId = createActiveSupplier("SUP-001", "Acme Supplier");
 

@@ -63,6 +63,11 @@ export async function supplierInvoiceAction(id: number, action: 'approve' | 'dis
 }
 
 // ─── Supplier payments ────────────────────────────────────────────────────────
+export async function listSupplierPayments() {
+  const { data } = await gatewayClient.get<SupplierPayment[]>('/supplier-payments')
+  return data
+}
+
 export async function createSupplierPayment(
   payload: CreateSupplierPaymentPayload,
   idempotencyKey: string,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { gatewayClient } from '@core/api/gatewayClient'
-import { openPosSession } from '../api/pos.api'
+import { createSaleOrder, openPosSession } from '../api/pos.api'
 
 describe('pos.api', () => {
   afterEach(() => {
@@ -42,5 +42,24 @@ describe('pos.api', () => {
 
     expect(result.sessionExisted).toBe(true)
     expect(result.session.sessionCode).toBe('POS-001')
+  })
+
+  it('drops legacy currencyCode when creating a sale order', async () => {
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: { id: 5 } } as any)
+
+    await createSaleOrder({
+      posSessionId: 1,
+      orderType: 'DINE_IN',
+      currencyCode: 'VND',
+      note: 'Table 8',
+      lines: [{ productId: 10, qty: 2, note: 'Less ice' }],
+    })
+
+    expect(postSpy).toHaveBeenCalledWith('/sale-orders', {
+      posSessionId: 1,
+      orderType: 'DINE_IN',
+      note: 'Table 8',
+      lines: [{ productId: 10, qty: 2, note: 'Less ice' }],
+    })
   })
 })

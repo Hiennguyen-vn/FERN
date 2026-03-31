@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -107,23 +108,33 @@ public class PosSessionService {
             int limit
     ) {
         posAuthorizer.requireOutletPermission(principal, outletId, PermissionCodes.POS_SESSION_READ);
-        return jdbcTemplate.query("""
+        StringBuilder sql = new StringBuilder("""
                 SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
                        status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
                 FROM pos.pos_session
                 WHERE outlet_id = :outletId
-                  AND (CAST(:terminalId AS VARCHAR) IS NULL OR terminal_id = CAST(:terminalId AS VARCHAR))
-                  AND (:status IS NULL OR status = :status)
-                  AND (:businessDate IS NULL OR business_date = :businessDate)
+                """);
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        params.addValue("outletId", outletId);
+        if (terminalId != null && !terminalId.isBlank()) {
+            sql.append(" AND terminal_id = :terminalId");
+            params.addValue("terminalId", terminalId);
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append(" AND status = :status");
+            params.addValue("status", status);
+        }
+        if (businessDate != null) {
+            sql.append(" AND business_date = :businessDate");
+            params.addValue("businessDate", businessDate);
+        }
+        sql.append("""
+                
                 ORDER BY opened_at DESC
                 LIMIT :limit
-                """, PosSql.params(
-                "outletId", outletId,
-                "terminalId", terminalId,
-                "status", status,
-                "businessDate", businessDate,
-                "limit", limit
-        ), (rs, rowNum) -> store.mapSession(new SessionRecord(
+                """);
+        params.addValue("limit", limit);
+        return jdbcTemplate.query(sql.toString(), params, (rs, rowNum) -> store.mapSession(new SessionRecord(
                 rs.getLong("id"),
                 rs.getString("session_code"),
                 rs.getLong("region_id"),

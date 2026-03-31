@@ -23,6 +23,14 @@ export interface CreateExportPayload {
   payrollRunId?: number
   regionId?: number
   toDate?: string
+  filters?: {
+    fromDate?: string
+    limit?: number
+    outletId?: number
+    payrollRunId?: number
+    regionId?: number
+    toDate?: string
+  }
 }
 
 export interface ExportJob {

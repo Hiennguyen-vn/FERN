@@ -11,9 +11,10 @@ import type {
   ReportPayrollSummaryFilters,
 } from '../model/payrollReport.types'
 import type { CreateExportPayload, ExportJob, ExportPreview } from '../model/reportExport.types'
+import { normalizeExportPayload } from '../services/reportFilter.service'
 
 export async function createExportJob(payload: CreateExportPayload) {
-  const { data } = await gatewayClient.post<ExportJob>('/reports/exports', payload)
+  const { data } = await gatewayClient.post<ExportJob>('/reports/exports', normalizeExportPayload(payload))
   return data
 }
 

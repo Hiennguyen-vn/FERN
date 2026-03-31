@@ -167,7 +167,7 @@ export interface CreateSupplierInvoicePayload {
 // ─── Supplier payment ─────────────────────────────────────────────────────────
 export type PaymentMethod = 'CASH' | 'CARD' | 'EWALLET' | 'BANK_TRANSFER' | 'CHEQUE' | 'VOUCHER'
 
-export interface SupplierPaymentAllocation {
+export interface SupplierPaymentAllocationResponse {
   supplierInvoiceId: number
   allocatedAmount: string
   note: string | null
@@ -183,7 +183,7 @@ export interface SupplierPayment {
   paymentTime: string
   transactionRef: string | null
   note: string | null
-  invoiceAllocations: SupplierPaymentAllocation[]
+  invoiceAllocations: SupplierPaymentAllocationResponse[]
 }
 
 export interface CreateSupplierPaymentPayload {

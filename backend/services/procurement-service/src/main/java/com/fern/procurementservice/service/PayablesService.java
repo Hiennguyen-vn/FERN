@@ -4,6 +4,7 @@ import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
+import com.fern.platform.common.ScopeAccess;
 import com.fern.procurementservice.dto.ProcurementCommands.CreateSupplierInvoiceRequest;
 import com.fern.procurementservice.dto.ProcurementCommands.CreateSupplierPaymentRequest;
 import com.fern.procurementservice.dto.ProcurementCommands.PaymentAllocationInput;
@@ -151,6 +152,15 @@ public class PayablesService {
             throw new ConflictException("Cancelled invoices cannot be disputed");
         }
         return getSupplierInvoice(principal, id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupplierPaymentResponse> listSupplierPayments(FernPrincipal principal, int limit) {
+        procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_PAYMENT_READ);
+        return procurementJdbcRepository.listSupplierPaymentIds(limit).stream()
+                .map(procurementJdbcRepository::getSupplierPayment)
+                .filter(payment -> isSupplierPaymentReadable(principal, payment))
+                .toList();
     }
 
     public SupplierPaymentResponse createSupplierPayment(
@@ -363,6 +373,16 @@ public class PayablesService {
 
     private BigDecimal invoiceAllocatedAmount(Long supplierInvoiceId) {
         return procurementJdbcRepository.invoiceAllocatedAmount(supplierInvoiceId);
+    }
+
+    private boolean isSupplierPaymentReadable(FernPrincipal principal, SupplierPaymentResponse payment) {
+        if (payment.invoiceAllocations().isEmpty()) {
+            return false;
+        }
+        return payment.invoiceAllocations().stream()
+                .map(SupplierPaymentAllocationResponse::supplierInvoiceId)
+                .map(this::requireSupplierInvoice)
+                .allMatch(invoice -> ScopeAccess.allowsRoute(principal, invoice.regionId(), invoice.outletId()));
     }
 
     private record NormalizedSupplierPaymentAllocation(

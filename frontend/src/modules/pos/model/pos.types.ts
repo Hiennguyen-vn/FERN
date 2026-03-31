@@ -127,6 +127,7 @@ export interface ReconcilePosSessionPayload {
 export interface CreateSaleOrderPayload {
   posSessionId: number
   orderType: PosOrderType
+  currencyCode?: string
   note?: string
   lines: Array<{
     productId: number
@@ -160,6 +161,7 @@ export interface OpenSessionResult {
 
 export interface PosSessionFilters {
   outletId: number
+  terminalId?: string | null
   businessDate?: string
   status?: PosSessionStatus | ''
 }
