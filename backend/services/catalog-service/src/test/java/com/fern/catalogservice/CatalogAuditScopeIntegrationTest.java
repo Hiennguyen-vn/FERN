@@ -114,7 +114,10 @@ class CatalogAuditScopeIntegrationTest {
                 1L,
                 "catalog-audit-scope-jti",
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                com.fern.platform.common.FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("catalog-service")
         ), jwtService.accessTokenTtl());
     }
 

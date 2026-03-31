@@ -4,6 +4,42 @@ export type IamUserStatus = 'ACTIVE' | 'INACTIVE' | 'LOCKED' | 'SUSPENDED'
 export type IamRoleStatus = 'ACTIVE' | 'INACTIVE'
 export type PermissionOverrideMode = 'GRANT' | 'DENY'
 
+// ─── Write request types ──────────────────────────────────────────────────────
+export interface CreateUserRequest {
+  username: string
+  password: string
+  fullName: string
+  email?: string | null
+  phone?: string | null
+  status?: IamUserStatus
+}
+
+export interface UpdateUserRequest {
+  fullName?: string | null
+  email?: string | null
+  phone?: string | null
+  status?: IamUserStatus
+}
+
+export interface AssignUserRolesRequest {
+  roleCodes: string[]
+}
+
+export interface AssignUserScopesRequest {
+  system?: boolean
+  regions?: number[]
+  outlets?: number[]
+}
+
+export interface PutUserPermissionOverridesRequest {
+  overrides: Array<{
+    permissionCode: string
+    overrideMode: PermissionOverrideMode
+    reason?: string | null
+    expiresAt?: string | null
+  }>
+}
+
 export interface IamUser {
   id: number
   username: string

@@ -221,8 +221,8 @@ function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const [username, setUsername] = useState('bootstrap-admin')
-  const [password, setPassword] = useState('Admin123!')
+  const [username, setUsername] = useState(import.meta.env.DEV ? 'bootstrap-admin' : '')
+  const [password, setPassword] = useState(import.meta.env.DEV ? 'Admin123!' : '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

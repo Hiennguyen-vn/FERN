@@ -233,6 +233,48 @@ class AuditQueryServiceTest {
     }
 
     @Test
+    void shouldUseAccessibleScopeForDescendantAuditEventAccess() {
+        FernPrincipal principal = new FernPrincipal(
+                7L,
+                "regional-ops",
+                java.util.Set.of("regional_manager"),
+                java.util.Set.of("audit.read"),
+                new ScopeRoots(List.of(10L), List.of()),
+                new ScopeRoots(false, List.of(10L, 11L), List.of(101L, 102L)),
+                1L,
+                1L,
+                "audit-jti-accessible",
+                com.fern.platform.common.FernPrincipalType.USER
+        );
+        AuditEventRow row = new AuditEventRow(
+                10L,
+                "event-1",
+                "catalog-service",
+                "catalog",
+                "catalog.product.changed",
+                Instant.parse("2026-03-27T10:00:00Z"),
+                Instant.parse("2026-03-27T10:00:01Z"),
+                "idem-1",
+                "corr-1",
+                11L,
+                102L,
+                3L,
+                "UPDATE",
+                "PRODUCT",
+                "5",
+                "SUCCESS",
+                null,
+                null,
+                Map.of()
+        );
+        when(auditJdbcRepository.findAuditEventById(10L)).thenReturn(Optional.of(row));
+
+        AuditEventDetailResponse response = auditQueryService.getAuditEvent(principal, 10L, false);
+
+        assertThat(response.id()).isEqualTo(10L);
+    }
+
+    @Test
     void shouldApplyPrincipalScopeInRequestTraceQuery() {
         FernPrincipal principal = new FernPrincipal(
                 8L,

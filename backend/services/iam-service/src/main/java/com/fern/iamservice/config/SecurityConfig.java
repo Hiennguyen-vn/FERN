@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .addFilterBefore(
                         new FernJwtAuthenticationFilter(
                                 jwtService,
-                                new RedisFernTokenAcceptanceValidator(redisTemplate, serviceName, jwtProperties.getUserTokenIssuer())
+                                new RedisFernTokenAcceptanceValidator(redisTemplate, serviceName, jwtProperties.getGatewayRelayUserIssuer())
                         ),
                         UsernamePasswordAuthenticationFilter.class
                 )

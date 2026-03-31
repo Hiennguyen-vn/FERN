@@ -1,5 +1,6 @@
 package com.fern.iamservice.service;
 
+import com.fern.iamservice.client.OrgScopeExpansionClient;
 import com.fern.iamservice.domain.UserAccountEntity;
 import com.fern.iamservice.domain.UserStatus;
 import com.fern.iamservice.dto.AuthLoginRequest;
@@ -31,6 +32,7 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final LoginProtectionService loginProtectionService;
     private final IamAuditService iamAuditService;
+    private final OrgScopeExpansionClient orgScopeExpansionClient;
     private final Clock clock;
 
     public AuthService(
@@ -43,6 +45,7 @@ public class AuthService {
             RefreshTokenService refreshTokenService,
             LoginProtectionService loginProtectionService,
             IamAuditService iamAuditService,
+            OrgScopeExpansionClient orgScopeExpansionClient,
             Clock clock
     ) {
         this.userAccountService = userAccountService;
@@ -54,6 +57,7 @@ public class AuthService {
         this.refreshTokenService = refreshTokenService;
         this.loginProtectionService = loginProtectionService;
         this.iamAuditService = iamAuditService;
+        this.orgScopeExpansionClient = orgScopeExpansionClient;
         this.clock = clock;
     }
 
@@ -141,6 +145,7 @@ public class AuthService {
         var roleCodes = userViewService.roleCodes(user.getId());
         var permissionCodes = userViewService.permissionCodes(user.getId());
         var scopeRoots = userViewService.scopeRoots(user.getId());
+        var accessibleScope = orgScopeExpansionClient.expand(scopeRoots);
         long policyVersion = policyVersionService.currentVersion();
         long scopeVersion = scopeVersionBridgeService.currentVersion();
         Instant now = clock.instant();
@@ -152,6 +157,7 @@ public class AuthService {
                 roleCodes,
                 permissionCodes,
                 scopeRoots,
+                accessibleScope,
                 policyVersion,
                 scopeVersion,
                 UUID.randomUUID().toString(),

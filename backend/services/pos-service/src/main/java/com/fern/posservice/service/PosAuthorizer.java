@@ -2,6 +2,7 @@ package com.fern.posservice.service;
 
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ForbiddenException;
+import com.fern.platform.common.ScopeAccess;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,24 +15,21 @@ public class PosAuthorizer {
 
     public void requireOutletPermission(FernPrincipal principal, Long outletId, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system()) {
-            return;
-        }
-        if (!principal.scopeRoots().outlets().contains(outletId)) {
+        if (!ScopeAccess.allowsOutlet(principal, outletId)) {
             throw new ForbiddenException("Outlet is outside the current scope");
         }
     }
 
     public void requireRoutePermission(FernPrincipal principal, Long regionId, Long outletId, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system()) {
-            return;
-        }
-        if (regionId != null && !principal.scopeRoots().regions().contains(regionId)) {
-            throw new ForbiddenException("Region is outside the current scope");
-        }
-        if (outletId != null && !principal.scopeRoots().outlets().contains(outletId)) {
-            throw new ForbiddenException("Outlet is outside the current scope");
+        if (!ScopeAccess.allowsRoute(principal, regionId, outletId)) {
+            if (outletId != null) {
+                throw new ForbiddenException("Outlet is outside the current scope");
+            }
+            if (regionId != null) {
+                throw new ForbiddenException("Region is outside the current scope");
+            }
+            throw new ForbiddenException("Resource is outside the current scope");
         }
     }
 }

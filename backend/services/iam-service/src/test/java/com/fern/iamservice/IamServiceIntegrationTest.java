@@ -1,11 +1,13 @@
 package com.fern.iamservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.iamservice.repository.AuthSessionRepository;
+import com.fern.iamservice.client.OrgScopeExpansionClient;
 import com.fern.platform.audit.AuditEvent;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.SecurityEvent;
@@ -78,6 +81,9 @@ class IamServiceIntegrationTest {
     @MockBean
     private AuditEventPublisher auditEventPublisher;
 
+    @MockBean
+    private OrgScopeExpansionClient orgScopeExpansionClient;
+
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("iam"));
@@ -104,6 +110,10 @@ class IamServiceIntegrationTest {
         redisTemplate.delete("fern:iam:login-fail:bootstrap-admin");
         redisTemplate.delete("fern:iam:login-lock:bootstrap-admin");
         reset(auditEventPublisher);
+        when(orgScopeExpansionClient.expand(any())).thenAnswer(invocation -> {
+            ScopeRoots roots = invocation.getArgument(0);
+            return roots == null ? ScopeRoots.empty() : roots;
+        });
     }
 
     @Test
@@ -121,7 +131,7 @@ class IamServiceIntegrationTest {
         String accessToken = loginJson.get("accessToken").asText();
         String refreshToken = loginJson.get("refreshToken").asText();
         Long bootstrapAdminId = loginJson.get("user").get("id").asLong();
-        String adminToken = accessToken;
+        String adminToken = relayForIam(accessToken);
 
         MvcResult createUserResult = mockMvc.perform(post("/users")
                         .header("Authorization", "Bearer " + adminToken)
@@ -213,6 +223,7 @@ class IamServiceIntegrationTest {
         JsonNode refreshJson = objectMapper.readTree(refreshResult.getResponse().getContentAsString());
         String rotatedAccessToken = refreshJson.get("accessToken").asText();
         String rotatedRefreshToken = refreshJson.get("refreshToken").asText();
+        String rotatedRelayAccessToken = relayForIam(rotatedAccessToken);
 
         assertThat(rotatedRefreshToken).isNotEqualTo(refreshToken);
         assertThat(authSessionRepository.findAllByUserIdAndRevokedAtIsNull(bootstrapAdminId)).hasSize(1);
@@ -220,7 +231,7 @@ class IamServiceIntegrationTest {
         assertThat(totalSessions).isEqualTo(2);
 
         mockMvc.perform(post("/auth/logout")
-                        .header("Authorization", "Bearer " + rotatedAccessToken)
+                        .header("Authorization", "Bearer " + rotatedRelayAccessToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"refreshToken":"%s"}
@@ -536,7 +547,7 @@ class IamServiceIntegrationTest {
                                 """))
                 .andExpect(status().isOk());
 
-        String staleToken = login("role-revoke-user", "Role123!").get("accessToken").asText();
+        String staleToken = relayForIam(login("role-revoke-user", "Role123!").get("accessToken").asText());
 
         mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
                         .header("Authorization", "Bearer " + staleToken))
@@ -637,7 +648,7 @@ class IamServiceIntegrationTest {
                                 """))
                 .andExpect(status().isOk());
 
-        String staleToken = login("scope-revoke-user", "Scope123!").get("accessToken").asText();
+        String staleToken = relayForIam(login("scope-revoke-user", "Scope123!").get("accessToken").asText());
 
         mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
                         .header("Authorization", "Bearer " + staleToken))
@@ -692,7 +703,7 @@ class IamServiceIntegrationTest {
     @Test
     void shouldPublishLogoutSecurityEventWithCorrelationAndClientMetadata() throws Exception {
         JsonNode login = loginAsBootstrapAdmin();
-        String accessToken = login.get("accessToken").asText();
+        String accessToken = relayForIam(login.get("accessToken").asText());
         String refreshToken = login.get("refreshToken").asText();
         reset(auditEventPublisher);
 
@@ -777,7 +788,33 @@ class IamServiceIntegrationTest {
                 "iam-test-bootstrap-" + policyVersion + "-" + scopeVersion + "-" + Instant.now().toEpochMilli(),
                 Instant.now(),
                 Instant.now().plusSeconds(900),
-                FernPrincipalType.USER
+                FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("iam-service")
+        ), jwtService.accessTokenTtl());
+    }
+
+    private String relayForIam(String publicAccessToken) {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        FernJwtClaims claims = jwtService.decode(publicAccessToken);
+        return jwtService.encode(new FernJwtClaims(
+                claims.userId(),
+                claims.username(),
+                claims.roles(),
+                claims.permissions(),
+                claims.scopeRoots(),
+                claims.accessibleScope(),
+                claims.policyVersion(),
+                claims.scopeVersion(),
+                claims.jti(),
+                claims.authTime(),
+                claims.expiresAt(),
+                claims.principalType(),
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("iam-service")
         ), jwtService.accessTokenTtl());
     }
 

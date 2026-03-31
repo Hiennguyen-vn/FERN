@@ -7,6 +7,7 @@ import type {
   RequestTraceDetail,
   RequestTraceFilters,
   RequestTraceSummary,
+  SecurityEventDetail,
   SecurityEventSummary,
   SecurityEventsFilters,
 } from '../model/audit.types'
@@ -26,6 +27,12 @@ export const auditApi = {
     return gatewayClient
       .get<AuditListResponse<SecurityEventSummary>>('/audit/security-events', { params: filters })
       .then((response) => response.data.items)
+  },
+
+  getSecurityEvent(eventId: string) {
+    return gatewayClient
+      .get<SecurityEventDetail>(`/audit/security-events/${eventId}`)
+      .then((response) => response.data)
   },
 
   listRequestTraces(filters: RequestTraceFilters = {}) {

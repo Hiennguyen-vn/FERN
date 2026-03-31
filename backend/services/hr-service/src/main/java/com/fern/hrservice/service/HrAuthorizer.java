@@ -2,6 +2,7 @@ package com.fern.hrservice.service;
 
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ForbiddenException;
+import com.fern.platform.common.ScopeAccess;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,14 +15,14 @@ public class HrAuthorizer {
 
     public void requireSystemPermission(FernPrincipal principal, String permission) {
         requirePermission(principal, permission);
-        if (!principal.scopeRoots().system()) {
+        if (!ScopeAccess.isSystemScoped(principal)) {
             throw new ForbiddenException("System scope is required");
         }
     }
 
     public void requireRegionPermission(FernPrincipal principal, Long regionId, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system() || principal.scopeRoots().regions().contains(regionId)) {
+        if (ScopeAccess.allowsRegion(principal, regionId)) {
             return;
         }
         throw new ForbiddenException("Region is outside the current scope");
@@ -29,7 +30,7 @@ public class HrAuthorizer {
 
     public void requireOutletPermission(FernPrincipal principal, Long outletId, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system() || principal.scopeRoots().outlets().contains(outletId)) {
+        if (ScopeAccess.allowsOutlet(principal, outletId)) {
             return;
         }
         throw new ForbiddenException("Outlet is outside the current scope");

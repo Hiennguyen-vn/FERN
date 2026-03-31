@@ -27,9 +27,9 @@ import {
   formatReportDateLabel as formatDate,
 } from '../services/reportsReadModel.service'
 import {
-  canExportReports,
+  canCreateExport,
   canPreviewExport,
-  canReadReports,
+  canReadInventoryReport,
   getExportStatusDescription,
 } from '../services/reportsUiPolicy.service'
 
@@ -56,8 +56,8 @@ export function InventoryReportPage() {
   usePageTitle('Inventory Report')
   const principal = usePrincipal()
   const { selectedOutletId } = useScopeContext()
-  const canRead = canReadReports(principal)
-  const canExport = canExportReports(principal)
+  const canRead = canReadInventoryReport(principal)
+  const canExport = canCreateExport(principal, 'INVENTORY_MOVEMENT_FACT')
   const createExport = useCreateExportJob()
   const [lastExportJob, setLastExportJob] = useState<Awaited<ReturnType<typeof createExport.mutateAsync>> | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -146,7 +146,7 @@ export function InventoryReportPage() {
   if (!canRead) {
     return (
       <DashboardLayout title="Inventory Report" description="Operational inventory reporting workspace.">
-        <PermissionDeniedInline message="Bạn cần report.read hoặc report.export để mở inventory report." />
+        <PermissionDeniedInline message="Bạn cần report.read để mở inventory report." />
       </DashboardLayout>
     )
   }
@@ -216,6 +216,12 @@ export function InventoryReportPage() {
     >
       <ReadonlyBanner message="Inventory report dùng read-side operational APIs hiện có: stock balances cho snapshot và inventory transactions cho movement breakdown. Chọn outlet rõ ràng để giữ report ổn định." />
 
+      {!canExport ? (
+        <div className="inline-banner inline-banner-warning" role="status">
+          Bạn có thể đọc inventory report nhưng không thể queue inventory export vì thiếu report.export.
+        </div>
+      ) : null}
+
       {!selectedOutletId ? (
         <div className="inline-banner inline-banner-warning" role="status">
           Chưa chọn outlet ở app shell. Inventory report cần outlet rõ ràng để query stock balances và inventory transactions.
@@ -278,11 +284,11 @@ export function InventoryReportPage() {
 
       {lastExportJob ? (
         <AsyncJobProgress
-          actionLabel={canPreviewExport(lastExportJob) ? 'Open preview' : undefined}
+          actionLabel={canPreviewExport(principal, lastExportJob) ? 'Open preview' : undefined}
           completedAt={lastExportJob.completedAt}
           description={getExportStatusDescription(lastExportJob)}
           onAction={
-            canPreviewExport(lastExportJob)
+            canPreviewExport(principal, lastExportJob)
               ? () => {
                   window.location.href = `/reports/export-jobs/${lastExportJob.exportJobId}/preview`
                 }

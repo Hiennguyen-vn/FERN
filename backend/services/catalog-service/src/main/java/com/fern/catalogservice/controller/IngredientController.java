@@ -29,9 +29,9 @@ public class IngredientController {
     }
 
     @GetMapping
-    public List<IngredientResponse> list(@AuthenticationPrincipal FernPrincipal principal) {
+    public List<IngredientResponse> list(@AuthenticationPrincipal FernPrincipal principal, @org.springframework.web.bind.annotation.RequestParam(required = false) Integer limit) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_INGREDIENT_READ);
-        return ingredientService.list();
+        return ingredientService.list(com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @GetMapping("/{id}")

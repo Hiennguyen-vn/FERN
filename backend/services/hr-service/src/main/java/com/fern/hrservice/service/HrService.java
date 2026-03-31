@@ -24,6 +24,7 @@ import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
+import com.fern.platform.common.ScopeAccess;
 import com.fern.platform.contracts.AttendanceApprovedEvent;
 import com.fern.platform.observability.CorrelationId;
 import java.math.BigDecimal;
@@ -269,11 +270,11 @@ public class HrService {
                 WHERE employee_id = :employeeId
                 ORDER BY start_date DESC, id DESC
                 """, params("employeeId", employeeId), (rs, rowNum) -> mapContract(rs));
-        if (principal != null && principal.scopeRoots().system()) {
+        if (ScopeAccess.isSystemScoped(principal)) {
             return contracts;
         }
         return contracts.stream()
-                .filter(contract -> contract.regionId() != null && principal != null && principal.scopeRoots().regions().contains(contract.regionId()))
+                .filter(contract -> ScopeAccess.allowsRegion(principal, contract.regionId()))
                 .toList();
     }
 
@@ -296,7 +297,7 @@ public class HrService {
                 rs.getBoolean("is_primary"),
                 rs.getString("status")
         ));
-        if (principal != null && principal.scopeRoots().system()) {
+        if (ScopeAccess.isSystemScoped(principal)) {
             return assignments;
         }
         return assignments.stream()
@@ -320,8 +321,8 @@ public class HrService {
         return hrAttendanceService.getAttendanceApproval(principal, shiftAssignmentId);
     }
 
-    public List<AttendanceApprovalResponse> listAttendanceApprovals(FernPrincipal principal, Long regionId, Long outletId) {
-        return hrAttendanceService.listAttendanceApprovals(principal, regionId, outletId);
+    public List<AttendanceApprovalResponse> listAttendanceApprovals(FernPrincipal principal, Long regionId, Long outletId, int limit) {
+        return hrAttendanceService.listAttendanceApprovals(principal, regionId, outletId, limit);
     }
 
     @Transactional(readOnly = true)
@@ -627,11 +628,11 @@ public class HrService {
     }
 
     private boolean isRegionVisible(FernPrincipal principal, Long regionId) {
-        return principal != null && regionId != null && principal.scopeRoots().regions().contains(regionId);
+        return ScopeAccess.allowsRegion(principal, regionId);
     }
 
     private boolean isOutletVisible(FernPrincipal principal, Long outletId) {
-        return principal != null && outletId != null && principal.scopeRoots().outlets().contains(outletId);
+        return ScopeAccess.allowsOutlet(principal, outletId);
     }
 
     private Instant instant(ResultSet rs, String column) throws java.sql.SQLException {

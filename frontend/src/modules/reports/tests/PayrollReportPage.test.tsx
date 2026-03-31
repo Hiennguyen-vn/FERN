@@ -25,11 +25,11 @@ describe('PayrollReportPage', () => {
     resetTestStores()
   })
 
-  it('renders payroll summary and masks employee amounts without detail permission', async () => {
+  it('renders payroll summary for a read-only payroll user and keeps export disabled', async () => {
     const user = userEvent.setup()
     setAuthenticatedSession({
       principal: {
-        permissions: [permissionConstants.report.payrollRead, permissionConstants.report.payrollExport],
+        permissions: [permissionConstants.report.payrollRead],
       },
     })
     mocks.useCreateExportJob.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
@@ -93,15 +93,48 @@ describe('PayrollReportPage', () => {
     renderWithProviders(<PayrollReportPage />)
 
     expect(screen.getByRole('heading', { name: 'Payroll Report' })).toBeInTheDocument()
-    expect(screen.getByText('Payroll runs')).toBeInTheDocument()
+    expect(screen.getByText(/không thể queue payroll export/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Queue payroll export' })).toBeDisabled()
     expect(screen.getByText('Employee-level payroll amounts đang bị masked vì thiếu finance.payroll.detail.read.')).toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('Payroll run'), '55')
     expect(screen.getByText('Employee results')).toBeInTheDocument()
     expect(screen.getAllByText('••••••').length).toBeGreaterThan(0)
   })
 
-  it('shows permission denied without payroll report permissions', () => {
-    setAuthenticatedSession({ principal: { permissions: [] } })
+  it('enables payroll export for a read-plus-export user', () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.payrollRead, permissionConstants.report.payrollExport],
+      },
+    })
+    mocks.useCreateExportJob.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
+    mocks.usePayrollReport.mockReturnValue({
+      runDetailQuery: { data: null, error: null, isLoading: false, refetch: vi.fn() },
+      runsQuery: { data: [], error: null, isLoading: false, refetch: vi.fn() },
+      summaryQuery: {
+        data: {
+          fromDate: '2026-03-01',
+          regionId: 1,
+          runCount: 1,
+          toDate: '2026-03-31',
+          totalExpense: 12000000,
+          totalGrossPay: 15000000,
+          totalNetPay: 12000000,
+          totalTax: 1000000,
+        },
+        error: null,
+        isLoading: false,
+        refetch: vi.fn(),
+      },
+    })
+
+    renderWithProviders(<PayrollReportPage />)
+
+    expect(screen.getByRole('button', { name: 'Queue payroll export' })).toBeEnabled()
+  })
+
+  it('shows permission denied for payroll export-only users', () => {
+    setAuthenticatedSession({ principal: { permissions: [permissionConstants.report.payrollExport] } })
     mocks.useCreateExportJob.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
     mocks.usePayrollReport.mockReturnValue({
       runDetailQuery: { data: null, error: null, isLoading: false, refetch: vi.fn() },
@@ -112,5 +145,6 @@ describe('PayrollReportPage', () => {
     renderWithProviders(<PayrollReportPage />)
 
     expect(screen.getByText('Permission denied')).toBeInTheDocument()
+    expect(screen.getByText('Bạn cần report.payroll.read để mở payroll report.')).toBeInTheDocument()
   })
 })

@@ -35,10 +35,11 @@ import {
 } from '../services/reportsReadModel.service'
 import {
   canDownloadExport,
-  canExportPayrollReports,
+  canCreateExport,
+  canOpenExportJob,
   canPreviewExport,
   canReadPayrollReportDetail,
-  canReadPayrollReports,
+  canReadPayrollReport,
   getExportStatusDescription,
 } from '../services/reportsUiPolicy.service'
 
@@ -56,9 +57,8 @@ export function PayrollReportPage() {
   usePageTitle('Payroll Report')
   const principal = usePrincipal()
   const { regionIds, selectedRegionId } = useScopeContext()
-  const canRead = canReadPayrollReports(principal)
+  const canRead = canReadPayrollReport(principal)
   const canReadDetail = canReadPayrollReportDetail(principal)
-  const canExport = canExportPayrollReports(principal)
   const createExport = useCreateExportJob()
   const [lastExportJob, setLastExportJob] = useState<Awaited<ReturnType<typeof createExport.mutateAsync>> | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -72,6 +72,7 @@ export function PayrollReportPage() {
   )
 
   const regionId = regionFilter.trim() ? Number(regionFilter) : undefined
+  const canExport = canCreateExport(principal, selectedRunId ? 'PAYROLL_RUN' : 'PAYROLL_SUMMARY')
   const payrollReport = usePayrollReport(
     regionId && fromDate && toDate
       ? {
@@ -150,7 +151,7 @@ export function PayrollReportPage() {
   if (!canRead) {
     return (
       <DashboardLayout title="Payroll Report" description="Payroll reporting workspace for HR/Finance alignment.">
-        <PermissionDeniedInline message="Bạn cần report.payroll.read hoặc report.payroll.export để mở payroll report." />
+        <PermissionDeniedInline message="Bạn cần report.payroll.read để mở payroll report." />
       </DashboardLayout>
     )
   }
@@ -203,6 +204,12 @@ export function PayrollReportPage() {
       }
     >
       <ReadonlyBanner message="Payroll report ưu tiên summary + run inspection. Employee-level money fields sẽ bị masked nếu principal thiếu finance.payroll.detail.read." />
+
+      {!canExport ? (
+        <div className="inline-banner inline-banner-warning" role="status">
+          Bạn có thể đọc payroll report nhưng không thể queue payroll export vì thiếu report.payroll.export.
+        </div>
+      ) : null}
 
       <FilterBar
         actions={
@@ -271,11 +278,11 @@ export function PayrollReportPage() {
 
       {lastExportJob ? (
         <AsyncJobProgress
-          actionLabel={canPreviewExport(lastExportJob) ? 'Open preview' : undefined}
+          actionLabel={canPreviewExport(principal, lastExportJob) ? 'Open preview' : undefined}
           completedAt={lastExportJob.completedAt}
           description={getExportStatusDescription(lastExportJob)}
           onAction={
-            canPreviewExport(lastExportJob)
+            canPreviewExport(principal, lastExportJob)
               ? () => {
                   window.location.href = `/reports/export-jobs/${lastExportJob.exportJobId}/preview`
                 }
@@ -409,14 +416,16 @@ export function PayrollReportPage() {
         </>
       ) : null}
 
-      {lastExportJob && canDownloadExport(lastExportJob) ? (
+      {lastExportJob && canOpenExportJob(principal, lastExportJob) ? (
         <div className="form-actions align-start">
           <Button asChild size="sm" variant="secondary">
             <Link to={`/reports/export-jobs/${lastExportJob.exportJobId}`}>Job detail</Link>
           </Button>
-          <Button asChild size="sm" variant="ghost">
-            <Link to={`/reports/export-jobs/${lastExportJob.exportJobId}/download`}>Download export</Link>
-          </Button>
+          {canDownloadExport(principal, lastExportJob) ? (
+            <Button asChild size="sm" variant="ghost">
+              <Link to={`/reports/export-jobs/${lastExportJob.exportJobId}/download`}>Download export</Link>
+            </Button>
+          ) : null}
         </div>
       ) : null}
     </DashboardLayout>

@@ -3,6 +3,7 @@ package com.fern.apigateway.security;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.SecurityEvent;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.observability.CorrelationId;
 import com.fern.platform.security.FernJwtClaimValidationRules;
 import com.fern.platform.security.FernJwtClaims;
@@ -32,6 +33,7 @@ import reactor.core.scheduler.Schedulers;
 @Component
 public class GatewaySecurityFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = List.of("/auth/login", "/auth/refresh", "/actuator/health");
+    private static final String INTERNAL_PATH_PREFIX = "/internal/";
     private static final Logger LOGGER = LoggerFactory.getLogger(GatewaySecurityFilter.class);
     private static final RedisScript<Long> RATE_LIMIT_SCRIPT = RedisScript.of("""
             local current = redis.call('INCR', KEYS[1])
@@ -48,7 +50,9 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
     private final Counter outboxEnqueueFailureCounter;
     private final int trustedProxyCount;
     private final String currentServiceName;
-    private final String expectedUserIssuer;
+    private final String expectedPublicUserIssuer;
+    private final GatewayRouteTargetServiceResolver routeTargetServiceResolver;
+    private final GatewayUserRelayTokenSupport relayTokenSupport;
 
     public GatewaySecurityFilter(
             FernJwtService jwtService,
@@ -56,6 +60,8 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
             AuditEventPublisher auditEventPublisher,
             MeterRegistry meterRegistry,
             FernJwtProperties jwtProperties,
+            GatewayRouteTargetServiceResolver routeTargetServiceResolver,
+            GatewayUserRelayTokenSupport relayTokenSupport,
             @org.springframework.beans.factory.annotation.Value("${spring.application.name}") String currentServiceName,
             @org.springframework.beans.factory.annotation.Value("${fern.security.trusted-proxy-count:0}") int trustedProxyCount
     ) {
@@ -69,12 +75,24 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                 .register(meterRegistry);
         this.trustedProxyCount = trustedProxyCount;
         this.currentServiceName = currentServiceName;
-        this.expectedUserIssuer = jwtProperties.getUserTokenIssuer();
+        this.expectedPublicUserIssuer = jwtProperties.getUserTokenIssuer();
+        this.routeTargetServiceResolver = routeTargetServiceResolver;
+        this.relayTokenSupport = relayTokenSupport;
     }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getPath().value();
+        if (path.startsWith(INTERNAL_PATH_PREFIX) || path.equals("/internal")) {
+            authFailureCounter.increment();
+            return enqueueSecurityEvent(
+                    exchange,
+                    null,
+                    "gateway.auth.internal_path_blocked",
+                    "Access to internal paths is forbidden",
+                    Map.of("path", path)
+            ).then(writeError(exchange, HttpStatus.FORBIDDEN, "Forbidden"));
+        }
         if (PUBLIC_PATHS.contains(path)) {
             return checkRateLimit("gateway:public:" + path + ":" + clientKey(exchange), 10).flatMap(allowed -> {
                 if (!allowed) {
@@ -106,7 +124,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
         FernJwtClaims claims;
         try {
             claims = jwtService.decode(authorization.substring(7));
-            FernJwtClaimValidationRules.validateIssuerAndAudience(claims, currentServiceName, expectedUserIssuer);
+            FernJwtClaimValidationRules.validateGatewayIngress(claims, currentServiceName, expectedPublicUserIssuer);
         } catch (Exception exception) {
             authFailureCounter.increment();
             return enqueueSecurityEvent(
@@ -143,12 +161,29 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                                             Map.of("path", path, "scope", "user", "username", principal.username())
                                     ).then(writeError(exchange, HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded"));
                                 }
+                                String forwardedAuthorization = authorization;
+                                if (claims.principalType() == FernPrincipalType.USER) {
+                                    String targetService = routeTargetServiceResolver.resolve(exchange);
+                                    if (targetService == null || targetService.isBlank()) {
+                                        authFailureCounter.increment();
+                                        return enqueueSecurityEvent(
+                                                exchange,
+                                                principal,
+                                                "gateway.auth.unmapped_downstream_route",
+                                                "Unable to determine downstream route target",
+                                                Map.of("path", path)
+                                        ).then(writeError(exchange, HttpStatus.BAD_GATEWAY, "Unable to determine downstream route target"));
+                                    }
+                                    forwardedAuthorization = "Bearer " + relayTokenSupport.issueRelayToken(claims, targetService);
+                                }
+                                String relayAuthorization = forwardedAuthorization;
                                 ServerWebExchange mutated = exchange.mutate().request(request -> request
                                                 .headers(headers -> {
                                                     String correlationId = exchange.getRequest().getHeaders().getFirst(CorrelationId.HEADER);
                                                     if (correlationId != null && !correlationId.isBlank()) {
                                                         headers.set(CorrelationId.HEADER, correlationId);
                                                     }
+                                                    headers.set(HttpHeaders.AUTHORIZATION, relayAuthorization);
                                                     headers.set("X-Fern-User-Id", String.valueOf(principal.userId()));
                                                     headers.set("X-Fern-Username", principal.username());
                                                     headers.set("X-Fern-Roles", String.join(",", principal.roles()));

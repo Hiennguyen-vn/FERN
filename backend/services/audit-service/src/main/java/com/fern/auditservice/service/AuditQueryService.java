@@ -17,6 +17,8 @@ import com.fern.auditservice.repository.SecurityEventRow;
 import com.fern.platform.audit.SensitiveDataMasker;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ResourceNotFoundException;
+import com.fern.platform.common.ScopeAccess;
+import com.fern.platform.common.ScopeRoots;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -271,29 +273,21 @@ public class AuditQueryService {
     }
 
     private boolean canAccess(FernPrincipal principal, Long regionId, Long outletId) {
-        if (principal == null || principal.scopeRoots() == null) {
-            return false;
-        }
-        if (principal.scopeRoots().system()) {
-            return true;
-        }
-        if (outletId != null && principal.scopeRoots().outlets().contains(outletId)) {
-            return true;
-        }
-        return regionId != null && principal.scopeRoots().regions().contains(regionId);
+        return ScopeAccess.allowsRoute(principal, regionId, outletId);
     }
 
     private boolean canAccessGlobal(FernPrincipal principal) {
-        return principal != null && principal.scopeRoots() != null && principal.scopeRoots().system();
+        return ScopeAccess.isSystemScoped(principal);
     }
 
     private AuditAccessScope accessScope(FernPrincipal principal) {
-        if (principal == null || principal.scopeRoots() == null) {
+        ScopeRoots scope = ScopeAccess.accessibleScope(principal);
+        if (!scope.system() && scope.regions().isEmpty() && scope.outlets().isEmpty()) {
             return new AuditAccessScope(false, List.of(), List.of());
         }
-        if (principal.scopeRoots().system()) {
+        if (scope.system()) {
             return AuditAccessScope.unrestricted();
         }
-        return new AuditAccessScope(false, principal.scopeRoots().regions(), principal.scopeRoots().outlets());
+        return new AuditAccessScope(false, scope.regions(), scope.outlets());
     }
 }

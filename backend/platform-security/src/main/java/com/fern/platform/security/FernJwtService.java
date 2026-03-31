@@ -60,6 +60,10 @@ public class FernJwtService {
         scopeRoots.put("system", claims.scopeRoots().system());
         scopeRoots.put("regions", claims.scopeRoots().regions());
         scopeRoots.put("outlets", claims.scopeRoots().outlets());
+        Map<String, Object> accessibleScope = new HashMap<>();
+        accessibleScope.put("system", claims.accessibleScope().system());
+        accessibleScope.put("regions", claims.accessibleScope().regions());
+        accessibleScope.put("outlets", claims.accessibleScope().outlets());
 
         Builder builder = JwtClaimsSet.builder()
                 .subject(claims.username())
@@ -71,6 +75,7 @@ public class FernJwtService {
                 .claim("roles", claims.roles())
                 .claim("permissions", claims.permissions())
                 .claim("scope_roots", scopeRoots)
+                .claim("accessible_scope", accessibleScope)
                 .claim("policy_version", claims.policyVersion())
                 .claim("scope_version", claims.scopeVersion())
                 .claim("auth_time", claims.authTime().getEpochSecond())

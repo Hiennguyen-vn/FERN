@@ -17,6 +17,7 @@ import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.security.FernJwtClaims;
+import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.testsupport.FernIntegrationContainers;
@@ -452,6 +453,23 @@ class FinanceSecurityIntegrationTest {
 
     @Test
     @Tag("security-gap")
+    void shouldRejectDirectIamIssuedUserTokenOverHttp() throws Exception {
+        long periodId = seedPayrollPeriod(1L, "PP-DIRECT-IAM-001");
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        mockMvc.perform(get("/payroll-periods/{id}", periodId)
+                        .header("Authorization", "Bearer " + userTokenWithIdentity(
+                                Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
+                                new ScopeRoots(false, List.of(1L), List.of()),
+                                FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER,
+                                Set.of("finance-service")
+                        )))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Tag("security-gap")
     void shouldRejectUserTokenWithWrongAudienceOverHttp() throws Exception {
         long periodId = seedPayrollPeriod(1L, "PP-WRONG-AUD-001");
         redisTemplate.opsForValue().set("fern:versions:policy", "1");
@@ -461,7 +479,7 @@ class FinanceSecurityIntegrationTest {
                         .header("Authorization", "Bearer " + userTokenWithIdentity(
                                 Set.of(PermissionCodes.FINANCE_PAYROLL_READ),
                                 new ScopeRoots(false, List.of(1L), List.of()),
-                                "iam-service",
+                                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
                                 Set.of("hr-service")
                         )))
                 .andExpect(status().isUnauthorized());
@@ -569,7 +587,7 @@ class FinanceSecurityIntegrationTest {
         );
 
         var response = financeReadController.getPayrollRun(principal, runId);
-        var listed = financeReadController.listPayrollRuns(principal, 1L);
+        var listed = financeReadController.listPayrollRuns(principal, 1L, null);
 
         assertThat(response.employees()).isEmpty();
         assertThat(listed).singleElement().satisfies(run -> assertThat(run.employees()).isEmpty());
@@ -584,7 +602,7 @@ class FinanceSecurityIntegrationTest {
         );
 
         var response = financeReadController.getPayrollRun(principal, runId);
-        var listed = financeReadController.listPayrollRuns(principal, 1L);
+        var listed = financeReadController.listPayrollRuns(principal, 1L, null);
 
         assertThat(response.employees()).hasSize(1);
         assertThat(response.employees().getFirst().allocations()).hasSize(1);
@@ -638,7 +656,9 @@ class FinanceSecurityIntegrationTest {
                         UUID.randomUUID().toString(),
                         now,
                         now.plus(jwtService.accessTokenTtl()),
-                        com.fern.platform.common.FernPrincipalType.USER
+                        com.fern.platform.common.FernPrincipalType.USER,
+                        FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                        Set.of("finance-service")
                 ),
                 jwtService.accessTokenTtl()
         );

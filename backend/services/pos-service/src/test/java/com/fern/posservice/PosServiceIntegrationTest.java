@@ -11,6 +11,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -74,6 +75,18 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 class PosServiceIntegrationTest {
+    private static final Set<String> POS_FULL_ACCESS_PERMISSIONS = Set.of(
+            "pos.session.read",
+            "pos.session.open",
+            "pos.session.close",
+            "pos.session.reconcile",
+            "pos.order.read",
+            "pos.order.create",
+            "pos.order.update",
+            "pos.order.cancel",
+            "pos.order.complete",
+            "catalog.internal.resolve"
+    );
     private static HttpServer catalogServer;
     private static HttpServer inventoryServer;
     private static HttpServer orgServer;
@@ -322,6 +335,14 @@ class PosServiceIntegrationTest {
                           "regionId": 1
                         }
                         """.getBytes();
+            } else if ("/outlets/102".equals(path)) {
+                status = 200;
+                body = """
+                        {
+                          "id": 102,
+                          "regionId": 11
+                        }
+                        """.getBytes();
             }
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(status, body.length);
@@ -384,22 +405,7 @@ class PosServiceIntegrationTest {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         properties.setAllowInsecureDefaultSecret(true);
-        token = issueToken(
-                Set.of(
-                        "pos.session.read",
-                        "pos.session.open",
-                        "pos.session.close",
-                        "pos.session.reconcile",
-                        "pos.order.read",
-                        "pos.order.create",
-                        "pos.order.update",
-                        "pos.order.cancel",
-                        "pos.order.complete",
-                        "catalog.internal.resolve"
-                ),
-                List.of(1L),
-                List.of(101L)
-        );
+        token = issueToken(POS_FULL_ACCESS_PERMISSIONS, List.of(1L), List.of(101L));
     }
 
     @Test
@@ -1785,25 +1791,109 @@ class PosServiceIntegrationTest {
     }
 
     @Test
-    void shouldRejectMismatchedRegionScopeEvenWhenOutletMatches() throws Exception {
-        String wrongRegionToken = issueToken(
-                Set.of("pos.session.open"),
-                List.of(999L),
-                List.of(101L)
+    void shouldAllowSessionOpenForSystemScopedManager() throws Exception {
+        String systemScopedToken = issueToken(
+                POS_FULL_ACCESS_PERMISSIONS,
+                new ScopeRoots(true, List.of(), List.of()),
+                new ScopeRoots(true, List.of(), List.of())
         );
 
-        mockMvc.perform(post("/pos-sessions")
-                        .header("Authorization", "Bearer " + wrongRegionToken)
-                        .contentType("application/json")
-                        .content("""
-                                {
-                                  "regionId": 1,
-                                  "outletId": 101,
-                                  "currencyCode": "VND",
-                                  "businessDate": "2026-03-27"
-                                }
-                                """))
-                .andExpect(status().isForbidden());
+        Long sessionId = openSession(bearer(systemScopedToken), 1L, 101L);
+
+        mockMvc.perform(get("/pos-sessions/{id}", sessionId)
+                        .header("Authorization", bearer(systemScopedToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(sessionId));
+    }
+
+    @Test
+    void shouldAllowRegionScopedManagerWithoutExplicitOutletMembershipAcrossRouteOperations() throws Exception {
+        String regionScopedToken = issueToken(
+                POS_FULL_ACCESS_PERMISSIONS,
+                new ScopeRoots(false, List.of(1L), List.of()),
+                new ScopeRoots(false, List.of(1L, 11L), List.of(102L))
+        );
+
+        Long sessionId = openSession(bearer(regionScopedToken), 11L, 102L);
+
+        mockMvc.perform(get("/pos-sessions/{id}", sessionId)
+                        .header("Authorization", bearer(regionScopedToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.regionId").value(11))
+                .andExpect(jsonPath("$.outletId").value(102));
+
+        Long orderId = createSimpleOrder(bearer(regionScopedToken), sessionId, "region-scope-order");
+
+        mockMvc.perform(get("/sale-orders/{id}", orderId)
+                        .header("Authorization", bearer(regionScopedToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.regionId").value(11))
+                .andExpect(jsonPath("$.outletId").value(102));
+
+        updateOrderToSingleLatte(bearer(regionScopedToken), orderId);
+
+        mockMvc.perform(post("/sale-orders/{id}/cancel", orderId)
+                        .header("Authorization", bearer(regionScopedToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        closeAndReconcileSession(bearer(regionScopedToken), sessionId);
+    }
+
+    @Test
+    void shouldAllowOutletOnlyCashierAcrossAllPosEntryPointsWithoutRegionRoot() throws Exception {
+        String outletOnlyToken = issueToken(
+                POS_FULL_ACCESS_PERMISSIONS,
+                new ScopeRoots(false, List.of(), List.of(101L)),
+                new ScopeRoots(false, List.of(), List.of(101L))
+        );
+
+        Long sessionId = openSession(bearer(outletOnlyToken), 1L, 101L);
+
+        mockMvc.perform(get("/pos-sessions/{id}", sessionId)
+                        .header("Authorization", bearer(outletOnlyToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(sessionId));
+
+        Long completedOrderId = createSimpleOrder(bearer(outletOnlyToken), sessionId, "outlet-only-complete");
+
+        mockMvc.perform(get("/sale-orders/{id}", completedOrderId)
+                        .header("Authorization", bearer(outletOnlyToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(completedOrderId));
+
+        updateOrderToSingleLatte(bearer(outletOnlyToken), completedOrderId);
+        addCardPayment(bearer(outletOnlyToken), completedOrderId, "outlet-only-pay-1", "55.00");
+
+        mockMvc.perform(post("/sale-orders/{id}/complete", completedOrderId)
+                        .header("Authorization", bearer(outletOnlyToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+
+        Long cancelledOrderId = createSimpleOrder(bearer(outletOnlyToken), sessionId, "outlet-only-cancel");
+
+        mockMvc.perform(post("/sale-orders/{id}/cancel", cancelledOrderId)
+                        .header("Authorization", bearer(outletOnlyToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        closeAndReconcileSession(bearer(outletOnlyToken), sessionId);
+    }
+
+    @Test
+    void shouldAllowSessionOpenWhenOutletScopeMatchesEvenIfRegionRootDiffers() throws Exception {
+        String mixedScopeToken = issueToken(
+                POS_FULL_ACCESS_PERMISSIONS,
+                new ScopeRoots(false, List.of(999L), List.of(101L)),
+                new ScopeRoots(false, List.of(999L), List.of(101L))
+        );
+
+        Long sessionId = openSession(bearer(mixedScopeToken), 1L, 101L);
+
+        mockMvc.perform(get("/pos-sessions/{id}", sessionId)
+                        .header("Authorization", bearer(mixedScopeToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outletId").value(101));
     }
 
     @Test
@@ -2735,11 +2825,116 @@ class PosServiceIntegrationTest {
         return "Bearer " + token;
     }
 
+    private String bearer(String accessToken) {
+        return "Bearer " + accessToken;
+    }
+
+    private Long openSession(String authorizationHeader, Long regionId, Long outletId) throws Exception {
+        String sessionJson = mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", authorizationHeader)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": %d,
+                                  "outletId": %d,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """.formatted(regionId, outletId)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return readId(sessionJson);
+    }
+
+    private Long createSimpleOrder(String authorizationHeader, Long sessionId, String note) throws Exception {
+        String orderJson = mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", authorizationHeader)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "note": "%s",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId, note)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return readId(orderJson);
+    }
+
+    private void updateOrderToSingleLatte(String authorizationHeader, Long orderId) throws Exception {
+        mockMvc.perform(patch("/sale-orders/{id}", orderId)
+                        .header("Authorization", authorizationHeader)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId));
+    }
+
+    private void addCardPayment(String authorizationHeader, Long orderId, String idempotencyKey, String amount) throws Exception {
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", authorizationHeader)
+                        .header("Idempotency-Key", idempotencyKey)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CARD",
+                                  "amount": %s,
+                                  "transactionRef": "%s"
+                                }
+                                """.formatted(amount, idempotencyKey.toUpperCase())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+    }
+
+    private void closeAndReconcileSession(String authorizationHeader, Long sessionId) throws Exception {
+        mockMvc.perform(post("/pos-sessions/{id}/close", sessionId)
+                        .header("Authorization", authorizationHeader))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CLOSED"));
+
+        mockMvc.perform(post("/pos-sessions/{id}/reconcile", sessionId)
+                        .header("Authorization", authorizationHeader)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "countedCashAmount": 0.00
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RECONCILED"));
+    }
+
     private String issueToken(Set<String> permissions, List<Long> regions, List<Long> outlets) {
-        return issueToken(1L, "pos-tester", permissions, regions, outlets);
+        ScopeRoots scopeRoots = new ScopeRoots(false, regions, outlets);
+        return issueToken(1L, "pos-tester", permissions, scopeRoots, scopeRoots);
     }
 
     private String issueToken(Long userId, String username, Set<String> permissions, List<Long> regions, List<Long> outlets) {
+        ScopeRoots scopeRoots = new ScopeRoots(false, regions, outlets);
+        return issueToken(userId, username, permissions, scopeRoots, scopeRoots);
+    }
+
+    private String issueToken(Set<String> permissions, ScopeRoots scopeRoots, ScopeRoots accessibleScope) {
+        return issueToken(1L, "pos-tester", permissions, scopeRoots, accessibleScope);
+    }
+
+    private String issueToken(
+            Long userId,
+            String username,
+            Set<String> permissions,
+            ScopeRoots scopeRoots,
+            ScopeRoots accessibleScope
+    ) {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         properties.setAllowInsecureDefaultSecret(true);
@@ -2749,12 +2944,16 @@ class PosServiceIntegrationTest {
                 username,
                 Set.of("outlet_manager"),
                 permissions,
-                new ScopeRoots(regions, outlets),
+                scopeRoots,
+                accessibleScope,
                 1L,
                 1L,
-                "pos-test-jti-" + userId + "-" + permissions.hashCode() + "-" + regions.hashCode() + "-" + outlets.hashCode(),
+                "pos-test-jti-" + userId + "-" + permissions.hashCode() + "-" + scopeRoots.hashCode() + "-" + accessibleScope.hashCode(),
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("pos-service")
         ), jwtService.accessTokenTtl());
     }
 }

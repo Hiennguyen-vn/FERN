@@ -8,7 +8,7 @@ import {
   buildRevenueRunRequest,
   buildRevenueSummary,
 } from '../services/reportsReadModel.service'
-import { canPreviewExport } from '../services/reportsUiPolicy.service'
+import { isExportPreviewAvailable } from '../services/reportsUiPolicy.service'
 import { useCreateExportJob } from './useCreateExportJob'
 import { useExportJob } from './useExportJob'
 
@@ -20,7 +20,7 @@ export function useRevenueReport() {
   const exportJob = exportJobQuery.data ?? null
 
   const previewQuery = useQuery({
-    enabled: activeJobId !== null && Boolean(exportJob && canPreviewExport(exportJob)),
+    enabled: activeJobId !== null && Boolean(exportJob && isExportPreviewAvailable(exportJob)),
     queryFn: () => getExportPreview(activeJobId as number),
     queryKey: reportQueryKeys.exportPreview(activeJobId ?? 0),
   })

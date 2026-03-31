@@ -150,7 +150,10 @@ class CatalogServiceIntegrationTest {
                 1L,
                 "catalog-test-jti",
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("catalog-service")
         ), jwtService.accessTokenTtl());
         serviceToken = jwtService.encode(new FernJwtClaims(
                 null,
@@ -839,7 +842,10 @@ class CatalogServiceIntegrationTest {
                 1L,
                 "catalog-user-internal-jti",
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("catalog-service")
         ), jwtService.accessTokenTtl());
 
         mockMvc.perform(get("/internal/catalog/menu")

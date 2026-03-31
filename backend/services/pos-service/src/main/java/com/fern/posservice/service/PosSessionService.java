@@ -103,7 +103,8 @@ public class PosSessionService {
             Long outletId,
             String terminalId,
             String status,
-            LocalDate businessDate
+            LocalDate businessDate,
+            int limit
     ) {
         posAuthorizer.requireOutletPermission(principal, outletId, PermissionCodes.POS_SESSION_READ);
         return jdbcTemplate.query("""
@@ -115,11 +116,13 @@ public class PosSessionService {
                   AND (:status IS NULL OR status = :status)
                   AND (:businessDate IS NULL OR business_date = :businessDate)
                 ORDER BY opened_at DESC
+                LIMIT :limit
                 """, PosSql.params(
                 "outletId", outletId,
                 "terminalId", terminalId,
                 "status", status,
-                "businessDate", businessDate
+                "businessDate", businessDate,
+                "limit", limit
         ), (rs, rowNum) -> store.mapSession(new SessionRecord(
                 rs.getLong("id"),
                 rs.getString("session_code"),

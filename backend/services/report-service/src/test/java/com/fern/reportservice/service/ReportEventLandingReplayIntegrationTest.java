@@ -3,6 +3,8 @@ package com.fern.reportservice.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.reset;
@@ -55,12 +57,15 @@ class ReportEventLandingReplayIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @SpyBean
+    @Autowired
     private ReportService reportService;
+
+    @SpyBean
+    private DailySummaryProjector dailySummaryProjector;
 
     @BeforeEach
     void setUp() {
-        reset(reportService);
+        reset(dailySummaryProjector);
         jdbcTemplate.execute("""
                 TRUNCATE TABLE
                     report.outbox_event,
@@ -105,13 +110,14 @@ class ReportEventLandingReplayIntegrationTest {
         AtomicBoolean failOnce = new AtomicBoolean(true);
 
         doAnswer(invocation -> {
-            ExpensePostedEvent expenseEvent = invocation.getArgument(1, ExpensePostedEvent.class);
-            if ("expense-event-replay-failed".equals(expenseEvent.eventId())
-                    && failOnce.compareAndSet(true, false)) {
+            if (failOnce.compareAndSet(true, false)) {
                 throw new DataAccessResourceFailureException("forced report expense failure");
             }
             return invocation.callRealMethod();
-        }).when(reportService).persistExpensePosted(anyString(), any(ExpensePostedEvent.class));
+        }).when(dailySummaryProjector).applyDelta(
+                anyString(), anyString(), anyString(), any(), anyString(),
+                anyLong(), anyList(), any(), anyString(), any()
+        );
 
         assertThatThrownBy(() -> reportService.ingestExpensePosted(payload, event))
                 .isInstanceOf(DataAccessResourceFailureException.class);

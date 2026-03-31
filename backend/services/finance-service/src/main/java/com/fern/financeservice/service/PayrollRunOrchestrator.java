@@ -22,6 +22,7 @@ import com.fern.financeservice.service.payroll.model.PayrollPeriodRecord;
 import com.fern.financeservice.service.payroll.model.PayrollRunRecord;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ListQueryDefaults;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.contracts.PayrollPostedEvent.PayrollExpenseLink;
@@ -220,13 +221,19 @@ public class PayrollRunOrchestrator {
         return response;
     }
 
-    @Transactional
     public PayrollRunResponse markPayrollPaid(FernPrincipal principal, Long runId, MarkPaidRequest request) {
         return markPayrollPaid(principal, runId, request, null);
     }
 
-    @Transactional
+    /**
+     * Uses TransactionTemplate instead of @Transactional for consistency with
+     * createPayrollRun() and to avoid AOP proxy bypass risks from self-invocation.
+     */
     public PayrollRunResponse markPayrollPaid(FernPrincipal principal, Long runId, MarkPaidRequest request, String correlationId) {
+        return transactionTemplate.execute(status -> markPayrollPaidTx(principal, runId, request, correlationId));
+    }
+
+    private PayrollRunResponse markPayrollPaidTx(FernPrincipal principal, Long runId, MarkPaidRequest request, String correlationId) {
         PayrollRunRecord run = requirePayrollRunRecord(runId);
         PayrollPeriodRecord period = payrollPeriodService.requirePayrollPeriodRecord(run.payrollPeriodId());
         financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PAY);
@@ -340,23 +347,35 @@ public class PayrollRunOrchestrator {
     }
 
     public List<PayrollRunResponse> listPayrollRuns(FernPrincipal principal, Long regionId) {
+        return listPayrollRuns(principal, regionId, ListQueryDefaults.DEFAULT_LIMIT);
+    }
+
+    public List<PayrollRunResponse> listPayrollRuns(FernPrincipal principal, Long regionId, int limit) {
+        List<Long> runIds;
         if (regionId != null) {
             financeAuthorizer.requireRegionPermission(principal, regionId, PermissionCodes.FINANCE_PAYROLL_READ);
-            return jdbcTemplate.query("""
+            runIds = jdbcTemplate.queryForList("""
                     SELECT pr.id
                     FROM finance.payroll_run pr
                     JOIN finance.payroll_period pp ON pp.id = pr.payroll_period_id
                     WHERE pp.region_id = :regionId
                     ORDER BY pr.run_date DESC, pr.id DESC
-                    """, params("regionId", regionId), (rs, rowNum) -> getPayrollRun(principal, rs.getLong("id")));
+                    LIMIT :limit
+                    """, params("regionId", regionId, "limit", limit), Long.class);
+        } else {
+            financeAuthorizer.requireSystemPermission(principal, PermissionCodes.FINANCE_PAYROLL_READ);
+            runIds = jdbcTemplate.queryForList("""
+                    SELECT pr.id
+                    FROM finance.payroll_run pr
+                    JOIN finance.payroll_period pp ON pp.id = pr.payroll_period_id
+                    ORDER BY pr.run_date DESC, pr.id DESC
+                    LIMIT :limit
+                    """, params("limit", limit), Long.class);
         }
-        financeAuthorizer.requireSystemPermission(principal, PermissionCodes.FINANCE_PAYROLL_READ);
-        return jdbcTemplate.query("""
-                SELECT pr.id
-                FROM finance.payroll_run pr
-                JOIN finance.payroll_period pp ON pp.id = pr.payroll_period_id
-                ORDER BY pr.run_date DESC, pr.id DESC
-                """, params(), (rs, rowNum) -> getPayrollRun(principal, rs.getLong("id")));
+        if (runIds.isEmpty()) {
+            return List.of();
+        }
+        return batchAssemblePayrollRuns(runIds);
     }
 
     public PayrollRunResponse getPayrollRun(FernPrincipal principal, Long id) {
@@ -564,15 +583,46 @@ public class PayrollRunOrchestrator {
         jdbcTemplate.update("DELETE FROM finance.payroll_employee_result WHERE payroll_run_id = :payrollRunId", params("payrollRunId", runId));
     }
 
-    private List<PayrollEmployeeResultResponse> queryPayrollEmployees(Long runId) {
-        return jdbcTemplate.query("""
-                SELECT id, employee_id, contract_id, outlet_id, gross_pay, deduction_amount, tax_amount, net_pay,
+    /**
+     * Batch-fetches all payroll runs by ID, assembling employees/lines/allocations
+     * with only 4 queries total instead of the previous 1 + N×3 pattern.
+     */
+    private List<PayrollRunResponse> batchAssemblePayrollRuns(List<Long> runIds) {
+        // 1. Batch-fetch all run rows
+        List<PayrollRunResponse> shells = jdbcTemplate.query("""
+                SELECT id, payroll_period_id, run_code, run_date, status, total_amount, payment_ref, note,
+                       submitted_at, approved_at, paid_at
+                FROM finance.payroll_run
+                WHERE id IN (:ids)
+                ORDER BY run_date DESC, id DESC
+                """, params("ids", runIds), (rs, rowNum) -> new PayrollRunResponse(
+                rs.getLong("id"),
+                rs.getLong("payroll_period_id"),
+                rs.getString("run_code"),
+                rs.getObject("run_date", LocalDate.class),
+                rs.getString("status"),
+                rs.getBigDecimal("total_amount"),
+                rs.getString("payment_ref"),
+                rs.getString("note"),
+                instant(rs, "submitted_at"),
+                instant(rs, "approved_at"),
+                instant(rs, "paid_at"),
+                List.of() // placeholder — assembled below
+        ));
+        if (shells.isEmpty()) {
+            return List.of();
+        }
+
+        // 2. Batch-fetch all employee results for these runs
+        List<EmployeeResultRow> employeeRows = jdbcTemplate.query("""
+                SELECT id, payroll_run_id, employee_id, contract_id, outlet_id, gross_pay, deduction_amount, tax_amount, net_pay,
                        work_days, work_hours, overtime_hours, payment_status, exception_message
                 FROM finance.payroll_employee_result
-                WHERE payroll_run_id = :payrollRunId
-                ORDER BY employee_id, id
-                """, params("payrollRunId", runId), (rs, rowNum) -> new PayrollEmployeeResultResponse(
+                WHERE payroll_run_id IN (:ids)
+                ORDER BY payroll_run_id, employee_id, id
+                """, params("ids", runIds), (rs, rowNum) -> new EmployeeResultRow(
                 rs.getLong("id"),
+                rs.getLong("payroll_run_id"),
                 rs.getLong("employee_id"),
                 nullableLong(rs, "contract_id"),
                 nullableLong(rs, "outlet_id"),
@@ -584,38 +634,116 @@ public class PayrollRunOrchestrator {
                 rs.getBigDecimal("work_hours"),
                 rs.getBigDecimal("overtime_hours"),
                 rs.getString("payment_status"),
-                rs.getString("exception_message"),
-                queryLines(rs.getLong("id")),
-                queryAllocations(rs.getLong("id"))
+                rs.getString("exception_message")
         ));
+        List<Long> resultIds = employeeRows.stream().map(EmployeeResultRow::id).toList();
+
+        // 3. Batch-fetch all lines for these employee results
+        Map<Long, List<PayrollLineResponse>> linesByResultId = new LinkedHashMap<>();
+        if (!resultIds.isEmpty()) {
+            jdbcTemplate.query("""
+                    SELECT id, payroll_employee_result_id, line_type, description, amount
+                    FROM finance.payroll_result_line
+                    WHERE payroll_employee_result_id IN (:ids)
+                    ORDER BY payroll_employee_result_id, id
+                    """, params("ids", resultIds), (rs, rowNum) -> {
+                linesByResultId
+                        .computeIfAbsent(rs.getLong("payroll_employee_result_id"), k -> new ArrayList<>())
+                        .add(new PayrollLineResponse(
+                                rs.getLong("id"),
+                                rs.getString("line_type"),
+                                rs.getString("description"),
+                                rs.getBigDecimal("amount")
+                        ));
+                return null;
+            });
+        }
+
+        // 4. Batch-fetch all allocations for these employee results
+        Map<Long, List<PayrollAllocationResponse>> allocationsByResultId = new LinkedHashMap<>();
+        if (!resultIds.isEmpty()) {
+            jdbcTemplate.query("""
+                    SELECT id, payroll_employee_result_id, outlet_id, work_hours, allocated_amount
+                    FROM finance.payroll_result_allocation
+                    WHERE payroll_employee_result_id IN (:ids)
+                    ORDER BY payroll_employee_result_id, id
+                    """, params("ids", resultIds), (rs, rowNum) -> {
+                allocationsByResultId
+                        .computeIfAbsent(rs.getLong("payroll_employee_result_id"), k -> new ArrayList<>())
+                        .add(new PayrollAllocationResponse(
+                                rs.getLong("id"),
+                                rs.getLong("outlet_id"),
+                                rs.getBigDecimal("work_hours"),
+                                rs.getBigDecimal("allocated_amount")
+                        ));
+                return null;
+            });
+        }
+
+        // 5. Assemble employee responses grouped by run
+        Map<Long, List<PayrollEmployeeResultResponse>> employeesByRunId = new LinkedHashMap<>();
+        for (EmployeeResultRow row : employeeRows) {
+            employeesByRunId
+                    .computeIfAbsent(row.payrollRunId(), k -> new ArrayList<>())
+                    .add(new PayrollEmployeeResultResponse(
+                            row.id(),
+                            row.employeeId(),
+                            row.contractId(),
+                            row.outletId(),
+                            row.grossPay(),
+                            row.deductionAmount(),
+                            row.taxAmount(),
+                            row.netPay(),
+                            row.workDays(),
+                            row.workHours(),
+                            row.overtimeHours(),
+                            row.paymentStatus(),
+                            row.exceptionMessage(),
+                            linesByResultId.getOrDefault(row.id(), List.of()),
+                            allocationsByResultId.getOrDefault(row.id(), List.of())
+                    ));
+        }
+
+        // 6. Replace placeholder employees in shells
+        return shells.stream()
+                .map(shell -> new PayrollRunResponse(
+                        shell.id(),
+                        shell.payrollPeriodId(),
+                        shell.runCode(),
+                        shell.runDate(),
+                        shell.status(),
+                        shell.totalAmount(),
+                        shell.paymentRef(),
+                        shell.note(),
+                        shell.submittedAt(),
+                        shell.approvedAt(),
+                        shell.paidAt(),
+                        employeesByRunId.getOrDefault(shell.id(), List.of())
+                ))
+                .toList();
     }
 
-    private List<PayrollLineResponse> queryLines(Long payrollEmployeeResultId) {
-        return jdbcTemplate.query("""
-                SELECT id, line_type, description, amount
-                FROM finance.payroll_result_line
-                WHERE payroll_employee_result_id = :payrollEmployeeResultId
-                ORDER BY id
-                """, params("payrollEmployeeResultId", payrollEmployeeResultId), (rs, rowNum) -> new PayrollLineResponse(
-                rs.getLong("id"),
-                rs.getString("line_type"),
-                rs.getString("description"),
-                rs.getBigDecimal("amount")
-        ));
+    private List<PayrollEmployeeResultResponse> queryPayrollEmployees(Long runId) {
+        List<PayrollRunResponse> assembled = batchAssemblePayrollRuns(List.of(runId));
+        return assembled.isEmpty() ? List.of() : assembled.getFirst().employees();
     }
 
-    private List<PayrollAllocationResponse> queryAllocations(Long payrollEmployeeResultId) {
-        return jdbcTemplate.query("""
-                SELECT id, outlet_id, work_hours, allocated_amount
-                FROM finance.payroll_result_allocation
-                WHERE payroll_employee_result_id = :payrollEmployeeResultId
-                ORDER BY id
-                """, params("payrollEmployeeResultId", payrollEmployeeResultId), (rs, rowNum) -> new PayrollAllocationResponse(
-                rs.getLong("id"),
-                rs.getLong("outlet_id"),
-                rs.getBigDecimal("work_hours"),
-                rs.getBigDecimal("allocated_amount")
-        ));
+    private record EmployeeResultRow(
+            Long id,
+            Long payrollRunId,
+            Long employeeId,
+            Long contractId,
+            Long outletId,
+            BigDecimal grossPay,
+            BigDecimal deductionAmount,
+            BigDecimal taxAmount,
+            BigDecimal netPay,
+            BigDecimal workDays,
+            BigDecimal workHours,
+            BigDecimal overtimeHours,
+            String paymentStatus,
+            String exceptionMessage
+    ) {
     }
 
     private record PrefetchedRecalculation(

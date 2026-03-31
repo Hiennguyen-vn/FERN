@@ -97,6 +97,10 @@ public class FinancePayrollService {
         return payrollRunOrchestrator.listPayrollRuns(principal, regionId);
     }
 
+    public List<PayrollRunResponse> listPayrollRuns(FernPrincipal principal, Long regionId, int limit) {
+        return payrollRunOrchestrator.listPayrollRuns(principal, regionId, limit);
+    }
+
     public PayrollRunResponse getPayrollRun(FernPrincipal principal, Long id) {
         return payrollRunOrchestrator.getPayrollRun(principal, id);
     }

@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button, FormActions, FormSection, Input, Select } from '@design-system/index'
 import type { SelectOption } from '@design-system/index'
 import { exportJobSchema, type ExportJobFormValues } from '../forms/exportJob.schema'
 import { mapExportFormToPayload } from '../forms/reportFilter.mapper'
 import { exportDatasetOptions, exportFormatOptions } from '../model/reports.enums'
+import type { ExportDataset } from '../model/reportExport.types'
 import { requiresDateRange, requiresPayrollRunId, requiresRegion } from '../services/reportFilter.service'
 
 interface ReportFilterPanelProps {
+  allowedDatasets: ExportDataset[]
   isSubmitting?: boolean
   onSubmit: (values: ReturnType<typeof mapExportFormToPayload>) => Promise<void> | void
 }
@@ -22,19 +24,37 @@ const initialValues: ExportJobFormValues = {
   limit: '20',
 }
 
-export function ReportFilterPanel({ isSubmitting = false, onSubmit }: ReportFilterPanelProps) {
+export function ReportFilterPanel({ allowedDatasets, isSubmitting = false, onSubmit }: ReportFilterPanelProps) {
   const [values, setValues] = useState<ExportJobFormValues>(initialValues)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const dataset = values.dataset as typeof exportDatasetOptions[number]['value']
   const datasetOptions = useMemo<Array<SelectOption>>(
-    () => exportDatasetOptions.map((option) => ({ label: option.label, value: option.value })),
-    [],
+    () =>
+      exportDatasetOptions
+        .filter((option) => allowedDatasets.includes(option.value))
+        .map((option) => ({ label: option.label, value: option.value })),
+    [allowedDatasets],
   )
   const formatOptions = useMemo<Array<SelectOption>>(
     () => exportFormatOptions.map((option) => ({ label: option.label, value: option.value })),
     [],
   )
+
+  useEffect(() => {
+    if (datasetOptions.length === 0) {
+      return
+    }
+
+    if (datasetOptions.some((option) => option.value === values.dataset)) {
+      return
+    }
+
+    setValues((current) => ({
+      ...current,
+      dataset: String(datasetOptions[0]?.value ?? current.dataset),
+    }))
+  }, [datasetOptions, values.dataset])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()

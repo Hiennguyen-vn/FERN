@@ -100,6 +100,103 @@ export interface CreateGoodsReceiptPayload {
     uomCode: string
     qtyReceived: number
     unitCost: number
+    manufactureDate?: string
+    expiryDate?: string
     note?: string
+  }>
+}
+
+// ─── Supplier invoice ─────────────────────────────────────────────────────────
+export type SupplierInvoiceStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'DISPUTED' | 'PAID'
+export type InvoiceLineType = 'STOCK' | 'PARTIAL_MATCH' | 'NON_PO_RECEIPT' | 'NON_STOCK'
+
+export interface SupplierInvoiceLine {
+  id: number
+  lineNumber: number
+  lineType: InvoiceLineType
+  goodsReceiptLineId: number | null
+  description: string | null
+  qtyInvoiced: string | null
+  unitPrice: string | null
+  taxPercent: string | null
+  taxAmount: string | null
+  lineTotal: string
+  note: string | null
+}
+
+export interface SupplierInvoice {
+  id: number
+  supplierId: number
+  regionId: number
+  outletId: number
+  currencyCode: string
+  invoiceNumber: string
+  invoiceDate: string
+  dueDate: string | null
+  subtotal: string
+  taxAmount: string
+  totalAmount: string
+  status: SupplierInvoiceStatus
+  note: string | null
+  approvedAt: string | null
+  lines: SupplierInvoiceLine[]
+}
+
+export interface CreateSupplierInvoicePayload {
+  supplierId: number
+  regionId: number
+  outletId: number
+  currencyCode: string
+  invoiceNumber: string
+  invoiceDate: string
+  dueDate?: string | null
+  note?: string | null
+  lines: Array<{
+    lineType: InvoiceLineType
+    goodsReceiptLineId?: number | null
+    description?: string | null
+    qtyInvoiced?: number | null
+    unitPrice?: number | null
+    taxPercent?: number | null
+    taxAmount?: number | null
+    lineTotal: number
+    note?: string | null
+  }>
+}
+
+// ─── Supplier payment ─────────────────────────────────────────────────────────
+export type PaymentMethod = 'CASH' | 'CARD' | 'EWALLET' | 'BANK_TRANSFER' | 'CHEQUE' | 'VOUCHER'
+
+export interface SupplierPaymentAllocation {
+  supplierInvoiceId: number
+  allocatedAmount: string
+  note: string | null
+}
+
+export interface SupplierPayment {
+  id: number
+  paymentNumber: string
+  supplierId: number
+  currencyCode: string
+  paymentMethod: PaymentMethod
+  amount: string
+  paymentTime: string
+  transactionRef: string | null
+  note: string | null
+  invoiceAllocations: SupplierPaymentAllocation[]
+}
+
+export interface CreateSupplierPaymentPayload {
+  supplierId: number
+  currencyCode: string
+  paymentMethod: PaymentMethod
+  amount: number
+  paymentTime: string
+  transactionRef?: string | null
+  note?: string | null
+  invoiceAllocations: Array<{
+    supplierInvoiceId: number
+    allocatedAmount: number
+    note?: string | null
   }>
 }

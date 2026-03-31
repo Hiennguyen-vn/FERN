@@ -3,6 +3,7 @@ package com.fern.reportservice.service;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.PermissionCodes;
+import com.fern.platform.common.ScopeAccess;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -35,10 +36,10 @@ public class ReportAuthorizer {
         if (principal == null || !hasAnyPermission(principal, primaryPermission, secondaryPermission)) {
             throw new ForbiddenException("Missing permission");
         }
-        if (principal.scopeRoots().system()) {
+        if (ScopeAccess.isSystemScoped(principal)) {
             return;
         }
-        if (regionId == null || principal.scopeRoots().regions().isEmpty() || !principal.scopeRoots().regions().contains(regionId)) {
+        if (!ScopeAccess.allowsRegion(principal, regionId)) {
             throw new ForbiddenException("Region is outside the current scope");
         }
     }
@@ -47,7 +48,7 @@ public class ReportAuthorizer {
         if (principal == null || !hasAnyPermission(principal, primaryPermission, secondaryPermission)) {
             throw new ForbiddenException("Missing permission");
         }
-        if (!principal.scopeRoots().system()) {
+        if (!ScopeAccess.isSystemScoped(principal)) {
             throw new ForbiddenException("System scope is required");
         }
     }

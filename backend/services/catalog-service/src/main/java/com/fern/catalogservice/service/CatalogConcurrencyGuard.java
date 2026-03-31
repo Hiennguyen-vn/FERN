@@ -13,10 +13,17 @@ class CatalogConcurrencyGuard {
     }
 
     void lock(String key) {
-        jdbcTemplate.queryForObject(
+        jdbcTemplate.execute(
                 "SELECT pg_advisory_xact_lock(hashtext(:lockKey))",
                 Map.of("lockKey", "catalog:" + key),
-                Long.class
+                preparedStatement -> {
+                    try (var resultSet = preparedStatement.executeQuery()) {
+                        while (resultSet.next()) {
+                            // Consume the advisory-lock result row so the statement completes on all drivers.
+                        }
+                    }
+                    return null;
+                }
         );
     }
 }

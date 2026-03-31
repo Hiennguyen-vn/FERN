@@ -19,7 +19,7 @@ public interface TaxRateRepository extends JpaRepository<TaxRateEntity, Long> {
             where t.product.id = :productId
               and (:excludeId is null or t.id <> :excludeId)
               and t.effectiveFrom <= coalesce(:effectiveTo, t.effectiveFrom)
-              and coalesce(t.effectiveTo, :effectiveTo) >= :effectiveFrom
+              and (t.effectiveTo is null or t.effectiveTo >= :effectiveFrom)
             """)
     boolean existsOverlap(
             @Param("productId") Long productId,

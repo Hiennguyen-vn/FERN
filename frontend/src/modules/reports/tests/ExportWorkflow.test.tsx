@@ -2,8 +2,15 @@ import { Route, Routes } from 'react-router-dom'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '@core/api/apiError'
+import { permissionConstants } from '@core/permissions/permission.constants'
 import { renderWithProviders } from '@shared/test-utils/renderWithProviders'
-import { clearTestStorage } from '@shared/test-utils/scopeTestHelpers'
+import {
+  clearTestStorage,
+  resetTestStores,
+  setAuthenticatedSession,
+} from '@shared/test-utils/scopeTestHelpers'
+import { addRecentExportJobId } from '../services/exportHistory.service'
 import { ExportDownloadPage } from '../routes/ExportDownloadPage'
 import { ExportJobDetailPage } from '../routes/ExportJobDetailPage'
 import { ExportJobsPage } from '../routes/ExportJobsPage'
@@ -54,6 +61,7 @@ function createExportJob(overrides: Partial<ExportJob> = {}): ExportJob {
 describe('export workflows', () => {
   beforeEach(() => {
     clearTestStorage()
+    resetTestStores()
     vi.useRealTimers()
     reportsApi.createExportJob.mockReset()
     reportsApi.getExportJob.mockReset()
@@ -65,15 +73,19 @@ describe('export workflows', () => {
     vi.useRealTimers()
   })
 
-  it('creates an export job and shows it in recent jobs', async () => {
+  it('lets export-only users queue exports in create-only mode without opening recent-job inspection', async () => {
     const user = userEvent.setup()
     const exportJobState = createExportJob({
       exportJobId: 901,
       status: 'QUEUED',
     })
 
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.export],
+      },
+    })
     reportsApi.createExportJob.mockResolvedValue(clone(exportJobState))
-    reportsApi.getExportJob.mockImplementation(async () => clone(exportJobState))
 
     renderWithProviders(<ExportJobsPage />)
 
@@ -93,31 +105,44 @@ describe('export workflows', () => {
         }),
       )
     })
-    expect(await screen.findByText('Export #901')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Details' })).toBeInTheDocument()
+
+    expect(screen.getByText(/^Create-only mode:/i)).toBeInTheDocument()
+    expect(screen.getByText('Recent export inspection requires read access')).toBeInTheDocument()
+    expect(reportsApi.getExportJob).not.toHaveBeenCalled()
+    expect(screen.queryByRole('link', { name: 'Details' })).not.toBeInTheDocument()
   })
 
-  it('polls export detail until the job completes', async () => {
-    const runningJob = createExportJob({
-      exportJobId: 902,
-      status: 'RUNNING',
-      startedAt: '2026-03-30T11:00:05.000Z',
+  it('shows readable recent jobs and hides restricted ones for partial-read users', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.read],
+      },
     })
-    const completedJob = createExportJob({
-      exportJobId: 902,
-      status: 'COMPLETED',
-      startedAt: '2026-03-30T11:00:05.000Z',
-      completedAt: '2026-03-30T11:01:00.000Z',
-      rowCount: 42,
-      downloadUrl: '/reports/exports/902/download',
-      preview: [{ orderNumber: 'SO-1' }],
-    })
-    let requestCount = 0
+    addRecentExportJobId(901)
+    addRecentExportJobId(902)
 
-    reportsApi.getExportJob.mockImplementation(async () => {
-      requestCount += 1
-      return clone(requestCount === 1 ? runningJob : completedJob)
+    reportsApi.getExportJob.mockImplementation(async (jobId: number) => {
+      if (jobId === 901) {
+        return clone(createExportJob({ exportJobId: 901, dataset: 'SALES_FACT', status: 'COMPLETED' }))
+      }
+
+      throw new ApiError(403, { message: 'Forbidden' })
     })
+
+    renderWithProviders(<ExportJobsPage />)
+
+    expect(await screen.findByText('Export #901')).toBeInTheDocument()
+    expect(screen.getByText(/1 recent export job is hidden/i)).toBeInTheDocument()
+    expect(screen.queryByText('Không thể tải recent export jobs')).not.toBeInTheDocument()
+  })
+
+  it('renders a permission-denied state when export job detail is forbidden', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.export],
+      },
+    })
+    reportsApi.getExportJob.mockRejectedValue(new ApiError(403, { message: 'Forbidden' }))
 
     renderWithProviders(
       <Routes>
@@ -126,24 +151,16 @@ describe('export workflows', () => {
       { route: '/reports/export-jobs/902' },
     )
 
-    expect(await screen.findByText('Job is being generated. Preview may already be available.')).toBeInTheDocument()
-    await waitFor(() => {
-      expect(reportsApi.getExportJob).toHaveBeenCalledTimes(2)
-    })
-
-    expect(await screen.findByText('Job finished successfully and can be previewed or downloaded.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Preview' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Download' })).toBeInTheDocument()
+    expect(await screen.findByText('Bạn không có quyền truy cập export job này.')).toBeInTheDocument()
   })
 
-  it('renders export preview rows from the preview endpoint', async () => {
-    reportsApi.getExportPreview.mockResolvedValue({
-      exportJobId: 903,
-      status: 'COMPLETED',
-      dataset: 'SALES_FACT',
-      rowCount: 1,
-      rows: [{ orderNumber: 'SO-903', totalAmount: 150000 }],
+  it('renders a permission-denied state when export preview is forbidden', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.export],
+      },
     })
+    reportsApi.getExportPreview.mockRejectedValue(new ApiError(403, { message: 'Forbidden' }))
 
     renderWithProviders(
       <Routes>
@@ -152,11 +169,17 @@ describe('export workflows', () => {
       { route: '/reports/export-jobs/903/preview' },
     )
 
-    expect(await screen.findByText('SO-903')).toBeInTheDocument()
-    expect(screen.getByText('150000')).toBeInTheDocument()
+    expect(await screen.findByText('Bạn không có quyền truy cập export preview này.')).toBeInTheDocument()
   })
 
-  it('starts export download using the current API base path', async () => {
+  it('does not start download when export download access is forbidden', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.export],
+      },
+    })
+    reportsApi.getExportJob.mockRejectedValue(new ApiError(403, { message: 'Forbidden' }))
+
     renderWithProviders(
       <Routes>
         <Route path="/reports/export-jobs/:jobId/download" element={<ExportDownloadPage />} />
@@ -164,8 +187,35 @@ describe('export workflows', () => {
       { route: '/reports/export-jobs/904/download' },
     )
 
+    expect(await screen.findByText('Bạn không có quyền truy cập export download này.')).toBeInTheDocument()
+    expect(downloadService.startBrowserDownload).not.toHaveBeenCalled()
+  })
+
+  it('preflights export download with job detail before starting the browser download', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.read],
+      },
+    })
+    reportsApi.getExportJob.mockResolvedValue(
+      createExportJob({
+        exportJobId: 905,
+        status: 'COMPLETED',
+        dataset: 'SALES_FACT',
+        completedAt: '2026-03-30T11:01:00.000Z',
+      }),
+    )
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/reports/export-jobs/:jobId/download" element={<ExportDownloadPage />} />
+      </Routes>,
+      { route: '/reports/export-jobs/905/download' },
+    )
+
     await waitFor(() => {
-      expect(downloadService.startBrowserDownload).toHaveBeenCalledWith('/reports/exports/904/download')
+      expect(reportsApi.getExportJob).toHaveBeenCalledWith(905)
+      expect(downloadService.startBrowserDownload).toHaveBeenCalledWith('/reports/exports/905/download')
     })
   })
 })

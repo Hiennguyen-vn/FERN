@@ -62,6 +62,7 @@ SMOKE_RECIPE_CODE="${SMOKE_RECIPE_CODE:-RCP${RUN_ID}}"
 SMOKE_SUPPLIER_CODE="${SMOKE_SUPPLIER_CODE:-SUP${RUN_ID}}"
 SMOKE_SUPPLIER_NAME="${SMOKE_SUPPLIER_NAME:-Smoke Supplier ${RUN_ID}}"
 SMOKE_SUPPLIER_INVOICE_NUMBER="${SMOKE_SUPPLIER_INVOICE_NUMBER:-INV-${RUN_ID}}"
+SMOKE_PROMOTION_CODE="${SMOKE_PROMOTION_CODE:-PROMO${RUN_ID}}"
 
 KEEP_INFRA_UP="${KEEP_INFRA_UP:-1}"
 SKIP_INFRA_BOOTSTRAP="${SKIP_INFRA_BOOTSTRAP:-0}"
@@ -98,6 +99,8 @@ EMPLOYEE_ID=""
 EMPLOYEE_ASSIGNMENT_ID=""
 SHIFT_SCHEDULE_ID=""
 SHIFT_ASSIGNMENT_ID=""
+
+PROMOTION_ID=""
 
 ADJUSTMENT_ID=""
 WASTE_ID=""
@@ -354,6 +357,21 @@ flush_local_redis_state() {
   docker exec "${FERN_REDIS_CONTAINER}" redis-cli -a "${FERN_REDIS_PASSWORD}" FLUSHALL >/dev/null
 }
 
+ensure_local_postgres_database() {
+  local database="$1"
+  local exists
+  exists="$(docker exec "${FERN_POSTGRES_CONTAINER}" psql -U "${FERN_DB_USERNAME}" -d postgres -Atqc "SELECT 1 FROM pg_database WHERE datname = '${database}'" | tr -d '[:space:]')"
+  if [[ "${exists}" != "1" ]]; then
+    log "Creating PostgreSQL database ${database}"
+    docker exec "${FERN_POSTGRES_CONTAINER}" psql -U "${FERN_DB_USERNAME}" -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE ${database}" >/dev/null
+  fi
+}
+
+ensure_local_postgres_databases() {
+  ensure_local_postgres_database "${FERN_MASTER_DB}"
+  ensure_local_postgres_database "${FERN_OPERATIONAL_DB}"
+}
+
 wait_for_sql_count_eq() {
   local database="$1"
   local sql="$2"
@@ -454,6 +472,7 @@ start_local_infrastructure() {
   wait_for_container_health "${FERN_POSTGRES_CONTAINER}"
   wait_for_container_health "${FERN_REDIS_CONTAINER}"
   wait_for_container_health "${FERN_KAFKA_CONTAINER}" 90
+  ensure_local_postgres_databases
   flush_local_redis_state
 }
 
@@ -516,6 +535,9 @@ start_application_stack() {
   start_service "finance-service" "services/finance-service/pom.xml" "${FINANCE_HEALTH_URL}" \
     SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
     SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE="${SMOKE_DB_POOL_MIN_IDLE}" \
+    FERN_FINANCE_JDBC_URL="jdbc:postgresql://127.0.0.1:55432/${FERN_OPERATIONAL_DB}?currentSchema=finance" \
+    FERN_FINANCE_MASTER_JDBC_URL="jdbc:postgresql://127.0.0.1:55432/${FERN_MASTER_DB}?currentSchema=config" \
+    FERN_FINANCE_PROJECTION_JDBC_URL="jdbc:postgresql://127.0.0.1:55432/${FERN_MASTER_DB}?currentSchema=finance_projection" \
     FERN_DATASOURCE_MAX_POOL_SIZE="${SMOKE_DB_POOL_MAX_SIZE}" \
     FERN_DATASOURCE_MIN_IDLE="${SMOKE_DB_POOL_MIN_IDLE}"
   start_service "report-service" "services/report-service/pom.xml" "${REPORT_HEALTH_URL}" \
@@ -577,6 +599,28 @@ create_scoped_user() {
   printf '%s' "${user_id}"
 }
 
+create_promotion() {
+  local code="$1"
+  local name="$2"
+  local scope_type="${3:-GLOBAL}"
+  local discount_percent="${4:-10.00}"
+  local effective_from="${5:-$(date +%F)}"
+
+  local promotion_response
+  promotion_response="$(bootstrap_json POST "${FERN_BASE_URL}/catalog/promotions" \
+    "{\"code\":\"${code}\",\"name\":\"${name}\",\"description\":\"${name}\",\"promotionType\":\"ORDER\",\"discountPercent\":${discount_percent},\"discountAmount\":null,\"scopeType\":\"${scope_type}\",\"scopeId\":null,\"minOrderAmount\":null,\"maxUsageTotal\":null,\"effectiveFrom\":\"${effective_from}\",\"effectiveTo\":null}")" || return 1
+  printf '%s' "${promotion_response}" | json_get id
+}
+
+assert_internal_path_blocked() {
+  local path="$1"
+  local status
+  status="$(http_status GET "${FERN_BASE_URL}${path}")"
+  if [[ "${status}" != "403" ]]; then
+    fail "Expected 403 for internal path ${path}, got ${status}"
+  fi
+}
+
 summarize_smoke_success() {
   SMOKE_PHASE="summary"
   log "Completed successfully"
@@ -586,4 +630,7 @@ summarize_smoke_success() {
   log "POS session ID: ${POS_SESSION_ID}"
   log "Goods receipt ID: ${GOODS_RECEIPT_ID}"
   log "Payroll run ID: ${PAYROLL_RUN_ID}"
+  if [[ -n "${PROMOTION_ID}" ]]; then
+    log "Promotion ID: ${PROMOTION_ID}"
+  fi
 }

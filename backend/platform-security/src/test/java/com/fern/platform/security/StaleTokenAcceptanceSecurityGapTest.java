@@ -71,7 +71,7 @@ class StaleTokenAcceptanceSecurityGapTest {
                 now,
                 now.plusSeconds(900),
                 com.fern.platform.common.FernPrincipalType.USER,
-                FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
                 Set.of("finance-service")
         );
     }
@@ -82,10 +82,10 @@ class StaleTokenAcceptanceSecurityGapTest {
             FernTokenAcceptanceKnowledge knowledge,
             boolean authoritative
     ) {
-        FernJwtClaimValidationRules.validateIssuerAndAudience(
+        FernJwtClaimValidationRules.validateDownstreamIngress(
                 claims,
                 "finance-service",
-                FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER
         );
         if (!FernTokenAcceptanceRules.isAccepted(
                 claims,

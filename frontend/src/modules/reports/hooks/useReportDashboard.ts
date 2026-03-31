@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import { useExportJobs } from './useExportJobs'
 import { buildReportDashboardSummary } from '../services/reportsReadModel.service'
 
-export function useReportDashboard() {
-  const exportJobs = useExportJobs()
+export function useReportDashboard(enabled = true) {
+  const exportJobs = useExportJobs({ enabled })
 
   const summaryCards = useMemo(() => {
     const jobCount = exportJobs.jobs.length

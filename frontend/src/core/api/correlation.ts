@@ -1,15 +1,19 @@
 import { v4 as uuidv4 } from 'uuid'
 
-// A small utility to retrieve an existing correlation ID or generate a new one
-let currentCorrelationId: string | null = null
-
+/**
+ * Generates a fresh correlation ID for every HTTP request.
+ *
+ * Previous implementation memoized a single UUID per session, which made it
+ * impossible to correlate individual requests in backend logs. Now each call
+ * returns a new UUID, matching the standard per-request correlation pattern.
+ */
 export function getCorrelationId(): string {
-  if (!currentCorrelationId) {
-    currentCorrelationId = uuidv4()
-  }
-  return currentCorrelationId
+  return uuidv4()
 }
 
+/**
+ * @deprecated No-op — kept for backward compatibility. Correlation IDs are now per-request.
+ */
 export function resetCorrelationId(): void {
-  currentCorrelationId = null
+  // no-op: correlation IDs are generated per-request
 }

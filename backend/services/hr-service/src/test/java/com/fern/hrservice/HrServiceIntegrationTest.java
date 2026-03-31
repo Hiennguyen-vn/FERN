@@ -351,6 +351,85 @@ class HrServiceIntegrationTest {
     }
 
     @Test
+    void shouldFindApprovedAttendanceWithContractResolvedFromMasterDatasource() {
+        FernPrincipal systemPrincipal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_CONTRACT_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE,
+                PermissionCodes.HR_ATTENDANCE_REVIEW
+        );
+        long employeeId = hrService.createEmployee(systemPrincipal, new CreateEmployeeRequest(
+                "EMP-PAYROLL-001",
+                "Payroll Attendance",
+                null,
+                null,
+                null,
+                null,
+                null,
+                LocalDate.of(2026, 1, 1),
+                null
+        )).id();
+        long contractId = hrService.createContract(systemPrincipal, new CreateContractRequest(
+                employeeId,
+                "FULL_TIME",
+                "MONTHLY",
+                BigDecimal.valueOf(1800),
+                1L,
+                "TAX-PAYROLL",
+                "ACTIVE",
+                LocalDate.of(2026, 1, 1),
+                null
+        )).id();
+        long scheduleId = hrService.createShiftSchedule(systemPrincipal, new CreateShiftScheduleRequest(
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                "Payroll Shift",
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                null
+        )).id();
+        long shiftAssignmentId = hrService.createShiftAssignment(systemPrincipal, new CreateShiftAssignmentRequest(
+                scheduleId,
+                employeeId,
+                "SERVER",
+                null
+        )).id();
+
+        hrService.recordAttendanceEvent(systemPrincipal, "payroll-attendance-clock-in", new RecordAttendanceEventRequest(
+                employeeId,
+                1L,
+                201L,
+                shiftAssignmentId,
+                "CLOCK_IN",
+                Instant.parse("2026-03-28T02:00:00Z"),
+                "POS"
+        ));
+        hrService.recordAttendanceEvent(systemPrincipal, "payroll-attendance-clock-out", new RecordAttendanceEventRequest(
+                employeeId,
+                1L,
+                201L,
+                shiftAssignmentId,
+                "CLOCK_OUT",
+                Instant.parse("2026-03-28T10:00:00Z"),
+                "POS"
+        ));
+        hrService.reviewAttendance(outletPrincipal(PermissionCodes.HR_ATTENDANCE_REVIEW, 201L), shiftAssignmentId, "APPROVED", "approved");
+
+        var approvedAttendance = hrService.findApprovedAttendance(1L, LocalDate.of(2026, 3, 28), LocalDate.of(2026, 3, 28));
+
+        assertThat(approvedAttendance).singleElement().satisfies(item -> {
+            assertThat(item.employeeId()).isEqualTo(employeeId);
+            assertThat(item.contractId()).isEqualTo(contractId);
+            assertThat(item.attendanceStatus()).isEqualTo("PRESENT");
+            assertThat(item.workHours()).isEqualByComparingTo("8.00");
+        });
+    }
+
+    @Test
     void shouldReplayConcurrentAttendanceEventWithSameIdempotencyKey() throws Exception {
         FernPrincipal principal = systemPrincipal(
                 PermissionCodes.HR_EMPLOYEE_READ,
@@ -927,6 +1006,45 @@ class HrServiceIntegrationTest {
     }
 
     @Test
+    void shouldListAttendanceEventsForDescendantRouteWhenAccessibleScopeIsExpanded() throws Exception {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_READ,
+                PermissionCodes.HR_SHIFT_WRITE,
+                PermissionCodes.HR_ATTENDANCE_WRITE
+        );
+        AttendanceFixture fixture = createAttendanceFixture(
+                principal,
+                "EMP-ATT-010A",
+                "Attendance Descendant Scope",
+                2L,
+                202L,
+                LocalDate.of(2026, 3, 28),
+                LocalTime.of(9, 0),
+                LocalTime.of(17, 0),
+                "Descendant Scope Shift"
+        );
+
+        hrService.recordAttendanceEvent(principal, "attendance-descendant-clock-in", attendanceRequest(fixture, "CLOCK_IN", "2026-03-28T02:00:00Z"));
+        hrService.recordAttendanceEvent(principal, "attendance-descendant-clock-out", attendanceRequest(fixture, "CLOCK_OUT", "2026-03-28T10:00:00Z"));
+
+        mockMvc.perform(get("/attendance-events")
+                        .header("Authorization", bearer(
+                                Set.of(PermissionCodes.HR_ATTENDANCE_REVIEW),
+                                new ScopeRoots(false, List.of(1L), List.of()),
+                                new ScopeRoots(false, List.of(1L, 2L), List.of(202L))
+                        ))
+                        .param("shiftAssignmentId", fixture.shiftAssignmentId().toString())
+                        .param("fromDate", "2026-03-28")
+                        .param("toDate", "2026-03-28"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].shiftAssignmentId").value(fixture.shiftAssignmentId()))
+                .andExpect(jsonPath("$.items[0].regionId").value(2))
+                .andExpect(jsonPath("$.items[0].outletId").value(202));
+    }
+
+    @Test
     @Tag("security-gap")
     void shouldRejectReadingShiftAssignmentAndApprovalOutsideOutletScopeById() throws Exception {
         FernPrincipal principal = systemPrincipal(
@@ -1245,6 +1363,10 @@ class HrServiceIntegrationTest {
     }
 
     private String bearer(Set<String> permissions, List<Long> regions, List<Long> outlets, boolean systemScoped) {
+        return bearer(permissions, new ScopeRoots(systemScoped, regions, outlets), new ScopeRoots(systemScoped, regions, outlets));
+    }
+
+    private String bearer(Set<String> permissions, ScopeRoots scopeRoots, ScopeRoots accessibleScope) {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret(TEST_SECRET);
         properties.setAllowInsecureDefaultSecret(true);
@@ -1254,12 +1376,16 @@ class HrServiceIntegrationTest {
                 "hr-http-tester",
                 Set.of("hr"),
                 permissions,
-                new ScopeRoots(systemScoped, regions, outlets),
+                scopeRoots,
+                accessibleScope,
                 1L,
                 1L,
-                "hr-test-jti-" + permissions.hashCode() + "-" + regions.hashCode() + "-" + outlets.hashCode() + "-" + systemScoped,
+                "hr-test-jti-" + permissions.hashCode() + "-" + scopeRoots.hashCode() + "-" + accessibleScope.hashCode(),
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                com.fern.platform.common.FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("hr-service")
         ), jwtService.accessTokenTtl());
         return "Bearer " + token;
     }

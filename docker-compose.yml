@@ -9,7 +9,7 @@ services:
     ports:
       - "${FERN_POSTGRES_HOST_PORT:-55432}:5432"
     volumes:
-      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./backend/infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${FERN_DB_USERNAME:-fern} -d fern_master"]
       interval: 10s
@@ -37,11 +37,12 @@ services:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      # 9092 = external (localhost), 9094 = internal Docker network, 9093 = controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:9094,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
@@ -52,5 +53,323 @@ services:
       timeout: 10s
       retries: 15
 
-# Reporting, audit, notification, and projection schemas now live in
-# PostgreSQL `fern_master`; no separate local reporting warehouse is required.
+  # ---------------------------------------------------------------------------
+  # Application services — profile: app
+  # Build images first:
+  #   cd backend && ./mvnw -pl services/iam-service[,...] spring-boot:build-image -DskipTests
+  # Start stack:
+  #   docker compose --profile app up -d
+  # ---------------------------------------------------------------------------
+
+  x-app-common: &app-common
+    profiles: [app]
+    restart: unless-stopped
+    environment: &common-env
+      FERN_DB_USERNAME: ${FERN_DB_USERNAME:-fern}
+      FERN_DB_PASSWORD: ${FERN_DB_PASSWORD:-fern}
+      FERN_REDIS_HOST: redis
+      FERN_REDIS_PORT: 6379
+      FERN_REDIS_PASSWORD: ${FERN_REDIS_PASSWORD:-localdev}
+      FERN_KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+      FERN_JWT_SECRET: ${FERN_JWT_SECRET:-fern-local-smoke-secret-0123456789abcdef}
+
+  iam-service:
+    <<: *app-common
+    image: fern/iam-service:latest
+    container_name: fern-iam
+    ports:
+      - "8081:8081"
+    environment:
+      <<: *common-env
+      FERN_IAM_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=iam
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  org-service:
+    <<: *app-common
+    image: fern/org-service:latest
+    container_name: fern-org
+    ports:
+      - "8082:8082"
+    environment:
+      <<: *common-env
+      FERN_ORG_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=org
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  audit-service:
+    <<: *app-common
+    image: fern/audit-service:latest
+    container_name: fern-audit
+    ports:
+      - "8084:8084"
+    environment:
+      <<: *common-env
+      FERN_AUDIT_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=audit
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8084/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  catalog-service:
+    <<: *app-common
+    image: fern/catalog-service:latest
+    container_name: fern-catalog
+    ports:
+      - "8085:8085"
+    environment:
+      <<: *common-env
+      FERN_CATALOG_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=catalog
+      FERN_OUTBOX_PUBLISH_DELAY_MS: ${FERN_OUTBOX_PUBLISH_DELAY_MS:-5000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  inventory-service:
+    <<: *app-common
+    image: fern/inventory-service:latest
+    container_name: fern-inventory
+    ports:
+      - "8087:8087"
+    environment:
+      <<: *common-env
+      FERN_INVENTORY_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=inventory
+      FERN_ORG_BASE_URL: http://org-service:8082
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      org-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8087/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  pos-service:
+    <<: *app-common
+    image: fern/pos-service:latest
+    container_name: fern-pos
+    ports:
+      - "8086:8086"
+    environment:
+      <<: *common-env
+      FERN_POS_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=pos
+      FERN_CATALOG_BASE_URL: http://catalog-service:8085
+      FERN_INVENTORY_BASE_URL: http://inventory-service:8087
+      FERN_OUTBOX_PUBLISH_DELAY_MS: ${FERN_OUTBOX_PUBLISH_DELAY_MS:-5000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8086/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  procurement-service:
+    <<: *app-common
+    image: fern/procurement-service:latest
+    container_name: fern-procurement
+    ports:
+      - "8088:8088"
+    environment:
+      <<: *common-env
+      FERN_PROCUREMENT_JDBC_URL: jdbc:postgresql://postgres:5432/fern_operational?currentSchema=procurement
+      FERN_OUTBOX_PUBLISH_DELAY_MS: ${FERN_OUTBOX_PUBLISH_DELAY_MS:-5000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8088/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  hr-service:
+    <<: *app-common
+    image: fern/hr-service:latest
+    container_name: fern-hr
+    ports:
+      - "8089:8089"
+    environment:
+      <<: *common-env
+      FERN_HR_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=hr
+      FERN_OUTBOX_PUBLISH_DELAY_MS: ${FERN_OUTBOX_PUBLISH_DELAY_MS:-5000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8089/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  report-service:
+    <<: *app-common
+    image: fern/report-service:latest
+    container_name: fern-report
+    ports:
+      - "8090:8090"
+    environment:
+      <<: *common-env
+      FERN_REPORT_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=report
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8090/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  finance-service:
+    <<: *app-common
+    image: fern/finance-service:latest
+    container_name: fern-finance
+    ports:
+      - "8091:8091"
+    environment:
+      <<: *common-env
+      FERN_FINANCE_JDBC_URL: jdbc:postgresql://postgres:5432/fern_operational?currentSchema=finance
+      FERN_FINANCE_MASTER_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=config
+      FERN_FINANCE_PROJECTION_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=finance_projection
+      FERN_HR_BASE_URL: http://hr-service:8089
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      hr-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8091/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  api-gateway:
+    <<: *app-common
+    image: fern/api-gateway:latest
+    container_name: fern-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      <<: *common-env
+      FERN_GATEWAY_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=gateway
+      FERN_IAM_ROUTE_URI: http://iam-service:8081
+      FERN_ORG_ROUTE_URI: http://org-service:8082
+      FERN_CATALOG_ROUTE_URI: http://catalog-service:8085
+      FERN_AUDIT_ROUTE_URI: http://audit-service:8084
+      FERN_POS_ROUTE_URI: http://pos-service:8086
+      FERN_INVENTORY_ROUTE_URI: http://inventory-service:8087
+      FERN_PROCUREMENT_ROUTE_URI: http://procurement-service:8088
+      FERN_HR_ROUTE_URI: http://hr-service:8089
+      FERN_REPORT_ROUTE_URI: http://report-service:8090
+      FERN_FINANCE_ROUTE_URI: http://finance-service:8091
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      iam-service:
+        condition: service_healthy
+      org-service:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+      audit-service:
+        condition: service_healthy
+      pos-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      procurement-service:
+        condition: service_healthy
+      hr-service:
+        condition: service_healthy
+      report-service:
+        condition: service_healthy
+      finance-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s

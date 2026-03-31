@@ -19,7 +19,7 @@ describe('ReportsDashboardPage', () => {
     resetTestStores()
   })
 
-  it('renders report surfaces and recent export activity', () => {
+  it('shows only readable report surfaces for a generic read user', () => {
     setAuthenticatedSession({
       principal: {
         permissions: [permissionConstants.report.read],
@@ -41,12 +41,15 @@ describe('ReportsDashboardPage', () => {
           format: 'CSV',
           preview: [],
           requestedAt: '2026-03-30T08:00:00.000Z',
+          restrictedJobCount: 0,
           rowCount: 12,
           startedAt: null,
           status: 'QUEUED',
         },
       ],
       refresh: vi.fn(),
+      restrictedJobCount: 0,
+      restrictedJobIds: [],
       summaryCards: [
         { label: 'Recent exports', value: 1 },
         { label: 'Pending exports', value: 1 },
@@ -56,10 +59,36 @@ describe('ReportsDashboardPage', () => {
     renderWithProviders(<ReportsDashboardPage />)
 
     expect(screen.getByRole('heading', { name: 'Reports' })).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'Open' }).length).toBeGreaterThan(0)
     expect(screen.getByText('Revenue report')).toBeInTheDocument()
+    expect(screen.getByText('Inventory report')).toBeInTheDocument()
+    expect(screen.queryByText('Payroll report')).not.toBeInTheDocument()
+    expect(screen.getByText('Export jobs')).toBeInTheDocument()
     expect(screen.getByText('Recent export activity')).toBeInTheDocument()
     expect(screen.getByText('#99')).toBeInTheDocument()
+  })
+
+  it('keeps export-only users in create-only dashboard mode', () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.export],
+      },
+    })
+    mocks.useReportDashboard.mockReturnValue({
+      error: null,
+      isLoading: false,
+      jobs: [],
+      refresh: vi.fn(),
+      restrictedJobCount: 0,
+      restrictedJobIds: [],
+      summaryCards: [],
+    })
+
+    renderWithProviders(<ReportsDashboardPage />)
+
+    expect(screen.getByText(/create-only mode/i)).toBeInTheDocument()
+    expect(screen.getByText('Export jobs')).toBeInTheDocument()
+    expect(screen.queryByText('Revenue report')).not.toBeInTheDocument()
+    expect(screen.queryByText('Recent export activity')).not.toBeInTheDocument()
   })
 
   it('shows permission denied without report permissions', () => {
@@ -69,6 +98,8 @@ describe('ReportsDashboardPage', () => {
       isLoading: false,
       jobs: [],
       refresh: vi.fn(),
+      restrictedJobCount: 0,
+      restrictedJobIds: [],
       summaryCards: [],
     })
 

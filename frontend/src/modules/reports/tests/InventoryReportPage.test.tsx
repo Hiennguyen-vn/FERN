@@ -24,7 +24,7 @@ describe('InventoryReportPage', () => {
     resetTestStores()
   })
 
-  it('renders inventory summary and table rows', () => {
+  it('renders inventory summary and table rows for a read-plus-export user', () => {
     setAuthenticatedSession({
       principal: {
         permissions: [permissionConstants.report.read, permissionConstants.report.export],
@@ -97,10 +97,30 @@ describe('InventoryReportPage', () => {
     expect(screen.getAllByText('#9').length).toBeGreaterThan(0)
     expect(screen.getByText('Movement breakdown')).toBeInTheDocument()
     expect(screen.getByText('SO-1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Queue export' })).toBeEnabled()
   })
 
-  it('shows permission denied without report permissions', () => {
-    setAuthenticatedSession({ principal: { permissions: [] } })
+  it('allows read-only users to open inventory report but disables export creation', () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.read],
+      },
+    })
+    mocks.useCreateExportJob.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
+    mocks.useInventoryReport.mockReturnValue({
+      balanceQuery: { data: null, error: null, isLoading: false, refetch: vi.fn() },
+      summary: { availableQuantity: 0, balanceRows: 0, ingredients: 0, transactionRows: 0, txnQuantityDelta: 0 },
+      transactionQuery: { data: null, error: null, isLoading: false, refetch: vi.fn() },
+    })
+
+    renderWithProviders(<InventoryReportPage />)
+
+    expect(screen.getByText(/không thể queue inventory export/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Queue export' })).toBeDisabled()
+  })
+
+  it('shows permission denied for export-only users', () => {
+    setAuthenticatedSession({ principal: { permissions: [permissionConstants.report.export] } })
     mocks.useCreateExportJob.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
     mocks.useInventoryReport.mockReturnValue({
       balanceQuery: { data: null, error: null, isLoading: false, refetch: vi.fn() },
@@ -111,5 +131,6 @@ describe('InventoryReportPage', () => {
     renderWithProviders(<InventoryReportPage />)
 
     expect(screen.getByText('Permission denied')).toBeInTheDocument()
+    expect(screen.getByText('Bạn cần report.read để mở inventory report.')).toBeInTheDocument()
   })
 })

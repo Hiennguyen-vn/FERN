@@ -2,6 +2,7 @@ package com.fern.procurementservice.service;
 
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ForbiddenException;
+import com.fern.platform.common.ScopeAccess;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,32 +15,21 @@ public class ProcurementAuthorizer {
 
     public void requireOutletPermission(FernPrincipal principal, Long outletId, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system()) {
-            return;
-        }
-        if (!principal.scopeRoots().outlets().contains(outletId)) {
+        if (!ScopeAccess.allowsOutlet(principal, outletId)) {
             throw new ForbiddenException("Outlet is outside the current scope");
         }
     }
 
     public void requireRegionPermission(FernPrincipal principal, Long regionId, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system()) {
-            return;
-        }
-        if (!principal.scopeRoots().regions().contains(regionId)) {
+        if (!ScopeAccess.allowsRegion(principal, regionId)) {
             throw new ForbiddenException("Region is outside the current scope");
         }
     }
 
     public void requireRouteRead(FernPrincipal principal, Long regionId, Long outletId, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system()) {
-            return;
-        }
-        boolean outletAllowed = outletId != null && principal.scopeRoots().outlets().contains(outletId);
-        boolean regionAllowed = regionId != null && principal.scopeRoots().regions().contains(regionId);
-        if (!outletAllowed && !regionAllowed) {
+        if (!ScopeAccess.allowsRoute(principal, regionId, outletId)) {
             throw new ForbiddenException("Resource is outside the current scope");
         }
     }

@@ -168,7 +168,10 @@ class InventoryServiceIntegrationTest {
                 1L,
                 "inventory-test-jti",
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("inventory-service")
         ), jwtService.accessTokenTtl());
     }
 
@@ -1741,7 +1744,10 @@ class InventoryServiceIntegrationTest {
                 1L,
                 "inventory-scoped-jti-" + outletIds,
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("inventory-service")
         ), jwtService.accessTokenTtl());
         return "Bearer " + scopedToken;
     }

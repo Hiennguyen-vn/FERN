@@ -14,7 +14,7 @@ public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
 
     boolean existsByCodeIgnoreCaseAndDeletedAtIsNullAndIdNot(String code, Long id);
 
-    List<ProductEntity> findAllByDeletedAtIsNullOrderByCodeAsc();
+    List<ProductEntity> findAllByDeletedAtIsNullOrderByCodeAsc(org.springframework.data.domain.Pageable pageable);
 
     List<ProductEntity> findByIdInAndDeletedAtIsNull(Collection<Long> ids);
 

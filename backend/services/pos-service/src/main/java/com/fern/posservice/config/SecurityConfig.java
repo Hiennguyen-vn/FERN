@@ -31,7 +31,7 @@ public class SecurityConfig {
         StringRedisTemplate redisTemplate = redisTemplateProvider.getIfAvailable();
         FernTokenAcceptanceValidator validator = redisTemplate == null
                 ? FernTokenAcceptanceValidator.noop()
-                : new RedisFernTokenAcceptanceValidator(redisTemplate, serviceName, jwtProperties.getUserTokenIssuer());
+                : new RedisFernTokenAcceptanceValidator(redisTemplate, serviceName, jwtProperties.getGatewayRelayUserIssuer());
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)

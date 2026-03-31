@@ -14,13 +14,56 @@ import org.junit.jupiter.api.Test;
 
 class FernJwtClaimValidationRulesTest {
     @Test
+    void shouldAcceptGatewayFacingUserTokenFromIamIssuer() {
+        FernJwtClaims claims = userClaims(
+                FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER,
+                Set.of("api-gateway")
+        );
+
+        assertThatCode(() -> FernJwtClaimValidationRules.validateGatewayIngress(
+                claims,
+                "api-gateway",
+                FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER
+        )).doesNotThrowAnyException();
+    }
+
+    @Test
+    void shouldRejectDirectIamIssuedUserTokenAtDownstream() {
+        FernJwtClaims claims = userClaims(
+                FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER,
+                Set.of("finance-service")
+        );
+
+        assertThatThrownBy(() -> FernJwtClaimValidationRules.validateDownstreamIngress(
+                claims,
+                "finance-service",
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER
+        )).isInstanceOf(UnauthorizedException.class)
+                .hasMessage("Invalid bearer token");
+    }
+
+    @Test
+    void shouldAcceptGatewayRelayedUserTokenAtDownstream() {
+        FernJwtClaims claims = userClaims(
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("finance-service")
+        );
+
+        assertThatCode(() -> FernJwtClaimValidationRules.validateDownstreamIngress(
+                claims,
+                "finance-service",
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER
+        )).doesNotThrowAnyException();
+    }
+
+    @Test
     void shouldAcceptServiceTokenWhenIssuerMatchesUsernameAndAudienceContainsTargetService() {
         FernJwtClaims claims = serviceClaims("inventory-service", "inventory-service", Set.of("org-service", "audit-service"));
 
-        assertThatCode(() -> FernJwtClaimValidationRules.validateIssuerAndAudience(
+        assertThatCode(() -> FernJwtClaimValidationRules.validateDownstreamIngress(
                 claims,
                 "org-service",
-                FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER
         )).doesNotThrowAnyException();
     }
 
@@ -28,10 +71,10 @@ class FernJwtClaimValidationRulesTest {
     void shouldRejectServiceTokenWhenAudienceDoesNotContainTargetService() {
         FernJwtClaims claims = serviceClaims("inventory-service", "inventory-service", Set.of("inventory-service"));
 
-        assertThatThrownBy(() -> FernJwtClaimValidationRules.validateIssuerAndAudience(
+        assertThatThrownBy(() -> FernJwtClaimValidationRules.validateDownstreamIngress(
                 claims,
                 "org-service",
-                FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER
         )).isInstanceOf(UnauthorizedException.class)
                 .hasMessage("Invalid bearer token");
     }
@@ -40,12 +83,31 @@ class FernJwtClaimValidationRulesTest {
     void shouldRejectServiceTokenWhenIssuerDoesNotMatchUsername() {
         FernJwtClaims claims = serviceClaims("inventory-service", "org-internal", Set.of("org-service"));
 
-        assertThatThrownBy(() -> FernJwtClaimValidationRules.validateIssuerAndAudience(
+        assertThatThrownBy(() -> FernJwtClaimValidationRules.validateDownstreamIngress(
                 claims,
                 "org-service",
-                FernJwtProperties.DEFAULT_USER_TOKEN_ISSUER
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER
         )).isInstanceOf(UnauthorizedException.class)
                 .hasMessage("Invalid bearer token");
+    }
+
+    private FernJwtClaims userClaims(String issuer, Set<String> audience) {
+        Instant now = Instant.parse("2026-03-29T00:00:00Z");
+        return new FernJwtClaims(
+                1L,
+                "finance-user",
+                Set.of("finance"),
+                Set.of("finance.payroll.read"),
+                new ScopeRoots(false, List.of(1L), List.of()),
+                1L,
+                1L,
+                UUID.randomUUID().toString(),
+                now,
+                now.plusSeconds(300),
+                FernPrincipalType.USER,
+                issuer,
+                audience
+        );
     }
 
     private FernJwtClaims serviceClaims(String username, String issuer, Set<String> audience) {

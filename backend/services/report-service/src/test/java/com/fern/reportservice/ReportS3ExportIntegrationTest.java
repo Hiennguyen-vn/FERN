@@ -231,7 +231,10 @@ class ReportS3ExportIntegrationTest {
                 1L,
                 "report-s3-test-jti-" + sequence,
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                com.fern.platform.common.FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("report-service")
         ), jwtService.accessTokenTtl());
     }
 

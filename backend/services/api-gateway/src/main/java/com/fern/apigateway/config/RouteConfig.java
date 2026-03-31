@@ -26,7 +26,8 @@ public class RouteConfig {
                         "/recipe-versions/**",
                         "/tax-rates/**",
                         "/product-prices/**",
-                        "/product-availability/**"
+                        "/product-availability/**",
+                        "/catalog/promotions/**"
                 ).uri(properties.getCatalog()))
                 .route("audit-core", r -> r.path("/audit/**").uri(properties.getAudit()))
                 .route("pos-core", r -> r.path("/pos-sessions/**", "/sale-orders/**").uri(properties.getPos()))

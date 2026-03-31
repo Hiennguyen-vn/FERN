@@ -8,6 +8,7 @@ public record FernPrincipal(
         Set<String> roles,
         Set<String> permissions,
         ScopeRoots scopeRoots,
+        ScopeRoots accessibleScope,
         long policyVersion,
         long scopeVersion,
         String jti,
@@ -23,7 +24,26 @@ public record FernPrincipal(
             long scopeVersion,
             String jti
     ) {
-        this(userId, username, roles, permissions, scopeRoots, policyVersion, scopeVersion, jti, FernPrincipalType.USER);
+        this(userId, username, roles, permissions, scopeRoots, scopeRoots, policyVersion, scopeVersion, jti, FernPrincipalType.USER);
+    }
+
+    public FernPrincipal(
+            Long userId,
+            String username,
+            Set<String> roles,
+            Set<String> permissions,
+            ScopeRoots scopeRoots,
+            long policyVersion,
+            long scopeVersion,
+            String jti,
+            FernPrincipalType principalType
+    ) {
+        this(userId, username, roles, permissions, scopeRoots, scopeRoots, policyVersion, scopeVersion, jti, principalType);
+    }
+
+    public FernPrincipal {
+        scopeRoots = scopeRoots == null ? ScopeRoots.empty() : scopeRoots;
+        accessibleScope = accessibleScope == null ? scopeRoots : accessibleScope;
     }
 
     public boolean isService() {
@@ -31,6 +51,6 @@ public record FernPrincipal(
     }
 
     public boolean isSystemScoped() {
-        return scopeRoots != null && scopeRoots.system();
+        return accessibleScope.system();
     }
 }

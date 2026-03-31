@@ -11,6 +11,7 @@ export interface FernPrincipal {
   roles: string[]
   permissions: string[]
   scopeRoots: ScopeRoots
+  accessibleScope?: ScopeRoots
   policyVersion: number
   scopeVersion: number
   jti?: string
@@ -39,6 +40,7 @@ export interface JwtClaims {
   roles: string[]
   permissions: string[]
   scopeRoots: ScopeRoots
+  accessibleScope?: ScopeRoots
   policyVersion: number
   scopeVersion: number
   jti?: string

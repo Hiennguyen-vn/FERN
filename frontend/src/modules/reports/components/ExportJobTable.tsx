@@ -1,15 +1,17 @@
 import { Link } from 'react-router-dom'
+import type { FernPrincipal } from '@core/auth/auth.types'
 import { Button, DataTable } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import type { ExportJob } from '../model/reportExport.types'
-import { canDownloadExport, canPreviewExport } from '../services/reportsUiPolicy.service'
+import { canDownloadExport, canOpenExportJob, canPreviewExport } from '../services/reportsUiPolicy.service'
 import { ExportStatusBadge } from './ExportStatusBadge'
 
 interface ExportJobTableProps {
   jobs: ExportJob[]
+  principal: FernPrincipal | null
 }
 
-export function ExportJobTable({ jobs }: ExportJobTableProps) {
+export function ExportJobTable({ jobs, principal }: ExportJobTableProps) {
   const columns: Array<DataTableColumn<ExportJob>> = [
     {
       key: 'job',
@@ -34,23 +36,31 @@ export function ExportJobTable({ jobs }: ExportJobTableProps) {
     {
       key: 'actions',
       header: 'Actions',
-      render: (job) => (
-        <div className="table-actions">
-          <Button asChild size="sm" variant="ghost">
-            <Link to={`/reports/export-jobs/${job.exportJobId}`}>Open</Link>
-          </Button>
-          {canPreviewExport(job) ? (
-            <Button asChild size="sm" variant="ghost">
-              <Link to={`/reports/export-jobs/${job.exportJobId}/preview`}>Preview</Link>
-            </Button>
-          ) : null}
-          {canDownloadExport(job) ? (
-            <Button asChild size="sm" variant="ghost">
-              <Link to={`/reports/export-jobs/${job.exportJobId}/download`}>Download</Link>
-            </Button>
-          ) : null}
-        </div>
-      ),
+      render: (job) => {
+        const canOpen = canOpenExportJob(principal, job)
+        const canPreview = canPreviewExport(principal, job)
+        const canDownload = canDownloadExport(principal, job)
+
+        return (
+          <div className="table-actions">
+            {canOpen ? (
+              <Button asChild size="sm" variant="ghost">
+                <Link to={`/reports/export-jobs/${job.exportJobId}`}>Open</Link>
+              </Button>
+            ) : null}
+            {canPreview ? (
+              <Button asChild size="sm" variant="ghost">
+                <Link to={`/reports/export-jobs/${job.exportJobId}/preview`}>Preview</Link>
+              </Button>
+            ) : null}
+            {canDownload ? (
+              <Button asChild size="sm" variant="ghost">
+                <Link to={`/reports/export-jobs/${job.exportJobId}/download`}>Download</Link>
+              </Button>
+            ) : null}
+          </div>
+        )
+      },
     },
   ]
 

@@ -1,14 +1,79 @@
 import type { FernPrincipal } from '@core/auth/auth.types'
 import { hasAnyPermissions, hasPermission } from '@core/permissions/permission.checker'
 import { permissionConstants } from '@core/permissions/permission.constants'
-import type { ExportJob } from '../model/reportExport.types'
+import type { ExportDataset, ExportJob } from '../model/reportExport.types'
 
-export function canPreviewExport(job: ExportJob): boolean {
+type ExportDatasetFamily = 'generic' | 'payroll'
+
+const genericReportDatasets: ExportDataset[] = [
+  'SALES_FACT',
+  'PAYMENT_FACT',
+  'INVENTORY_MOVEMENT_FACT',
+  'PROCUREMENT_FACT',
+  'ATTENDANCE_FACT',
+  'EXPENSE_FACT',
+  'REGION_DAILY_SUMMARY',
+  'COMPANY_DAILY_SUMMARY',
+]
+
+const payrollReportDatasets: ExportDataset[] = [
+  'PAYROLL_FACT',
+  'PAYROLL_SUMMARY',
+  'PAYROLL_RUN',
+]
+
+function resolveDatasetFamily(dataset: string): ExportDatasetFamily | null {
+  if (genericReportDatasets.includes(dataset as ExportDataset)) {
+    return 'generic'
+  }
+
+  if (payrollReportDatasets.includes(dataset as ExportDataset)) {
+    return 'payroll'
+  }
+
+  return null
+}
+
+function canReadGenericReports(principal: FernPrincipal | null) {
+  return hasPermission(principal, permissionConstants.report.read)
+}
+
+function canReadPayrollReportsInternal(principal: FernPrincipal | null) {
+  return hasPermission(principal, permissionConstants.report.payrollRead)
+}
+
+function canReadExportRecord(principal: FernPrincipal | null, dataset: string) {
+  const family = resolveDatasetFamily(dataset)
+
+  if (family === 'generic') {
+    return canReadGenericReports(principal)
+  }
+
+  if (family === 'payroll') {
+    return canReadPayrollReportsInternal(principal)
+  }
+
+  return false
+}
+
+export function isExportPreviewAvailable(job: ExportJob): boolean {
   return ['RUNNING', 'COMPLETED'].includes(job.status.toUpperCase())
 }
 
-export function canDownloadExport(job: ExportJob): boolean {
+export function isExportDownloadAvailable(job: ExportJob): boolean {
   return job.status.toUpperCase() === 'COMPLETED'
+}
+
+export function canOpenExportJob(principal: FernPrincipal | null, job: ExportJob): boolean {
+  return canReadExportRecord(principal, job.dataset)
+}
+
+export function canPreviewExport(principal: FernPrincipal | null, job: ExportJob): boolean {
+  return canOpenExportJob(principal, job) && isExportPreviewAvailable(job)
+}
+
+export function canDownloadExport(principal: FernPrincipal | null, job: ExportJob): boolean {
+  return canOpenExportJob(principal, job) && isExportDownloadAvailable(job)
 }
 
 export function getExportStatusDescription(job: ExportJob): string {
@@ -26,29 +91,55 @@ export function getExportStatusDescription(job: ExportJob): string {
   }
 }
 
-const reportReadPermissions = [permissionConstants.report.read, permissionConstants.report.export]
-const payrollReportPermissions = [permissionConstants.report.payrollRead, permissionConstants.report.payrollExport]
-
-export function canReadReports(principal: FernPrincipal | null) {
-  return hasAnyPermissions(principal, reportReadPermissions)
+export function canReadRevenueReport(principal: FernPrincipal | null) {
+  return canReadGenericReports(principal)
 }
 
-export function canExportReports(principal: FernPrincipal | null) {
-  return hasPermission(principal, permissionConstants.report.export)
+export function canReadInventoryReport(principal: FernPrincipal | null) {
+  return canReadGenericReports(principal)
 }
 
-export function canReadPayrollReports(principal: FernPrincipal | null) {
-  return hasAnyPermissions(principal, payrollReportPermissions)
+export function canReadPayrollReport(principal: FernPrincipal | null) {
+  return canReadPayrollReportsInternal(principal)
 }
 
-export function canExportPayrollReports(principal: FernPrincipal | null) {
-  return hasPermission(principal, permissionConstants.report.payrollExport)
+export function canCreateExport(principal: FernPrincipal | null, dataset?: ExportDataset) {
+  if (!dataset) {
+    return hasAnyPermissions(principal, [permissionConstants.report.export, permissionConstants.report.payrollExport])
+  }
+
+  const family = resolveDatasetFamily(dataset)
+
+  if (family === 'generic') {
+    return hasPermission(principal, permissionConstants.report.export)
+  }
+
+  if (family === 'payroll') {
+    return hasPermission(principal, permissionConstants.report.payrollExport)
+  }
+
+  return false
+}
+
+export function getCreatableExportDatasets(principal: FernPrincipal | null): ExportDataset[] {
+  return [...genericReportDatasets, ...payrollReportDatasets].filter((dataset) => canCreateExport(principal, dataset))
 }
 
 export function canReadPayrollReportDetail(principal: FernPrincipal | null) {
   return hasPermission(principal, permissionConstants.finance.payrollDetailRead)
 }
 
-export function canSeeReportsNavigation(principal: FernPrincipal | null) {
-  return canReadReports(principal) || canReadPayrollReports(principal)
+export function canInspectExportJobs(principal: FernPrincipal | null) {
+  return canReadGenericReports(principal) || canReadPayrollReportsInternal(principal)
+}
+
+export function canViewExportJobs(principal: FernPrincipal | null) {
+  return canInspectExportJobs(principal) || canCreateExport(principal)
+}
+
+export function canOpenReportDashboard(principal: FernPrincipal | null) {
+  return canReadRevenueReport(principal)
+    || canReadInventoryReport(principal)
+    || canReadPayrollReport(principal)
+    || canViewExportJobs(principal)
 }

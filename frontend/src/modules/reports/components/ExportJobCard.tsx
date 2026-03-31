@@ -1,15 +1,21 @@
 import { Link } from 'react-router-dom'
+import type { FernPrincipal } from '@core/auth/auth.types'
 import { Button, Card } from '@design-system/index'
 import type { ExportJob } from '../model/reportExport.types'
-import { canDownloadExport, canPreviewExport, getExportStatusDescription } from '../services/reportsUiPolicy.service'
+import { canDownloadExport, canOpenExportJob, canPreviewExport, getExportStatusDescription } from '../services/reportsUiPolicy.service'
 import { ExportStatusBadge } from './ExportStatusBadge'
 
 interface ExportJobCardProps {
   job: ExportJob
+  principal: FernPrincipal | null
   onRemove?: (jobId: number) => void
 }
 
-export function ExportJobCard({ job, onRemove }: ExportJobCardProps) {
+export function ExportJobCard({ job, principal, onRemove }: ExportJobCardProps) {
+  const canOpen = canOpenExportJob(principal, job)
+  const canPreview = canPreviewExport(principal, job)
+  const canDownload = canDownloadExport(principal, job)
+
   return (
     <Card title={`Export #${job.exportJobId}`}>
       <div className="page-stack">
@@ -24,15 +30,17 @@ export function ExportJobCard({ job, onRemove }: ExportJobCardProps) {
           <span>Rows: {job.rowCount ?? 'N/A'}</span>
         </div>
         <div className="form-actions align-start">
-          <Button asChild size="sm" variant="secondary">
-            <Link to={`/reports/export-jobs/${job.exportJobId}`}>Details</Link>
-          </Button>
-          {canPreviewExport(job) ? (
+          {canOpen ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/reports/export-jobs/${job.exportJobId}`}>Details</Link>
+            </Button>
+          ) : null}
+          {canPreview ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`/reports/export-jobs/${job.exportJobId}/preview`}>Preview</Link>
             </Button>
           ) : null}
-          {canDownloadExport(job) ? (
+          {canDownload ? (
             <Button asChild size="sm" variant="secondary">
               <Link to={`/reports/export-jobs/${job.exportJobId}/download`}>Download</Link>
             </Button>

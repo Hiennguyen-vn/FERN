@@ -1,5 +1,6 @@
 import { hasAnyPermissions } from '@core/permissions/permission.checker'
 import { permissionConstants } from '@core/permissions/permission.constants'
+import { canOpenReportDashboard } from '@modules/reports/services/reportsUiPolicy.service'
 import type { NavigationItem } from './navigation.types'
 
 const catalogReadPermissions = [
@@ -31,13 +32,6 @@ const inventoryNavigationPermissions = [
 const workforceNavigationPermissions = [
   permissionConstants.hr.attendanceWrite,
   permissionConstants.hr.attendanceReview,
-]
-
-const reportsNavigationPermissions = [
-  permissionConstants.report.read,
-  permissionConstants.report.export,
-  permissionConstants.report.payrollRead,
-  permissionConstants.report.payrollExport,
 ]
 
 const financeNavigationPermissions = [
@@ -131,6 +125,6 @@ export const navigationConfig: NavigationItem[] = [
   {
     label: 'Reports',
     to: '/reports',
-    visible: (principal) => hasAnyPermissions(principal, reportsNavigationPermissions),
+    visible: (principal) => canOpenReportDashboard(principal),
   },
 ]

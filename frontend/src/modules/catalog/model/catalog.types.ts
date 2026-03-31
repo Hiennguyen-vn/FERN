@@ -4,6 +4,8 @@ export type IngredientStatus = 'ACTIVE' | 'INACTIVE'
 export type RecipeVersionStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
 export type PriceScopeType = 'GLOBAL' | 'REGION' | 'OUTLET'
 export type PriceType = 'STANDARD' | 'PROMOTIONAL' | 'COST'
+export type PromotionStatus = 'ACTIVE' | 'INACTIVE' | 'EXPIRED'
+export type PromotionType = 'PERCENT_DISCOUNT' | 'FIXED_DISCOUNT' | 'BUY_X_GET_Y' | 'FREE_ITEM'
 
 // ─── Reference data ───────────────────────────────────────────────────────────
 export interface Category {
@@ -153,4 +155,84 @@ export interface ProductAvailabilityUpsertRequest {
   productId: number
   outletId: number
   available: boolean
+}
+
+// ─── Tax rates ────────────────────────────────────────────────────────────────
+export interface TaxRate {
+  id: number
+  code: string
+  name: string
+  ratePercent: number
+  countryCode: string | null
+  regionId: number | null
+  effectiveFrom: string | null
+  effectiveTo: string | null
+  status: string
+}
+
+export interface TaxRateUpsertRequest {
+  code: string
+  name: string
+  ratePercent: number
+  countryCode?: string | null
+  regionId?: number | null
+  effectiveFrom?: string | null
+  effectiveTo?: string | null
+}
+
+// ─── Promotions ───────────────────────────────────────────────────────────────
+export interface Promotion {
+  id: number
+  code: string
+  name: string
+  description: string | null
+  promotionType: PromotionType | string
+  discountPercent: number | null
+  discountAmount: number | null
+  scopeType: PriceScopeType | string
+  scopeId: number | null
+  minOrderAmount: number | null
+  maxUsageTotal: number | null
+  effectiveFrom: string
+  effectiveTo: string | null
+  status: PromotionStatus | string
+  createdByUserId: number | null
+  updatedByUserId: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PromotionUpsertRequest {
+  code: string
+  name: string
+  description?: string | null
+  promotionType: PromotionType | string
+  discountPercent?: number | null
+  discountAmount?: number | null
+  scopeType: PriceScopeType | string
+  scopeId?: number | null
+  minOrderAmount?: number | null
+  maxUsageTotal?: number | null
+  effectiveFrom: string
+  effectiveTo?: string | null
+}
+
+// ─── Reference data write requests ───────────────────────────────────────────
+export interface CategoryUpsertRequest {
+  code: string
+  name: string
+  description?: string | null
+  active?: boolean
+}
+
+export interface UnitOfMeasureUpsertRequest {
+  code: string
+  name: string
+  symbol: string
+}
+
+export interface UomConversionUpsertRequest {
+  fromUomCode: string
+  toUomCode: string
+  factor: number
 }

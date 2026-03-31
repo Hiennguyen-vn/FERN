@@ -2,9 +2,13 @@ import { gatewayClient } from '@core/api/gatewayClient'
 import type {
   CreateGoodsReceiptPayload,
   CreatePurchaseOrderPayload,
+  CreateSupplierInvoicePayload,
+  CreateSupplierPaymentPayload,
   GoodsReceipt,
   PurchaseOrder,
   Supplier,
+  SupplierInvoice,
+  SupplierPayment,
 } from '../model/procurement.types'
 
 export async function listSuppliers() {
@@ -39,5 +43,32 @@ export async function getGoodsReceipt(id: number) {
 
 export async function goodsReceiptAction(id: number, action: 'receive' | 'post' | 'cancel') {
   const { data } = await gatewayClient.post<GoodsReceipt>(`/goods-receipts/${id}/${action}`)
+  return data
+}
+
+// ─── Supplier invoices ────────────────────────────────────────────────────────
+export async function createSupplierInvoice(payload: CreateSupplierInvoicePayload) {
+  const { data } = await gatewayClient.post<SupplierInvoice>('/supplier-invoices', payload)
+  return data
+}
+
+export async function getSupplierInvoice(id: number) {
+  const { data } = await gatewayClient.get<SupplierInvoice>(`/supplier-invoices/${id}`)
+  return data
+}
+
+export async function supplierInvoiceAction(id: number, action: 'approve' | 'dispute') {
+  const { data } = await gatewayClient.post<SupplierInvoice>(`/supplier-invoices/${id}/${action}`)
+  return data
+}
+
+// ─── Supplier payments ────────────────────────────────────────────────────────
+export async function createSupplierPayment(
+  payload: CreateSupplierPaymentPayload,
+  idempotencyKey: string,
+) {
+  const { data } = await gatewayClient.post<SupplierPayment>('/supplier-payments', payload, {
+    headers: { 'Idempotency-Key': idempotencyKey },
+  })
   return data
 }

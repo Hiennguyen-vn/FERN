@@ -31,7 +31,7 @@ public class GatewayRoutesProperties {
 
     private String iam = "http://localhost:8081";
     private String org = "http://localhost:8082";
-    private String catalog = "http://localhost:8083";
+    private String catalog = "http://localhost:8085";
     private String audit = "http://localhost:8084";
     private String pos = "http://localhost:8086";
     private String inventory = "http://localhost:8087";

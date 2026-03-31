@@ -29,9 +29,9 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductResponse> list(@AuthenticationPrincipal FernPrincipal principal) {
+    public List<ProductResponse> list(@AuthenticationPrincipal FernPrincipal principal, @org.springframework.web.bind.annotation.RequestParam(required = false) Integer limit) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_READ);
-        return productService.list();
+        return productService.list(com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @GetMapping("/{id}")

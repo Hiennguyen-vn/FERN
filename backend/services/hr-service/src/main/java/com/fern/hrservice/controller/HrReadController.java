@@ -69,9 +69,10 @@ public class HrReadController {
     public List<AttendanceApprovalResponse> listAttendanceApprovals(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam(required = false) Long regionId,
-            @RequestParam(required = false) Long outletId
+            @RequestParam(required = false) Long outletId,
+            @RequestParam(required = false) Integer limit
     ) {
-        return hrService.listAttendanceApprovals(principal, regionId, outletId);
+        return hrService.listAttendanceApprovals(principal, regionId, outletId, com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @GetMapping("/attendance-events")

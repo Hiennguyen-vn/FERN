@@ -19,10 +19,34 @@ describe('RevenueReportPage', () => {
     resetTestStores()
   })
 
-  it('shows an empty state before any revenue export is queued', () => {
+  it('blocks export-only users from opening the revenue report page', () => {
     setAuthenticatedSession({
       principal: {
-        permissions: [permissionConstants.report.read, permissionConstants.report.export],
+        permissions: [permissionConstants.report.export],
+      },
+    })
+    mocks.useRevenueReport.mockReturnValue({
+      activeFilters: null,
+      exportJob: null,
+      exportJobError: null,
+      isCreating: false,
+      isLoading: false,
+      preview: null,
+      previewError: null,
+      runReport: vi.fn(),
+      summary: { dimensionCount: 0, jobStatus: null, rowCount: 0, totalDiscount: null, totalOrders: null, totalRevenue: null },
+    })
+
+    renderWithProviders(<RevenueReportPage />)
+
+    expect(screen.getByText('Permission denied')).toBeInTheDocument()
+    expect(screen.getByText('Bạn cần report.read để mở revenue report.')).toBeInTheDocument()
+  })
+
+  it('allows read-only users to open the page but keeps export-backed execution disabled', () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.read],
       },
     })
     mocks.useRevenueReport.mockReturnValue({
@@ -40,10 +64,11 @@ describe('RevenueReportPage', () => {
     renderWithProviders(<RevenueReportPage />)
 
     expect(screen.getByRole('heading', { name: 'Revenue Report' })).toBeInTheDocument()
-    expect(screen.getByText('Revenue report chưa chạy')).toBeInTheDocument()
+    expect(screen.getByText(/cần report\.export để queue report run mới/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run revenue report' })).toBeDisabled()
   })
 
-  it('renders revenue preview data when an export preview is available', () => {
+  it('renders revenue preview data and export links for a read-plus-export user', () => {
     setAuthenticatedSession({
       principal: {
         permissions: [permissionConstants.report.read, permissionConstants.report.export],
@@ -93,5 +118,6 @@ describe('RevenueReportPage', () => {
     expect(screen.getByText('Revenue preview')).toBeInTheDocument()
     expect(screen.getByText('1000000')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Job detail' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Download' })).toBeInTheDocument()
   })
 })

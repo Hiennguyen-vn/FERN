@@ -19,6 +19,18 @@ function parseScopeRoots(value: unknown): ScopeRoots {
   }
 }
 
+function parseOptionalScopeRoots(value: unknown): ScopeRoots | undefined {
+  if (value == null) {
+    return undefined
+  }
+
+  return parseScopeRoots(value)
+}
+
+function resolveAccessibleScope(claims: { accessibleScope?: ScopeRoots; scopeRoots: ScopeRoots }): ScopeRoots {
+  return claims.accessibleScope ?? claims.scopeRoots
+}
+
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY)
 }
@@ -52,6 +64,7 @@ export function parseJwtClaims(token: string): JwtClaims {
     roles: Array.isArray(parsed.roles) ? parsed.roles.map(String) : [],
     permissions: Array.isArray(parsed.permissions) ? parsed.permissions.map(String) : [],
     scopeRoots: parseScopeRoots(parsed.scope_roots),
+    accessibleScope: parseOptionalScopeRoots(parsed.accessible_scope),
     policyVersion: typeof parsed.policy_version === 'number' ? parsed.policy_version : 0,
     scopeVersion: typeof parsed.scope_version === 'number' ? parsed.scope_version : 0,
     jti: typeof parsed.jti === 'string' ? parsed.jti : undefined,
@@ -67,6 +80,7 @@ export function toPrincipal(claims: JwtClaims, user?: AuthUser | null): FernPrin
     roles: claims.roles,
     permissions: claims.permissions,
     scopeRoots: claims.scopeRoots,
+    accessibleScope: resolveAccessibleScope(claims),
     policyVersion: claims.policyVersion,
     scopeVersion: claims.scopeVersion,
     jti: claims.jti,

@@ -7,6 +7,8 @@ import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.SecurityEvent;
 import com.fern.platform.audit.SensitiveDataMasker;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ScopeAccess;
+import com.fern.platform.common.ScopeRoots;
 import java.time.Clock;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -192,10 +194,12 @@ public class IamAuditService {
     }
 
     private Long firstRegionId(FernPrincipal principal) {
-        return principal == null || principal.scopeRoots().regions().isEmpty() ? null : principal.scopeRoots().regions().getFirst();
+        ScopeRoots accessibleScope = principal == null ? ScopeRoots.empty() : ScopeAccess.accessibleScope(principal);
+        return accessibleScope.regions().isEmpty() ? null : accessibleScope.regions().getFirst();
     }
 
     private Long firstOutletId(FernPrincipal principal) {
-        return principal == null || principal.scopeRoots().outlets().isEmpty() ? null : principal.scopeRoots().outlets().getFirst();
+        ScopeRoots accessibleScope = principal == null ? ScopeRoots.empty() : ScopeAccess.accessibleScope(principal);
+        return accessibleScope.outlets().isEmpty() ? null : accessibleScope.outlets().getFirst();
     }
 }

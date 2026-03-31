@@ -14,6 +14,8 @@ import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
+import com.fern.platform.common.ScopeAccess;
+import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.contracts.AttendanceApprovedEvent;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,6 +31,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -289,7 +292,7 @@ class HrAttendanceService {
         );
     }
 
-    public List<AttendanceApprovalResponse> listAttendanceApprovals(FernPrincipal principal, Long regionId, Long outletId) {
+    public List<AttendanceApprovalResponse> listAttendanceApprovals(FernPrincipal principal, Long regionId, Long outletId, int limit) {
         if (outletId != null) {
             hrAuthorizer.requireOutletPermission(principal, outletId, PermissionCodes.HR_ATTENDANCE_REVIEW);
         } else if (regionId != null) {
@@ -317,8 +320,9 @@ class HrAttendanceService {
                 WHERE (:regionId IS NULL OR s.region_id = :regionId)
                   AND (:outletId IS NULL OR s.outlet_id = :outletId)
                 ORDER BY s.shift_date DESC, sa.id DESC
+                LIMIT :limit
                 """;
-        return jdbcTemplate.query(sql, params("regionId", regionId, "outletId", outletId), (rs, rowNum) -> {
+        return jdbcTemplate.query(sql, params("regionId", regionId, "outletId", outletId, "limit", limit), (rs, rowNum) -> {
             ShiftAssignmentRecord assignment = new ShiftAssignmentRecord(
                     rs.getLong("shift_assignment_id"),
                     null,
@@ -442,7 +446,7 @@ class HrAttendanceService {
     }
 
     private List<ApprovedAttendanceResponse> queryApprovedAttendance(String whereClause, MapSqlParameterSource params) {
-        return jdbcTemplate.query("""
+        List<ApprovedAttendanceResponse> items = jdbcTemplate.query("""
                 SELECT aa.id AS approval_id,
                        sa.id AS shift_assignment_id,
                        sa.employee_id,
@@ -459,19 +463,13 @@ class HrAttendanceService {
                                             (s.shift_date + s.end_time) - (s.shift_date + s.start_time)
                                         ELSE
                                             ((s.shift_date + 1) + s.end_time) - (s.shift_date + s.start_time)
-                                    END)) / 3600.0), 0) AS overtime_hours,
-                       ec.id AS contract_id
+                                    END)) / 3600.0), 0) AS overtime_hours
                 FROM hr.attendance_approval aa
                 JOIN hr.shift_assignment sa ON sa.id = aa.shift_assignment_id
                 JOIN hr.shift_schedule s ON s.id = sa.shift_schedule_id
                 LEFT JOIN hr.attendance_event ae ON ae.shift_assignment_id = sa.id
-                LEFT JOIN hr_master.employee_contract ec
-                  ON ec.employee_id = sa.employee_id
-                 AND ec.contract_status = 'ACTIVE'
-                 AND ec.start_date <= s.shift_date
-                 AND (ec.end_date IS NULL OR ec.end_date >= s.shift_date)
                 """ + whereClause + """
-                GROUP BY aa.id, sa.id, sa.employee_id, s.region_id, s.outlet_id, s.shift_date, sa.attendance_status, ec.id
+                GROUP BY aa.id, sa.id, sa.employee_id, s.region_id, s.outlet_id, s.shift_date, s.start_time, s.end_time, sa.attendance_status
                 ORDER BY s.shift_date, sa.id
                 """, params, (rs, rowNum) -> new ApprovedAttendanceResponse(
                 rs.getLong("approval_id"),
@@ -479,12 +477,86 @@ class HrAttendanceService {
                 rs.getLong("employee_id"),
                 rs.getLong("region_id"),
                 rs.getLong("outlet_id"),
-                rs.getObject("contract_id") == null ? null : rs.getLong("contract_id"),
+                null,
                 rs.getObject("shift_date", LocalDate.class),
                 rs.getString("attendance_status"),
                 roundHours(rs.getBigDecimal("work_hours")),
                 roundHours(rs.getBigDecimal("overtime_hours"))
         ));
+        return attachContractIds(items);
+    }
+
+    private List<ApprovedAttendanceResponse> attachContractIds(List<ApprovedAttendanceResponse> items) {
+        if (items.isEmpty()) {
+            return items;
+        }
+        LocalDate minBusinessDate = items.stream()
+                .map(ApprovedAttendanceResponse::businessDate)
+                .min(LocalDate::compareTo)
+                .orElseThrow();
+        LocalDate maxBusinessDate = items.stream()
+                .map(ApprovedAttendanceResponse::businessDate)
+                .max(LocalDate::compareTo)
+                .orElseThrow();
+        List<Long> employeeIds = items.stream()
+                .map(ApprovedAttendanceResponse::employeeId)
+                .distinct()
+                .toList();
+        List<EffectiveContractResponse> contracts = masterJdbcTemplate.query("""
+                SELECT id, employee_id, region_id, employment_type, salary_type, base_salary, tax_code, start_date, end_date
+                FROM hr_master.employee_contract
+                WHERE employee_id IN (:employeeIds)
+                  AND contract_status = 'ACTIVE'
+                  AND start_date <= :maxBusinessDate
+                  AND (end_date IS NULL OR end_date >= :minBusinessDate)
+                ORDER BY employee_id, start_date DESC, id DESC
+                """, params(
+                "employeeIds", employeeIds,
+                "minBusinessDate", minBusinessDate,
+                "maxBusinessDate", maxBusinessDate
+        ), (rs, rowNum) -> new EffectiveContractResponse(
+                rs.getLong("id"),
+                rs.getLong("employee_id"),
+                nullableLong(rs, "region_id"),
+                rs.getString("employment_type"),
+                rs.getString("salary_type"),
+                rs.getBigDecimal("base_salary"),
+                rs.getString("tax_code"),
+                rs.getObject("start_date", LocalDate.class),
+                rs.getObject("end_date", LocalDate.class)
+        ));
+        Map<Long, List<EffectiveContractResponse>> contractsByEmployeeId = new HashMap<>();
+        for (EffectiveContractResponse contract : contracts) {
+            contractsByEmployeeId.computeIfAbsent(contract.employeeId(), ignored -> new ArrayList<>()).add(contract);
+        }
+        return items.stream()
+                .map(item -> new ApprovedAttendanceResponse(
+                        item.approvalId(),
+                        item.shiftAssignmentId(),
+                        item.employeeId(),
+                        item.regionId(),
+                        item.outletId(),
+                        selectActiveContractId(contractsByEmployeeId.get(item.employeeId()), item.businessDate()),
+                        item.businessDate(),
+                        item.attendanceStatus(),
+                        item.workHours(),
+                        item.overtimeHours()
+                ))
+                .toList();
+    }
+
+    private Long selectActiveContractId(List<EffectiveContractResponse> contracts, LocalDate businessDate) {
+        if (contracts == null || contracts.isEmpty()) {
+            return null;
+        }
+        for (EffectiveContractResponse contract : contracts) {
+            boolean startsOnOrBefore = !contract.startDate().isAfter(businessDate);
+            boolean endsOnOrAfter = contract.endDate() == null || !contract.endDate().isBefore(businessDate);
+            if (startsOnOrBefore && endsOnOrAfter) {
+                return contract.contractId();
+            }
+        }
+        return null;
     }
 
     private ShiftAssignmentRecord requireShiftAssignment(Long id) {
@@ -938,11 +1010,12 @@ class HrAttendanceService {
             StringBuilder sql,
             MapSqlParameterSource parameters
     ) {
-        if (principal == null || principal.scopeRoots().system() || regionId != null || outletId != null) {
+        if (principal == null || ScopeAccess.isSystemScoped(principal) || regionId != null || outletId != null) {
             return;
         }
-        List<Long> outletScopes = principal.scopeRoots().outlets();
-        List<Long> regionScopes = principal.scopeRoots().regions();
+        ScopeRoots accessibleScope = ScopeAccess.accessibleScope(principal);
+        List<Long> outletScopes = accessibleScope.outlets();
+        List<Long> regionScopes = accessibleScope.regions();
         if (outletScopes.isEmpty() && regionScopes.isEmpty()) {
             throw new com.fern.platform.common.ForbiddenException("Attendance events are outside the current scope");
         }

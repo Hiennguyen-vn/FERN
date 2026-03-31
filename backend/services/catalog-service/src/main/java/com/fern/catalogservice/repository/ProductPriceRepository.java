@@ -24,7 +24,7 @@ public interface ProductPriceRepository extends JpaRepository<ProductPriceEntity
               and p.priceType = :priceType
               and (:excludeId is null or p.id <> :excludeId)
               and p.effectiveFrom <= coalesce(:effectiveTo, p.effectiveFrom)
-              and coalesce(p.effectiveTo, :effectiveTo) >= :effectiveFrom
+              and (p.effectiveTo is null or p.effectiveTo >= :effectiveFrom)
             """)
     boolean existsOverlap(
             @Param("productId") Long productId,

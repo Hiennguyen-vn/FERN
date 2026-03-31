@@ -36,7 +36,7 @@ public interface RecipeVersionRepository extends JpaRepository<RecipeVersionEnti
               and rv.status = :status
               and (:excludeId is null or rv.id <> :excludeId)
               and rv.effectiveFrom <= coalesce(:effectiveTo, rv.effectiveFrom)
-              and coalesce(rv.effectiveTo, :effectiveTo) >= :effectiveFrom
+              and (rv.effectiveTo is null or rv.effectiveTo >= :effectiveFrom)
             """)
     boolean existsOverlappingActiveVersion(
             @Param("productId") Long productId,

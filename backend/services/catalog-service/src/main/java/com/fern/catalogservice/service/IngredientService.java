@@ -31,8 +31,8 @@ public class IngredientService {
     }
 
     @Transactional(readOnly = true)
-    public List<IngredientResponse> list() {
-        return ingredientRepository.findAllByDeletedAtIsNullOrderByCodeAsc().stream().map(this::toResponse).toList();
+    public List<IngredientResponse> list(int limit) {
+        return ingredientRepository.findAllByDeletedAtIsNullOrderByCodeAsc(org.springframework.data.domain.PageRequest.of(0, limit)).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)

@@ -2,6 +2,7 @@ package com.fern.inventoryservice.service;
 
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ForbiddenException;
+import com.fern.platform.common.ScopeAccess;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,10 +15,7 @@ public class InventoryAuthorizer {
 
     public void requireOutletAccess(FernPrincipal principal, Long outletId, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system()) {
-            return;
-        }
-        if (principal.scopeRoots().outlets().contains(outletId)) {
+        if (ScopeAccess.allowsOutlet(principal, outletId)) {
             return;
         }
         throw new ForbiddenException("Outlet is outside the current scope");

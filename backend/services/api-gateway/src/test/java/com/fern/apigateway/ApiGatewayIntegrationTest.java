@@ -72,6 +72,7 @@ class ApiGatewayIntegrationTest {
     private static HttpServer posServer;
     private static HttpServer inventoryServer;
     private static HttpServer procurementServer;
+    private static volatile String lastOrgAuthorizationHeader;
 
     @LocalServerPort
     private int port;
@@ -139,6 +140,7 @@ class ApiGatewayIntegrationTest {
 
         orgServer = HttpServer.create(new InetSocketAddress(0), 0);
         orgServer.createContext("/regions/1", exchange -> {
+            lastOrgAuthorizationHeader = exchange.getRequestHeaders().getFirst(HttpHeaders.AUTHORIZATION);
             String response = "{\"path\":\"" + exchange.getRequestURI().getPath() + "\",\"correlationId\":\"" +
                     exchange.getRequestHeaders().getFirst("X-Correlation-Id") + "\"}";
             byte[] bytes = response.getBytes();
@@ -152,6 +154,13 @@ class ApiGatewayIntegrationTest {
         catalogServer = HttpServer.create(new InetSocketAddress(0), 0);
         catalogServer.createContext("/internal/catalog/menu", exchange -> {
             byte[] bytes = "{\"items\":[]}".getBytes();
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(bytes);
+            }
+        });
+        catalogServer.createContext("/catalog/promotions", exchange -> {
+            byte[] bytes = "[{\"id\":1,\"code\":\"PROMO-GW\",\"status\":\"ACTIVE\"}]".getBytes();
             exchange.sendResponseHeaders(200, bytes.length);
             try (OutputStream outputStream = exchange.getResponseBody()) {
                 outputStream.write(bytes);
@@ -230,6 +239,7 @@ class ApiGatewayIntegrationTest {
         webTestClient = WebTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
         redisTemplate.getConnectionFactory().getConnection().serverCommands().flushAll();
         jdbcTemplate.execute("TRUNCATE TABLE gateway.outbox_event");
+        lastOrgAuthorizationHeader = null;
         when(kafkaTemplate.send(anyString(), anyString(), anyString())).thenReturn(CompletableFuture.completedFuture((SendResult<String, String>) null));
     }
 
@@ -297,6 +307,13 @@ class ApiGatewayIntegrationTest {
         JsonNode response = objectMapper.readTree(body);
         assertThat(response.get("path").asText()).isEqualTo("/regions/1");
         assertThat(response.get("correlationId").asText()).isNotBlank();
+        assertThat(lastOrgAuthorizationHeader).startsWith("Bearer ").isNotEqualTo("Bearer " + token);
+        FernJwtClaims relayedClaims = jwtService.decode(lastOrgAuthorizationHeader.substring(7));
+        assertThat(relayedClaims.issuer()).isEqualTo(FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER);
+        assertThat(relayedClaims.audience()).containsExactly("org-service");
+        assertThat(relayedClaims.username()).isEqualTo("bootstrap-admin");
+        assertThat(relayedClaims.principalType()).isEqualTo(com.fern.platform.common.FernPrincipalType.USER);
+        assertThat(relayedClaims.jti()).isEqualTo("gateway-jti");
 
         waitForRows("REQUEST_TRACE", 1);
         String payload = jdbcTemplate.queryForObject(
@@ -428,7 +445,43 @@ class ApiGatewayIntegrationTest {
     }
 
     @Test
-    void shouldNotExposeInternalCatalogRoutesThroughGateway() {
+    void shouldBlockInternalPathsWithForbiddenBeforeAuth() {
+        webTestClient.get()
+                .uri("/internal/catalog/menu?outletId=1")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.post()
+                .uri("/internal/hr/effective-contracts")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.get()
+                .uri("/internal/inventory/sale-reservations")
+                .exchange()
+                .expectStatus().isForbidden();
+
+        webTestClient.get()
+                .uri("/internal/scopes/expand")
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    void shouldBlockInternalPathsEvenWithValidToken() {
+        String token = gatewayToken("bootstrap-admin", Set.of("catalog.internal.resolve"), 1L, 1L, "internal-block-jti");
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        webTestClient.get()
+                .uri("/internal/catalog/menu?outletId=1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    void shouldRouteCatalogPromotionsRequest() {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         properties.setAllowInsecureDefaultSecret(true);
@@ -437,11 +490,11 @@ class ApiGatewayIntegrationTest {
                 1L,
                 "bootstrap-admin",
                 Set.of("bootstrap_admin"),
-                Set.of("catalog.internal.resolve"),
+                Set.of("catalog.promotion.read"),
                 new ScopeRoots(true, java.util.List.of(), java.util.List.of()),
                 1L,
                 1L,
-                "internal-route-jti",
+                "promotions-route-jti",
                 Instant.now(),
                 Instant.now().plusSeconds(900)
         ), jwtService.accessTokenTtl());
@@ -449,11 +502,16 @@ class ApiGatewayIntegrationTest {
         redisTemplate.opsForValue().set("fern:versions:policy", "1");
         redisTemplate.opsForValue().set("fern:versions:scope", "1");
 
-        webTestClient.get()
-                .uri("/internal/catalog/menu?outletId=1")
+        String body = webTestClient.get()
+                .uri("/catalog/promotions")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .returnResult()
+                .getResponseBody();
+
+        assertThat(body).contains("PROMO-GW");
     }
 
     @Test

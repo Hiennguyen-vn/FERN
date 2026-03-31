@@ -59,7 +59,7 @@ public interface PromotionRepository extends JpaRepository<PromotionEntity, Long
               and ((:scopeId is null and p.scopeId is null) or p.scopeId = :scopeId)
               and (:excludeId is null or p.id <> :excludeId)
               and p.effectiveFrom <= coalesce(:effectiveTo, p.effectiveFrom)
-              and coalesce(p.effectiveTo, :effectiveTo) >= :effectiveFrom
+              and (p.effectiveTo is null or p.effectiveTo >= :effectiveFrom)
             """)
     boolean existsActiveOverlap(
             @Param("code") String code,

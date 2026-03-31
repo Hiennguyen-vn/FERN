@@ -164,7 +164,10 @@ class ProcurementServiceIntegrationTest {
                 1L,
                 "procurement-test-jti",
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                com.fern.platform.common.FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("procurement-service")
         ), jwtService.accessTokenTtl());
     }
 
@@ -1738,7 +1741,10 @@ class ProcurementServiceIntegrationTest {
                 1L,
                 "procurement-test-jti-" + permissions.hashCode() + "-" + regions.hashCode() + "-" + outlets.hashCode(),
                 Instant.now(),
-                Instant.now().plusSeconds(900)
+                Instant.now().plusSeconds(900),
+                com.fern.platform.common.FernPrincipalType.USER,
+                FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                Set.of("procurement-service")
         ), jwtService.accessTokenTtl());
     }
 }

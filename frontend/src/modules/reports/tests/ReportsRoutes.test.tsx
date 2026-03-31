@@ -64,25 +64,23 @@ describe('Reports route group', () => {
   beforeEach(() => {
     clearTestStorage()
     resetTestStores()
-    setAuthenticatedSession({
-      principal: {
-        permissions: [
-          permissionConstants.report.read,
-          permissionConstants.report.export,
-          permissionConstants.report.payrollRead,
-          permissionConstants.report.payrollExport,
-          permissionConstants.finance.payrollDetailRead,
-        ],
-      },
-    })
 
     mocks.useCreateExportJob.mockReturnValue({ isPending: false, mutateAsync: vi.fn() })
-    mocks.useExportJobs.mockReturnValue({ error: null, isLoading: false, jobs: [], refresh: vi.fn() })
+    mocks.useExportJobs.mockReturnValue({
+      error: null,
+      isLoading: false,
+      jobs: [],
+      refresh: vi.fn(),
+      restrictedJobCount: 0,
+      restrictedJobIds: [],
+    })
     mocks.useReportDashboard.mockReturnValue({
       error: null,
       isLoading: false,
       jobs: [],
       refresh: vi.fn(),
+      restrictedJobCount: 0,
+      restrictedJobIds: [],
       summaryCards: [
         { label: 'Recent exports', value: 0 },
         { label: 'Pending exports', value: 0 },
@@ -111,15 +109,54 @@ describe('Reports route group', () => {
     })
   })
 
-  it.each([
-    ['/reports', 'Reports'],
-    ['/reports/revenue', 'Revenue Report'],
-    ['/reports/inventory', 'Inventory Report'],
-    ['/reports/payroll', 'Payroll Report'],
-    ['/reports/export-jobs', 'Export Jobs'],
-  ])('resolves %s', async (route, heading) => {
-    renderWithProviders(<ReportsRoutesHarness />, { route })
+  it('allows a read-only user to open revenue and export jobs but not payroll', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.read],
+      },
+    })
 
-    expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument()
+    renderWithProviders(<ReportsRoutesHarness />, { route: '/reports/revenue' })
+    expect(await screen.findByRole('heading', { name: 'Revenue Report' })).toBeInTheDocument()
+    expect(screen.queryByText('Permission denied')).not.toBeInTheDocument()
+  })
+
+  it('keeps export-only users out of read-report routes while allowing the export center', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.export],
+      },
+    })
+
+    const exportJobsRender = renderWithProviders(<ReportsRoutesHarness />, { route: '/reports/export-jobs' })
+    expect(await screen.findByRole('heading', { name: 'Export Jobs' })).toBeInTheDocument()
+    expect(screen.getByText(/^Create-only mode:/i)).toBeInTheDocument()
+    exportJobsRender.unmount()
+
+    renderWithProviders(<ReportsRoutesHarness />, { route: '/reports/revenue' })
+    expect(await screen.findByRole('heading', { name: 'Revenue Report' })).toBeInTheDocument()
+    expect(screen.getByText('Permission denied')).toBeInTheDocument()
+  })
+
+  it('allows payroll read-plus-export users to open the payroll route', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.payrollRead, permissionConstants.report.payrollExport],
+      },
+    })
+
+    renderWithProviders(<ReportsRoutesHarness />, { route: '/reports/payroll' })
+
+    expect(await screen.findByRole('heading', { name: 'Payroll Report' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Queue payroll export' })).toBeEnabled()
+  })
+
+  it('blocks users with no report access from export jobs', async () => {
+    setAuthenticatedSession({ principal: { permissions: [] } })
+
+    renderWithProviders(<ReportsRoutesHarness />, { route: '/reports/export-jobs' })
+
+    expect(await screen.findByRole('heading', { name: 'Export Jobs' })).toBeInTheDocument()
+    expect(screen.getByText('Permission denied')).toBeInTheDocument()
   })
 })

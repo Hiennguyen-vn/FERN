@@ -52,9 +52,10 @@ public class PosSessionController {
             @RequestParam Long outletId,
             @RequestParam(required = false) String terminalId,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) LocalDate businessDate
+            @RequestParam(required = false) LocalDate businessDate,
+            @RequestParam(required = false) Integer limit
     ) {
-        return posSessionService.listSessions(principal, outletId, terminalId, status, businessDate);
+        return posSessionService.listSessions(principal, outletId, terminalId, status, businessDate, com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @PostMapping("/{id}/close")

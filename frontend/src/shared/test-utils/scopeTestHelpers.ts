@@ -13,6 +13,7 @@ function mergeScopeRoots(scopeRoots?: Partial<ScopeRoots>): ScopeRoots {
 
 export function createTestPrincipal(overrides: Partial<FernPrincipal> = {}): FernPrincipal {
   const scopeRoots = mergeScopeRoots(overrides.scopeRoots)
+  const accessibleScope = overrides.accessibleScope ? mergeScopeRoots(overrides.accessibleScope) : scopeRoots
 
   return {
     userId: overrides.userId ?? 1,
@@ -21,6 +22,7 @@ export function createTestPrincipal(overrides: Partial<FernPrincipal> = {}): Fer
     roles: overrides.roles ?? ['MANAGER'],
     permissions: overrides.permissions ?? [],
     scopeRoots,
+    accessibleScope,
     policyVersion: overrides.policyVersion ?? 1,
     scopeVersion: overrides.scopeVersion ?? 1,
     jti: overrides.jti,

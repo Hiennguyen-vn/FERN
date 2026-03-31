@@ -7,6 +7,7 @@ import com.fern.financeservice.dto.FinanceResponses.SystemPolicyResponse;
 import com.fern.financeservice.service.FinancePayrollService;
 import com.fern.financeservice.service.PayrollResponseMasker;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ListQueryDefaults;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,9 +43,10 @@ public class FinanceReadController {
     @GetMapping("/payroll-runs")
     public List<PayrollRunResponse> listPayrollRuns(
             @AuthenticationPrincipal FernPrincipal principal,
-            @RequestParam(required = false) Long regionId
+            @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) Integer limit
     ) {
-        return financePayrollService.listPayrollRuns(principal, regionId).stream()
+        return financePayrollService.listPayrollRuns(principal, regionId, ListQueryDefaults.clampLimit(limit)).stream()
                 .map(response -> payrollResponseMasker.maskForPrincipal(principal, response))
                 .toList();
     }

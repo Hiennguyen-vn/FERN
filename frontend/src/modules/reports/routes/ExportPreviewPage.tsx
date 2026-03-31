@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Card, EmptyState, ErrorState } from '@design-system/index'
+import { Card, EmptyState, ErrorState, PermissionDeniedInline } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { getExportPreview } from '../api/reports.api'
 import { reportQueryKeys } from '../api/reports.queries'
 import { ExportPreviewPanel } from '../components/ExportPreviewPanel'
+import { getReportsPermissionDeniedMessage, isReportsPermissionDenied } from '../services/reportsError.service'
 
 export function ExportPreviewPage() {
   const params = useParams<{ jobId: string }>()
@@ -26,7 +27,10 @@ export function ExportPreviewPage() {
           <p className="muted-text">Fetching preview rows...</p>
         </Card>
       ) : null}
-      {previewQuery.error ? (
+      {previewQuery.error && isReportsPermissionDenied(previewQuery.error) ? (
+        <PermissionDeniedInline message={getReportsPermissionDeniedMessage('export preview này')} />
+      ) : null}
+      {previewQuery.error && !isReportsPermissionDenied(previewQuery.error) ? (
         <ErrorState
           actionLabel="Retry"
           message={previewQuery.error instanceof Error ? previewQuery.error.message : 'Unable to load preview'}

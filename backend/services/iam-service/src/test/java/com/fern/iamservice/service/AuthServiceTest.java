@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fern.iamservice.client.OrgScopeExpansionClient;
 import com.fern.iamservice.dto.AuthLoginRequest;
 import com.fern.platform.common.UnauthorizedException;
 import com.fern.platform.security.FernJwtService;
@@ -44,6 +45,9 @@ class AuthServiceTest {
     @Mock
     private IamAuditService iamAuditService;
 
+    @Mock
+    private OrgScopeExpansionClient orgScopeExpansionClient;
+
     private AuthService authService;
 
     @BeforeEach
@@ -59,6 +63,7 @@ class AuthServiceTest {
                 refreshTokenService,
                 loginProtectionService,
                 iamAuditService,
+                orgScopeExpansionClient,
                 Clock.systemUTC()
         );
     }

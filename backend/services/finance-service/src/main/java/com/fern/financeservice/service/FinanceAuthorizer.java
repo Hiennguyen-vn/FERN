@@ -2,6 +2,7 @@ package com.fern.financeservice.service;
 
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ForbiddenException;
+import com.fern.platform.common.ScopeAccess;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,7 +15,7 @@ public class FinanceAuthorizer {
 
     public void requireRegionPermission(FernPrincipal principal, Long regionId, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system() || principal.scopeRoots().regions().contains(regionId)) {
+        if (ScopeAccess.allowsRegion(principal, regionId)) {
             return;
         }
         throw new ForbiddenException("Region is outside the current scope");
@@ -22,7 +23,7 @@ public class FinanceAuthorizer {
 
     public void requireSystemPermission(FernPrincipal principal, String permission) {
         requirePermission(principal, permission);
-        if (principal.scopeRoots().system()) {
+        if (ScopeAccess.isSystemScoped(principal)) {
             return;
         }
         throw new ForbiddenException("System scope is required");

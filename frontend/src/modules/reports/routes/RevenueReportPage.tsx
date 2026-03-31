@@ -21,10 +21,11 @@ import { ReportSummaryCards } from '../components/ReportSummaryCards'
 import { useRevenueReport } from '../hooks/useRevenueReport'
 import { formatReportDateLabel, formatReportCurrency } from '../services/reportsReadModel.service'
 import {
+  canCreateExport,
   canDownloadExport,
-  canExportReports,
+  canOpenExportJob,
   canPreviewExport,
-  canReadReports,
+  canReadRevenueReport,
   getExportStatusDescription,
 } from '../services/reportsUiPolicy.service'
 
@@ -42,8 +43,7 @@ export function RevenueReportPage() {
   usePageTitle('Revenue Report')
   const principal = usePrincipal()
   const { regionIds, selectedRegionId } = useScopeContext()
-  const canRead = canReadReports(principal)
-  const canExport = canExportReports(principal)
+  const canRead = canReadRevenueReport(principal)
   const isSystemScoped = Boolean(principal?.scopeRoots.system)
   const regionOptions = useMemo<SelectOption[]>(
     () => regionIds.map((regionId) => ({ label: `Region #${regionId}`, value: String(regionId) })),
@@ -62,12 +62,16 @@ export function RevenueReportPage() {
         title="Revenue Report"
         description="Async export-aware revenue reporting workspace."
       >
-        <PermissionDeniedInline message="Bạn cần report.read hoặc report.export để mở revenue report." />
+        <PermissionDeniedInline message="Bạn cần report.read để mở revenue report." />
       </DashboardLayout>
     )
   }
 
   const regionId = regionFilter.trim() ? Number(regionFilter) : undefined
+  const canExport = canCreateExport(
+    principal,
+    regionId || !isSystemScoped ? 'REGION_DAILY_SUMMARY' : 'COMPANY_DAILY_SUMMARY',
+  )
   const canRunReport = Boolean(fromDate && toDate && (regionId || isSystemScoped))
 
   const summaryCards = [
@@ -112,6 +116,12 @@ export function RevenueReportPage() {
       }
     >
       <ReadonlyBanner message="Revenue report chạy qua export job workflow để tránh giả lập synchronous API không tồn tại. Bộ lọc hiện tại tạo export job rồi load preview khi job sẵn sàng." />
+
+      {!canExport ? (
+        <div className="inline-banner inline-banner-warning" role="status">
+          Revenue report dùng export pipeline hiện có. Bạn có thể mở màn hình vì có report.read, nhưng cần report.export để queue report run mới.
+        </div>
+      ) : null}
 
       {!isSystemScoped && !regionId ? (
         <div className="inline-banner inline-banner-warning" role="status">
@@ -196,11 +206,11 @@ export function RevenueReportPage() {
 
       {revenueReport.exportJob ? (
         <AsyncJobProgress
-          actionLabel={canPreviewExport(revenueReport.exportJob) ? 'Open preview' : undefined}
+          actionLabel={canPreviewExport(principal, revenueReport.exportJob) ? 'Open preview' : undefined}
           completedAt={revenueReport.exportJob.completedAt}
           description={getExportStatusDescription(revenueReport.exportJob)}
           onAction={
-            canPreviewExport(revenueReport.exportJob)
+            canPreviewExport(principal, revenueReport.exportJob)
               ? () => {
                   window.location.href = `/reports/export-jobs/${revenueReport.exportJob?.exportJobId}/preview`
                 }
@@ -246,15 +256,17 @@ export function RevenueReportPage() {
             </div>
             {revenueReport.exportJob ? (
               <div className="form-actions align-start">
-                <Button asChild size="sm" variant="secondary">
-                  <Link to={`/reports/export-jobs/${revenueReport.exportJob.exportJobId}`}>Job detail</Link>
-                </Button>
-                {canPreviewExport(revenueReport.exportJob) ? (
+                {canOpenExportJob(principal, revenueReport.exportJob) ? (
+                  <Button asChild size="sm" variant="secondary">
+                    <Link to={`/reports/export-jobs/${revenueReport.exportJob.exportJobId}`}>Job detail</Link>
+                  </Button>
+                ) : null}
+                {canPreviewExport(principal, revenueReport.exportJob) ? (
                   <Button asChild size="sm" variant="secondary">
                     <Link to={`/reports/export-jobs/${revenueReport.exportJob.exportJobId}/preview`}>Preview route</Link>
                   </Button>
                 ) : null}
-                {canDownloadExport(revenueReport.exportJob) ? (
+                {canDownloadExport(principal, revenueReport.exportJob) ? (
                   <Button asChild size="sm" variant="ghost">
                     <Link to={`/reports/export-jobs/${revenueReport.exportJob.exportJobId}/download`}>Download</Link>
                   </Button>

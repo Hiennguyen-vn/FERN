@@ -262,7 +262,13 @@ class OrgServiceIntegrationTest {
                 "org-test-jti-" + principalType.name().toLowerCase() + "-" + scopeVersion,
                 Instant.now(),
                 Instant.now().plusSeconds(900),
-                principalType
+                principalType,
+                principalType == com.fern.platform.common.FernPrincipalType.SERVICE
+                        ? "org-internal"
+                        : FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
+                principalType == com.fern.platform.common.FernPrincipalType.SERVICE
+                        ? Set.of("org-service")
+                        : Set.of("org-service")
         ), jwtService.accessTokenTtl());
     }
 

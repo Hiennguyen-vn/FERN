@@ -13,7 +13,7 @@ public interface IngredientRepository extends JpaRepository<IngredientEntity, Lo
 
     boolean existsByCodeIgnoreCaseAndDeletedAtIsNullAndIdNot(String code, Long id);
 
-    List<IngredientEntity> findAllByDeletedAtIsNullOrderByCodeAsc();
+    List<IngredientEntity> findAllByDeletedAtIsNullOrderByCodeAsc(org.springframework.data.domain.Pageable pageable);
 
     List<IngredientEntity> findByIdIn(Collection<Long> ids);
 }

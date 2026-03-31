@@ -34,6 +34,7 @@ public class FernServiceTokenSupport {
                         Set.of(),
                         Set.copyOf(permissions),
                         new ScopeRoots(true, List.of(), List.of()),
+                        new ScopeRoots(true, List.of(), List.of()),
                         readVersion(FernTokenAcceptanceRules.POLICY_VERSION_KEY),
                         readVersion(FernTokenAcceptanceRules.SCOPE_VERSION_KEY),
                         UUID.randomUUID().toString(),

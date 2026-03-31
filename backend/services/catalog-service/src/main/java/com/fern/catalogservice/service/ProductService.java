@@ -32,8 +32,8 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductResponse> list() {
-        return productRepository.findAllByDeletedAtIsNullOrderByCodeAsc().stream().map(this::toResponse).toList();
+    public List<ProductResponse> list(int limit) {
+        return productRepository.findAllByDeletedAtIsNullOrderByCodeAsc(org.springframework.data.domain.PageRequest.of(0, limit)).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
