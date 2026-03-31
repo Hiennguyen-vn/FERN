@@ -445,30 +445,30 @@ class ApiGatewayIntegrationTest {
     }
 
     @Test
-    void shouldBlockInternalPathsWithForbiddenBeforeAuth() {
+    void shouldNotExposeInternalPathsBeforeAuth() {
         webTestClient.get()
                 .uri("/internal/catalog/menu?outletId=1")
                 .exchange()
-                .expectStatus().isForbidden();
+                .expectStatus().isNotFound();
 
         webTestClient.post()
                 .uri("/internal/hr/effective-contracts")
                 .exchange()
-                .expectStatus().isForbidden();
+                .expectStatus().isNotFound();
 
         webTestClient.get()
                 .uri("/internal/inventory/sale-reservations")
                 .exchange()
-                .expectStatus().isForbidden();
+                .expectStatus().isNotFound();
 
         webTestClient.get()
                 .uri("/internal/scopes/expand")
                 .exchange()
-                .expectStatus().isForbidden();
+                .expectStatus().isNotFound();
     }
 
     @Test
-    void shouldBlockInternalPathsEvenWithValidToken() {
+    void shouldNotExposeInternalPathsEvenWithValidToken() {
         String token = gatewayToken("bootstrap-admin", Set.of("catalog.internal.resolve"), 1L, 1L, "internal-block-jti");
         redisTemplate.opsForValue().set("fern:versions:policy", "1");
         redisTemplate.opsForValue().set("fern:versions:scope", "1");
@@ -477,7 +477,7 @@ class ApiGatewayIntegrationTest {
                 .uri("/internal/catalog/menu?outletId=1")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchange()
-                .expectStatus().isForbidden();
+                .expectStatus().isNotFound();
     }
 
     @Test
