@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, ReadonlyBanner } from '@design-system/index'
+import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { useAuthStore } from '@core/auth/auth.store'
 import { useInventoryTransactions } from '../hooks/useInventoryTransactions'
 import type { InventoryTransaction } from '../model/inventory.types'
 import { buildInventoryTransactionSummary } from '../services/inventoryWorkflow.service'
+import { canReadInventoryLedger } from '../services/inventoryPermission.service'
 
 function toOptionalNumber(value: string): number | undefined {
   if (!value) {
@@ -20,7 +22,12 @@ function toOptionalNumber(value: string): number | undefined {
 export function InventoryTransactionsPage() {
   usePageTitle('Inventory Transactions')
 
+  const principal = useAuthStore((state) => state.principal)
   const { selectedOutletId } = useScopeContext()
+
+  if (!canReadInventoryLedger(principal)) {
+    return <PermissionDeniedInline message="Bạn cần quyền inventory.ledger.read để xem giao dịch kho." />
+  }
   const [filters, setFilters] = useState({
     ingredientId: '',
     txnType: '',

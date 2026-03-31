@@ -8,8 +8,11 @@ import { EmptyLayout } from '@app/layouts/EmptyLayout'
 import { PosLayout } from '@app/layouts/PosLayout'
 import { RequireAuth } from '@app/guards/RequireAuth'
 import { RequireOutletContext } from '@app/guards/RequireOutletContext'
+import { RequirePermission } from '@app/guards/RequirePermission'
+import { RequireAnyPermission } from '@app/guards/RequireAnyPermission'
 import { login } from '@core/auth/auth.service'
 import { useScopeContext } from '@core/scopes/useScopeContext'
+import { permissionConstants } from '@core/permissions/permission.constants'
 import { LazyRouteBoundary } from './LazyRouteBoundary'
 import { useAuthStore } from '@core/auth/auth.store'
 import { Button, Card, Input, ReadonlyBanner } from '@design-system/index'
@@ -526,10 +529,25 @@ export const router = createBrowserRouter([
       { path: 'home', element: <HomePage /> },
 
       // ── Catalog ───────────────────────────────────────────────
+      // Guard accepts any of the 4 catalog read permissions, matching the
+      // canSeeCatalogNavigation policy which allows users with only ingredientRead,
+      // recipeRead, or priceRead to access the module.
       {
         path: 'catalog',
-        element: <LazyRouteBoundary moduleName="Catalog" label="Loading catalog" />,
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.catalog.productRead,
+              permissionConstants.catalog.ingredientRead,
+              permissionConstants.catalog.recipeRead,
+              permissionConstants.catalog.priceRead,
+            ]}
+          />
+        ),
         children: [
+          {
+            element: <LazyRouteBoundary moduleName="Catalog" label="Loading catalog" />,
+            children: [
           {
             path: 'products',
             element: <ProductsPage />,
@@ -554,14 +572,31 @@ export const router = createBrowserRouter([
             path: 'availability',
             element: <AvailabilityPage />,
           },
+            ],
+          },
         ],
       },
 
       // ── IAM ───────────────────────────────────────────────
+      // Guard accepts any of the 4 IAM read permissions, matching the
+      // canSeeIamNavigation policy which allows users with roleRead,
+      // permissionRead, or permissionOverrideRead alone.
       {
         path: 'iam',
-        element: <LazyRouteBoundary moduleName="IAM" label="Loading IAM console" />,
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.iam.userRead,
+              permissionConstants.iam.roleRead,
+              permissionConstants.iam.permissionRead,
+              permissionConstants.iam.permissionOverrideRead,
+            ]}
+          />
+        ),
         children: [
+          {
+            element: <LazyRouteBoundary moduleName="IAM" label="Loading IAM console" />,
+            children: [
           {
             index: true,
             element: <Navigate replace to="assignments" />,
@@ -582,14 +617,19 @@ export const router = createBrowserRouter([
             path: 'effective-access/:userId',
             element: <EffectiveAccessPage />,
           },
+            ],
+          },
         ],
       },
 
       // ── Audit ────────────────────────────────────────────────
       {
         path: 'audit',
-        element: <LazyRouteBoundary moduleName="Audit" label="Loading audit console" />,
+        element: <RequirePermission permissions={[permissionConstants.audit.read]} />,
         children: [
+          {
+            element: <LazyRouteBoundary moduleName="Audit" label="Loading audit console" />,
+            children: [
           {
             path: 'events',
             element: <AuditEventsPage />,
@@ -610,14 +650,19 @@ export const router = createBrowserRouter([
             path: 'request-traces/:traceId',
             element: <RequestTraceDetailPage />,
           },
+            ],
+          },
         ],
       },
 
       // ── Regional Ops ────────────────────────────────────────
       {
         path: 'regional-ops',
-        element: <LazyRouteBoundary moduleName="Regional Ops" label="Loading regional ops workspace" />,
+        element: <RequirePermission permissions={[permissionConstants.org.regionRead]} />,
         children: [
+          {
+            element: <LazyRouteBoundary moduleName="Regional Ops" label="Loading regional ops workspace" />,
+            children: [
           {
             index: true,
             element: <RegionalDashboardPage />,
@@ -630,14 +675,19 @@ export const router = createBrowserRouter([
             path: 'outlets/:outletId',
             element: <RegionalOutletDetailPage />,
           },
+            ],
+          },
         ],
       },
 
       // ── HR ────────────────────────────────────────────────
       {
         path: 'hr',
-        element: <LazyRouteBoundary moduleName="HR" label="Loading HR workspace" />,
+        element: <RequirePermission permissions={[permissionConstants.hr.employeeRead]} />,
         children: [
+          {
+            element: <LazyRouteBoundary moduleName="HR" label="Loading HR workspace" />,
+            children: [
           {
             index: true,
             element: <Navigate replace to="employees" />,
@@ -670,14 +720,37 @@ export const router = createBrowserRouter([
             path: 'payroll-draft-review/:runId',
             element: <PayrollDraftReviewPage />,
           },
+            ],
+          },
         ],
       },
 
       // ── Finance ───────────────────────────────────────────
+      // Guard accepts any of the finance navigation permissions, matching the
+      // canSeeFinanceNavigation policy. This allows users with supplier, invoice,
+      // or payment permissions (not just payroll) to access the module.
       {
         path: 'finance',
-        element: <LazyRouteBoundary moduleName="Finance" label="Loading finance workspace" />,
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.procurement.supplierRead,
+              permissionConstants.procurement.invoiceRead,
+              permissionConstants.procurement.invoiceReview,
+              permissionConstants.procurement.invoiceApprove,
+              permissionConstants.procurement.invoiceDispute,
+              permissionConstants.procurement.paymentRead,
+              permissionConstants.procurement.paymentRecord,
+              permissionConstants.finance.payrollRead,
+              permissionConstants.finance.payrollApprove,
+              permissionConstants.finance.payrollPay,
+            ]}
+          />
+        ),
         children: [
+          {
+            element: <LazyRouteBoundary moduleName="Finance" label="Loading finance workspace" />,
+            children: [
           {
             index: true,
             element: <Navigate replace to="payroll-approvals" />,
@@ -706,32 +779,39 @@ export const router = createBrowserRouter([
             path: 'payroll-paid/:runId',
             element: <PayrollPaidPage />,
           },
+            ],
+          },
         ],
       },
 
       // ── POS ───────────────────────────────────────────────
       {
         path: 'pos',
-        element: <PosShell />,
+        element: <RequirePermission permissions={[permissionConstants.pos.sessionRead]} />,
         children: [
           {
-            element: <LazyRouteBoundary moduleName="POS" label="Loading POS workspace" />,
+            element: <PosShell />,
             children: [
               {
-                index: true,
-                element: <PosHomePage />,
-              },
-              {
-                path: 'orders/:orderId',
-                element: <PosOrderDetailPage />,
-              },
-              {
-                path: 'sessions',
-                element: <PosSessionsPage />,
-              },
-              {
-                path: 'sessions/:sessionId',
-                element: <PosSessionDetailPage />,
+                element: <LazyRouteBoundary moduleName="POS" label="Loading POS workspace" />,
+                children: [
+                  {
+                    index: true,
+                    element: <PosHomePage />,
+                  },
+                  {
+                    path: 'orders/:orderId',
+                    element: <PosOrderDetailPage />,
+                  },
+                  {
+                    path: 'sessions',
+                    element: <PosSessionsPage />,
+                  },
+                  {
+                    path: 'sessions/:sessionId',
+                    element: <PosSessionDetailPage />,
+                  },
+                ],
               },
             ],
           },
@@ -741,8 +821,11 @@ export const router = createBrowserRouter([
       // ── Procurement ───────────────────────────────────────
       {
         path: 'procurement',
-        element: <LazyRouteBoundary moduleName="Procurement" label="Loading procurement" />,
+        element: <RequirePermission permissions={[permissionConstants.procurement.purchaseOrderRead]} />,
         children: [
+          {
+            element: <LazyRouteBoundary moduleName="Procurement" label="Loading procurement" />,
+            children: [
           {
             path: 'purchase-orders/new',
             element: <PurchaseOrderCreatePage />,
@@ -759,41 +842,63 @@ export const router = createBrowserRouter([
             path: 'goods-receipts/:goodsReceiptId',
             element: <GoodsReceiptDetailPage />,
           },
+            ],
+          },
         ],
       },
 
       // ── Inventory ─────────────────────────────────────────
       {
         path: 'inventory',
-        element: <LazyRouteBoundary moduleName="Inventory" label="Loading inventory" />,
+        element: <RequirePermission permissions={[permissionConstants.inventory.balanceRead]} />,
         children: [
           {
-            path: 'stock-balances',
-            element: <StockOverviewPage />,
-          },
-          {
-            path: 'transactions',
-            element: <InventoryTransactionsPage />,
+            element: <LazyRouteBoundary moduleName="Inventory" label="Loading inventory" />,
+            children: [
+              {
+                path: 'stock-balances',
+                element: <StockOverviewPage />,
+              },
+              {
+                path: 'transactions',
+                element: <InventoryTransactionsPage />,
+              },
+            ],
           },
         ],
       },
 
       // ── Workforce ─────────────────────────────────────────
+      // Guard accepts attendance.write (clock-in/out staff) OR attendance.review
+      // (supervisors reviewing approvals). Individual pages enforce stricter
+      // action-level checks via canRecordAttendance / canApproveAttendance.
       {
         path: 'workforce',
-        element: <LazyRouteBoundary moduleName="Workforce" label="Loading workforce" />,
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.hr.attendanceWrite,
+              permissionConstants.hr.attendanceReview,
+            ]}
+          />
+        ),
         children: [
           {
-            path: 'my-attendance',
-            element: <MyAttendancePage />,
-          },
-          {
-            path: 'attendance-approvals',
-            element: <AttendanceReviewPage />,
-          },
-          {
-            path: 'attendance-approvals/:shiftAssignmentId',
-            element: <AttendanceDetailPage />,
+            element: <LazyRouteBoundary moduleName="Workforce" label="Loading workforce" />,
+            children: [
+              {
+                path: 'my-attendance',
+                element: <MyAttendancePage />,
+              },
+              {
+                path: 'attendance-approvals',
+                element: <AttendanceReviewPage />,
+              },
+              {
+                path: 'attendance-approvals/:shiftAssignmentId',
+                element: <AttendanceDetailPage />,
+              },
+            ],
           },
         ],
       },
@@ -801,8 +906,11 @@ export const router = createBrowserRouter([
       // ── Reports ───────────────────────────────────────────
       {
         path: 'reports',
-        element: <LazyRouteBoundary moduleName="Reports" label="Loading reports" />,
+        element: <RequirePermission permissions={[permissionConstants.report.read]} />,
         children: [
+          {
+            element: <LazyRouteBoundary moduleName="Reports" label="Loading reports" />,
+            children: [
           {
             index: true,
             element: <ReportsDashboardPage />,
@@ -834,6 +942,8 @@ export const router = createBrowserRouter([
           {
             path: 'export-jobs/:jobId/download',
             element: <ExportDownloadPage />,
+          },
+            ],
           },
         ],
       },

@@ -19,7 +19,11 @@ export function ExportDownloadPage() {
 
   usePageTitle(jobId ? `Export Download #${jobId}` : 'Export Download')
 
-  const downloadUrl = jobId !== null ? `${appConfig.apiBaseUrl}/reports/exports/${jobId}/download` : null
+  // Use backend-provided signed download URL when available (e.g. S3 presigned).
+  // Fall back to the gateway streaming endpoint only if the job has no downloadUrl.
+  const downloadUrl = jobId !== null
+    ? (job?.downloadUrl ?? `${appConfig.apiBaseUrl}/reports/exports/${jobId}/download`)
+    : null
   const canStartDownload = Boolean(job && downloadUrl && canDownloadExport(principal, job))
 
   useEffect(() => {

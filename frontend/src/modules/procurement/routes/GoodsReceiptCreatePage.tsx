@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Button, Card, EmptyState, ErrorState, FormActions, FormSection, Input } from '@design-system/index'
+import { Button, Card, EmptyState, ErrorState, FormActions, FormSection, Input, PermissionDeniedInline } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { useAuthStore } from '@core/auth/auth.store'
 import { useCreateGoodsReceipt } from '../hooks/useGoodsReceipt'
 import { usePurchaseOrder } from '../hooks/usePurchaseOrder'
 import { createDefaultGoodsReceiptLine } from '../services/procurementWorkflow.service'
+import { canCreateGoodsReceipt } from '../services/procurementPermission.service'
 
 function toOptionalNumber(value: string): number | undefined {
   if (!value) {
@@ -19,8 +21,13 @@ function toOptionalNumber(value: string): number | undefined {
 export function GoodsReceiptCreatePage() {
   usePageTitle('Goods Receipt Create')
 
+  const principal = useAuthStore((state) => state.principal)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+
+  if (!canCreateGoodsReceipt(principal)) {
+    return <PermissionDeniedInline message="Bạn cần quyền procurement.gr.create để tạo goods receipt." />
+  }
   const initialPurchaseOrderId = searchParams.get('purchaseOrderId') ?? ''
   const [form, setForm] = useState({
     purchaseOrderId: initialPurchaseOrderId,

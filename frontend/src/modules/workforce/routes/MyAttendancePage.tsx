@@ -12,10 +12,12 @@ import {
   Pagination,
   ReadonlyBanner,
   Select,
+  PermissionDeniedInline,
 } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { useAuthStore } from '@core/auth/auth.store'
 import { useAttendanceEvents } from '../hooks/useAttendanceEvents'
 import { useRecordAttendanceEvent } from '../hooks/useRecordAttendanceEvent'
 import type { AttendanceEventListItem } from '../model/workforce.types'
@@ -33,7 +35,13 @@ function toOptionalNumber(value: string): number | undefined {
 export function MyAttendancePage() {
   usePageTitle('My Attendance')
 
+  const principal = useAuthStore((state) => state.principal)
   const { selectedOutletId, selectedRegionId } = useScopeContext()
+
+  if (!canRecordAttendance(principal)) {
+    return <PermissionDeniedInline message="You don't have permission to record attendance events" />
+  }
+
   const [page, setPage] = useState(0)
   const [filters, setFilters] = useState({
     employeeId: '',
@@ -124,7 +132,7 @@ export function MyAttendancePage() {
         <FormActions
           primaryAction={
             <Button
-              disabled={!selectedOutletId || !selectedRegionId || !canRecordAttendance()}
+              disabled={!selectedOutletId || !selectedRegionId}
               loading={recordMutation.isPending}
               onClick={() => {
                 if (!selectedOutletId || !selectedRegionId) {

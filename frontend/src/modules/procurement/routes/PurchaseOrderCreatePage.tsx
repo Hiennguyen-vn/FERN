@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Button, Card, EmptyState, ErrorState, FormActions, FormSection, Input, ReadonlyBanner, Select } from '@design-system/index'
+import { Button, Card, EmptyState, ErrorState, FormActions, FormSection, Input, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { useAuthStore } from '@core/auth/auth.store'
 import { useCreatePurchaseOrder } from '../hooks/usePurchaseOrder'
 import { useSuppliers } from '../hooks/useSuppliers'
 import type { Supplier } from '../model/procurement.types'
 import { createDefaultPurchaseOrderLine } from '../services/procurementWorkflow.service'
+import { canCreatePurchaseOrder } from '../services/procurementPermission.service'
 
 function toOptionalNumber(value: string): number | undefined {
   if (!value) {
@@ -21,8 +23,13 @@ function toOptionalNumber(value: string): number | undefined {
 export function PurchaseOrderCreatePage() {
   usePageTitle('Purchase Order Create')
 
+  const principal = useAuthStore((state) => state.principal)
   const navigate = useNavigate()
   const { selectedOutletId, selectedRegionId } = useScopeContext()
+
+  if (!canCreatePurchaseOrder(principal)) {
+    return <PermissionDeniedInline message="Bạn cần quyền procurement.po.create để tạo purchase order." />
+  }
   const suppliersQuery = useSuppliers()
   const createMutation = useCreatePurchaseOrder()
   const [form, setForm] = useState({

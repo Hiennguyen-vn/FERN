@@ -43,7 +43,7 @@ describe('attendance approval workflows', () => {
   beforeEach(() => {
     clearTestStorage()
     resetTestStores()
-    setAuthenticatedSession()
+    setAuthenticatedSession({ principal: { permissions: ['hr.attendance.write', 'hr.attendance.review'] } })
     approvalState = createApproval()
 
     workforceApi.getAttendanceApprovals.mockImplementation(async () => clone([approvalState]))

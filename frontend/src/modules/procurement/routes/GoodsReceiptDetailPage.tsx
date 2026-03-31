@@ -1,9 +1,10 @@
 import { useParams } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Button, Card, DataTable, EmptyState, EntityHeader, ErrorState, ReadonlyBanner, StatusBadge } from '@design-system/index'
+import { Button, Card, DataTable, EmptyState, EntityHeader, ErrorState, PermissionDeniedInline, ReadonlyBanner, StatusBadge } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useConfirmAction } from '@shared/hooks/useConfirmAction'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { useAuthStore } from '@core/auth/auth.store'
 import { useGoodsReceipt, useGoodsReceiptAction } from '../hooks/useGoodsReceipt'
 import type { GoodsReceiptLine } from '../model/procurement.types'
 import {
@@ -11,8 +12,10 @@ import {
   canPostGoodsReceipt,
   canReceiveGoodsReceipt,
 } from '../services/goodsReceiptUiPolicy.service'
+import { canReadGoodsReceipts } from '../services/procurementPermission.service'
 
 export function GoodsReceiptDetailPage() {
+  const principal = useAuthStore((state) => state.principal)
   const params = useParams<{ goodsReceiptId: string }>()
   const goodsReceiptId = params.goodsReceiptId ? Number(params.goodsReceiptId) : null
   const confirmAction = useConfirmAction()
@@ -20,6 +23,10 @@ export function GoodsReceiptDetailPage() {
   const actionMutation = useGoodsReceiptAction()
 
   usePageTitle(goodsReceiptId ? `Goods Receipt #${goodsReceiptId}` : 'Goods Receipt Detail')
+
+  if (!canReadGoodsReceipts(principal)) {
+    return <PermissionDeniedInline message="Bạn cần quyền procurement.gr.read để xem goods receipt." />
+  }
 
   const receipt = query.data
   const isReadonly = receipt ? ['POSTED', 'CANCELLED'].includes(receipt.status.toUpperCase()) : false

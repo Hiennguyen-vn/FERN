@@ -16,12 +16,13 @@ export function hasScopeAccess(principal: FernPrincipal | null, requirement: Sco
     return accessibleScope.system
   }
 
+  // System-scope principals have access to all regions and outlets.
   if (requirement.regionId !== undefined) {
-    return accessibleScope.regions.includes(requirement.regionId)
+    return accessibleScope.system || accessibleScope.regions.includes(requirement.regionId)
   }
 
   if (requirement.outletId !== undefined) {
-    return accessibleScope.outlets.includes(requirement.outletId)
+    return accessibleScope.system || accessibleScope.outlets.includes(requirement.outletId)
   }
 
   return true

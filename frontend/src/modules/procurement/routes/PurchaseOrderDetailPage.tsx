@@ -1,9 +1,10 @@
 import { useParams, Link } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Button, Card, DataTable, EmptyState, EntityHeader, ErrorState, ReadonlyBanner, StatusBadge } from '@design-system/index'
+import { Button, Card, DataTable, EmptyState, EntityHeader, ErrorState, PermissionDeniedInline, ReadonlyBanner, StatusBadge } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useConfirmAction } from '@shared/hooks/useConfirmAction'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { useAuthStore } from '@core/auth/auth.store'
 import { usePurchaseOrder, usePurchaseOrderAction } from '../hooks/usePurchaseOrder'
 import type { PurchaseOrderLine } from '../model/procurement.types'
 import {
@@ -12,8 +13,10 @@ import {
   canIssuePurchaseOrder,
   canSubmitPurchaseOrder,
 } from '../services/purchaseOrderUiPolicy.service'
+import { canReadPurchaseOrders } from '../services/procurementPermission.service'
 
 export function PurchaseOrderDetailPage() {
+  const principal = useAuthStore((state) => state.principal)
   const params = useParams<{ purchaseOrderId: string }>()
   const purchaseOrderId = params.purchaseOrderId ? Number(params.purchaseOrderId) : null
   const confirmAction = useConfirmAction()
@@ -21,6 +24,10 @@ export function PurchaseOrderDetailPage() {
   const actionMutation = usePurchaseOrderAction()
 
   usePageTitle(purchaseOrderId ? `Purchase Order #${purchaseOrderId}` : 'Purchase Order Detail')
+
+  if (!canReadPurchaseOrders(principal)) {
+    return <PermissionDeniedInline message="Bạn cần quyền procurement.po.read để xem purchase order." />
+  }
 
   const columns: Array<DataTableColumn<PurchaseOrderLine>> = [
     { key: 'lineNumber', header: 'Line', render: (row) => row.lineNumber },

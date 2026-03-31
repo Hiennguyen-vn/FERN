@@ -1,14 +1,22 @@
 import { Link } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Button, Card, EmptyState, ErrorState, ReadonlyBanner, StatusBadge } from '@design-system/index'
+import { Button, Card, EmptyState, ErrorState, ReadonlyBanner, StatusBadge, PermissionDeniedInline } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { useAuthStore } from '@core/auth/auth.store'
 import { useAttendanceApprovals } from '../hooks/useAttendanceApprovals'
+import { canApproveAttendance } from '../services/workforcePermission.service'
 
 export function AttendanceReviewPage() {
   usePageTitle('Attendance Review')
 
+  const principal = useAuthStore((state) => state.principal)
   const { selectedOutletId, selectedRegionId } = useScopeContext()
+
+  if (!canApproveAttendance(principal)) {
+    return <PermissionDeniedInline message="You don't have permission to review attendance approvals" />
+  }
+
   const approvalsQuery = useAttendanceApprovals(
     selectedOutletId || selectedRegionId
       ? {

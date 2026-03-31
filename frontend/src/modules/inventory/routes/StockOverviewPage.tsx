@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, ReadonlyBanner } from '@design-system/index'
+import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { useAuthStore } from '@core/auth/auth.store'
 import { useStockBalances } from '../hooks/useStockBalances'
 import type { StockBalance } from '../model/inventory.types'
+import { canReadStockBalances } from '../services/inventoryPermission.service'
 
 function toOptionalNumber(value: string): number | undefined {
   if (!value) {
@@ -19,7 +21,12 @@ function toOptionalNumber(value: string): number | undefined {
 export function StockOverviewPage() {
   usePageTitle('Stock Overview')
 
+  const principal = useAuthStore((state) => state.principal)
   const { selectedOutletId } = useScopeContext()
+
+  if (!canReadStockBalances(principal)) {
+    return <PermissionDeniedInline message="Bạn cần quyền inventory.balance.read để xem tồn kho." />
+  }
   const [ingredientId, setIngredientId] = useState('')
   const [page, setPage] = useState(0)
   const size = 20

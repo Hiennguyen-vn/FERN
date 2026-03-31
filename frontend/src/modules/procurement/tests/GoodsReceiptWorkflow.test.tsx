@@ -95,7 +95,7 @@ describe('goods receipt workflows', () => {
   beforeEach(() => {
     clearTestStorage()
     resetTestStores()
-    setAuthenticatedSession()
+    setAuthenticatedSession({ principal: { permissions: ['procurement.po.read', 'procurement.gr.read', 'procurement.gr.create'] } })
     purchaseOrderState = createPurchaseOrder()
     goodsReceiptState = createGoodsReceipt()
 

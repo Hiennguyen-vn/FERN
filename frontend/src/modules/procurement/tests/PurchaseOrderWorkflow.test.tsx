@@ -63,7 +63,7 @@ describe('purchase order workflows', () => {
   beforeEach(() => {
     clearTestStorage()
     resetTestStores()
-    setAuthenticatedSession()
+    setAuthenticatedSession({ principal: { permissions: ['procurement.po.read', 'procurement.po.create'] } })
     purchaseOrderState = createPurchaseOrder()
 
     const suppliers: Supplier[] = [
