@@ -140,6 +140,16 @@ export interface ProductPrice {
   effectiveTo: string | null
 }
 
+/**
+ * Backend ProductPriceUpsertRequest:
+ *   @NotNull Long productId
+ *   @NotNull PriceScopeType scopeType
+ *   @NotNull PriceType priceType
+ *   @NotBlank String currencyCode
+ *   @NotNull @DecimalMin("0.00") BigDecimal priceValue
+ *   @NotNull LocalDate effectiveFrom  ← required, never null
+ *   LocalDate effectiveTo             ← optional
+ */
 export interface ProductPriceUpsertRequest {
   productId: number
   scopeType: PriceScopeType
@@ -147,7 +157,7 @@ export interface ProductPriceUpsertRequest {
   priceType: PriceType
   currencyCode: string
   priceValue: number
-  effectiveFrom: string | null
+  effectiveFrom: string
   effectiveTo: string | null
 }
 

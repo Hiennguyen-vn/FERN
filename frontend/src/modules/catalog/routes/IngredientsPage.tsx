@@ -44,8 +44,13 @@ export function IngredientsPage() {
   usePageTitle('Nguyên liệu — Catalog')
   const principal = usePrincipal()
   const canViewIngredients = canReadIngredients(principal)
-  const { data: ingredients = [], error, isLoading, refetch } = useIngredients({ enabled: canViewIngredients })
-  const { data: categories = [], error: categoriesError } = useIngredientCategories({ enabled: canViewIngredients })
+  // Backend CatalogAuthorizer.requireSystemPermission gates all ingredient endpoints.
+  // Non-system users with catalog.ingredient.read permission will still get a 403 from
+  // the backend. Skip the fetch and show a targeted scope warning instead.
+  const hasSystemScope = principal?.scopeRoots?.system === true
+  const canFetchIngredients = canViewIngredients && hasSystemScope
+  const { data: ingredients = [], error, isLoading, refetch } = useIngredients({ enabled: canFetchIngredients })
+  const { data: categories = [], error: categoriesError } = useIngredientCategories({ enabled: canFetchIngredients })
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<IngredientStatus | 'ALL'>('ALL')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
@@ -129,6 +134,14 @@ export function IngredientsPage() {
   return (
     <DashboardLayout title="Nguyên liệu" description="Danh mục nguyên liệu dùng cho recipe và inventory planning.">
       <ReadonlyBanner message="Catalog đang được publish ở chế độ browse/inspect only trong giai đoạn này." />
+
+      {!hasSystemScope && (
+        <div className="inline-banner inline-banner-warning" role="status">
+          Danh mục nguyên liệu yêu cầu <strong>system scope</strong>. Tài khoản hiện tại chỉ có scope outlet/region
+          nên backend sẽ từ chối truy cập endpoint này. Liên hệ System Admin để được cấp system scope nếu cần xem dữ liệu
+          nguyên liệu.
+        </div>
+      )}
 
       <Card title="Bộ lọc nguyên liệu">
         <div className="field-grid">

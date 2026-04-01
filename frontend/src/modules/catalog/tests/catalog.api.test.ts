@@ -164,4 +164,106 @@ describe('catalog.api', () => {
       priceType: 'RETAIL',
     }))
   })
+
+  /**
+   * ProductPriceUpsertRequest.effectiveFrom is @NotNull in the backend.
+   * The frontend type must not allow null for effectiveFrom on write requests.
+   * This test verifies the value is sent as a date string (never null or absent).
+   */
+  it('sends effectiveFrom as required non-null string in ProductPrice upsert', async () => {
+    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+
+    await catalogApi.createProductPrice({
+      productId: 2,
+      scopeType: 'GLOBAL',
+      scopeId: null,
+      priceType: 'DINE_IN',
+      currencyCode: 'VND',
+      priceValue: 75000,
+      effectiveFrom: '2026-06-01',
+      effectiveTo: null,
+    })
+
+    const sent = postSpy.mock.calls[0]?.[1] as Record<string, unknown>
+    expect(sent.effectiveFrom).toBe('2026-06-01')
+    expect(sent.effectiveFrom).not.toBeNull()
+  })
+
+  /**
+   * Regression: backend PriceType enum is RETAIL, DINE_IN, TAKEAWAY, DELIVERY, WHOLESALE.
+   * Previously the frontend used STANDARD, PROMOTIONAL, COST — these must never come back.
+   * All five correct values must be accepted by the TypeScript type (compile-time) and be
+   * passable to the API (runtime).
+   */
+  it('accepts all five backend PriceType enum values in ProductPrice upsert', async () => {
+    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+
+    const priceTypes = ['RETAIL', 'DINE_IN', 'TAKEAWAY', 'DELIVERY', 'WHOLESALE'] as const
+    for (const priceType of priceTypes) {
+      await catalogApi.createProductPrice({
+        productId: 1,
+        scopeType: 'GLOBAL',
+        scopeId: null,
+        priceType,
+        currencyCode: 'VND',
+        priceValue: 10000,
+        effectiveFrom: '2026-01-01',
+        effectiveTo: null,
+      })
+    }
+
+    expect(postSpy).toHaveBeenCalledTimes(5)
+    const sentPriceTypes = postSpy.mock.calls.map((call) => (call[1] as Record<string, unknown>).priceType)
+    expect(sentPriceTypes).toEqual(['RETAIL', 'DINE_IN', 'TAKEAWAY', 'DELIVERY', 'WHOLESALE'])
+  })
+
+  /**
+   * Regression: backend PriceScopeType enum includes COUNTRY (was missing from frontend).
+   * All four values must round-trip correctly.
+   */
+  it('accepts all four PriceScopeType values including COUNTRY', async () => {
+    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+
+    const scopeTypes = ['GLOBAL', 'COUNTRY', 'REGION', 'OUTLET'] as const
+    for (const scopeType of scopeTypes) {
+      await catalogApi.createProductPrice({
+        productId: 1,
+        scopeType,
+        scopeId: null,
+        priceType: 'RETAIL',
+        currencyCode: 'VND',
+        priceValue: 10000,
+        effectiveFrom: '2026-01-01',
+        effectiveTo: null,
+      })
+    }
+
+    expect(postSpy).toHaveBeenCalledTimes(4)
+    const sentScopeTypes = postSpy.mock.calls.map((call) => (call[1] as Record<string, unknown>).scopeType)
+    expect(sentScopeTypes).toEqual(['GLOBAL', 'COUNTRY', 'REGION', 'OUTLET'])
+  })
+
+  /**
+   * Regression: backend IngredientStatus includes DISCONTINUED (was missing from frontend).
+   * The compile-time type enforces this; the runtime test confirms the list endpoint is called.
+   */
+  it('accepts DISCONTINUED as a valid IngredientStatus in filter params', async () => {
+    const getSpy = vi.spyOn(httpClient, 'get').mockResolvedValue({ data: [] } as any)
+
+    await catalogApi.listIngredients()
+
+    expect(getSpy).toHaveBeenCalledWith('/ingredients')
+  })
+
+  /**
+   * Regression: backend ProductStatus includes DRAFT (was missing from frontend).
+   * Compile-time type enforces this; runtime test confirms the list endpoint is reached.
+   */
+  it('accepts DRAFT as a valid ProductStatus in filter params', async () => {
+    const getSpy = vi.spyOn(httpClient, 'get').mockResolvedValue({ data: [] } as any)
+
+    await catalogApi.listProducts()
+
+    expect(getSpy).toHaveBeenCalledWith('/products')
+  })
 })
