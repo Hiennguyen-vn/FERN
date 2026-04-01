@@ -15,11 +15,30 @@ export function useRegion(regionId: number, options: OrgQueryOptions = {}) {
   })
 }
 
+export function useRegionList(params: { search?: string; page?: number; size?: number }, options: OrgQueryOptions = {}) {
+  return useQuery({
+    queryKey: orgQueryKeys.regionList(params),
+    queryFn: () => orgApi.listRegions(params),
+    enabled: options.enabled ?? true,
+  })
+}
+
 export function useOutlet(outletId: number, options: OrgQueryOptions = {}) {
   return useQuery({
     queryKey: orgQueryKeys.outletDetail(outletId),
     queryFn: () => orgApi.getOutlet(outletId),
     enabled: (options.enabled ?? true) && outletId > 0,
+  })
+}
+
+export function useOutletList(
+  params: { regionId?: number; search?: string; status?: string; page?: number; size?: number },
+  options: OrgQueryOptions = {},
+) {
+  return useQuery({
+    queryKey: orgQueryKeys.outletList(params),
+    queryFn: () => orgApi.listOutlets(params),
+    enabled: options.enabled ?? true,
   })
 }
 

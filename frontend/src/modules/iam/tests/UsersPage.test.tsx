@@ -3,15 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { permissionConstants } from '@core/permissions/permission.constants'
 import { renderWithProviders } from '@shared/test-utils/renderWithProviders'
 import { clearTestStorage, resetTestStores, setAuthenticatedSession } from '@shared/test-utils/scopeTestHelpers'
-import { saveRecentIamUser } from '../services/recentUsers.service'
 import { UsersPage } from '../routes/UsersPage'
 
 const mocks = vi.hoisted(() => ({
-  useIamUser: vi.fn(),
+  useIamUsers: vi.fn(),
 }))
 
 vi.mock('../hooks/useIam', () => ({
-  useIamUser: mocks.useIamUser,
+  useIamUsers: mocks.useIamUsers,
 }))
 
 describe('UsersPage', () => {
@@ -24,26 +23,31 @@ describe('UsersPage', () => {
         permissions: [permissionConstants.iam.userRead],
       },
     })
-    mocks.useIamUser.mockReturnValue({
-      data: undefined,
+    mocks.useIamUsers.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 1,
+            username: 'bootstrap-admin',
+            fullName: 'Bootstrap Admin',
+            email: 'admin@fern.local',
+            phone: null,
+            status: 'ACTIVE',
+            roleCodes: ['bootstrap_admin'],
+            scopeRoots: { system: true, regions: [], outlets: [] },
+          },
+        ],
+        page: 0,
+        size: 50,
+        hasMore: false,
+      },
       error: null,
       isLoading: false,
       refetch: vi.fn(),
     })
   })
 
-  it('renders recent inspected users from local history', () => {
-    saveRecentIamUser({
-      id: 1,
-      username: 'bootstrap-admin',
-      fullName: 'Bootstrap Admin',
-      email: 'admin@fern.local',
-      phone: null,
-      status: 'ACTIVE',
-      roleCodes: ['bootstrap_admin'],
-      scopeRoots: { system: true, regions: [], outlets: [] },
-    })
-
+  it('renders browsable users from the real list query', () => {
     renderWithProviders(<UsersPage />)
 
     expect(screen.getByText('bootstrap-admin')).toBeInTheDocument()
@@ -56,6 +60,6 @@ describe('UsersPage', () => {
 
     renderWithProviders(<UsersPage />)
 
-    expect(screen.getByText('Bạn cần quyền iam.user.read để tra cứu và inspect user accounts.')).toBeInTheDocument()
+    expect(screen.getByText('Bạn cần quyền iam.user.read để xem user directory.')).toBeInTheDocument()
   })
 })

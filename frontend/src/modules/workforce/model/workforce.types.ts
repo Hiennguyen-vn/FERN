@@ -1,5 +1,9 @@
 import type { PageResponse } from '@core/types/api'
 
+/**
+ * Shape returned by GET /attendance-events (AttendanceEventListItemResponse).
+ * Includes outlet/region/shift context used for display.
+ */
 export interface AttendanceEventListItem {
   id: number
   employeeId: number
@@ -7,6 +11,20 @@ export interface AttendanceEventListItem {
   outletId: number
   shiftAssignmentId: number
   shiftDate: string
+  eventType: string
+  eventTime: string
+  sourceSystem: string | null
+}
+
+/**
+ * Shape returned by POST /attendance-events (AttendanceEventResponse).
+ * The single-record create response intentionally omits regionId, outletId
+ * and shiftDate — those are only present on the list item projection.
+ */
+export interface AttendanceEventRecord {
+  id: number
+  employeeId: number
+  shiftAssignmentId: number
   eventType: string
   eventTime: string
   sourceSystem: string | null
@@ -20,8 +38,8 @@ export interface AttendanceApproval {
   approvedAt: string | null
   approvedByUserId: number | null
   attendanceStatus: string
-  workHours: string | null
-  overtimeHours: string | null
+  workHours: number | null
+  overtimeHours: number | null
   businessDate: string | null
 }
 

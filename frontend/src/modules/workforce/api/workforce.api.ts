@@ -3,6 +3,7 @@ import type {
   AttendanceApproval,
   AttendanceEventFilters,
   AttendanceEventPage,
+  AttendanceEventRecord,
   RecordAttendanceEventPayload,
 } from '../model/workforce.types'
 
@@ -20,7 +21,7 @@ export async function recordAttendanceEvent(payload: RecordAttendanceEventPayloa
   const eventDay = payload.eventTime.slice(0, 10) // YYYY-MM-DD
   const idempotencyKey = `attendance:${payload.employeeId}:${payload.shiftAssignmentId}:${payload.eventType}:${eventDay}`
 
-  const { data } = await gatewayClient.post('/attendance-events', payload, {
+  const { data } = await gatewayClient.post<AttendanceEventRecord>('/attendance-events', payload, {
     headers: { 'Idempotency-Key': idempotencyKey },
   })
   return data

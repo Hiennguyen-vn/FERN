@@ -16,12 +16,17 @@ import com.fern.iamservice.repository.UserRoleAssignmentRepository;
 import com.fern.iamservice.repository.UserScopeAssignmentRepository;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ListQueryDefaults;
+import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.ScopeType;
 import com.fern.platform.security.FernPasswordHasher;
 import java.time.Clock;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Sort;
 
 @Service
 public class UserService {
@@ -105,6 +110,23 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse get(Long id) {
         return userViewService.toResponse(userViewService.findUser(id));
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<UserResponse> list(String search, UserStatus status, Integer page, Integer size) {
+        String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        int clampedSize = ListQueryDefaults.clampLimit(size);
+
+        List<UserResponse> users = userAccountRepository.findAll(Sort.by(
+                        Sort.Order.asc("username"),
+                        Sort.Order.asc("id")
+                )).stream()
+                .filter(user -> status == null || user.getStatus() == status)
+                .filter(user -> matchesSearch(user, normalizedSearch))
+                .map(userViewService::toResponse)
+                .toList();
+
+        return toPageResponse(users, page, clampedSize);
     }
 
     @Transactional
@@ -203,5 +225,33 @@ public class UserService {
         assignment.setScopeId(scopeId);
         assignment.setCreatedAt(clock.instant());
         userScopeAssignmentRepository.save(assignment);
+    }
+
+    private boolean matchesSearch(UserAccountEntity user, String normalizedSearch) {
+        if (normalizedSearch.isBlank()) {
+            return true;
+        }
+        return contains(user.getId(), normalizedSearch)
+                || contains(user.getUsername(), normalizedSearch)
+                || contains(user.getFullName(), normalizedSearch)
+                || contains(user.getEmail(), normalizedSearch)
+                || contains(user.getPhone(), normalizedSearch);
+    }
+
+    private boolean contains(Object value, String normalizedSearch) {
+        return value != null && String.valueOf(value).toLowerCase(Locale.ROOT).contains(normalizedSearch);
+    }
+
+    private <T> PageResponse<T> toPageResponse(List<T> items, Integer page, int size) {
+        int safePage = page == null || page < 0 ? 0 : page;
+        int offset = Math.toIntExact(ListQueryDefaults.offsetFrom(page, size));
+        if (offset >= items.size()) {
+            return new PageResponse<>(List.of(), safePage, size, false);
+        }
+        int endExclusive = Math.min(items.size(), offset + size + 1);
+        List<T> window = items.subList(offset, endExclusive);
+        boolean hasMore = window.size() > size;
+        List<T> pagedItems = hasMore ? List.copyOf(window.subList(0, size)) : List.copyOf(window);
+        return new PageResponse<>(pagedItems, safePage, size, hasMore);
     }
 }

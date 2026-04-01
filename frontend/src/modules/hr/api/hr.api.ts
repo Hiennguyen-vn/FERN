@@ -1,7 +1,10 @@
 import { gatewayClient } from '@core/api/gatewayClient'
+import type { PageResponse } from '@core/types/api'
 import type {
   CreatePayrollPeriodPayload,
   CreatePayrollRunPayload,
+  CreateShiftAssignmentPayload,
+  CreateShiftSchedulePayload,
   HrAssignment,
   HrAttendanceApproval,
   HrAttendanceEventPage,
@@ -10,11 +13,21 @@ import type {
   HrEmployee,
   PayrollPeriod,
   PayrollRun,
+  ShiftAssignment,
+  ShiftSchedule,
 } from '../model/hr.types'
 
 export const hrApi = {
+  listEmployees(params?: { search?: string; status?: string; page?: number; size?: number }) {
+    return gatewayClient.get<PageResponse<HrEmployee>>('/employees', { params }).then((response) => response.data)
+  },
+
   getEmployee(employeeId: number) {
     return gatewayClient.get<HrEmployee>(`/employees/${employeeId}`).then((response) => response.data)
+  },
+
+  listContracts(params?: { employeeId?: number; regionId?: number; search?: string; status?: string; page?: number; size?: number }) {
+    return gatewayClient.get<PageResponse<HrContract>>('/employee-contracts', { params }).then((response) => response.data)
   },
 
   listEmployeeContracts(employeeId: number) {
@@ -64,5 +77,35 @@ export const hrApi = {
 
   createPayrollRun(payload: CreatePayrollRunPayload) {
     return gatewayClient.post<PayrollRun>('/payroll-runs', payload).then((response) => response.data)
+  },
+
+  // ── Shift Schedules ──────────────────────────────────────
+  listShiftSchedules(params?: { outletId?: number; fromDate?: string; toDate?: string }) {
+    return gatewayClient
+      .get<ShiftSchedule[]>('/shift-schedules', { params })
+      .then((response) => response.data)
+  },
+
+  getShiftSchedule(id: number) {
+    return gatewayClient.get<ShiftSchedule>(`/shift-schedules/${id}`).then((response) => response.data)
+  },
+
+  createShiftSchedule(payload: CreateShiftSchedulePayload) {
+    return gatewayClient.post<ShiftSchedule>('/shift-schedules', payload).then((response) => response.data)
+  },
+
+  // ── Shift Assignments ────────────────────────────────────
+  listShiftAssignments(shiftScheduleId: number) {
+    return gatewayClient
+      .get<ShiftAssignment[]>('/shift-assignments', { params: { shiftScheduleId } })
+      .then((response) => response.data)
+  },
+
+  getShiftAssignment(id: number) {
+    return gatewayClient.get<ShiftAssignment>(`/shift-assignments/${id}`).then((response) => response.data)
+  },
+
+  createShiftAssignment(payload: CreateShiftAssignmentPayload) {
+    return gatewayClient.post<ShiftAssignment>('/shift-assignments', payload).then((response) => response.data)
   },
 }

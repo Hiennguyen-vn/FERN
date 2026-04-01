@@ -96,6 +96,7 @@ function InventoryHarness() {
         <Route path="transactions" element={<h1>transactions</h1>} />
       </Route>
       <Route path="/unauthorized" element={<h1>unauthorized</h1>} />
+      <Route path="*" element={<h1>not-found</h1>} />
     </Routes>
   )
 }
@@ -196,6 +197,19 @@ describe('published module landing audit', () => {
     setAuthenticatedSession({ principal: { permissions: [permissionConstants.inventory.ledgerRead] } })
     renderWithProviders(<InventoryHarness />, { route: '/inventory' })
     expect(await screen.findByRole('heading', { name: 'transactions' })).toBeInTheDocument()
+  })
+
+  it('does not publish the removed inter-outlet transfer route in V1', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [
+          permissionConstants.inventory.balanceRead,
+          permissionConstants.inventory.ledgerRead,
+        ],
+      },
+    })
+    renderWithProviders(<InventoryHarness />, { route: '/inventory/transfers' })
+    expect(await screen.findByRole('heading', { name: 'not-found' })).toBeInTheDocument()
   })
 
   it('lands review-only workforce users on attendance approvals', async () => {

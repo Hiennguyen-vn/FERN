@@ -3,20 +3,19 @@
 # seed-demo.sh — FERN Full-System Demo Seed
 # =============================================================================
 # Creates a realistic, persona-driven staging dataset via live API calls.
-# Idempotent: resolves existing entity IDs via psql when API 409 conflicts occur.
+# Idempotent: resolves existing entity IDs via live browse/list APIs when API
+# 409 conflicts occur.
 #
 # Prerequisites:
-#   1. Full stack running (services + infrastructure containers)
+#   1. Full stack running (services + infrastructure)
 #   2. Migrations applied
-#   3. docker, curl, python3 available
+#   3. curl, python3 available
 #
 # Usage:
 #   ./scripts/seed-demo.sh
 #
 # Environment overrides:
 #   FERN_BASE_URL=http://localhost:8080
-#   FERN_IAM_BASE_URL=http://localhost:8081
-#   FERN_POSTGRES_CONTAINER=fern-postgres
 #   DEMO_PASSWORD=Demo123!
 #   BUSINESS_DATE=2026-04-01
 # =============================================================================
@@ -24,17 +23,13 @@
 set -euo pipefail
 
 FERN_BASE_URL="${FERN_BASE_URL:-http://localhost:8080}"
-FERN_IAM_BASE_URL="${FERN_IAM_BASE_URL:-http://localhost:8081}"
-FERN_POSTGRES_CONTAINER="${FERN_POSTGRES_CONTAINER:-fern-postgres}"
-FERN_DB_USERNAME="${FERN_DB_USERNAME:-fern}"
-FERN_MASTER_DB="${FERN_MASTER_DB:-fern_master}"
-FERN_OPERATIONAL_DB="${FERN_OPERATIONAL_DB:-fern_operational}"
 BOOTSTRAP_USERNAME="${BOOTSTRAP_USERNAME:-bootstrap-admin}"
 BOOTSTRAP_PASSWORD="${BOOTSTRAP_PASSWORD:-Admin123!}"
 DEMO_PASSWORD="${DEMO_PASSWORD:-Demo123!}"
 BUSINESS_DATE="${BUSINESS_DATE:-$(date +%F)}"
 PAYROLL_MONTH_START="${PAYROLL_MONTH_START:-$(date +%Y-%m-01)}"
 PAYROLL_MONTH_END="${PAYROLL_MONTH_END:-${BUSINESS_DATE}}"
+BOOTSTRAP_TOKEN_FILE="${TMPDIR:-/tmp}/fern-seed-bootstrap-token.$$"
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -48,38 +43,266 @@ require_cmd() { command -v "$1" >/dev/null 2>&1 || fail "Missing: $1"; }
 # ---------------------------------------------------------------------------
 require_cmd curl
 require_cmd python3
-require_cmd docker
 
-curl -fsS "${FERN_IAM_BASE_URL}/actuator/health" >/dev/null 2>&1 \
-  || fail "IAM not reachable at ${FERN_IAM_BASE_URL}. Start the stack first."
+cleanup_seed() {
+  rm -f "${BOOTSTRAP_TOKEN_FILE}"
+}
+
+trap cleanup_seed EXIT
 curl -fsS "${FERN_BASE_URL}/actuator/health" >/dev/null 2>&1 \
   || fail "Gateway not reachable at ${FERN_BASE_URL}. Start the stack first."
 
 log "======================================================================"
 log "FERN Demo Seed — ${BUSINESS_DATE}"
-log "Gateway: ${FERN_BASE_URL}  IAM: ${FERN_IAM_BASE_URL}"
+log "Gateway: ${FERN_BASE_URL}"
 log "======================================================================"
 
 # ---------------------------------------------------------------------------
-# Database helpers — used for idempotent ID resolution (list endpoints are
-# unreliable through the gateway for org/iam entities)
+# Browse/list helpers — used for idempotent ID resolution via live APIs
 # ---------------------------------------------------------------------------
-psql_scalar() {
-  local db="$1"
-  local sql="$2"
-  docker exec "${FERN_POSTGRES_CONTAINER}" psql -U "${FERN_DB_USERNAME}" -d "${db}" \
-    -Atqc "${sql}" 2>/dev/null | tr -d '[:space:]'
+urlencode() {
+  python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$1"
 }
 
-db_region_id()    { psql_scalar "${FERN_MASTER_DB}" "SELECT id FROM org.region WHERE code='$1' LIMIT 1"; }
-db_outlet_id()    { psql_scalar "${FERN_MASTER_DB}" "SELECT id FROM org.outlet WHERE code='$1' LIMIT 1"; }
-db_user_id()      { psql_scalar "${FERN_MASTER_DB}" "SELECT id FROM iam.user_account WHERE username='$1' LIMIT 1"; }
-db_ingredient_id(){ psql_scalar "${FERN_MASTER_DB}" "SELECT id FROM catalog.ingredient WHERE code='$1' LIMIT 1"; }
-db_uom_exists()   { psql_scalar "${FERN_MASTER_DB}" "SELECT COUNT(*) FROM catalog.unit_of_measure WHERE code='$1'"; }
-db_product_id()   { psql_scalar "${FERN_MASTER_DB}" "SELECT id FROM catalog.product WHERE code='$1' LIMIT 1"; }
-db_recipe_id()    { psql_scalar "${FERN_MASTER_DB}" "SELECT id FROM catalog.recipe WHERE recipe_code='$1' LIMIT 1"; }
-db_supplier_id()  { psql_scalar "${FERN_MASTER_DB}" "SELECT id FROM procurement_master.supplier WHERE supplier_code='$1' LIMIT 1"; }
-db_employee_id()  { psql_scalar "${FERN_MASTER_DB}" "SELECT id FROM hr_master.employee_profile WHERE employee_code='$1' LIMIT 1"; }
+collection_find_field_value() {
+  local body="$1"
+  local out_field="$2"
+  shift 2 || true
+  printf '%s' "${body}" | python3 -c '
+import json, sys
+out_field = sys.argv[1]
+pairs = sys.argv[2:]
+assert len(pairs) % 2 == 0, "expected field/value pairs"
+data = json.load(sys.stdin)
+items = data.get("items", data) if isinstance(data, dict) else data
+if not isinstance(items, list):
+    items = []
+for item in items:
+    matched = True
+    for index in range(0, len(pairs), 2):
+        field = pairs[index]
+        expected = pairs[index + 1]
+        value = item.get(field)
+        if value is None or str(value) != expected:
+            matched = False
+            break
+    if matched:
+        value = item.get(out_field)
+        if value is not None:
+            print(value)
+            break
+' "$out_field" "$@"
+}
+
+collection_count_matches() {
+  local body="$1"
+  shift || true
+  printf '%s' "${body}" | python3 -c '
+import json, sys
+pairs = sys.argv[1:]
+assert len(pairs) % 2 == 0, "expected field/value pairs"
+data = json.load(sys.stdin)
+items = data.get("items", data) if isinstance(data, dict) else data
+if not isinstance(items, list):
+    items = []
+count = 0
+for item in items:
+    matched = True
+    for index in range(0, len(pairs), 2):
+        field = pairs[index]
+        expected = pairs[index + 1]
+        value = item.get(field)
+        if value is None or str(value) != expected:
+            matched = False
+            break
+    if matched:
+        count += 1
+print(count)
+' "$@"
+}
+
+json_path_value() {
+  local body="$1"
+  local path="$2"
+  printf '%s' "${body}" | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+value = data
+for segment in sys.argv[1].split("."):
+    if isinstance(value, list):
+        value = value[int(segment)]
+    else:
+        value = value.get(segment)
+    if value is None:
+        break
+if value is not None:
+    print(value)
+' "$path"
+}
+
+bootstrap_get() {
+  local path="$1"
+  shift || true
+  bootstrap_request GET "${path}" "" "$@"
+  [[ "${HTTP_STATUS}" -ge 200 && "${HTTP_STATUS}" -lt 300 ]] \
+    || fail "HTTP ${HTTP_STATUS} for GET ${path}: ${HTTP_BODY}"
+  printf '%s' "${HTTP_BODY}"
+}
+
+find_region_id_by_code() {
+  local code="$1"
+  local body
+  body="$(bootstrap_get "/regions?search=$(urlencode "${code}")&page=0&size=100")"
+  collection_find_field_value "${body}" id code "${code}"
+}
+
+find_outlet_id_by_code() {
+  local code="$1"
+  local body
+  body="$(bootstrap_get "/outlets?search=$(urlencode "${code}")&page=0&size=100")"
+  collection_find_field_value "${body}" id code "${code}"
+}
+
+find_user_id_by_username() {
+  local username="$1"
+  local body
+  body="$(bootstrap_get "/users?search=$(urlencode "${username}")&page=0&size=100")"
+  collection_find_field_value "${body}" id username "${username}"
+}
+
+find_ingredient_id_by_code() {
+  local code="$1"
+  local body
+  body="$(bootstrap_get "/ingredients?limit=200")"
+  collection_find_field_value "${body}" id code "${code}"
+}
+
+uom_exists_by_code() {
+  local code="$1"
+  local body
+  body="$(bootstrap_get "/units-of-measure")"
+  collection_count_matches "${body}" code "${code}"
+}
+
+find_product_id_by_code() {
+  local code="$1"
+  local body
+  body="$(bootstrap_get "/products?limit=200")"
+  collection_find_field_value "${body}" id code "${code}"
+}
+
+find_recipe_id_by_code() {
+  local code="$1"
+  local body
+  body="$(bootstrap_get "/recipes")"
+  collection_find_field_value "${body}" id recipeCode "${code}"
+}
+
+find_supplier_id_by_code() {
+  local code="$1"
+  local body
+  body="$(bootstrap_get "/suppliers")"
+  collection_find_field_value "${body}" id supplierCode "${code}"
+}
+
+find_employee_id_by_code() {
+  local code="$1"
+  local body
+  body="$(bootstrap_get "/employees?search=$(urlencode "${code}")&page=0&size=100")"
+  collection_find_field_value "${body}" id employeeCode "${code}"
+}
+
+find_purchase_order_id_by_note() {
+  local note="$1"
+  local body
+  body="$(bootstrap_get "/purchase-orders?outletId=${OUTLET_D1}&supplierId=${SUPPLIER_ID}&limit=200")"
+  collection_find_field_value "${body}" id note "${note}"
+}
+
+find_purchase_order_line_id() {
+  local po_id="$1"
+  local body
+  body="$(bootstrap_get "/purchase-orders/${po_id}")"
+  json_path_value "${body}" "lines.0.id"
+}
+
+find_goods_receipt_id_by_note() {
+  local po_id="$1"
+  local note="$2"
+  local body
+  body="$(bootstrap_get "/goods-receipts?purchaseOrderId=${po_id}&limit=100")"
+  collection_find_field_value "${body}" id note "${note}"
+}
+
+find_goods_receipt_line_id() {
+  local gr_id="$1"
+  local body
+  body="$(bootstrap_get "/goods-receipts/${gr_id}")"
+  json_path_value "${body}" "lines.0.id"
+}
+
+find_supplier_invoice_id_by_number() {
+  local invoice_number="$1"
+  local body
+  body="$(bootstrap_get "/supplier-invoices?supplierId=${SUPPLIER_ID}&outletId=${OUTLET_D1}&limit=100")"
+  collection_find_field_value "${body}" id invoiceNumber "${invoice_number}"
+}
+
+find_supplier_payment_id_by_txn_ref() {
+  local txn_ref="$1"
+  local body
+  body="$(bootstrap_get "/supplier-payments?supplierId=${SUPPLIER_ID}&limit=100")"
+  collection_find_field_value "${body}" id transactionRef "${txn_ref}"
+}
+
+employee_has_active_contract() {
+  local employee_id="$1"
+  local body
+  body="$(bootstrap_get "/employee-contracts?employeeId=${employee_id}&page=0&size=50")"
+  collection_count_matches "${body}" employeeId "${employee_id}" contractStatus "ACTIVE"
+}
+
+employee_has_active_assignment() {
+  local employee_id="$1"
+  local body
+  body="$(bootstrap_get "/employees/${employee_id}/assignments")"
+  collection_count_matches "${body}" outletId "${OUTLET_D1}" status "ACTIVE"
+}
+
+find_shift_schedule_id() {
+  local body
+  body="$(bootstrap_get "/shift-schedules?outletId=${OUTLET_D1}&fromDate=${BUSINESS_DATE}&toDate=${BUSINESS_DATE}&limit=50")"
+  collection_find_field_value "${body}" id shiftName "Morning Demo Shift"
+}
+
+find_shift_assignment_id() {
+  local shift_schedule_id="$1"
+  local employee_id="$2"
+  local body
+  body="$(bootstrap_get "/shift-assignments?shiftScheduleId=${shift_schedule_id}&limit=50")"
+  collection_find_field_value "${body}" id employeeId "${employee_id}"
+}
+
+find_payroll_period_id_by_name() {
+  local region_id="$1"
+  local name="$2"
+  local body
+  body="$(bootstrap_get "/payroll-periods?regionId=${region_id}")"
+  collection_find_field_value "${body}" id name "${name}"
+}
+
+find_payroll_run_id() {
+  local region_id="$1"
+  local payroll_period_id="$2"
+  local status="${3:-}"
+  local body
+  body="$(bootstrap_get "/payroll-runs?regionId=${region_id}&limit=100")"
+  if [[ -n "${status}" ]]; then
+    collection_find_field_value "${body}" id payrollPeriodId "${payroll_period_id}" status "${status}"
+  else
+    collection_find_field_value "${body}" id payrollPeriodId "${payroll_period_id}"
+  fi
+}
 
 # ---------------------------------------------------------------------------
 # HTTP helpers
@@ -132,27 +355,71 @@ json_field() {
 # ---------------------------------------------------------------------------
 BOOTSTRAP_TOKEN=""
 refresh_bootstrap_token() {
-  # Always re-fetch — token TTL is 15 min and seeds can run longer
-  local resp
-  resp="$(http_ok POST "${FERN_IAM_BASE_URL}/auth/login" \
-    "{\"username\":\"${BOOTSTRAP_USERNAME}\",\"password\":\"${BOOTSTRAP_PASSWORD}\"}" "")"
-  BOOTSTRAP_TOKEN="$(json_field accessToken "${resp}")"
+  if [[ -n "${BOOTSTRAP_TOKEN}" ]]; then
+    return
+  fi
+  if [[ -f "${BOOTSTRAP_TOKEN_FILE}" ]]; then
+    BOOTSTRAP_TOKEN="$(cat "${BOOTSTRAP_TOKEN_FILE}")"
+    if [[ -n "${BOOTSTRAP_TOKEN}" ]]; then
+      return
+    fi
+  fi
+  local attempt=1
+  local max_attempts=6
+  while (( attempt <= max_attempts )); do
+    perform_request POST "${FERN_BASE_URL}/auth/login" \
+      "{\"username\":\"${BOOTSTRAP_USERNAME}\",\"password\":\"${BOOTSTRAP_PASSWORD}\"}" ""
+    if [[ "${HTTP_STATUS}" -ge 200 && "${HTTP_STATUS}" -lt 300 ]]; then
+      BOOTSTRAP_TOKEN="$(json_field accessToken "${HTTP_BODY}")"
+      printf '%s' "${BOOTSTRAP_TOKEN}" > "${BOOTSTRAP_TOKEN_FILE}"
+      return
+    fi
+    if [[ "${HTTP_STATUS}" == "429" ]]; then
+      sleep $(( attempt ))
+      attempt=$(( attempt + 1 ))
+      continue
+    fi
+    fail "HTTP ${HTTP_STATUS} for POST ${FERN_BASE_URL}/auth/login: ${HTTP_BODY}"
+  done
+  fail "HTTP 429 for POST ${FERN_BASE_URL}/auth/login after ${max_attempts} attempts: ${HTTP_BODY}"
+}
+
+bootstrap_request() {
+  local method="$1"; local path="$2"; local body="${3:-}"
+  shift 3 || true
+  local attempt=1
+  local max_attempts=6
+  while (( attempt <= max_attempts )); do
+    refresh_bootstrap_token
+    perform_request "${method}" "${FERN_BASE_URL}${path}" "${body}" "Bearer ${BOOTSTRAP_TOKEN}" "$@"
+    if [[ "${HTTP_STATUS}" == "401" ]]; then
+      BOOTSTRAP_TOKEN=""
+      rm -f "${BOOTSTRAP_TOKEN_FILE}"
+      attempt=$(( attempt + 1 ))
+      continue
+    fi
+    if [[ "${HTTP_STATUS}" == "429" ]]; then
+      sleep $(( attempt ))
+      attempt=$(( attempt + 1 ))
+      continue
+    fi
+    return
+  done
 }
 
 # Create-or-resolve: attempts POST, on 409 or 5xx with existing DB row, resolves ID via psql
 create_or_resolve() {
-  local db_func="$1"; local code="$2"; local method="$3"; local path="$4"; local body="$5"
+  local resolver_func="$1"; local code="$2"; local method="$3"; local path="$4"; local body="$5"
   shift 5 || true
-  refresh_bootstrap_token
-  perform_request "${method}" "${FERN_BASE_URL}${path}" "${body}" "Bearer ${BOOTSTRAP_TOKEN}" "$@"
+  bootstrap_request "${method}" "${path}" "${body}" "$@"
   if [[ "${HTTP_STATUS}" == "409" || "${HTTP_STATUS}" -ge 500 ]]; then
     local existing_id
-    existing_id="$(${db_func} "${code}")"
+    existing_id="$(${resolver_func} "${code}")"
     if [[ -n "${existing_id}" ]]; then
       printf '%s' "${existing_id}"
       return
     fi
-    fail "HTTP ${HTTP_STATUS} for ${method} ${path} and no existing entity in DB: ${HTTP_BODY}"
+    fail "HTTP ${HTTP_STATUS} for ${method} ${path} and no existing entity resolved from live APIs: ${HTTP_BODY}"
   fi
   [[ "${HTTP_STATUS}" -ge 200 && "${HTTP_STATUS}" -lt 300 ]] \
     || fail "HTTP ${HTTP_STATUS} for ${method} ${path}: ${HTTP_BODY}"
@@ -163,8 +430,10 @@ create_or_resolve() {
 bootstrap_post() {
   local path="$1"; local body="$2"
   shift 2 || true
-  refresh_bootstrap_token
-  http_ok POST "${FERN_BASE_URL}${path}" "${body}" "Bearer ${BOOTSTRAP_TOKEN}" "$@"
+  bootstrap_request POST "${path}" "${body}" "$@"
+  [[ "${HTTP_STATUS}" -ge 200 && "${HTTP_STATUS}" -lt 300 ]] \
+    || fail "HTTP ${HTTP_STATUS} for POST ${path}: ${HTTP_BODY}"
+  printf '%s' "${HTTP_BODY}"
 }
 
 # POST with user token, fail on non-2xx
@@ -186,10 +455,23 @@ user_post_ok409() {
 
 get_user_token() {
   local username="$1"; local password="$2"
-  local resp
-  resp="$(http_ok POST "${FERN_IAM_BASE_URL}/auth/login" \
-    "{\"username\":\"${username}\",\"password\":\"${password}\"}" "")"
-  json_field accessToken "${resp}"
+  local attempt=1
+  local max_attempts=6
+  while (( attempt <= max_attempts )); do
+    perform_request POST "${FERN_BASE_URL}/auth/login" \
+      "{\"username\":\"${username}\",\"password\":\"${password}\"}" ""
+    if [[ "${HTTP_STATUS}" -ge 200 && "${HTTP_STATUS}" -lt 300 ]]; then
+      json_field accessToken "${HTTP_BODY}"
+      return
+    fi
+    if [[ "${HTTP_STATUS}" == "429" ]]; then
+      sleep $(( attempt ))
+      attempt=$(( attempt + 1 ))
+      continue
+    fi
+    fail "HTTP ${HTTP_STATUS} for POST ${FERN_BASE_URL}/auth/login: ${HTTP_BODY}"
+  done
+  fail "HTTP 429 for POST ${FERN_BASE_URL}/auth/login after ${max_attempts} attempts: ${HTTP_BODY}"
 }
 
 # ===========================================================================
@@ -198,15 +480,15 @@ get_user_token() {
 log ""
 log "=== [1/9] ORGANIZATION ==="
 
-REGION_ID="$(create_or_resolve db_region_id DEMO-HCM POST "/regions" \
+REGION_ID="$(create_or_resolve find_region_id_by_code DEMO-HCM POST "/regions" \
   "{\"code\":\"DEMO-HCM\",\"parentRegionId\":1,\"currencyCode\":\"VND\",\"name\":\"Ho Chi Minh City Demo\",\"timezoneName\":\"Asia/Ho_Chi_Minh\"}")"
 log "Region DEMO-HCM → id=${REGION_ID}"
 
-OUTLET_D1="$(create_or_resolve db_outlet_id DEMO-HCM-DIST1 POST "/outlets" \
+OUTLET_D1="$(create_or_resolve find_outlet_id_by_code DEMO-HCM-DIST1 POST "/outlets" \
   "{\"regionId\":${REGION_ID},\"code\":\"DEMO-HCM-DIST1\",\"name\":\"District 1 Demo Outlet\",\"status\":\"ACTIVE\",\"openedAt\":\"${BUSINESS_DATE}\"}")"
 log "Outlet DEMO-HCM-DIST1 → id=${OUTLET_D1}"
 
-OUTLET_D3="$(create_or_resolve db_outlet_id DEMO-HCM-DIST3 POST "/outlets" \
+OUTLET_D3="$(create_or_resolve find_outlet_id_by_code DEMO-HCM-DIST3 POST "/outlets" \
   "{\"regionId\":${REGION_ID},\"code\":\"DEMO-HCM-DIST3\",\"name\":\"District 3 Demo Outlet\",\"status\":\"ACTIVE\",\"openedAt\":\"${BUSINESS_DATE}\"}")"
 log "Outlet DEMO-HCM-DIST3 → id=${OUTLET_D3}"
 
@@ -223,30 +505,29 @@ create_demo_user() {
   refresh_bootstrap_token
 
   # Create user — 409 means already exists
-  perform_request POST "${FERN_BASE_URL}/users" \
-    "{\"username\":\"${username}\",\"password\":\"${DEMO_PASSWORD}\",\"fullName\":\"${full_name}\",\"status\":\"ACTIVE\"}" \
-    "Bearer ${BOOTSTRAP_TOKEN}"
+  bootstrap_request POST "/users" \
+    "{\"username\":\"${username}\",\"password\":\"${DEMO_PASSWORD}\",\"fullName\":\"${full_name}\",\"status\":\"ACTIVE\"}"
 
   local user_id
   if [[ "${HTTP_STATUS}" == "409" ]]; then
-    user_id="$(db_user_id "${username}")"
+    user_id="$(find_user_id_by_username "${username}")"
     [[ -n "${user_id}" ]] || fail "409 for user ${username} but not in DB"
-    log "  ${username} already exists → id=${user_id}"
+    log "  ${username} already exists → id=${user_id}" >&2
   elif [[ "${HTTP_STATUS}" -ge 200 && "${HTTP_STATUS}" -lt 300 ]]; then
     user_id="$(json_id "${HTTP_BODY}")"
-    log "  Created ${username} → id=${user_id}"
+    log "  Created ${username} → id=${user_id}" >&2
   else
     fail "Failed to create ${username}: ${HTTP_STATUS} ${HTTP_BODY}"
   fi
 
   # Assign roles (idempotent — 409 is fine)
-  perform_request POST "${FERN_BASE_URL}/users/${user_id}/roles" \
-    "{\"roleCodes\":${roles_json}}" "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
+  bootstrap_request POST "/users/${user_id}/roles" \
+    "{\"roleCodes\":${roles_json}}" >/dev/null 2>&1 || true
 
   # Assign scope
   if [[ -n "${scope_json}" ]]; then
-    perform_request POST "${FERN_BASE_URL}/users/${user_id}/scopes" \
-      "${scope_json}" "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
+    bootstrap_request POST "/users/${user_id}/scopes" \
+      "${scope_json}" >/dev/null 2>&1 || true
   fi
 
   printf '%s' "${user_id}"
@@ -258,10 +539,10 @@ CASHIER_ID="$(create_demo_user "demo-cashier" "Demo Cashier" \
 
 OUTLET_MGR_ID="$(create_demo_user "demo-outlet-mgr" "Demo Outlet Manager" \
   '["outlet_manager"]' \
-  "{\"regionIds\":[${REGION_ID}],\"outletIds\":[${OUTLET_D1}]}")"
+  "{\"regionIds\":[],\"outletIds\":[${OUTLET_D1}]}")"
 
 REGION_MGR_ID="$(create_demo_user "demo-region-mgr" "Demo Region Manager" \
-  '["outlet_manager","regional_finance"]' \
+  '["outlet_manager"]' \
   "{\"regionIds\":[${REGION_ID}],\"outletIds\":[]}")"
 
 REG_FINANCE_ID="$(create_demo_user "demo-reg-finance" "Demo Regional Finance" \
@@ -270,7 +551,7 @@ REG_FINANCE_ID="$(create_demo_user "demo-reg-finance" "Demo Regional Finance" \
 
 HR_ID="$(create_demo_user "demo-hr" "Demo HR Operator" \
   '["hr"]' \
-  "{\"regionIds\":[${REGION_ID}],\"outletIds\":[]}")"
+  "{\"systemScope\":true}")"
 
 FINANCE_ID="$(create_demo_user "demo-finance" "Demo Finance Operator" \
   '["finance"]' \
@@ -311,11 +592,10 @@ log "=== [3/9] CATALOG ==="
 create_uom_if_missing() {
   local code="$1"; local name="$2"; local symbol="$3"
   local cnt
-  cnt="$(db_uom_exists "${code}")"
+  cnt="$(uom_exists_by_code "${code}")"
   if [[ "${cnt}" == "0" || -z "${cnt}" ]]; then
-    perform_request POST "${FERN_BASE_URL}/units-of-measure" \
-      "{\"code\":\"${code}\",\"name\":\"${name}\",\"symbol\":\"${symbol}\"}" \
-      "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
+    bootstrap_request POST "/units-of-measure" \
+      "{\"code\":\"${code}\",\"name\":\"${name}\",\"symbol\":\"${symbol}\"}" >/dev/null 2>&1 || true
     log "  UOM ${code} created"
   else
     log "  UOM ${code} already exists"
@@ -327,42 +607,39 @@ create_uom_if_missing "ML" "Millilitre" "ml"
 create_uom_if_missing "CUP" "Cup" "cup"
 
 # Ingredient category
-perform_request POST "${FERN_BASE_URL}/ingredient-categories" \
-  '{"code":"RAW-INGREDIENT","name":"Raw Ingredients","description":"Base raw materials for beverages","active":true}' \
-  "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
+bootstrap_request POST "/ingredient-categories" \
+  '{"code":"RAW-INGREDIENT","name":"Raw Ingredients","description":"Base raw materials for beverages","active":true}' >/dev/null 2>&1 || true
 
 # Product categories
-perform_request POST "${FERN_BASE_URL}/product-categories" \
-  '{"code":"HOT-DRINKS","name":"Hot Drinks","description":"Hot beverage menu","active":true}' \
-  "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
-perform_request POST "${FERN_BASE_URL}/product-categories" \
-  '{"code":"COLD-DRINKS","name":"Cold Drinks","description":"Iced beverage menu","active":true}' \
-  "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
+bootstrap_request POST "/product-categories" \
+  '{"code":"HOT-DRINKS","name":"Hot Drinks","description":"Hot beverage menu","active":true}' >/dev/null 2>&1 || true
+bootstrap_request POST "/product-categories" \
+  '{"code":"COLD-DRINKS","name":"Cold Drinks","description":"Iced beverage menu","active":true}' >/dev/null 2>&1 || true
 
 # Ingredients
-ING_COFFEE="$(create_or_resolve db_ingredient_id COFFEE-ARABICA POST "/ingredients" \
+ING_COFFEE="$(create_or_resolve find_ingredient_id_by_code COFFEE-ARABICA POST "/ingredients" \
   '{"code":"COFFEE-ARABICA","name":"Arabica Coffee Beans","categoryCode":"RAW-INGREDIENT","baseUomCode":"GRAM","status":"ACTIVE"}')"
 log "Ingredient COFFEE-ARABICA → id=${ING_COFFEE}"
 
-ING_SUGAR="$(create_or_resolve db_ingredient_id SUGAR-WHITE POST "/ingredients" \
+ING_SUGAR="$(create_or_resolve find_ingredient_id_by_code SUGAR-WHITE POST "/ingredients" \
   '{"code":"SUGAR-WHITE","name":"White Sugar","categoryCode":"RAW-INGREDIENT","baseUomCode":"GRAM","status":"ACTIVE"}')"
 log "Ingredient SUGAR-WHITE → id=${ING_SUGAR}"
 
-ING_MILK="$(create_or_resolve db_ingredient_id MILK-FULL POST "/ingredients" \
+ING_MILK="$(create_or_resolve find_ingredient_id_by_code MILK-FULL POST "/ingredients" \
   '{"code":"MILK-FULL","name":"Full Cream Milk","categoryCode":"RAW-INGREDIENT","baseUomCode":"ML","status":"ACTIVE"}')"
 log "Ingredient MILK-FULL → id=${ING_MILK}"
 
 # Products
-PROD_LATTE="$(create_or_resolve db_product_id LATTE-HOT POST "/products" \
+PROD_LATTE="$(create_or_resolve find_product_id_by_code LATTE-HOT POST "/products" \
   '{"code":"LATTE-HOT","name":"Hot Latte","categoryCode":"HOT-DRINKS","status":"ACTIVE","description":"Classic hot latte with steamed milk"}')"
 log "Product LATTE-HOT → id=${PROD_LATTE}"
 
-PROD_AMERICANO="$(create_or_resolve db_product_id AMERICANO-ICE POST "/products" \
+PROD_AMERICANO="$(create_or_resolve find_product_id_by_code AMERICANO-ICE POST "/products" \
   '{"code":"AMERICANO-ICE","name":"Iced Americano","categoryCode":"COLD-DRINKS","status":"ACTIVE","description":"Chilled americano with ice"}')"
 log "Product AMERICANO-ICE → id=${PROD_AMERICANO}"
 
 # Recipes (only create if not existing)
-RECIPE_LATTE="$(db_recipe_id RCP-LATTE-V1)"
+RECIPE_LATTE="$(find_recipe_id_by_code RCP-LATTE-V1)"
 if [[ -z "${RECIPE_LATTE}" ]]; then
   RECIPE_LATTE_RESP="$(bootstrap_post "/recipes" \
     "{\"productId\":${PROD_LATTE},\"recipeCode\":\"RCP-LATTE-V1\",\"description\":\"Standard hot latte recipe\"}")"
@@ -374,7 +651,7 @@ else
   log "Recipe RCP-LATTE-V1 already exists → id=${RECIPE_LATTE}"
 fi
 
-RECIPE_AMERICANO="$(db_recipe_id RCP-AMERICANO-V1)"
+RECIPE_AMERICANO="$(find_recipe_id_by_code RCP-AMERICANO-V1)"
 if [[ -z "${RECIPE_AMERICANO}" ]]; then
   RECIPE_AMERICANO_RESP="$(bootstrap_post "/recipes" \
     "{\"productId\":${PROD_AMERICANO},\"recipeCode\":\"RCP-AMERICANO-V1\",\"description\":\"Standard iced americano recipe\"}")"
@@ -388,25 +665,21 @@ fi
 
 # Tax rates and prices (ignore 409/duplicates)
 for prod_id in "${PROD_LATTE}" "${PROD_AMERICANO}"; do
-  perform_request POST "${FERN_BASE_URL}/tax-rates" \
-    "{\"productId\":${prod_id},\"taxPercent\":10.00,\"effectiveFrom\":\"${BUSINESS_DATE}\"}" \
-    "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
+  bootstrap_request POST "/tax-rates" \
+    "{\"productId\":${prod_id},\"taxPercent\":10.00,\"effectiveFrom\":\"${BUSINESS_DATE}\"}" >/dev/null 2>&1 || true
 done
 
 # Product prices — only post if not existing (409 allowed)
-perform_request POST "${FERN_BASE_URL}/product-prices" \
-  "{\"productId\":${PROD_LATTE},\"scopeType\":\"GLOBAL\",\"priceType\":\"RETAIL\",\"currencyCode\":\"VND\",\"priceValue\":65000.00,\"effectiveFrom\":\"${BUSINESS_DATE}\"}" \
-  "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
-perform_request POST "${FERN_BASE_URL}/product-prices" \
-  "{\"productId\":${PROD_AMERICANO},\"scopeType\":\"GLOBAL\",\"priceType\":\"RETAIL\",\"currencyCode\":\"VND\",\"priceValue\":55000.00,\"effectiveFrom\":\"${BUSINESS_DATE}\"}" \
-  "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
+bootstrap_request POST "/product-prices" \
+  "{\"productId\":${PROD_LATTE},\"scopeType\":\"GLOBAL\",\"priceType\":\"RETAIL\",\"currencyCode\":\"VND\",\"priceValue\":65000.00,\"effectiveFrom\":\"${BUSINESS_DATE}\"}" >/dev/null 2>&1 || true
+bootstrap_request POST "/product-prices" \
+  "{\"productId\":${PROD_AMERICANO},\"scopeType\":\"GLOBAL\",\"priceType\":\"RETAIL\",\"currencyCode\":\"VND\",\"priceValue\":55000.00,\"effectiveFrom\":\"${BUSINESS_DATE}\"}" >/dev/null 2>&1 || true
 
 # Availability — PUT is idempotent by design
 for prod_id in "${PROD_LATTE}" "${PROD_AMERICANO}"; do
   for outlet_id in "${OUTLET_D1}" "${OUTLET_D3}"; do
-    perform_request PUT "${FERN_BASE_URL}/product-availability" \
-      "{\"productId\":${prod_id},\"outletId\":${outlet_id},\"available\":true}" \
-      "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
+    bootstrap_request PUT "/product-availability" \
+      "{\"productId\":${prod_id},\"outletId\":${outlet_id},\"available\":true}" >/dev/null 2>&1 || true
   done
 done
 log "Catalog seeded."
@@ -420,11 +693,23 @@ log "=== [4/9] INVENTORY ==="
 post_adj_if_missing() {
   local token="$1"; local ingredient_id="$2"; local idem_key="$3"
   local qty="$4"; local reason="$5"; local note="$6"
-  # Check if already posted (table is stock_adjustment; use note as idempotency marker)
-  local cnt
-  cnt="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-    "SELECT COUNT(*) FROM inventory.stock_adjustment WHERE outlet_id=${OUTLET_D1} AND ingredient_id=${ingredient_id} AND note='${note}' AND status='POSTED'")"
-  if [[ "${cnt}" -ge 1 ]]; then
+  local body
+  body="$(bootstrap_get "/stock-balances?outletId=${OUTLET_D1}&ingredientId=${ingredient_id}&page=0&size=20")"
+  local has_balance
+  has_balance="$(printf '%s' "${body}" | python3 -c '
+import json, sys
+data = json.load(sys.stdin)
+items = data.get("items", data) if isinstance(data, dict) else data
+items = items if isinstance(items, list) else []
+for item in items:
+    qty = item.get("qtyOnHand")
+    if qty is not None and float(qty) > 0:
+        print("1")
+        break
+else:
+    print("0")
+')"
+  if [[ "${has_balance}" == "1" ]]; then
     log "  Adjustment ${idem_key} already posted, skipping"
     return
   fi
@@ -453,17 +738,15 @@ log ""
 log "=== [5/9] PROCUREMENT ==="
 
 # Supplier
-SUPPLIER_ID="$(create_or_resolve db_supplier_id DEMO-SUP-001 POST "/suppliers" \
+SUPPLIER_ID="$(create_or_resolve find_supplier_id_by_code DEMO-SUP-001 POST "/suppliers" \
   "{\"supplierCode\":\"DEMO-SUP-001\",\"name\":\"Fresh Brew Supplies Ltd\",\"email\":\"demo-supplier@freshbrew.vn\",\"phone\":\"0283001234\",\"address\":\"12 Nguyen Hue, District 1, HCMC\",\"defaultRegionId\":${REGION_ID},\"status\":\"INACTIVE\"}" \
   )"
 # Activate (use bootstrap token — outlet_manager lacks procurement.supplier.write)
-perform_request POST "${FERN_BASE_URL}/suppliers/${SUPPLIER_ID}/activate" "" \
-  "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1 || true
+bootstrap_request POST "/suppliers/${SUPPLIER_ID}/activate" "" >/dev/null 2>&1 || true
 log "Supplier DEMO-SUP-001 → id=${SUPPLIER_ID} (ACTIVE)"
 
 # PO-DEMO-001 — ISSUED (terminal, tests ReadonlyBanner)
-PO1_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-  "SELECT id FROM procurement.purchase_order WHERE note='Demo seed: standard restocking order' LIMIT 1")"
+PO1_ID="$(find_purchase_order_id_by_note "Demo seed: standard restocking order")"
 if [[ -z "${PO1_ID}" ]]; then
   PO1_RESP="$(user_post "${OUTLET_MGR_TOKEN}" "/purchase-orders" \
     "{\"regionId\":${REGION_ID},\"outletId\":${OUTLET_D1},\"supplierId\":${SUPPLIER_ID},\"orderDate\":\"${BUSINESS_DATE}\",\"expectedDeliveryDate\":\"${BUSINESS_DATE}\",\"note\":\"Demo seed: standard restocking order\",\"lines\":[{\"ingredientId\":${ING_COFFEE},\"uomCode\":\"GRAM\",\"qtyOrdered\":1000.00,\"expectedUnitPrice\":350.00,\"taxPercent\":10.00},{\"ingredientId\":${ING_MILK},\"uomCode\":\"ML\",\"qtyOrdered\":10000.00,\"expectedUnitPrice\":25.00,\"taxPercent\":10.00}]}")"
@@ -476,14 +759,12 @@ if [[ -z "${PO1_ID}" ]]; then
   PO1_LINE1_ID="$(printf '%s' "${PO1_ISSUED}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["lines"][0]["id"])')"
   log "PO-DEMO-001 → id=${PO1_ID} (ISSUED)"
 else
-  PO1_LINE1_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-    "SELECT id FROM procurement.purchase_order_line WHERE purchase_order_id=${PO1_ID} ORDER BY line_number LIMIT 1")"
+  PO1_LINE1_ID="$(find_purchase_order_line_id "${PO1_ID}")"
   log "PO-DEMO-001 already exists → id=${PO1_ID}"
 fi
 
 # PO-DEMO-002 — SUBMITTED (in-queue, tests approval flow)
-PO2_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-  "SELECT id FROM procurement.purchase_order WHERE note='Demo seed: pending approval restock' LIMIT 1")"
+PO2_ID="$(find_purchase_order_id_by_note "Demo seed: pending approval restock")"
 if [[ -z "${PO2_ID}" ]]; then
   PO2_RESP="$(user_post "${OUTLET_MGR_TOKEN}" "/purchase-orders" \
     "{\"regionId\":${REGION_ID},\"outletId\":${OUTLET_D1},\"supplierId\":${SUPPLIER_ID},\"orderDate\":\"${BUSINESS_DATE}\",\"expectedDeliveryDate\":\"${BUSINESS_DATE}\",\"note\":\"Demo seed: pending approval restock\",\"lines\":[{\"ingredientId\":${ING_SUGAR},\"uomCode\":\"GRAM\",\"qtyOrdered\":5000.00,\"expectedUnitPrice\":8.00,\"taxPercent\":10.00}]}")"
@@ -495,8 +776,7 @@ else
 fi
 
 # Goods Receipt — POSTED
-GR_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-  "SELECT id FROM procurement.goods_receipt WHERE purchase_order_id=${PO1_ID} AND note='Demo seed: received shipment' LIMIT 1")"
+GR_ID="$(find_goods_receipt_id_by_note "${PO1_ID}" "Demo seed: received shipment")"
 GR_LINE1_ID=""
 if [[ -z "${GR_ID}" ]]; then
   GR_RESP="$(user_post "${OUTLET_MGR_TOKEN}" "/goods-receipts" \
@@ -508,14 +788,12 @@ if [[ -z "${GR_ID}" ]]; then
     "Idempotency-Key: demo-gr-post-${GR_ID}" >/dev/null
   log "GR-DEMO → id=${GR_ID} (POSTED)"
 else
-  GR_LINE1_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-    "SELECT id FROM procurement.goods_receipt_line WHERE goods_receipt_id=${GR_ID} ORDER BY id LIMIT 1")"
+  GR_LINE1_ID="$(find_goods_receipt_line_id "${GR_ID}")"
   log "GR-DEMO already exists → id=${GR_ID}"
 fi
 
 # Supplier invoice
-INV_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-  "SELECT id FROM procurement.supplier_invoice WHERE invoice_number='INV-DEMO-2026-001' LIMIT 1")"
+INV_ID="$(find_supplier_invoice_id_by_number "INV-DEMO-2026-001")"
 if [[ -z "${INV_ID}" ]]; then
   # Invoice creation and approval require regional_finance (procurement.invoice.review)
   INV_RESP="$(user_post "${REG_FINANCE_TOKEN}" "/supplier-invoices" \
@@ -529,14 +807,13 @@ else
 fi
 
 # Supplier payment
-PAY_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-  "SELECT id FROM procurement.supplier_payment WHERE idempotency_key='demo-supplier-payment-${INV_ID}' LIMIT 1")"
+PAY_ID="$(find_supplier_payment_id_by_txn_ref "TXN-DEMO-2026-001")"
 if [[ -z "${PAY_ID}" ]]; then
   # Supplier payment requires finance role (procurement.payment.record)
   PAY_RESP="$(user_post_ok409 "${FINANCE_TOKEN}" "/supplier-payments" \
     "{\"supplierId\":${SUPPLIER_ID},\"currencyCode\":\"VND\",\"paymentMethod\":\"BANK_TRANSFER\",\"amount\":385000.00,\"paymentTime\":\"${BUSINESS_DATE}T14:00:00Z\",\"transactionRef\":\"TXN-DEMO-2026-001\",\"invoiceAllocations\":[{\"supplierInvoiceId\":${INV_ID},\"allocatedAmount\":385000.00,\"note\":\"Full settlement demo\"}]}" \
     "Idempotency-Key: demo-supplier-payment-${INV_ID}")"
-  PAY_ID="$(json_id "${PAY_RESP}" 2>/dev/null || psql_scalar "${FERN_OPERATIONAL_DB}" "SELECT id FROM procurement.supplier_payment WHERE transaction_ref='TXN-DEMO-2026-001' LIMIT 1")"
+  PAY_ID="$(json_id "${PAY_RESP}" 2>/dev/null || find_supplier_payment_id_by_txn_ref "TXN-DEMO-2026-001")"
   log "Supplier payment → id=${PAY_ID}"
 else
   log "Supplier payment already exists → id=${PAY_ID}"
@@ -552,9 +829,9 @@ create_employee() {
   local code="$1"; local name="$2"; local dob="$3"; local gender="$4"
   local email="$5"; local phone="$6"
   local existing_id
-  existing_id="$(db_employee_id "${code}")"
+  existing_id="$(find_employee_id_by_code "${code}")"
   if [[ -n "${existing_id}" ]]; then
-    log "  Employee ${code} already exists → id=${existing_id}"
+    log "  Employee ${code} already exists → id=${existing_id}" >&2
     printf '%s' "${existing_id}"
     return
   fi
@@ -562,7 +839,7 @@ create_employee() {
   resp="$(bootstrap_post "/employees" \
     "{\"employeeCode\":\"${code}\",\"fullName\":\"${name}\",\"status\":\"ACTIVE\",\"hiredAt\":\"${BUSINESS_DATE}\",\"dob\":\"${dob}\",\"gender\":\"${gender}\",\"email\":\"${email}\",\"phone\":\"${phone}\"}")"
   local eid; eid="$(json_id "${resp}")"
-  log "  Employee ${code} → id=${eid}"
+  log "  Employee ${code} → id=${eid}" >&2
   printf '%s' "${eid}"
 }
 
@@ -572,8 +849,7 @@ EMP3_ID="$(create_employee "EMP-DEMO-003" "Le Thi Mai" "2000-11-08" "FEMALE" "ma
 
 # Contracts (in fern_master.hr_master)
 for emp_id in "${EMP1_ID}" "${EMP2_ID}" "${EMP3_ID}"; do
-  cnt="$(psql_scalar "${FERN_MASTER_DB}" \
-    "SELECT COUNT(*) FROM hr_master.employee_contract WHERE employee_id=${emp_id} AND contract_status='ACTIVE'")"
+  cnt="$(employee_has_active_contract "${emp_id}")"
   if [[ "${cnt}" == "0" || -z "${cnt}" ]]; then
     if [[ "${emp_id}" == "${EMP1_ID}" ]]; then
       bootstrap_post "/employee-contracts" \
@@ -593,8 +869,7 @@ done
 
 # Assignments (in fern_operational.hr)
 for emp_id in "${EMP1_ID}" "${EMP2_ID}" "${EMP3_ID}"; do
-  cnt="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-    "SELECT COUNT(*) FROM hr.employee_assignment WHERE employee_id=${emp_id} AND outlet_id=${OUTLET_D1} AND status='ACTIVE'")"
+  cnt="$(employee_has_active_assignment "${emp_id}")"
   if [[ "${cnt}" == "0" || -z "${cnt}" ]]; then
     local_pos="Barista"
     [[ "${emp_id}" == "${EMP2_ID}" ]] && local_pos="Cashier"
@@ -607,8 +882,7 @@ for emp_id in "${EMP1_ID}" "${EMP2_ID}" "${EMP3_ID}"; do
 done
 
 # Shift + attendance (only once)
-SHIFT_SCHED_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-  "SELECT id FROM hr.shift_schedule WHERE outlet_id=${OUTLET_D1} AND shift_name='Morning Demo Shift' LIMIT 1")"
+SHIFT_SCHED_ID="$(find_shift_schedule_id)"
 if [[ -z "${SHIFT_SCHED_ID}" ]]; then
   SCHED_RESP="$(user_post "${OUTLET_MGR_TOKEN}" "/shift-schedules" \
     "{\"regionId\":${REGION_ID},\"outletId\":${OUTLET_D1},\"shiftDate\":\"${BUSINESS_DATE}\",\"shiftName\":\"Morning Demo Shift\",\"startTime\":\"07:00:00\",\"endTime\":\"15:00:00\",\"status\":\"SCHEDULED\"}")"
@@ -618,8 +892,7 @@ else
   log "Shift schedule already exists → id=${SHIFT_SCHED_ID}"
 fi
 
-SHIFT_ASSIGN_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-  "SELECT id FROM hr.shift_assignment WHERE shift_schedule_id=${SHIFT_SCHED_ID} AND employee_id=${EMP1_ID} LIMIT 1")"
+SHIFT_ASSIGN_ID="$(find_shift_assignment_id "${SHIFT_SCHED_ID}" "${EMP1_ID}")"
 if [[ -z "${SHIFT_ASSIGN_ID}" ]]; then
   SA_RESP="$(user_post "${OUTLET_MGR_TOKEN}" "/shift-assignments" \
     "{\"shiftScheduleId\":${SHIFT_SCHED_ID},\"employeeId\":${EMP1_ID},\"assignedRole\":\"STAFF\",\"note\":\"Demo shift assignment\"}")"
@@ -645,8 +918,7 @@ fi
 log ""
 log "=== [7/9] FINANCE / PAYROLL ==="
 
-PAYROLL_PERIOD_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-  "SELECT id FROM finance.payroll_period WHERE name='Demo Payroll March 2026' AND region_id=${REGION_ID} LIMIT 1")"
+PAYROLL_PERIOD_ID="$(find_payroll_period_id_by_name "${REGION_ID}" "Demo Payroll March 2026")"
 PAYROLL_RUN1_ID=""
 if [[ -z "${PAYROLL_PERIOD_ID}" ]]; then
   PP1_RESP="$(user_post "${HR_TOKEN}" "/payroll-periods" \
@@ -660,17 +932,15 @@ if [[ -z "${PAYROLL_PERIOD_ID}" ]]; then
   user_post "${HR_TOKEN}" "/payroll-runs/${PAYROLL_RUN1_ID}/submit" '{"note":"Demo submit"}' >/dev/null
   # approve + mark-paid: use bootstrap token (finance scope may not cover region)
   refresh_bootstrap_token
-  perform_request POST "${FERN_BASE_URL}/payroll-runs/${PAYROLL_RUN1_ID}/approve" '{"note":"Demo approve"}' "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1
-  perform_request POST "${FERN_BASE_URL}/payroll-runs/${PAYROLL_RUN1_ID}/mark-paid" '{"paymentReference":"PAY-DEMO-2026-03","note":"Demo payroll settled"}' "Bearer ${BOOTSTRAP_TOKEN}" >/dev/null 2>&1
+  bootstrap_request POST "/payroll-runs/${PAYROLL_RUN1_ID}/approve" '{"note":"Demo approve"}' >/dev/null 2>&1
+  bootstrap_request POST "/payroll-runs/${PAYROLL_RUN1_ID}/mark-paid" '{"paymentReference":"PAY-DEMO-2026-03","note":"Demo payroll settled"}' >/dev/null 2>&1
   log "Payroll run 1 → id=${PAYROLL_RUN1_ID} (PAID)"
 else
-  PAYROLL_RUN1_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-    "SELECT id FROM finance.payroll_run WHERE payroll_period_id=${PAYROLL_PERIOD_ID} AND status='PAID' LIMIT 1")"
+  PAYROLL_RUN1_ID="$(find_payroll_run_id "${REGION_ID}" "${PAYROLL_PERIOD_ID}" "PAID")"
   log "Payroll period (March) already exists → id=${PAYROLL_PERIOD_ID}, run=${PAYROLL_RUN1_ID}"
 fi
 
-PAYROLL_PERIOD2_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-  "SELECT id FROM finance.payroll_period WHERE name='Demo Payroll April 2026' AND region_id=${REGION_ID} LIMIT 1")"
+PAYROLL_PERIOD2_ID="$(find_payroll_period_id_by_name "${REGION_ID}" "Demo Payroll April 2026")"
 PAYROLL_RUN2_ID=""
 if [[ -z "${PAYROLL_PERIOD2_ID}" ]]; then
   PP2_RESP="$(user_post "${HR_TOKEN}" "/payroll-periods" \
@@ -683,8 +953,7 @@ if [[ -z "${PAYROLL_PERIOD2_ID}" ]]; then
     '{"note":"Demo submit — awaiting finance approval"}' >/dev/null
   log "Payroll run 2 → id=${PAYROLL_RUN2_ID} (SUBMITTED)"
 else
-  PAYROLL_RUN2_ID="$(psql_scalar "${FERN_OPERATIONAL_DB}" \
-    "SELECT id FROM finance.payroll_run WHERE payroll_period_id=${PAYROLL_PERIOD2_ID} LIMIT 1")"
+  PAYROLL_RUN2_ID="$(find_payroll_run_id "${REGION_ID}" "${PAYROLL_PERIOD2_ID}")"
   log "Payroll period (April) already exists → id=${PAYROLL_PERIOD2_ID}, run=${PAYROLL_RUN2_ID}"
 fi
 
@@ -739,16 +1008,17 @@ Reports
 DEMO ACCOUNTS  (all password: ${DEMO_PASSWORD})
 ----------------------------------------------------------------------
   demo-cashier       staff               DIST1(${OUTLET_D1})
-  demo-outlet-mgr    outlet_manager      DIST1(${OUTLET_D1}) + region
+  demo-outlet-mgr    outlet_manager      DIST1(${OUTLET_D1}) only
   demo-region-mgr    outlet_manager      HCM region(${REGION_ID})
-                     regional_finance
   demo-reg-finance   regional_finance    HCM region(${REGION_ID})
-  demo-hr            hr                  HCM region(${REGION_ID})
+  demo-hr            hr                  SYSTEM
   demo-finance       finance             SYSTEM
   demo-product-mgr   product_manager     SYSTEM
   demo-sysadmin      system_admin        SYSTEM
-  demo-audit         system_admin        SYSTEM
+  demo-audit         system_admin(*)     SYSTEM
   demo-readonly      regional_finance    DIST3(${OUTLET_D3}) only
+
+  (*) fallback until a dedicated audit-only role is published in IAM.
 
 Frontend: http://localhost:3000
 ======================================================================

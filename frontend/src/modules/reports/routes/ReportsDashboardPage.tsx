@@ -107,18 +107,13 @@ export function ReportsDashboardPage() {
         <section className="page-stack">
           <div className="page-header">
             <div>
-              <h2>Recent export activity</h2>
-              <p className="muted-text">Recent jobs are stored client-side and refreshed from backend detail endpoints.</p>
+              <h2>Export activity</h2>
+              <p className="muted-text">Export activity is loaded from the backend history endpoint and filtered by readable datasets.</p>
             </div>
           </div>
-          {dashboard.restrictedJobCount > 0 ? (
-            <div className="inline-banner inline-banner-warning" role="status">
-              {dashboard.restrictedJobCount} recent export job{dashboard.restrictedJobCount > 1 ? 's are' : ' is'} hidden because the current principal lacks read access for those datasets.
-            </div>
-          ) : null}
           {dashboard.isLoading ? (
             <Card title="Loading export activity">
-              <p className="muted-text">Refreshing recent export jobs for the reports dashboard...</p>
+              <p className="muted-text">Refreshing export jobs for the reports dashboard...</p>
             </Card>
           ) : null}
           {dashboard.error ? (
@@ -132,7 +127,7 @@ export function ReportsDashboardPage() {
           {!dashboard.isLoading && !dashboard.error && dashboard.jobs.length === 0 ? (
             <EmptyState
               description="Chạy revenue, inventory hoặc payroll report để tạo export job đầu tiên cho reports workspace."
-              title="No recent export jobs"
+              title="No export jobs"
             />
           ) : null}
           {dashboard.jobs.length > 0 ? <ExportJobTable jobs={dashboard.jobs} principal={principal} /> : null}

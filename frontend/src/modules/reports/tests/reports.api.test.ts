@@ -7,18 +7,14 @@ describe('reports.api', () => {
     vi.restoreAllMocks()
   })
 
-  it('flattens legacy nested export filters before calling the backend', async () => {
+  it('sends a region-scoped export payload with format defaulted to CSV', async () => {
     const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: { exportJobId: 1 } } as any)
 
     await createExportJob({
       dataset: 'PAYROLL_SUMMARY',
-      format: 'CSV',
-      filters: {
-        regionId: 2,
-        fromDate: '2026-03-01',
-        toDate: '2026-03-31',
-        limit: 1000,
-      },
+      regionId: 2,
+      fromDate: '2026-03-01',
+      toDate: '2026-03-31',
     })
 
     expect(postSpy).toHaveBeenCalledWith('/reports/exports', {
@@ -27,14 +23,10 @@ describe('reports.api', () => {
       regionId: 2,
       fromDate: '2026-03-01',
       toDate: '2026-03-31',
-      limit: 1000,
-      filters: undefined,
-      outletId: undefined,
-      payrollRunId: undefined,
     })
   })
 
-  it('preserves top-level export fields over legacy nested filters', async () => {
+  it('passes explicit format and outlet filter through unchanged', async () => {
     const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: { exportJobId: 2 } } as any)
 
     await createExportJob({
@@ -42,10 +34,6 @@ describe('reports.api', () => {
       format: 'CSV',
       regionId: 3,
       outletId: 101,
-      filters: {
-        regionId: 2,
-        outletId: 999,
-      },
     })
 
     expect(postSpy).toHaveBeenCalledWith('/reports/exports', {
@@ -53,11 +41,6 @@ describe('reports.api', () => {
       format: 'CSV',
       regionId: 3,
       outletId: 101,
-      filters: undefined,
-      fromDate: undefined,
-      toDate: undefined,
-      payrollRunId: undefined,
-      limit: undefined,
     })
   })
 })

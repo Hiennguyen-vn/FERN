@@ -18,6 +18,8 @@ interface QueryOptions {
 
 const KEYS = {
   suppliers: ['finance', 'suppliers'] as const,
+  paymentRequests: (params: { supplierId?: number; outletId?: number; status?: string; limit?: number }) =>
+    ['finance', 'payment-requests', 'list', params] as const,
   paymentRequest: (invoiceId: number) => ['finance', 'payment-requests', invoiceId] as const,
   payrollRuns: (filters: FinancePayrollFilters) => ['finance', 'payroll-runs', filters.regionId ?? 'all-regions'] as const,
   payrollRun: (runId: number) => ['finance', 'payroll-runs', runId] as const,
@@ -45,6 +47,17 @@ export function usePaymentRequest(invoiceId: number, options: QueryOptions = {})
     queryKey: KEYS.paymentRequest(invoiceId),
     queryFn: () => financeApi.getPaymentRequest(invoiceId),
     enabled: (options.enabled ?? true) && invoiceId > 0,
+  })
+}
+
+export function usePaymentRequests(
+  params: { supplierId?: number; outletId?: number; status?: string; limit?: number },
+  options: QueryOptions = {},
+) {
+  return useQuery({
+    queryKey: KEYS.paymentRequests(params),
+    queryFn: () => financeApi.listPaymentRequests(params),
+    enabled: options.enabled ?? true,
   })
 }
 

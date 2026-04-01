@@ -8,7 +8,14 @@ import { getTodayBusinessDate } from '../services/posDate.service'
 
 const openSessionMutateAsync = vi.fn()
 const usePosSessionsMock = vi.fn()
-const mockScopeContext = {
+const mockScopeContext: {
+  selectedOutletId: number | null
+  selectedRegionId: number | null
+  outletIds: number[]
+  regionIds: number[]
+  setSelectedOutletId: ReturnType<typeof vi.fn>
+  setSelectedRegionId: ReturnType<typeof vi.fn>
+} = {
   selectedOutletId: 101,
   selectedRegionId: 1,
   outletIds: [101],
@@ -145,7 +152,7 @@ describe('PosHomePage', () => {
     renderWithProviders(<PosHomePage />)
 
     expect(screen.getByText('POS-001')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('14')).toBeInTheDocument()
+    expect(screen.getByText('Region #14')).toBeInTheDocument()
     expect(screen.queryByText('Chưa chọn outlet')).not.toBeInTheDocument()
   })
 })

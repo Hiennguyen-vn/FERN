@@ -1,6 +1,7 @@
 package com.fern.reportservice.service;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.PageResponse;
 import com.fern.platform.contracts.AttendanceApprovedEvent;
 import com.fern.platform.contracts.ExpensePostedEvent;
 import com.fern.platform.contracts.InventoryAdjustmentPostedEvent;
@@ -134,6 +135,18 @@ public class ReportService {
 
     public ExportJobResponse getExport(FernPrincipal principal, Long jobId) {
         return reportExportService.getExport(principal, jobId);
+    }
+
+    public PageResponse<ExportJobResponse> listExports(
+            FernPrincipal principal,
+            Integer page,
+            Integer size,
+            String dataset,
+            String status,
+            Long regionId,
+            Long outletId
+    ) {
+        return reportExportService.listExports(principal, page, size, dataset, status, regionId, outletId);
     }
 
     public ExportPreviewResponse previewExport(FernPrincipal principal, Long jobId) {

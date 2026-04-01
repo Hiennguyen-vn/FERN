@@ -1,6 +1,7 @@
 package com.fern.orgservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.PageResponse;
 import com.fern.orgservice.dto.CreateRegionRequest;
 import com.fern.orgservice.dto.RegionResponse;
 import com.fern.orgservice.dto.UpdateRegionRequest;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/regions")
@@ -30,6 +32,16 @@ public class RegionController {
             @Valid @RequestBody CreateRegionRequest request
     ) {
         return regionService.create(principal, request);
+    }
+
+    @GetMapping
+    public PageResponse<RegionResponse> list(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "50") Integer size
+    ) {
+        return regionService.list(principal, search, page, size);
     }
 
     @GetMapping("/{id}")

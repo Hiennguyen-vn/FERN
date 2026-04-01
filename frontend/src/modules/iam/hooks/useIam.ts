@@ -6,6 +6,7 @@ interface QueryOptions {
 }
 
 const KEYS = {
+  users: (params: { search?: string; status?: string; page?: number; size?: number }) => ['iam', 'users', params] as const,
   user: (userId: number) => ['iam', 'users', userId] as const,
   roles: ['iam', 'roles'] as const,
   permissions: ['iam', 'permissions'] as const,
@@ -18,6 +19,14 @@ export function useIamUser(userId: number, options: QueryOptions = {}) {
     queryKey: KEYS.user(userId),
     queryFn: () => iamApi.getUser(userId),
     enabled: (options.enabled ?? true) && userId > 0,
+  })
+}
+
+export function useIamUsers(params: { search?: string; status?: string; page?: number; size?: number }, options: QueryOptions = {}) {
+  return useQuery({
+    queryKey: KEYS.users(params),
+    queryFn: () => iamApi.listUsers(params),
+    enabled: options.enabled ?? true,
   })
 }
 

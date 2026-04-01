@@ -2,7 +2,7 @@ export const reportQueryKeys = {
   dashboard: ['reports', 'dashboard'] as const,
   exportJob: (jobId: number) => ['reports', 'exports', jobId] as const,
   exportPreview: (jobId: number) => ['reports', 'exports', jobId, 'preview'] as const,
-  exportJobs: (jobIds: number[]) => ['reports', 'exports', 'recent', ...jobIds] as const,
+  exportJobs: (filters: Record<string, unknown>) => ['reports', 'exports', 'list', filters] as const,
   inventoryBalances: (filters: Record<string, unknown>) => ['reports', 'inventory', 'balances', filters] as const,
   inventoryTransactions: (filters: Record<string, unknown>) =>
     ['reports', 'inventory', 'transactions', filters] as const,

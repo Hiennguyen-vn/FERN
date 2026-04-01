@@ -30,6 +30,16 @@ export default defineConfig({
     },
     server: {
         port: 3000,
+        proxy: {
+            // Single catch-all proxy: any path that looks like an API call
+            // (starts with a known API path prefix) goes to the backend gateway on :8080.
+            // The gateway is responsible for routing internally to each microservice.
+            // Add new prefixes here as new backend routes are introduced.
+            '^/(auth|users|roles|permissions|permission-overrides|scope-assignments|regions|outlets|audit|request-traces|security-events|products|ingredients|recipes|prices|pos|inventory|purchase-orders|goods-receipts|suppliers|invoices|payment-requests|employees|contracts|shifts|attendance-events|attendance-approvals|payroll-runs|payroll-approvals|payroll-config|reports|export-jobs|finance)': {
+                target: 'http://localhost:8080',
+                changeOrigin: true,
+            },
+        },
     },
     test: {
         globals: true,

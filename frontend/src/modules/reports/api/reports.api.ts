@@ -1,4 +1,5 @@
 import { gatewayClient } from '@core/api/gatewayClient'
+import type { PageResponse } from '@core/types/api'
 import type {
   InventoryReportFilters,
   ReportInventoryTransactionPage,
@@ -10,7 +11,7 @@ import type {
   ReportPayrollSummary,
   ReportPayrollSummaryFilters,
 } from '../model/payrollReport.types'
-import type { CreateExportPayload, ExportJob, ExportPreview } from '../model/reportExport.types'
+import type { CreateExportPayload, ExportJob, ExportJobListFilters, ExportPreview } from '../model/reportExport.types'
 import { normalizeExportPayload } from '../services/reportFilter.service'
 
 export async function createExportJob(payload: CreateExportPayload) {
@@ -20,6 +21,13 @@ export async function createExportJob(payload: CreateExportPayload) {
 
 export async function getExportJob(jobId: number) {
   const { data } = await gatewayClient.get<ExportJob>(`/reports/exports/${jobId}`)
+  return data
+}
+
+export async function listExportJobs(filters: ExportJobListFilters = {}) {
+  const { data } = await gatewayClient.get<PageResponse<ExportJob>>('/reports/exports', {
+    params: filters,
+  })
   return data
 }
 

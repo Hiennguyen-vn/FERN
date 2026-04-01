@@ -1,30 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import {
-  Button,
-  Card,
   DataTable,
-  EmptyState,
   EntityHeader,
   ErrorState,
   FormSection,
   Input,
   PermissionDeniedInline,
-  ReadonlyBanner,
   Select,
   StatusBadge,
 } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useFinanceSuppliers, usePaymentRequest, useRecentPaymentRequests } from '../hooks/useFinance'
-import type { FinancePaymentRequestLine, RecentFinancePaymentRequestLookup } from '../model/finance.types'
+import { useFinanceSuppliers, usePaymentRequest, usePaymentRequests } from '../hooks/useFinance'
+import type { FinancePaymentRequest, FinancePaymentRequestLine } from '../model/finance.types'
 import { getFinanceErrorMessage } from '../services/financeError.service'
-import { saveRecentFinancePaymentRequest } from '../services/recentPaymentRequests.service'
 import {
   buildPaymentRequestLabel,
   buildSupplierLabel,
-  filterRecentPaymentRequests,
   formatFinanceCurrency,
   formatFinanceDateLabel,
 } from '../services/financeWorkflow.service'
@@ -35,45 +29,46 @@ export function PaymentRequestsPage() {
   const principal = usePrincipal()
   const canOpen = supplierUiPolicy.canOpenPaymentRequestsPage(principal)
   const canReadSuppliers = supplierUiPolicy.canOpenSuppliersPage(principal)
-  const [lookupInput, setLookupInput] = useState('')
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null)
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [validationError, setValidationError] = useState<string | null>(null)
-  const recentRequests = useRecentPaymentRequests()
   const suppliersQuery = useFinanceSuppliers({ enabled: canReadSuppliers })
+  const paymentRequestsQuery = usePaymentRequests(
+    {
+      status: statusFilter === 'ALL' ? undefined : statusFilter,
+      limit: 100,
+    },
+    { enabled: canOpen },
+  )
   const paymentRequestQuery = usePaymentRequest(selectedInvoiceId ?? 0, {
     enabled: canOpen && Boolean(selectedInvoiceId),
   })
-
-  useEffect(() => {
-    if (!paymentRequestQuery.data) {
-      return
-    }
-
-    const supplier = suppliersQuery.data?.find((item) => item.id === paymentRequestQuery.data?.supplierId)
-    saveRecentFinancePaymentRequest(paymentRequestQuery.data, {
-      supplierCode: supplier?.supplierCode,
-      supplierName: supplier?.name,
-    })
-    recentRequests.refresh()
-  }, [paymentRequestQuery.data, suppliersQuery.data])
 
   const supplierLookup = useMemo(
     () => new Map((suppliersQuery.data ?? []).map((supplier) => [supplier.id, supplier] as const)),
     [suppliersQuery.data],
   )
 
-  const filteredRecentRequests = useMemo(
-    () => filterRecentPaymentRequests(recentRequests.items, searchText, statusFilter),
-    [recentRequests.items, searchText, statusFilter],
+  const visibleRequests = useMemo(
+    () =>
+      (paymentRequestsQuery.data ?? []).filter((item) => {
+        const normalized = searchText.trim().toLowerCase()
+        if (!normalized) {
+          return true
+        }
+        const supplier = supplierLookup.get(item.supplierId)
+        return [item.id, item.invoiceNumber, item.status, supplier?.supplierCode, supplier?.name]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(normalized))
+      }),
+    [paymentRequestsQuery.data, searchText, supplierLookup],
   )
 
   const statusOptions = useMemo<SelectOption[]>(() => {
     const statuses = Array.from(
       new Set(
-        recentRequests.items
-          .map((item) => item.paymentRequest.status)
+        (paymentRequestsQuery.data ?? [])
+          .map((item) => item.status)
           .concat(paymentRequestQuery.data?.status ? [paymentRequestQuery.data.status] : [])
           .filter(Boolean),
       ),
@@ -83,40 +78,37 @@ export function PaymentRequestsPage() {
       { label: 'Tất cả trạng thái', value: 'ALL' },
       ...statuses.map((status) => ({ label: status, value: status })),
     ]
-  }, [paymentRequestQuery.data?.status, recentRequests.items])
+  }, [paymentRequestQuery.data?.status, paymentRequestsQuery.data])
 
-  const recentColumns = useMemo<Array<DataTableColumn<RecentFinancePaymentRequestLookup>>>(
+  const requestColumns = useMemo<Array<DataTableColumn<FinancePaymentRequest>>>(
     () => [
       {
         key: 'invoice',
         header: 'Payment request',
-        render: (row) => buildPaymentRequestLabel(row.paymentRequest),
+        render: (row) => buildPaymentRequestLabel(row),
       },
       {
         key: 'supplier',
         header: 'Supplier',
-        render: (row) =>
-          row.supplierCode && row.supplierName
-            ? `${row.supplierCode} · ${row.supplierName}`
-            : `#${row.paymentRequest.supplierId}`,
+        render: (row) => buildSupplierLabel(row.supplierId, supplierLookup.get(row.supplierId)),
       },
       {
         key: 'dueDate',
         header: 'Due date',
-        render: (row) => formatFinanceDateLabel(row.paymentRequest.dueDate),
+        render: (row) => formatFinanceDateLabel(row.dueDate),
       },
       {
         key: 'total',
         header: 'Total',
-        render: (row) => formatFinanceCurrency(row.paymentRequest.totalAmount, row.paymentRequest.currencyCode),
+        render: (row) => formatFinanceCurrency(row.totalAmount, row.currencyCode),
       },
       {
         key: 'status',
         header: 'Status',
-        render: (row) => <StatusBadge status={row.paymentRequest.status} />,
+        render: (row) => <StatusBadge status={row.status} />,
       },
     ],
-    [],
+    [supplierLookup],
   )
 
   const lineColumns = useMemo<Array<DataTableColumn<FinancePaymentRequestLine>>>(
@@ -130,20 +122,9 @@ export function PaymentRequestsPage() {
     [],
   )
 
-  function submitLookup() {
-    const parsed = Number(lookupInput)
-    if (!Number.isInteger(parsed) || parsed <= 0) {
-      setValidationError('Nhập invoice ID hợp lệ để lookup payment request.')
-      return
-    }
-
-    setValidationError(null)
-    setSelectedInvoiceId(parsed)
-  }
-
   if (!canOpen) {
     return (
-      <DashboardLayout title="Payment Requests" description="Lookup-first supplier invoice review console cho Finance">
+      <DashboardLayout title="Payment Requests" description="Supplier invoice review console cho Finance">
         <PermissionDeniedInline message="Bạn cần quyền procurement.invoice.read hoặc permission payables liên quan để mở payment requests." />
       </DashboardLayout>
     )
@@ -155,53 +136,41 @@ export function PaymentRequestsPage() {
   return (
     <DashboardLayout
       title="Payment Requests"
-      description="Lookup-first supplier invoice review console vì backend hiện chưa publish public invoice list endpoint."
+      description="Supplier invoice review console backed by the real invoice queue."
     >
-      <ReadonlyBanner message="Payment requests đang publish theo mô hình lookup-first + recent history. Trang này không giả lập invoice queue khi backend chưa có list endpoint công khai." />
+      <div className="field-grid">
+        <Input
+          label="Search payment requests"
+          onChange={(event) => setSearchText(event.target.value)}
+          placeholder="Invoice number, supplier, status..."
+          value={searchText}
+        />
+        <Select
+          label="Status filter"
+          onChange={(event) => setStatusFilter(event.target.value)}
+          options={statusOptions}
+          value={statusFilter}
+        />
+      </div>
 
-      <Card title="Lookup payment request">
-        <div className="field-grid">
-          <Input
-            label="Invoice ID"
-            onChange={(event) => setLookupInput(event.target.value)}
-            placeholder="VD: 10001"
-            type="number"
-            value={lookupInput}
-          />
-          <Input
-            label="Tìm trong recent payment requests"
-            onChange={(event) => setSearchText(event.target.value)}
-            placeholder="Invoice number, supplier, status..."
-            value={searchText}
-          />
-          <Select
-            label="Status filter"
-            onChange={(event) => setStatusFilter(event.target.value)}
-            options={statusOptions}
-            value={statusFilter}
-          />
-        </div>
-        <div className="form-actions align-start">
-          <Button onClick={submitLookup} size="sm">
-            Lookup invoice
-          </Button>
-          {recentRequests.items.length > 0 ? (
-            <Button onClick={recentRequests.clear} size="sm" variant="ghost">
-              Clear recent
-            </Button>
-          ) : null}
-        </div>
-        {validationError ? <p className="error-text">{validationError}</p> : null}
-      </Card>
+      <DataTable
+        columns={requestColumns}
+        emptyDescription="Không có payment request nào khớp bộ lọc hiện tại."
+        emptyTitle="No matching payment requests"
+        error={paymentRequestsQuery.error ? getFinanceErrorMessage(paymentRequestsQuery.error, 'Không thể tải payment request queue.') : null}
+        loading={paymentRequestsQuery.isLoading}
+        loadingDescription="Đang tải payment requests..."
+        loadingTitle="Đang tải payment requests"
+        onRetry={() => void paymentRequestsQuery.refetch()}
+        onRowClick={(row) => setSelectedInvoiceId(row.id)}
+        rowKey={(row) => row.id}
+        rows={visibleRequests}
+      />
 
       {selectedInvoiceId ? (
-        paymentRequestQuery.isLoading ? (
-          <Card title="Đang tải payment request">
-            <p className="muted-text">Đang tải supplier invoice #{selectedInvoiceId}...</p>
-          </Card>
-        ) : paymentRequestQuery.error ? (
+        paymentRequestQuery.isLoading ? null : paymentRequestQuery.error ? (
           <ErrorState
-            actionLabel="Retry lookup"
+            actionLabel="Retry detail"
             message={getFinanceErrorMessage(paymentRequestQuery.error, `Không thể tải supplier invoice #${selectedInvoiceId}.`)}
             onAction={() => void paymentRequestQuery.refetch()}
             title="Unable to load payment request"
@@ -243,26 +212,6 @@ export function PaymentRequestsPage() {
           </>
         ) : null
       ) : null}
-
-      {recentRequests.items.length === 0 ? (
-        <EmptyState
-          description="Chưa có payment request nào được lookup gần đây. Dùng invoice ID để inspect một supplier invoice cụ thể."
-          title="No recent payment requests"
-        />
-      ) : (
-        <DataTable
-          columns={recentColumns}
-          emptyDescription="Recent payment requests không có bản ghi nào khớp bộ lọc hiện tại."
-          emptyTitle="No matching recent payment requests"
-          onRowClick={(row) => {
-            setSelectedInvoiceId(row.paymentRequest.id)
-            setLookupInput(String(row.paymentRequest.id))
-            setValidationError(null)
-          }}
-          rowKey={(row) => row.paymentRequest.id}
-          rows={filteredRecentRequests}
-        />
-      )}
     </DashboardLayout>
   )
 }

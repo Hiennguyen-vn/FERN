@@ -17,10 +17,10 @@ import {
 const mocks = vi.hoisted(() => ({
   useFinanceSupplier: vi.fn(),
   useFinanceSuppliers: vi.fn(),
+  usePaymentRequests: vi.fn(),
   usePaymentRequest: vi.fn(),
   usePayrollApprovalQueue: vi.fn(),
   usePayrollRun: vi.fn(),
-  useRecentPaymentRequests: vi.fn(),
   useApprovePayrollRun: vi.fn(),
   useRejectPayrollRun: vi.fn(),
   useCancelPayrollRun: vi.fn(),
@@ -30,10 +30,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../hooks/useFinance', () => ({
   useFinanceSupplier: mocks.useFinanceSupplier,
   useFinanceSuppliers: mocks.useFinanceSuppliers,
+  usePaymentRequests: mocks.usePaymentRequests,
   usePaymentRequest: mocks.usePaymentRequest,
   usePayrollApprovalQueue: mocks.usePayrollApprovalQueue,
   usePayrollRun: mocks.usePayrollRun,
-  useRecentPaymentRequests: mocks.useRecentPaymentRequests,
   useApprovePayrollRun: mocks.useApprovePayrollRun,
   useRejectPayrollRun: mocks.useRejectPayrollRun,
   useCancelPayrollRun: mocks.useCancelPayrollRun,
@@ -108,11 +108,11 @@ describe('Finance route group', () => {
       isLoading: false,
       refetch: vi.fn(),
     })
-    mocks.useRecentPaymentRequests.mockReturnValue({
-      items: [],
-      clear: vi.fn(),
-      refresh: vi.fn(),
-      save: vi.fn(),
+    mocks.usePaymentRequests.mockReturnValue({
+      data: [],
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
     })
     mocks.usePaymentRequest.mockReturnValue({
       data: undefined,

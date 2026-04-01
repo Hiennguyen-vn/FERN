@@ -23,6 +23,7 @@ import { formatDate } from '@shared/formatters'
 import { PosCatalogGrid } from '../components/PosCatalogGrid'
 import { PosCartPanel } from '../components/PosCartPanel'
 import { PosSessionSummaryCard } from '../components/PosSessionSummaryCard'
+import { useRegion } from '@modules/org/hooks/useOrg'
 import { usePosCatalog } from '../hooks/usePosCatalog'
 import { useCreatePosOrder } from '../hooks/usePosOrder'
 import { useClosePosSession, useOpenPosSession, usePosSessions } from '../hooks/usePosSession'
@@ -89,6 +90,11 @@ export function PosHomePage() {
     }
     previousOutletId.current = selectedOutletId
   }, [clearOutletDrafts, clearOutletUi, selectedOutletId])
+
+  const regionQuery = useRegion(selectedRegionId ?? 0, { enabled: !!selectedRegionId })
+  // Use the region's configured currency code; fall back to 'VND' only while the
+  // region is still loading, so the payload is always a valid non-empty string.
+  const regionCurrencyCode = regionQuery.data?.currencyCode ?? 'VND'
 
   const canReadSessionsPermission = canReadSessions(principal)
   const canReadCatalogPermission = canReadCatalog(principal)
@@ -248,7 +254,7 @@ export function PosHomePage() {
               type="date"
               value={businessDate}
             />
-            <Input label="Currency" readOnly value="VND" />
+            <Input label="Currency" readOnly value={regionCurrencyCode} />
           </div>
           <Textarea
             label="Note"
@@ -270,7 +276,7 @@ export function PosHomePage() {
                       regionId: effectiveRegionId,
                       outletId: selectedOutletId,
                       businessDate,
-                      currencyCode: 'VND',
+                      currencyCode: regionCurrencyCode,
                       note: openSessionNote || undefined,
                     })
                     setReusedSessionCode(selectedOutletId, result.sessionExisted ? result.session.sessionCode : null)
@@ -293,7 +299,7 @@ export function PosHomePage() {
                   regionId: effectiveRegionId,
                   outletId: selectedOutletId,
                   businessDate,
-                  currencyCode: 'VND',
+                  currencyCode: regionCurrencyCode,
                   note: openSessionNote || undefined,
                 })
               }

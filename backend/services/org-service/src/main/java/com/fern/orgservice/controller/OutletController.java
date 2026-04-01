@@ -1,6 +1,7 @@
 package com.fern.orgservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.PageResponse;
 import com.fern.orgservice.dto.CreateOutletRequest;
 import com.fern.orgservice.dto.OutletResponse;
 import com.fern.orgservice.dto.UpdateOutletRequest;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/outlets")
@@ -30,6 +32,18 @@ public class OutletController {
             @Valid @RequestBody CreateOutletRequest request
     ) {
         return outletService.create(principal, request);
+    }
+
+    @GetMapping
+    public PageResponse<OutletResponse> list(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "50") Integer size
+    ) {
+        return outletService.list(principal, regionId, status, search, page, size);
     }
 
     @GetMapping("/{id}")

@@ -1,4 +1,5 @@
 import { httpClient } from '@core/api/httpClient'
+import type { PageResponse } from '@core/types/api'
 import type {
   AssignUserRolesRequest,
   AssignUserScopesRequest,
@@ -14,6 +15,8 @@ import type {
 
 export const iamApi = {
   // ─── Reads ─────────────────────────────────────────────────────────────────
+  listUsers: (params?: { search?: string; status?: string; page?: number; size?: number }) =>
+    httpClient.get<PageResponse<IamUser>>('/users', { params }).then((r) => r.data),
   getUser: (userId: number) =>
     httpClient.get<IamUser>(`/users/${userId}`).then((r) => r.data),
   getRoles: () =>

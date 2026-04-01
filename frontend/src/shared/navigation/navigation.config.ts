@@ -79,17 +79,17 @@ export const navigationConfig: NavigationItem[] = [
   },
   {
     label: 'Catalog',
-    to: '/catalog/products',
+    to: '/catalog',
     visible: (principal) => hasAnyPermissions(principal, catalogReadPermissions),
   },
   {
     label: 'IAM',
-    to: '/iam/assignments',
+    to: '/iam',
     visible: (principal) => hasAnyPermissions(principal, iamReadPermissions),
   },
   {
     label: 'Audit',
-    to: '/audit/events',
+    to: '/audit',
     visible: (principal) => hasAnyPermissions(principal, auditReadPermissions),
   },
   {
@@ -99,12 +99,12 @@ export const navigationConfig: NavigationItem[] = [
   },
   {
     label: 'HR',
-    to: '/hr/employees',
+    to: '/hr',
     visible: (principal) => hasAnyPermissions(principal, hrReadPermissions),
   },
   {
     label: 'Finance',
-    to: '/finance/payroll-approvals',
+    to: '/finance',
     visible: (principal) => hasAnyPermissions(principal, financeNavigationPermissions),
   },
   {
@@ -114,12 +114,12 @@ export const navigationConfig: NavigationItem[] = [
   },
   {
     label: 'Inventory',
-    to: '/inventory/stock-balances',
+    to: '/inventory',
     visible: (principal) => hasAnyPermissions(principal, inventoryNavigationPermissions),
   },
   {
     label: 'Workforce',
-    to: '/workforce/my-attendance',
+    to: '/workforce',
     visible: (principal) => hasAnyPermissions(principal, workforceNavigationPermissions),
   },
   {

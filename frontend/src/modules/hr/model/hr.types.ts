@@ -58,8 +58,8 @@ export interface HrAttendanceApproval {
   approvedAt: string | null
   approvedByUserId: number | null
   attendanceStatus: string
-  workHours: string | null
-  overtimeHours: string | null
+  workHours: number | null
+  overtimeHours: number | null
   businessDate: string | null
 }
 
@@ -156,4 +156,42 @@ export interface RecentHrContractLookup {
   employeeCode?: string | null
   employeeId: number
   employeeName?: string | null
+}
+
+export interface ShiftSchedule {
+  id: number
+  regionId: number
+  outletId: number
+  shiftDate: string
+  shiftName: string
+  startTime: string
+  endTime: string
+  status: string
+}
+
+export interface ShiftAssignment {
+  id: number
+  shiftScheduleId: number
+  employeeId: number
+  assignedRole: string | null
+  attendanceStatus: string
+  approvalStatus: string
+  note: string | null
+}
+
+export interface CreateShiftSchedulePayload {
+  regionId: number
+  outletId: number
+  shiftDate: string
+  shiftName: string
+  startTime: string
+  endTime: string
+  status?: string
+}
+
+export interface CreateShiftAssignmentPayload {
+  shiftScheduleId: number
+  employeeId: number
+  assignedRole?: string
+  note?: string
 }

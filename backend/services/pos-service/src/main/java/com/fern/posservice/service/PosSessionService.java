@@ -174,15 +174,33 @@ public class PosSessionService {
         if (openOrders) {
             throw new ConflictException("Cannot close a POS session while open orders still exist");
         }
+        // P1: Calculate expectedCashAmount at close time so UI can show it immediately
+        BigDecimal expectedCash = jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(payment.amount), 0)
+                FROM pos.sale_payment payment
+                JOIN pos.sale_order sale_order ON sale_order.id = payment.sale_order_id
+                WHERE payment.pos_session_id = :sessionId
+                  AND payment.status = :paymentStatus
+                  AND payment.payment_method = :paymentMethod
+                  AND sale_order.status = :orderStatus
+                """, PosSql.params(
+                "sessionId", id,
+                "paymentStatus", SalePaymentStatus.SUCCESS.name(),
+                "paymentMethod", PAYMENT_METHOD_CASH,
+                "orderStatus", SaleOrderStatus.COMPLETED.name()
+        ), BigDecimal.class);
         int updated = jdbcTemplate.update("""
                 UPDATE pos.pos_session
-                SET status = :status, closed_at = :closedAt, manager_user_id = :managerUserId, updated_at = CURRENT_TIMESTAMP
+                SET status = :status, closed_at = :closedAt, manager_user_id = :managerUserId,
+                    expected_cash_amount = :expectedCashAmount,
+                    updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
                   AND status = :currentStatus
                 """, PosSql.params(
                 "status", PosSessionStatus.CLOSED.name(),
                 "closedAt", clock.instant(),
                 "managerUserId", principal.userId(),
+                "expectedCashAmount", expectedCash,
                 "id", id,
                 "currentStatus", PosSessionStatus.OPEN.name()
         ));

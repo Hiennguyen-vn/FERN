@@ -36,9 +36,9 @@ describe('buildNavigation', () => {
 
     expect(buildNavigation(principal)).toEqual([
       { label: 'Home', to: '/home' },
-      { label: 'HR', to: '/hr/employees', visible: expect.any(Function) },
-      { label: 'Finance', to: '/finance/payroll-approvals', visible: expect.any(Function) },
-      { label: 'Workforce', to: '/workforce/my-attendance', visible: expect.any(Function) },
+      { label: 'HR', to: '/hr', visible: expect.any(Function) },
+      { label: 'Finance', to: '/finance', visible: expect.any(Function) },
+      { label: 'Workforce', to: '/workforce', visible: expect.any(Function) },
     ])
   })
 

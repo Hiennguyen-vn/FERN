@@ -276,6 +276,49 @@ class ReportServiceIntegrationTest {
     }
 
     @Test
+    void shouldListOnlyReadableExportJobsFromServerBackedHistory() throws Exception {
+        ExpensePostedEvent expense = expenseEvent("expense-event-list", "expense-idem-list", 9300L, new BigDecimal("42.00"));
+        reportService.ingestExpensePosted(objectMapper.writeValueAsString(expense), expense);
+
+        Long jobId = objectMapper.readTree(mockMvc.perform(post("/reports/exports")
+                        .header("Authorization", bearer(reportPermissions(), List.of(1L), false))
+                        .header("Idempotency-Key", "export-list-1")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "dataset": "EXPENSE_FACT",
+                                  "format": "CSV",
+                                  "regionId": 1,
+                                  "fromDate": "2026-03-27",
+                                  "toDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString()).get("exportJobId").asLong();
+
+        reportService.processQueuedExports();
+
+        mockMvc.perform(get("/reports/exports")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.REPORT_READ), List.of(1L), false))
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].exportJobId").value(jobId))
+                .andExpect(jsonPath("$.items[0].dataset").value("EXPENSE_FACT"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.hasMore").value(false));
+
+        mockMvc.perform(get("/reports/exports")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.REPORT_EXPORT), List.of(1L), false))
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty())
+                .andExpect(jsonPath("$.hasMore").value(false));
+    }
+
+    @Test
     void shouldBoundPreviewWhileExportingMultipleRows() throws Exception {
         for (long index = 0; index < 8; index++) {
             ExpensePostedEvent expense = expenseEvent(

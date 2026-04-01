@@ -6,13 +6,13 @@ import { clearTestStorage, resetTestStores, setAuthenticatedSession } from '@sha
 import { RegionsPage } from '../routes/RegionsPage'
 
 const mocks = vi.hoisted(() => ({
-  useRegion: vi.fn(),
-  useRegions: vi.fn(),
+  useRegionList: vi.fn(),
 }))
 
 vi.mock('../hooks/useOrg', () => ({
-  useRegion: mocks.useRegion,
-  useRegions: mocks.useRegions,
+  useRegionList: mocks.useRegionList,
+  useRegion: vi.fn(),
+  useRegions: vi.fn(),
   useOutlet: vi.fn(),
   useOutlets: vi.fn(),
 }))
@@ -31,30 +31,28 @@ describe('RegionsPage', () => {
         },
       },
     })
-
-    mocks.useRegion.mockReturnValue({
-      data: undefined,
+    mocks.useRegionList.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 1,
+            code: 'VN-SOUTH',
+            parentRegionId: null,
+            currencyCode: 'VND',
+            name: 'Southern Region',
+            taxCode: 'TAX-SOUTH',
+            timezoneName: 'Asia/Ho_Chi_Minh',
+            createdAt: '2026-03-01T08:00:00Z',
+            updatedAt: '2026-03-10T08:00:00Z',
+          },
+        ],
+        page: 0,
+        size: 50,
+        hasMore: false,
+      },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
-    })
-    mocks.useRegions.mockReturnValue({
-      rows: [
-        {
-          id: 1,
-          code: 'VN-SOUTH',
-          parentRegionId: null,
-          currencyCode: 'VND',
-          name: 'Southern Region',
-          taxCode: 'TAX-SOUTH',
-          timezoneName: 'Asia/Ho_Chi_Minh',
-          createdAt: '2026-03-01T08:00:00Z',
-          updatedAt: '2026-03-10T08:00:00Z',
-        },
-      ],
-      isLoading: false,
-      error: null,
-      refresh: vi.fn(),
     })
   })
 
@@ -77,17 +75,17 @@ describe('RegionsPage', () => {
         },
       },
     })
-    mocks.useRegions.mockReturnValue({
-      rows: [],
+    mocks.useRegionList.mockReturnValue({
+      data: { items: [], page: 0, size: 50, hasMore: false },
       isLoading: false,
       error: null,
-      refresh: vi.fn(),
+      refetch: vi.fn(),
     })
 
     renderWithProviders(<RegionsPage />)
 
-    expect(await screen.findByText('No scoped regions yet')).toBeInTheDocument()
-    expect(screen.getByText('Không có region nào trong scope hiện tại hoặc recent history. Dùng ô lookup để mở region theo ID.')).toBeInTheDocument()
+    expect(await screen.findByText('No matching regions')).toBeInTheDocument()
+    expect(screen.getByText('Không có region nào khớp bộ lọc hiện tại hoặc scope hiện tại.')).toBeInTheDocument()
   })
 
   it('shows permission denied when principal lacks org.region.read', () => {

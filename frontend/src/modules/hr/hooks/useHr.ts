@@ -7,7 +7,10 @@ interface QueryOptions {
 }
 
 const KEYS = {
+  employees: (params: { search?: string; status?: string; page?: number; size?: number }) => ['hr', 'employees', params] as const,
   employee: (employeeId: number) => ['hr', 'employees', employeeId] as const,
+  contracts: (params: { employeeId?: number; regionId?: number; search?: string; status?: string; page?: number; size?: number }) =>
+    ['hr', 'contracts', params] as const,
   employeeContracts: (employeeId: number) => ['hr', 'employees', employeeId, 'contracts'] as const,
   employeeAssignments: (employeeId: number) => ['hr', 'employees', employeeId, 'assignments'] as const,
   attendanceEvents: (filters: HrAttendanceFilters) => ['hr', 'attendance-events', filters] as const,
@@ -25,11 +28,30 @@ export function useHrEmployee(employeeId: number, options: QueryOptions = {}) {
   })
 }
 
+export function useHrEmployees(params: { search?: string; status?: string; page?: number; size?: number }, options: QueryOptions = {}) {
+  return useQuery({
+    queryKey: KEYS.employees(params),
+    queryFn: () => hrApi.listEmployees(params),
+    enabled: options.enabled ?? true,
+  })
+}
+
 export function useHrContracts(employeeId: number, options: QueryOptions = {}) {
   return useQuery({
     queryKey: KEYS.employeeContracts(employeeId),
     queryFn: () => hrApi.listEmployeeContracts(employeeId),
     enabled: (options.enabled ?? true) && employeeId > 0,
+  })
+}
+
+export function useHrContractBrowse(
+  params: { employeeId?: number; regionId?: number; search?: string; status?: string; page?: number; size?: number },
+  options: QueryOptions = {},
+) {
+  return useQuery({
+    queryKey: KEYS.contracts(params),
+    queryFn: () => hrApi.listContracts(params),
+    enabled: options.enabled ?? true,
   })
 }
 

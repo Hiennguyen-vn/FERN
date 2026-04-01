@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => ({
   useHrAttendanceApprovals: vi.fn(),
   useHrAttendanceEvents: vi.fn(),
   useHrAssignments: vi.fn(),
+  useHrContractBrowse: vi.fn(),
+  useHrEmployees: vi.fn(),
   useHrContracts: vi.fn(),
   useHrEmployee: vi.fn(),
   usePayrollPeriods: vi.fn(),
@@ -32,6 +34,8 @@ vi.mock('../hooks/useHr', () => ({
   useHrAttendanceApprovals: mocks.useHrAttendanceApprovals,
   useHrAttendanceEvents: mocks.useHrAttendanceEvents,
   useHrAssignments: mocks.useHrAssignments,
+  useHrContractBrowse: mocks.useHrContractBrowse,
+  useHrEmployees: mocks.useHrEmployees,
   useHrContracts: mocks.useHrContracts,
   useHrEmployee: mocks.useHrEmployee,
   usePayrollPeriods: mocks.usePayrollPeriods,
@@ -75,6 +79,30 @@ describe('HR route group', () => {
       },
     })
 
+    mocks.useHrEmployees.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 1,
+            employeeCode: 'EMP-001',
+            fullName: 'Nguyen Van A',
+            dob: '1994-01-01',
+            gender: 'MALE',
+            email: 'a@fern.local',
+            phone: '0901',
+            status: 'ACTIVE',
+            hiredAt: '2024-01-01',
+            userAccountId: 7,
+          },
+        ],
+        page: 0,
+        size: 50,
+        hasMore: false,
+      },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    })
     mocks.useHrEmployee.mockReturnValue({
       data: {
         id: 1,
@@ -87,6 +115,30 @@ describe('HR route group', () => {
         status: 'ACTIVE',
         hiredAt: '2024-01-01',
         userAccountId: 7,
+      },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    })
+    mocks.useHrContractBrowse.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 10,
+            employeeId: 1,
+            employmentType: 'FULL_TIME',
+            salaryType: 'MONTHLY',
+            baseSalary: 18000000,
+            regionId: 1,
+            taxCode: 'TX-01',
+            contractStatus: 'ACTIVE',
+            startDate: '2024-01-01',
+            endDate: null,
+          },
+        ],
+        page: 0,
+        size: 50,
+        hasMore: false,
       },
       error: null,
       isLoading: false,

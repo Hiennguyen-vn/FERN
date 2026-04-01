@@ -13,6 +13,10 @@ export const financeApi = {
     return gatewayClient.get<FinanceSupplier[]>('/suppliers').then((response) => response.data)
   },
 
+  listPaymentRequests(params?: { supplierId?: number; outletId?: number; status?: string; limit?: number }) {
+    return gatewayClient.get<FinancePaymentRequest[]>('/supplier-invoices', { params }).then((response) => response.data)
+  },
+
   getPaymentRequest(invoiceId: number) {
     return gatewayClient.get<FinancePaymentRequest>(`/supplier-invoices/${invoiceId}`).then((response) => response.data)
   },

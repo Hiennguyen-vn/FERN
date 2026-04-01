@@ -9,6 +9,10 @@ import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
+// NOTE: SALE_USAGE events (sourceReferenceType = SALE_ORDER, reason = SALE_USAGE) are published
+// by inventory-service StockReservationService after committing a reservation. They are ingested
+// here via ingestAdjustment(), which backfills sales_fact.cogs_amount for that sale order.
+
 /**
  * Projects inventory events (adjustments, waste records, stock counts)
  * into the {@code inventory_movement_fact} table, then updates daily summaries.
@@ -60,6 +64,22 @@ public class InventoryEventProjector {
                             "sourceReferenceType", event.sourceReferenceType(),
                             "sourceReferenceId", event.sourceReferenceId()
                     ));
+                    // Backfill COGS into sales_fact when this event is a SALE_USAGE
+                    if ("SALE_ORDER".equals(event.sourceReferenceType())
+                            && "SALE_USAGE".equals(event.reason())
+                            && event.unitCost() != null
+                            && event.qtyChange() != null) {
+                        BigDecimal cogsContribution = event.unitCost()
+                                .multiply(event.qtyChange().abs());
+                        support.jdbcTemplate().update("""
+                                UPDATE report.sales_fact
+                                SET cogs_amount = cogs_amount + :cogsContribution
+                                WHERE sale_order_id = :saleOrderId
+                                """, support.params(
+                                "cogsContribution", cogsContribution,
+                                "saleOrderId", Long.parseLong(event.sourceReferenceId())
+                        ));
+                    }
                     dailySummaryProjector.applyDelta(
                             event.eventId(),
                             event.sourceService(),

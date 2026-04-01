@@ -45,6 +45,7 @@ export const permissionConstants = {
   inventory: {
     balanceRead: 'inventory.balance.read',
     ledgerRead: 'inventory.ledger.read',
+    adjustmentWrite: 'inventory.adjustment.write',
   },
   hr: {
     employeeRead: 'hr.employee.read',

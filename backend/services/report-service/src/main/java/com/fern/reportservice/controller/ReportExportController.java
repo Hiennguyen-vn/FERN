@@ -1,6 +1,7 @@
 package com.fern.reportservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.PageResponse;
 import com.fern.platform.observability.CorrelationId;
 import com.fern.reportservice.dto.ReportCommands.CreateExportRequest;
 import com.fern.reportservice.dto.ReportResponses.ExportJobResponse;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -45,6 +47,19 @@ public class ReportExportController {
             @PathVariable Long jobId
     ) {
         return reportService.getExport(principal, jobId);
+    }
+
+    @GetMapping
+    public PageResponse<ExportJobResponse> listExports(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "50") Integer size,
+            @RequestParam(required = false) String dataset,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) Long outletId
+    ) {
+        return reportService.listExports(principal, page, size, dataset, status, regionId, outletId);
     }
 
     @GetMapping("/{jobId}/preview")

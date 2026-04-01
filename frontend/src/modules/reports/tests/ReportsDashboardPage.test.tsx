@@ -63,7 +63,7 @@ describe('ReportsDashboardPage', () => {
     expect(screen.getByText('Inventory report')).toBeInTheDocument()
     expect(screen.queryByText('Payroll report')).not.toBeInTheDocument()
     expect(screen.getByText('Export jobs')).toBeInTheDocument()
-    expect(screen.getByText('Recent export activity')).toBeInTheDocument()
+    expect(screen.getByText('Export activity')).toBeInTheDocument()
     expect(screen.getByText('#99')).toBeInTheDocument()
   })
 
@@ -88,7 +88,7 @@ describe('ReportsDashboardPage', () => {
     expect(screen.getByText(/create-only mode/i)).toBeInTheDocument()
     expect(screen.getByText('Export jobs')).toBeInTheDocument()
     expect(screen.queryByText('Revenue report')).not.toBeInTheDocument()
-    expect(screen.queryByText('Recent export activity')).not.toBeInTheDocument()
+    expect(screen.queryByText('Export activity')).not.toBeInTheDocument()
   })
 
   it('shows permission denied without report permissions', () => {

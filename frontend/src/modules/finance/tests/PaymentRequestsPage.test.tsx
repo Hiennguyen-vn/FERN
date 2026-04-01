@@ -8,14 +8,14 @@ import { PaymentRequestsPage } from '../routes/PaymentRequestsPage'
 
 const mocks = vi.hoisted(() => ({
   useFinanceSuppliers: vi.fn(),
+  usePaymentRequests: vi.fn(),
   usePaymentRequest: vi.fn(),
-  useRecentPaymentRequests: vi.fn(),
 }))
 
 vi.mock('../hooks/useFinance', () => ({
   useFinanceSuppliers: mocks.useFinanceSuppliers,
+  usePaymentRequests: mocks.usePaymentRequests,
   usePaymentRequest: mocks.usePaymentRequest,
-  useRecentPaymentRequests: mocks.useRecentPaymentRequests,
 }))
 
 describe('PaymentRequestsPage', () => {
@@ -39,11 +39,11 @@ describe('PaymentRequestsPage', () => {
       isLoading: false,
       refetch: vi.fn(),
     })
-    mocks.useRecentPaymentRequests.mockReturnValue({
-      items: [],
-      clear: vi.fn(),
-      refresh: vi.fn(),
-      save: vi.fn(),
+    mocks.usePaymentRequests.mockReturnValue({
+      data: [],
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
     })
     mocks.usePaymentRequest.mockReturnValue({
       data: undefined,
@@ -53,48 +53,68 @@ describe('PaymentRequestsPage', () => {
     })
   })
 
-  it('renders empty recent state when no lookup has been made', async () => {
+  it('renders empty queue state when no request matches', async () => {
     renderWithProviders(<PaymentRequestsPage />)
 
-    expect(await screen.findByText('No recent payment requests')).toBeInTheDocument()
+    expect(await screen.findByText('No matching payment requests')).toBeInTheDocument()
   })
 
-  it('supports invoice lookup and renders request detail', async () => {
+  it('renders request detail from the browsable queue', async () => {
     const user = userEvent.setup()
-
-    mocks.usePaymentRequest.mockImplementation((invoiceId: number) => ({
-      data:
-        invoiceId === 45
-          ? {
-              id: 45,
-              supplierId: 12,
-              regionId: 1,
-              outletId: 101,
-              currencyCode: 'VND',
-              invoiceNumber: 'INV-45',
-              invoiceDate: '2026-03-20',
-              dueDate: '2026-03-27',
-              subtotal: 1000000,
-              taxAmount: 100000,
-              totalAmount: 1100000,
-              status: 'APPROVED',
-              note: 'Ready for payment',
-              approvedAt: '2026-03-25T08:00:00Z',
-              lines: [],
-            }
-          : undefined,
+    mocks.usePaymentRequests.mockReturnValue({
+      data: [
+        {
+          id: 45,
+          supplierId: 12,
+          regionId: 1,
+          outletId: 101,
+          currencyCode: 'VND',
+          invoiceNumber: 'INV-45',
+          invoiceDate: '2026-03-20',
+          dueDate: '2026-03-27',
+          subtotal: 1000000,
+          taxAmount: 100000,
+          totalAmount: 1100000,
+          status: 'APPROVED',
+          note: 'Ready for payment',
+          approvedAt: '2026-03-25T08:00:00Z',
+          lines: [],
+        },
+      ],
       error: null,
       isLoading: false,
       refetch: vi.fn(),
-    }))
+    })
+    mocks.usePaymentRequest.mockReturnValue({
+      data: {
+        id: 45,
+        supplierId: 12,
+        regionId: 1,
+        outletId: 101,
+        currencyCode: 'VND',
+        invoiceNumber: 'INV-45',
+        invoiceDate: '2026-03-20',
+        dueDate: '2026-03-27',
+        subtotal: 1000000,
+        taxAmount: 100000,
+        totalAmount: 1100000,
+        status: 'APPROVED',
+        note: 'Ready for payment',
+        approvedAt: '2026-03-25T08:00:00Z',
+        lines: [],
+      },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    })
 
     renderWithProviders(<PaymentRequestsPage />)
 
-    await user.type(screen.getByLabelText('Invoice ID'), '45')
-    await user.click(screen.getByRole('button', { name: 'Lookup invoice' }))
+    await user.click(screen.getByText('INV-45 · #45'))
 
-    expect(await screen.findByText('INV-45 · #45')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'INV-45 · #45' })).toBeInTheDocument()
     expect(screen.getByText('Request summary')).toBeInTheDocument()
+    expect(screen.getAllByText('INV-45 · #45')).toHaveLength(2)
   })
 
   it('shows permission denied without invoice read permissions', () => {

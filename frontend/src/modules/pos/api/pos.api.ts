@@ -63,6 +63,11 @@ export async function getSaleOrder(orderId: number) {
   return data
 }
 
+export async function getSaleOrderSnapshot(orderId: number) {
+  const { data } = await gatewayClient.get<Record<string, unknown>>(`/sale-orders/${orderId}/snapshot`)
+  return data
+}
+
 export async function listSessionOrders(posSessionId: number, limit = 50) {
   const { data } = await gatewayClient.get<SaleOrder[]>('/sale-orders', {
     params: { posSessionId, limit },

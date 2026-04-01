@@ -13,6 +13,7 @@ import {
 } from '../routes/iamRoutes.bundle'
 
 const mocks = vi.hoisted(() => ({
+  useIamUsers: vi.fn(),
   useIamUser: vi.fn(),
   useIamRoles: vi.fn(),
   useIamPermissions: vi.fn(),
@@ -21,6 +22,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../hooks/useIam', () => ({
+  useIamUsers: mocks.useIamUsers,
   useIamUser: mocks.useIamUser,
   useIamRoles: mocks.useIamRoles,
   useIamPermissions: mocks.useIamPermissions,
@@ -54,6 +56,28 @@ describe('IAM route group', () => {
           permissionConstants.iam.permissionOverrideRead,
         ],
       },
+    })
+    mocks.useIamUsers.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 1,
+            username: 'bootstrap-admin',
+            fullName: 'Bootstrap Admin',
+            email: 'admin@fern.local',
+            phone: null,
+            status: 'ACTIVE',
+            roleCodes: ['bootstrap_admin'],
+            scopeRoots: { system: true, regions: [], outlets: [] },
+          },
+        ],
+        page: 0,
+        size: 50,
+        hasMore: false,
+      },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
     })
     mocks.useIamUser.mockReturnValue({
       data: {

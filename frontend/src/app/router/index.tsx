@@ -19,6 +19,16 @@ import { Button, Card, Input, ReadonlyBanner } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { buildNavigation } from '@shared/navigation/navigation.builder'
 import {
+  resolveAuditLandingPath,
+  resolveCatalogLandingPath,
+  resolveFinanceLandingPath,
+  resolveHrLandingPath,
+  resolveIamLandingPath,
+  resolveInventoryLandingPath,
+  resolveReportsLandingPath,
+  resolveWorkforceLandingPath,
+} from './moduleLanding.service'
+import {
   canReadPurchaseOrders,
   canReadGoodsReceipts,
 } from '@modules/procurement/services/procurementPermission.service'
@@ -91,6 +101,11 @@ const SupplierInvoiceListPage = lazy(() =>
 const SupplierPaymentListPage = lazy(() =>
   import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
     default: m.SupplierPaymentListPage,
+  })),
+)
+const ThreeWayMatchingPage = lazy(() =>
+  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
+    default: m.ThreeWayMatchingPage,
   })),
 )
 
@@ -178,6 +193,9 @@ const RegionalOutletSummaryPage = lazy(() =>
 const RegionalOutletDetailPage = lazy(() =>
   import('@modules/regional-ops/routes/regionalOpsRoutes.bundle').then((m) => ({ default: m.OutletDetailPage })),
 )
+const ExchangeRateManagementPage = lazy(() =>
+  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.ExchangeRateManagementPage })),
+)
 
 // ─── Lazy imports: HR ────────────────────────────────────────────────────────
 const EmployeesPage = lazy(() =>
@@ -200,6 +218,9 @@ const PayrollPreparationPage = lazy(() =>
 )
 const PayrollDraftReviewPage = lazy(() =>
   import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.PayrollDraftReviewPage })),
+)
+const ShiftSchedulingPage = lazy(() =>
+  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.ShiftSchedulingPage })),
 )
 
 // ─── Lazy imports: Finance ───────────────────────────────────────────────────
@@ -271,6 +292,22 @@ function ProcurementLandingRedirect() {
   }
   // Fallback: let the module guard handle the redirect to /unauthorized.
   return <Navigate replace to="/unauthorized" />
+}
+
+function ModuleLandingRedirect({
+  resolve,
+}: {
+  resolve: (principal: ReturnType<typeof useAuthStore.getState>['principal']) => string | null
+}) {
+  const principal = useAuthStore((state) => state.principal)
+  const path = resolve(principal)
+  return path ? <Navigate replace to={path} /> : <Navigate replace to="/unauthorized" />
+}
+
+function ReportsModuleIndex() {
+  const principal = useAuthStore((state) => state.principal)
+  const path = resolveReportsLandingPath(principal)
+  return path ? <Navigate replace to={path} /> : <ReportsDashboardPage />
 }
 
 // ─── Auth pages (inline — small, always needed) ───────────────────────────────
@@ -380,22 +417,22 @@ export function HomePage() {
   const { selectedOutletId, selectedRegionId } = useScopeContext()
   const visibleNavigation = buildNavigation(principal)
   const visibleModulePaths = new Set(visibleNavigation.map((item) => item.to))
-  const canSeeIam = visibleModulePaths.has('/iam/assignments')
-  const canSeeAudit = visibleModulePaths.has('/audit/events')
+  const canSeeIam = visibleModulePaths.has('/iam')
+  const canSeeAudit = visibleModulePaths.has('/audit')
   const canSeeRegionalOps = visibleModulePaths.has('/regional-ops')
-  const canSeeHr = visibleModulePaths.has('/hr/employees')
-  const canSeeFinance = visibleModulePaths.has('/finance/payroll-approvals')
+  const canSeeHr = visibleModulePaths.has('/hr')
+  const canSeeFinance = visibleModulePaths.has('/finance')
   const modules = [
     { to: '/pos', title: 'POS', description: 'Bán hàng, thu tiền, quản lý session.', status: 'live' as const },
-    { to: '/catalog/products', title: 'Catalog', description: 'Sản phẩm, công thức, bảng giá.', status: 'live' as const },
-    { to: '/iam/assignments', title: 'IAM', description: 'Users, assignments, effective access.', status: 'live' as const },
-    { to: '/audit/events', title: 'Audit', description: 'Audit events, security events, request traces.', status: 'live' as const },
+    { to: '/catalog', title: 'Catalog', description: 'Sản phẩm, công thức, bảng giá.', status: 'live' as const },
+    { to: '/iam', title: 'IAM', description: 'Users, assignments, effective access.', status: 'live' as const },
+    { to: '/audit', title: 'Audit', description: 'Audit events, security events, request traces.', status: 'live' as const },
     { to: '/regional-ops', title: 'Regional Ops', description: 'Regional dashboard, outlet scan và drill-down oversight.', status: 'live' as const },
-    { to: '/hr/employees', title: 'HR', description: 'Nhân viên, hợp đồng, chấm công tổng hợp, payroll prep.', status: 'live' as const },
-    { to: '/finance/payroll-approvals', title: 'Finance', description: 'Nhà cung cấp, payment requests, payroll approvals, mark paid.', status: 'live' as const },
+    { to: '/hr', title: 'HR', description: 'Nhân viên, hợp đồng, chấm công tổng hợp, payroll prep.', status: 'live' as const },
+    { to: '/finance', title: 'Finance', description: 'Nhà cung cấp, payment requests, payroll approvals, mark paid.', status: 'live' as const },
     { to: '/procurement', title: 'Procurement', description: 'Đặt hàng nhà cung cấp, nhận hàng.', status: 'live' as const },
-    { to: '/inventory/stock-balances', title: 'Inventory', description: 'Tồn kho, giao dịch kho.', status: 'live' as const },
-    { to: '/workforce/my-attendance', title: 'Workforce', description: 'Chấm công, duyệt ca.', status: 'live' as const },
+    { to: '/inventory', title: 'Inventory', description: 'Tồn kho, giao dịch kho.', status: 'live' as const },
+    { to: '/workforce', title: 'Workforce', description: 'Chấm công, duyệt ca.', status: 'live' as const },
     { to: '/reports', title: 'Reports', description: 'Dashboard, revenue, inventory, payroll và export jobs.', status: 'live' as const },
   ].filter((module) => visibleModulePaths.has(module.to))
   const quickActions = [
@@ -410,12 +447,12 @@ export function HomePage() {
       description: 'Tạo PO mới theo outlet hiện tại.',
     },
     {
-      to: '/inventory/stock-balances',
+      to: '/inventory',
       title: 'Check stock balances',
       description: 'Kiểm tra tồn kho trước khi mua hàng hoặc điều phối.',
     },
     {
-      to: '/workforce/attendance-approvals',
+      to: '/workforce',
       title: 'Review attendance',
       description: 'Mở queue phê duyệt chấm công.',
     },
@@ -442,22 +479,22 @@ export function HomePage() {
       return visibleModulePaths.has('/procurement')
     }
     if (action.to.startsWith('/inventory')) {
-      return visibleModulePaths.has('/inventory/stock-balances')
+      return visibleModulePaths.has('/inventory')
     }
     if (action.to.startsWith('/workforce')) {
-      return visibleModulePaths.has('/workforce/my-attendance')
+      return visibleModulePaths.has('/workforce')
     }
     if (action.to.startsWith('/reports')) {
       return visibleModulePaths.has('/reports')
     }
     if (action.to.startsWith('/audit')) {
-      return visibleModulePaths.has('/audit/events')
+      return visibleModulePaths.has('/audit')
     }
     if (action.to.startsWith('/regional-ops')) {
       return visibleModulePaths.has('/regional-ops')
     }
     if (action.to.startsWith('/finance')) {
-      return visibleModulePaths.has('/finance/payroll-approvals')
+      return visibleModulePaths.has('/finance')
     }
 
     return true
@@ -471,7 +508,7 @@ export function HomePage() {
   }
   if (canSeeIam) {
     quickActions.push({
-      to: '/iam/assignments',
+      to: '/iam',
       title: 'Open IAM console',
       description: 'Kiểm tra user assignments và effective access.',
     })
@@ -493,7 +530,7 @@ export function HomePage() {
   if (canSeeFinance) {
     quickActions.push(
       {
-        to: '/finance/payroll-approvals',
+        to: '/finance',
         title: 'Review payroll approvals',
         description: 'Mở approval queue để kiểm tra payroll runs đang chờ Finance decision.',
       },
@@ -604,6 +641,10 @@ export const router = createBrowserRouter([
             element: <LazyRouteBoundary moduleName="Catalog" label="Loading catalog" />,
             children: [
           {
+            index: true,
+            element: <ModuleLandingRedirect resolve={resolveCatalogLandingPath} />,
+          },
+          {
             path: 'products',
             element: <ProductsPage />,
           },
@@ -654,7 +695,7 @@ export const router = createBrowserRouter([
             children: [
           {
             index: true,
-            element: <Navigate replace to="assignments" />,
+            element: <ModuleLandingRedirect resolve={resolveIamLandingPath} />,
           },
           {
             path: 'users',
@@ -686,6 +727,10 @@ export const router = createBrowserRouter([
             element: <LazyRouteBoundary moduleName="Audit" label="Loading audit console" />,
             children: [
           {
+            index: true,
+            element: <ModuleLandingRedirect resolve={resolveAuditLandingPath} />,
+          },
+          {
             path: 'events',
             element: <AuditEventsPage />,
           },
@@ -713,7 +758,14 @@ export const router = createBrowserRouter([
       // ── Regional Ops ────────────────────────────────────────
       {
         path: 'regional-ops',
-        element: <RequirePermission permissions={[permissionConstants.org.regionRead]} />,
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.org.regionRead,
+              permissionConstants.org.outletRead,
+            ]}
+          />
+        ),
         children: [
           {
             element: <LazyRouteBoundary moduleName="Regional Ops" label="Loading regional ops workspace" />,
@@ -738,14 +790,25 @@ export const router = createBrowserRouter([
       // ── HR ────────────────────────────────────────────────
       {
         path: 'hr',
-        element: <RequirePermission permissions={[permissionConstants.hr.employeeRead]} />,
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.hr.employeeRead,
+              permissionConstants.hr.contractRead,
+              permissionConstants.hr.shiftRead,
+              permissionConstants.hr.attendanceReview,
+              permissionConstants.finance.payrollRead,
+              permissionConstants.finance.payrollPrepare,
+            ]}
+          />
+        ),
         children: [
           {
             element: <LazyRouteBoundary moduleName="HR" label="Loading HR workspace" />,
             children: [
           {
             index: true,
-            element: <Navigate replace to="employees" />,
+            element: <ModuleLandingRedirect resolve={resolveHrLandingPath} />,
           },
           {
             path: 'employees',
@@ -774,6 +837,10 @@ export const router = createBrowserRouter([
           {
             path: 'payroll-draft-review/:runId',
             element: <PayrollDraftReviewPage />,
+          },
+          {
+            path: 'shift-scheduling',
+            element: <ShiftSchedulingPage />,
           },
             ],
           },
@@ -808,7 +875,7 @@ export const router = createBrowserRouter([
             children: [
           {
             index: true,
-            element: <Navigate replace to="payroll-approvals" />,
+            element: <ModuleLandingRedirect resolve={resolveFinanceLandingPath} />,
           },
           {
             path: 'suppliers',
@@ -853,6 +920,10 @@ export const router = createBrowserRouter([
           {
             path: 'supplier-payments/new',
             element: <SupplierPaymentCreatePage />,
+          },
+          {
+            path: 'exchange-rates',
+            element: <ExchangeRateManagementPage />,
           },
             ],
           },
@@ -946,6 +1017,10 @@ export const router = createBrowserRouter([
             element: <GoodsReceiptDetailPage />,
           },
           {
+            path: 'supplier-invoices',
+            element: <SupplierInvoiceListPage />,
+          },
+          {
             path: 'supplier-invoices/new',
             element: <SupplierInvoiceCreatePage />,
           },
@@ -954,8 +1029,16 @@ export const router = createBrowserRouter([
             element: <SupplierInvoiceDetailPage />,
           },
           {
+            path: 'supplier-payments',
+            element: <SupplierPaymentListPage />,
+          },
+          {
             path: 'supplier-payments/new',
             element: <SupplierPaymentCreatePage />,
+          },
+          {
+            path: 'three-way-matching',
+            element: <ThreeWayMatchingPage />,
           },
             ],
           },
@@ -965,14 +1048,21 @@ export const router = createBrowserRouter([
       // ── Inventory ─────────────────────────────────────────
       {
         path: 'inventory',
-        element: <RequirePermission permissions={[permissionConstants.inventory.balanceRead]} />,
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.inventory.balanceRead,
+              permissionConstants.inventory.ledgerRead,
+            ]}
+          />
+        ),
         children: [
           {
             element: <LazyRouteBoundary moduleName="Inventory" label="Loading inventory" />,
             children: [
               {
                 index: true,
-                element: <Navigate replace to="stock-balances" />,
+                element: <ModuleLandingRedirect resolve={resolveInventoryLandingPath} />,
               },
               {
                 path: 'stock-balances',
@@ -1007,7 +1097,7 @@ export const router = createBrowserRouter([
             children: [
               {
                 index: true,
-                element: <Navigate replace to="my-attendance" />,
+                element: <ModuleLandingRedirect resolve={resolveWorkforceLandingPath} />,
               },
               {
                 path: 'my-attendance',
@@ -1029,14 +1119,23 @@ export const router = createBrowserRouter([
       // ── Reports ───────────────────────────────────────────
       {
         path: 'reports',
-        element: <RequirePermission permissions={[permissionConstants.report.read]} />,
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.report.read,
+              permissionConstants.report.export,
+              permissionConstants.report.payrollRead,
+              permissionConstants.report.payrollExport,
+            ]}
+          />
+        ),
         children: [
           {
             element: <LazyRouteBoundary moduleName="Reports" label="Loading reports" />,
             children: [
           {
             index: true,
-            element: <ReportsDashboardPage />,
+            element: <ReportsModuleIndex />,
           },
           {
             path: 'revenue',

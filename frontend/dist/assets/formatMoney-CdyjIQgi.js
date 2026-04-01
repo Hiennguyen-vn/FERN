@@ -1,0 +1,1 @@
+function m(n,t="VND"){const r=Number(n??0);try{return new Intl.NumberFormat("vi-VN",{style:"currency",currency:t,maximumFractionDigits:t==="VND"?0:2}).format(r)}catch{return`${r.toFixed(2)} ${t}`}}export{m as f};

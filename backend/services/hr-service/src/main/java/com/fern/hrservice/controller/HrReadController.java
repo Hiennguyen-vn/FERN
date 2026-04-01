@@ -35,11 +35,43 @@ public class HrReadController {
         return hrService.getEmployee(principal, id);
     }
 
+    @GetMapping("/employees")
+    public PageResponse<EmployeeResponse> listEmployees(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "50") Integer size
+    ) {
+        return hrService.listEmployees(principal, search, status, page, size);
+    }
+
     @GetMapping("/employees/{employeeId}/contracts")
     public List<ContractResponse> listContracts(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long employeeId) {
         return hrService.listContracts(principal, employeeId).stream()
                 .map(response -> contractResponseMasker.maskForPrincipal(principal, response))
                 .toList();
+    }
+
+    @GetMapping("/employee-contracts")
+    public PageResponse<ContractResponse> browseContracts(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(required = false) Long employeeId,
+            @RequestParam(required = false) Long regionId,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "50") Integer size
+    ) {
+        PageResponse<ContractResponse> response = hrService.listContracts(principal, employeeId, regionId, search, status, page, size);
+        return new PageResponse<>(
+                response.items().stream()
+                        .map(item -> contractResponseMasker.maskForPrincipal(principal, item))
+                        .toList(),
+                response.page(),
+                response.size(),
+                response.hasMore()
+        );
     }
 
     @GetMapping("/employees/{employeeId}/assignments")
@@ -52,9 +84,31 @@ public class HrReadController {
         return hrService.getShiftSchedule(principal, id);
     }
 
+    @GetMapping("/shift-schedules")
+    public List<ShiftScheduleResponse> listShiftSchedules(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(required = false) Long outletId,
+            @RequestParam(required = false) java.time.LocalDate fromDate,
+            @RequestParam(required = false) java.time.LocalDate toDate,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return hrService.listShiftSchedules(principal, outletId, fromDate, toDate,
+                com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
+    }
+
     @GetMapping("/shift-assignments/{id}")
     public ShiftAssignmentResponse getShiftAssignment(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         return hrService.getShiftAssignment(principal, id);
+    }
+
+    @GetMapping("/shift-assignments")
+    public List<ShiftAssignmentResponse> listShiftAssignments(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam Long shiftScheduleId,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return hrService.listShiftAssignments(principal, shiftScheduleId,
+                com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @GetMapping("/attendance-approvals/{shiftAssignmentId}")

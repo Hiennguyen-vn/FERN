@@ -13,15 +13,19 @@ import {
 } from '../routes/orgRoutes.bundle'
 
 const mocks = vi.hoisted(() => ({
+  useRegionList: vi.fn(),
   useRegion: vi.fn(),
   useRegions: vi.fn(),
+  useOutletList: vi.fn(),
   useOutlet: vi.fn(),
   useOutlets: vi.fn(),
 }))
 
 vi.mock('../hooks/useOrg', () => ({
+  useRegionList: mocks.useRegionList,
   useRegion: mocks.useRegion,
   useRegions: mocks.useRegions,
+  useOutletList: mocks.useOutletList,
   useOutlet: mocks.useOutlet,
   useOutlets: mocks.useOutlets,
 }))
@@ -57,24 +61,30 @@ describe('Org route group', () => {
       },
     })
 
-    mocks.useRegions.mockReturnValue({
-      rows: [
-        {
-          id: 1,
-          code: 'VN-SOUTH',
-          parentRegionId: null,
-          currencyCode: 'VND',
-          name: 'Southern Region',
-          taxCode: 'TAX-SOUTH',
-          timezoneName: 'Asia/Ho_Chi_Minh',
-          createdAt: '2026-03-01T08:00:00Z',
-          updatedAt: '2026-03-10T08:00:00Z',
-        },
-      ],
+    mocks.useRegionList.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 1,
+            code: 'VN-SOUTH',
+            parentRegionId: null,
+            currencyCode: 'VND',
+            name: 'Southern Region',
+            taxCode: 'TAX-SOUTH',
+            timezoneName: 'Asia/Ho_Chi_Minh',
+            createdAt: '2026-03-01T08:00:00Z',
+            updatedAt: '2026-03-10T08:00:00Z',
+          },
+        ],
+        page: 0,
+        size: 50,
+        hasMore: false,
+      },
       isLoading: false,
       error: null,
-      refresh: vi.fn(),
+      refetch: vi.fn(),
     })
+    mocks.useRegions.mockReturnValue({ rows: [], isLoading: false, error: null, refresh: vi.fn() })
     mocks.useRegion.mockImplementation((regionId: number) => ({
       data:
         regionId === 1
@@ -94,27 +104,33 @@ describe('Org route group', () => {
       error: null,
       refetch: vi.fn(),
     }))
-    mocks.useOutlets.mockReturnValue({
-      rows: [
-        {
-          id: 101,
-          regionId: 1,
-          code: 'OUT-101',
-          name: 'District 1 Flagship',
-          status: 'ACTIVE',
-          address: '1 Nguyen Hue',
-          phone: '0901000101',
-          email: 'd1@fern.local',
-          openedAt: '2025-01-10',
-          closedAt: null,
-          createdAt: '2025-01-01T08:00:00Z',
-          updatedAt: '2026-03-10T08:00:00Z',
-        },
-      ],
+    mocks.useOutletList.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 101,
+            regionId: 1,
+            code: 'OUT-101',
+            name: 'District 1 Flagship',
+            status: 'ACTIVE',
+            address: '1 Nguyen Hue',
+            phone: '0901000101',
+            email: 'd1@fern.local',
+            openedAt: '2025-01-10',
+            closedAt: null,
+            createdAt: '2025-01-01T08:00:00Z',
+            updatedAt: '2026-03-10T08:00:00Z',
+          },
+        ],
+        page: 0,
+        size: 50,
+        hasMore: false,
+      },
       isLoading: false,
       error: null,
-      refresh: vi.fn(),
+      refetch: vi.fn(),
     })
+    mocks.useOutlets.mockReturnValue({ rows: [], isLoading: false, error: null, refresh: vi.fn() })
     mocks.useOutlet.mockImplementation((outletId: number) => ({
       data:
         outletId === 101

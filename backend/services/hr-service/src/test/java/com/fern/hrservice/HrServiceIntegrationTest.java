@@ -1045,6 +1045,69 @@ class HrServiceIntegrationTest {
     }
 
     @Test
+    void shouldBrowseEmployeesAndContractsOverHttp() throws Exception {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_CONTRACT_READ,
+                PermissionCodes.HR_CONTRACT_WRITE
+        );
+        long employeeId = hrService.createEmployee(principal, new CreateEmployeeRequest(
+                "EMP-BROWSE-001",
+                "Browse Target",
+                null,
+                null,
+                "browse@fern.local",
+                "0909000000",
+                "ACTIVE",
+                LocalDate.of(2026, 1, 10),
+                null
+        )).id();
+        hrService.createContract(principal, new CreateContractRequest(
+                employeeId,
+                "FULL_TIME",
+                "MONTHLY",
+                new BigDecimal("15000000"),
+                1L,
+                "TAX-BROWSE-001",
+                "ACTIVE",
+                LocalDate.of(2026, 1, 10),
+                null
+        ));
+
+        String authorization = bearer(
+                Set.of(PermissionCodes.HR_EMPLOYEE_READ, PermissionCodes.HR_CONTRACT_READ),
+                List.of(),
+                List.of(),
+                true
+        );
+
+        mockMvc.perform(get("/employees")
+                        .header("Authorization", authorization)
+                        .param("search", "Browse")
+                        .param("status", "ACTIVE")
+                        .param("page", "0")
+                        .param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].employeeCode").value("EMP-BROWSE-001"))
+                .andExpect(jsonPath("$.items[0].fullName").value("Browse Target"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(5));
+
+        mockMvc.perform(get("/employee-contracts")
+                        .header("Authorization", authorization)
+                        .param("employeeId", Long.toString(employeeId))
+                        .param("status", "ACTIVE")
+                        .param("page", "0")
+                        .param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].employeeId").value(employeeId))
+                .andExpect(jsonPath("$.items[0].contractStatus").value("ACTIVE"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(5));
+    }
+
+    @Test
     @Tag("security-gap")
     void shouldRejectReadingShiftAssignmentAndApprovalOutsideOutletScopeById() throws Exception {
         FernPrincipal principal = systemPrincipal(

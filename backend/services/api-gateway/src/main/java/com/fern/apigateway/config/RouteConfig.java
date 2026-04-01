@@ -14,7 +14,7 @@ public class RouteConfig {
         return builder.routes()
                 .route("iam-auth", r -> r.path("/auth/**").uri(properties.getIam()))
                 .route("iam-admin", r -> r.path("/users/**", "/roles/**", "/permissions/**").uri(properties.getIam()))
-                .route("org-core", r -> r.path("/regions/**", "/outlets/**").uri(properties.getOrg()))
+                .route("org-core", r -> r.path("/regions/**", "/outlets/**", "/exchange-rates/**").uri(properties.getOrg()))
                 .route("catalog-core", r -> r.path(
                         "/ingredients/**",
                         "/ingredient-categories/**",

@@ -284,6 +284,40 @@ class IamServiceIntegrationTest {
     }
 
     @Test
+    void shouldBrowseUsersBySearchAndStatus() throws Exception {
+        String adminToken = issueBootstrapAdminToken();
+        createUser(adminToken, "ops-reader", "OpsReader123!");
+
+        adminToken = issueBootstrapAdminToken();
+        mockMvc.perform(post("/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username":"ops-locked",
+                                  "password":"OpsLocked123!",
+                                  "fullName":"Ops Locked",
+                                  "status":"LOCKED"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(get("/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("search", "ops")
+                        .param("status", "ACTIVE")
+                        .param("page", "0")
+                        .param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].username").value("ops-reader"))
+                .andExpect(jsonPath("$.items[?(@.username=='ops-locked')]").doesNotExist())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(5));
+    }
+
+    @Test
     void shouldRejectManualLockedSuspendedAndInactiveStatuses() throws Exception {
         String adminToken = issueBootstrapAdminToken();
         Long userId = createUser(adminToken, "status-user", "Status123!").get("id").asLong();

@@ -178,6 +178,7 @@ describe('POS session workflows', () => {
         regionId: 14,
         outletId: 101,
         status: 'OPEN',
+        businessDate: '2026-04-01',
       }),
     ]
 

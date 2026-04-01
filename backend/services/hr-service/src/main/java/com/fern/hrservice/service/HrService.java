@@ -21,6 +21,7 @@ import com.fern.hrservice.dto.HrResponses.ShiftScheduleResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ListQueryDefaults;
 import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
@@ -43,6 +44,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -261,6 +263,51 @@ public class HrService {
         return requireEmployee(id);
     }
 
+    public PageResponse<EmployeeResponse> listEmployees(FernPrincipal principal, String search, String status, Integer page, Integer size) {
+        hrAuthorizer.requireSystemPermission(principal, PermissionCodes.HR_EMPLOYEE_READ);
+        String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        String normalizedStatus = status == null ? null : status.trim();
+        int clampedSize = ListQueryDefaults.clampLimit(size);
+
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, employee_code, full_name, dob, gender, email, phone, status, hired_at, user_account_id
+                FROM hr_master.employee_profile
+                WHERE deleted_at IS NULL
+                """);
+        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        if (!normalizedSearch.isBlank()) {
+            sql.append("""
+                     AND (
+                        CAST(id AS text) ILIKE :search
+                        OR employee_code ILIKE :search
+                        OR full_name ILIKE :search
+                        OR COALESCE(email, '') ILIKE :search
+                        OR COALESCE(phone, '') ILIKE :search
+                     )
+                    """);
+            parameters.addValue("search", "%" + normalizedSearch + "%");
+        }
+        if (normalizedStatus != null && !normalizedStatus.isBlank()) {
+            sql.append(" AND status = :status");
+            parameters.addValue("status", normalizedStatus);
+        }
+        sql.append(" ORDER BY full_name ASC, id ASC");
+
+        List<EmployeeResponse> items = masterJdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> new EmployeeResponse(
+                rs.getLong("id"),
+                rs.getString("employee_code"),
+                rs.getString("full_name"),
+                rs.getObject("dob", LocalDate.class),
+                rs.getString("gender"),
+                rs.getString("email"),
+                rs.getString("phone"),
+                rs.getString("status"),
+                rs.getObject("hired_at", LocalDate.class),
+                nullableLong(rs, "user_account_id")
+        ));
+        return toPageResponse(items, page, clampedSize);
+    }
+
     public List<ContractResponse> listContracts(FernPrincipal principal, Long employeeId) {
         hrAuthorizer.requirePermission(principal, PermissionCodes.HR_CONTRACT_READ);
         requireEmployee(employeeId);
@@ -276,6 +323,72 @@ public class HrService {
         return contracts.stream()
                 .filter(contract -> ScopeAccess.allowsRegion(principal, contract.regionId()))
                 .toList();
+    }
+
+    public PageResponse<ContractResponse> listContracts(
+            FernPrincipal principal,
+            Long employeeId,
+            Long regionId,
+            String search,
+            String status,
+            Integer page,
+            Integer size
+    ) {
+        hrAuthorizer.requirePermission(principal, PermissionCodes.HR_CONTRACT_READ);
+        String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        String normalizedStatus = status == null ? null : status.trim();
+        int clampedSize = ListQueryDefaults.clampLimit(size);
+
+        StringBuilder sql = new StringBuilder("""
+                SELECT c.id,
+                       c.employee_id,
+                       c.employment_type,
+                       c.salary_type,
+                       c.base_salary,
+                       c.region_id,
+                       c.tax_code,
+                       c.contract_status,
+                       c.start_date,
+                       c.end_date,
+                       e.employee_code,
+                       e.full_name
+                FROM hr_master.employee_contract c
+                JOIN hr_master.employee_profile e ON e.id = c.employee_id
+                WHERE e.deleted_at IS NULL
+                """);
+        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        if (employeeId != null) {
+            sql.append(" AND c.employee_id = :employeeId");
+            parameters.addValue("employeeId", employeeId);
+        }
+        if (regionId != null) {
+            sql.append(" AND c.region_id = :regionId");
+            parameters.addValue("regionId", regionId);
+        }
+        if (normalizedStatus != null && !normalizedStatus.isBlank()) {
+            sql.append(" AND c.contract_status = :status");
+            parameters.addValue("status", normalizedStatus);
+        }
+        if (!normalizedSearch.isBlank()) {
+            sql.append("""
+                     AND (
+                        CAST(c.id AS text) ILIKE :search
+                        OR CAST(c.employee_id AS text) ILIKE :search
+                        OR c.employment_type ILIKE :search
+                        OR c.salary_type ILIKE :search
+                        OR COALESCE(c.tax_code, '') ILIKE :search
+                        OR e.employee_code ILIKE :search
+                        OR e.full_name ILIKE :search
+                     )
+                    """);
+            parameters.addValue("search", "%" + normalizedSearch + "%");
+        }
+        sql.append(" ORDER BY c.start_date DESC, c.id DESC");
+
+        List<ContractResponse> items = masterJdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> mapContract(rs)).stream()
+                .filter(contract -> ScopeAccess.isSystemScoped(principal) || ScopeAccess.allowsRegion(principal, contract.regionId()))
+                .toList();
+        return toPageResponse(items, page, clampedSize);
     }
 
     public List<AssignmentResponse> listAssignments(FernPrincipal principal, Long employeeId) {
@@ -315,6 +428,85 @@ public class HrService {
         ShiftAssignmentRecord record = requireShiftAssignment(id);
         hrAuthorizer.requireOutletPermission(principal, record.outletId(), PermissionCodes.HR_SHIFT_READ);
         return toShiftAssignmentResponse(record);
+    }
+
+    public List<ShiftScheduleResponse> listShiftSchedules(
+            FernPrincipal principal, Long outletId, LocalDate fromDate, LocalDate toDate, int limit
+    ) {
+        hrAuthorizer.requirePermission(principal, PermissionCodes.HR_SHIFT_READ);
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, region_id, outlet_id, shift_date, shift_name, start_time, end_time, status
+                FROM hr.shift_schedule
+                WHERE 1=1
+                """);
+        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        if (outletId != null) {
+            sql.append(" AND outlet_id = :outletId");
+            parameters.addValue("outletId", outletId);
+        }
+        if (fromDate != null) {
+            sql.append(" AND shift_date >= :fromDate");
+            parameters.addValue("fromDate", fromDate);
+        }
+        if (toDate != null) {
+            sql.append(" AND shift_date <= :toDate");
+            parameters.addValue("toDate", toDate);
+        }
+        sql.append(" ORDER BY shift_date DESC, start_time ASC LIMIT :limit");
+        parameters.addValue("limit", limit);
+        List<ShiftScheduleResponse> schedules = jdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> new ShiftScheduleResponse(
+                rs.getLong("id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getObject("shift_date", LocalDate.class),
+                rs.getString("shift_name"),
+                rs.getObject("start_time", LocalTime.class),
+                rs.getObject("end_time", LocalTime.class),
+                rs.getString("status")
+        ));
+        if (ScopeAccess.isSystemScoped(principal)) {
+            return schedules;
+        }
+        return schedules.stream()
+                .filter(s -> isOutletVisible(principal, s.outletId()) || isRegionVisible(principal, s.regionId()))
+                .toList();
+    }
+
+    public List<ShiftAssignmentResponse> listShiftAssignments(
+            FernPrincipal principal, Long shiftScheduleId, int limit
+    ) {
+        hrAuthorizer.requirePermission(principal, PermissionCodes.HR_SHIFT_READ);
+        List<ShiftAssignmentRecord> records = jdbcTemplate.query("""
+                SELECT sa.id,
+                       sa.shift_schedule_id,
+                       sa.employee_id,
+                       s.region_id,
+                       s.outlet_id,
+                       s.shift_date,
+                       s.start_time,
+                       s.end_time,
+                       sa.attendance_status,
+                       sa.approval_status,
+                       sa.note
+                FROM hr.shift_assignment sa
+                JOIN hr.shift_schedule s ON s.id = sa.shift_schedule_id
+                WHERE sa.shift_schedule_id = :shiftScheduleId
+                ORDER BY sa.id ASC
+                LIMIT :limit
+                """, params("shiftScheduleId", shiftScheduleId, "limit", limit), (rs, rowNum) -> new ShiftAssignmentRecord(
+                rs.getLong("id"),
+                rs.getLong("shift_schedule_id"),
+                rs.getLong("employee_id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getObject("shift_date", LocalDate.class),
+                rs.getObject("start_time", LocalTime.class),
+                rs.getObject("end_time", LocalTime.class),
+                rs.getString("attendance_status"),
+                rs.getString("approval_status"),
+                rs.getString("note")
+        ));
+        return records.stream().map(this::toShiftAssignmentResponse).toList();
     }
 
     public AttendanceApprovalResponse getAttendanceApproval(FernPrincipal principal, Long shiftAssignmentId) {
@@ -643,6 +835,19 @@ public class HrService {
     private Long nullableLong(ResultSet rs, String column) throws java.sql.SQLException {
         Object value = rs.getObject(column);
         return value == null ? null : ((Number) value).longValue();
+    }
+
+    private <T> PageResponse<T> toPageResponse(List<T> items, Integer page, int size) {
+        int safePage = page == null || page < 0 ? 0 : page;
+        int offset = Math.toIntExact(ListQueryDefaults.offsetFrom(page, size));
+        if (offset >= items.size()) {
+            return new PageResponse<>(List.of(), safePage, size, false);
+        }
+        int endExclusive = Math.min(items.size(), offset + size + 1);
+        List<T> window = items.subList(offset, endExclusive);
+        boolean hasMore = window.size() > size;
+        List<T> pagedItems = hasMore ? List.copyOf(window.subList(0, size)) : List.copyOf(window);
+        return new PageResponse<>(pagedItems, safePage, size, hasMore);
     }
 
     private record ShiftAssignmentRecord(

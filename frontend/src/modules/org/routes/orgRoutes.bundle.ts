@@ -1,3 +1,4 @@
+export { ExchangeRateManagementPage } from './ExchangeRateManagementPage'
 export { RegionsPage } from './RegionsPage'
 export { RegionDetailPage } from './RegionDetailPage'
 export { OutletsPage } from './OutletsPage'

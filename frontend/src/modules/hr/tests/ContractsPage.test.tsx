@@ -8,11 +8,13 @@ import { ContractDetailPage } from '../routes/ContractDetailPage'
 import { ContractsPage } from '../routes/ContractsPage'
 
 const mocks = vi.hoisted(() => ({
+  useHrContractBrowse: vi.fn(),
   useHrContracts: vi.fn(),
   useHrEmployee: vi.fn(),
 }))
 
 vi.mock('../hooks/useHr', () => ({
+  useHrContractBrowse: mocks.useHrContractBrowse,
   useHrContracts: mocks.useHrContracts,
   useHrEmployee: mocks.useHrEmployee,
 }))
@@ -28,6 +30,30 @@ describe('Contracts HR screens', () => {
           permissionConstants.hr.employeeRead,
         ],
       },
+    })
+    mocks.useHrContractBrowse.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 200,
+            employeeId: 42,
+            employmentType: 'FULL_TIME',
+            salaryType: 'MONTHLY',
+            baseSalary: null,
+            regionId: 1,
+            taxCode: null,
+            contractStatus: 'ACTIVE',
+            startDate: '2024-01-01',
+            endDate: null,
+          },
+        ],
+        page: 0,
+        size: 50,
+        hasMore: false,
+      },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
     })
     mocks.useHrEmployee.mockReturnValue({
       data: {
@@ -70,8 +96,7 @@ describe('Contracts HR screens', () => {
   it('renders employee-scoped contracts list', async () => {
     renderWithProviders(<ContractsPage />, { route: '/hr/contracts?employeeId=42' })
 
-    expect(await screen.findByText('Current employee contract set')).toBeInTheDocument()
-    expect(screen.getByText('EMP-042 · Pham Thi C')).toBeInTheDocument()
+    expect(await screen.findByText('Hợp đồng')).toBeInTheDocument()
     expect(screen.getByText('#200')).toBeInTheDocument()
   })
 

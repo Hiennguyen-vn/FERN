@@ -8,6 +8,9 @@ import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ForbiddenException;
+import com.fern.platform.common.ListQueryDefaults;
+import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.reportservice.config.ReportExportProperties;
@@ -226,6 +229,51 @@ class ReportExportService {
         ExportJobRecord record = requireExportJob(jobId);
         authorizeExportRecord(principal, record);
         return toExportJobResponse(record);
+    }
+
+    public PageResponse<ExportJobResponse> listExports(
+            FernPrincipal principal,
+            Integer page,
+            Integer size,
+            String dataset,
+            String status,
+            Long regionId,
+            Long outletId
+    ) {
+        int clampedSize = ListQueryDefaults.clampLimit(size);
+        String normalizedDataset = dataset == null || dataset.isBlank() ? null : dataset.trim().toUpperCase(Locale.ROOT);
+        String normalizedStatus = status == null || status.isBlank() ? null : status.trim().toUpperCase(Locale.ROOT);
+
+        List<ExportJobResponse> items = jdbcTemplate.query("""
+                SELECT export_job_id, report_type, format, status, requested_by, requested_at, started_at, completed_at, failed_at,
+                       row_count, file_path, expires_at, error_message, correlation_id, payload::text AS payload, preview_payload::text AS preview_payload
+                FROM report.export_job
+                ORDER BY requested_at DESC, export_job_id DESC
+                """, rs -> {
+            List<ExportJobResponse> rows = new ArrayList<>();
+            while (rs.next()) {
+                ExportJobRecord record = mapExportJob(rs);
+                if (normalizedDataset != null && !normalizedDataset.equalsIgnoreCase(record.dataset())) {
+                    continue;
+                }
+                if (normalizedStatus != null && !normalizedStatus.equalsIgnoreCase(record.status())) {
+                    continue;
+                }
+                if (regionId != null && !regionId.equals(extractRegionId(record))) {
+                    continue;
+                }
+                if (outletId != null && !outletId.equals(extractOutletId(record))) {
+                    continue;
+                }
+                if (!canInspectExportRecord(principal, record)) {
+                    continue;
+                }
+                rows.add(toExportJobResponse(record));
+            }
+            return rows;
+        });
+
+        return toPageResponse(items, page, clampedSize);
     }
 
     public ExportPreviewResponse previewExport(FernPrincipal principal, Long jobId) {
@@ -653,6 +701,15 @@ class ReportExportService {
         }
     }
 
+    private boolean canInspectExportRecord(FernPrincipal principal, ExportJobRecord record) {
+        try {
+            authorizeExportRecord(principal, record);
+            return true;
+        } catch (ForbiddenException exception) {
+            return false;
+        }
+    }
+
     private List<Long> claimQueuedExportJobs() {
         return transactionTemplate.execute(status -> jdbcTemplate.query("""
                 UPDATE report.export_job job
@@ -886,6 +943,19 @@ class ReportExportService {
         } catch (JsonProcessingException exception) {
             throw new BadRequestException("Unable to deserialize export request");
         }
+    }
+
+    private <T> PageResponse<T> toPageResponse(List<T> items, Integer page, int size) {
+        int safePage = page == null || page < 0 ? 0 : page;
+        int offset = Math.toIntExact(ListQueryDefaults.offsetFrom(page, size));
+        if (offset >= items.size()) {
+            return new PageResponse<>(List.of(), safePage, size, false);
+        }
+        int endExclusive = Math.min(items.size(), offset + size + 1);
+        List<T> window = items.subList(offset, endExclusive);
+        boolean hasMore = window.size() > size;
+        List<T> pagedItems = hasMore ? List.copyOf(window.subList(0, size)) : List.copyOf(window);
+        return new PageResponse<>(pagedItems, safePage, size, hasMore);
     }
 
     public record ExportDownload(Resource resource, String fileName, String contentType) {

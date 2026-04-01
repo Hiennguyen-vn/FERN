@@ -10,7 +10,6 @@ import {
   resetTestStores,
   setAuthenticatedSession,
 } from '@shared/test-utils/scopeTestHelpers'
-import { addRecentExportJobId } from '../services/exportHistory.service'
 import { ExportDownloadPage } from '../routes/ExportDownloadPage'
 import { ExportJobDetailPage } from '../routes/ExportJobDetailPage'
 import { ExportJobsPage } from '../routes/ExportJobsPage'
@@ -21,6 +20,7 @@ const reportsApi = vi.hoisted(() => ({
   createExportJob: vi.fn(),
   getExportJob: vi.fn(),
   getExportPreview: vi.fn(),
+  listExportJobs: vi.fn(),
 }))
 
 const downloadService = vi.hoisted(() => ({
@@ -66,6 +66,7 @@ describe('export workflows', () => {
     reportsApi.createExportJob.mockReset()
     reportsApi.getExportJob.mockReset()
     reportsApi.getExportPreview.mockReset()
+    reportsApi.listExportJobs.mockReset()
     downloadService.startBrowserDownload.mockReset()
   })
 
@@ -86,6 +87,7 @@ describe('export workflows', () => {
       },
     })
     reportsApi.createExportJob.mockResolvedValue(clone(exportJobState))
+    reportsApi.listExportJobs.mockResolvedValue({ items: [], page: 0, size: 20, hasMore: false })
 
     renderWithProviders(<ExportJobsPage />)
 
@@ -118,22 +120,18 @@ describe('export workflows', () => {
         permissions: [permissionConstants.report.read],
       },
     })
-    addRecentExportJobId(901)
-    addRecentExportJobId(902)
-
-    reportsApi.getExportJob.mockImplementation(async (jobId: number) => {
-      if (jobId === 901) {
-        return clone(createExportJob({ exportJobId: 901, dataset: 'SALES_FACT', status: 'COMPLETED' }))
-      }
-
-      throw new ApiError(403, { message: 'Forbidden' })
+    reportsApi.listExportJobs.mockResolvedValue({
+      items: [clone(createExportJob({ exportJobId: 901, dataset: 'SALES_FACT', status: 'COMPLETED' }))],
+      page: 0,
+      size: 20,
+      hasMore: false,
     })
 
     renderWithProviders(<ExportJobsPage />)
 
     expect(await screen.findByText('Export #901')).toBeInTheDocument()
-    expect(screen.getByText(/1 recent export job is hidden/i)).toBeInTheDocument()
-    expect(screen.queryByText('Không thể tải recent export jobs')).not.toBeInTheDocument()
+    expect(screen.queryByText(/hidden because the current principal lacks read access/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('Không thể tải export jobs')).not.toBeInTheDocument()
   })
 
   it('renders a permission-denied state when export job detail is forbidden', async () => {

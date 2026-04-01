@@ -16,21 +16,13 @@ export type ExportJobStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED'
 
 export interface CreateExportPayload {
   dataset: ExportDataset
-  format: ExportFormat
+  format?: ExportFormat
   fromDate?: string
   limit?: number
   outletId?: number
   payrollRunId?: number
   regionId?: number
   toDate?: string
-  filters?: {
-    fromDate?: string
-    limit?: number
-    outletId?: number
-    payrollRunId?: number
-    regionId?: number
-    toDate?: string
-  }
 }
 
 export interface ExportJob {
@@ -56,4 +48,13 @@ export interface ExportPreview {
   dataset: string
   rowCount: number | null
   rows: Array<Record<string, unknown>>
+}
+
+export interface ExportJobListFilters {
+  dataset?: ExportDataset
+  outletId?: number
+  page?: number
+  regionId?: number
+  size?: number
+  status?: ExportJobStatus
 }

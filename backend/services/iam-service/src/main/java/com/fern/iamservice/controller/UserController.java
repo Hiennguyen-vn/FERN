@@ -8,12 +8,14 @@ import com.fern.iamservice.dto.PutUserPermissionOverridesRequest;
 import com.fern.iamservice.dto.UpdateUserRequest;
 import com.fern.iamservice.dto.UserResponse;
 import com.fern.iamservice.dto.UserPermissionOverridesResponse;
+import com.fern.iamservice.domain.UserStatus;
 import com.fern.iamservice.service.IamAuthorizer;
 import com.fern.iamservice.service.IamRequestMetadata;
 import com.fern.iamservice.service.UserService;
 import com.fern.iamservice.service.UserPermissionOverrideService;
 import com.fern.iamservice.service.UserViewService;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.observability.CorrelationId;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/users")
@@ -58,6 +61,18 @@ public class UserController {
     ) {
         iamAuthorizer.requirePermission(principal, PermissionCodes.IAM_USER_WRITE);
         return userService.create(principal, request, IamRequestMetadata.from(httpRequest, correlationId));
+    }
+
+    @GetMapping
+    public PageResponse<UserResponse> list(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) UserStatus status,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "50") Integer size
+    ) {
+        iamAuthorizer.requirePermission(principal, PermissionCodes.IAM_USER_READ);
+        return userService.list(search, status, page, size);
     }
 
     @GetMapping("/{id}")
