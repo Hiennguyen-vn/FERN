@@ -1,12 +1,15 @@
 import type { ProductStatus } from '../model/catalog.types'
 
+// Backend ProductStatus: DRAFT, ACTIVE, INACTIVE, DISCONTINUED
 const STATUS_COLORS: Record<ProductStatus, string> = {
+  DRAFT: 'var(--color-primary-500)',
   ACTIVE: 'var(--color-success-500)',
   INACTIVE: 'var(--color-neutral-400)',
   DISCONTINUED: 'var(--color-danger-500)',
 }
 
 export const STATUS_LABELS: Record<ProductStatus, string> = {
+  DRAFT: 'Nháp',
   ACTIVE: 'Đang bán',
   INACTIVE: 'Ngừng bán',
   DISCONTINUED: 'Ngừng kinh doanh',

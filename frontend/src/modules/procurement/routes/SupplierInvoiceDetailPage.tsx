@@ -14,7 +14,7 @@ import {
 import type { DataTableColumn } from '@design-system/index'
 import { useConfirmAction } from '@shared/hooks/useConfirmAction'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useSupplierInvoice, useSupplierInvoiceAction } from '../hooks/useSupplierInvoice'
 import type { SupplierInvoiceLine } from '../model/procurement.types'
 import {
@@ -39,7 +39,7 @@ const lineColumns: Array<DataTableColumn<SupplierInvoiceLine>> = [
 ]
 
 export function SupplierInvoiceDetailPage() {
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const params = useParams<{ invoiceId: string }>()
   const invoiceId = params.invoiceId ? Number(params.invoiceId) : null
   const confirmAction = useConfirmAction()

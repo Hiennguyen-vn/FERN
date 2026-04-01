@@ -13,9 +13,10 @@ import com.fern.orgservice.repository.RegionRepository;
 import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Sort;
 
 @Service
 public class RegionService {
@@ -25,6 +26,7 @@ public class RegionService {
     private final ScopeExpansionService scopeExpansionService;
     private final ScopeVersionService scopeVersionService;
     private final OrgOutboxService outboxService;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final Clock clock;
 
     public RegionService(
@@ -34,6 +36,7 @@ public class RegionService {
             ScopeExpansionService scopeExpansionService,
             ScopeVersionService scopeVersionService,
             OrgOutboxService outboxService,
+            NamedParameterJdbcTemplate jdbcTemplate,
             Clock clock
     ) {
         this.regionRepository = regionRepository;
@@ -42,6 +45,7 @@ public class RegionService {
         this.scopeExpansionService = scopeExpansionService;
         this.scopeVersionService = scopeVersionService;
         this.outboxService = outboxService;
+        this.jdbcTemplate = jdbcTemplate;
         this.clock = clock;
     }
 
@@ -80,18 +84,59 @@ public class RegionService {
     public PageResponse<RegionResponse> list(FernPrincipal principal, String search, Integer page, Integer size) {
         orgAuthorizer.requirePermission(principal, "org.region.read");
         String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        int safePage = page == null || page < 0 ? 0 : page;
         int clampedSize = ListQueryDefaults.clampLimit(size);
+        long offset = ListQueryDefaults.offsetFrom(safePage, clampedSize);
         var expanded = principal.scopeRoots().system()
                 ? null
                 : scopeExpansionService.expand(principal.scopeRoots().regions(), principal.scopeRoots().outlets());
+        if (expanded != null && expanded.regionIds().isEmpty()) {
+            return new PageResponse<>(List.of(), safePage, clampedSize, false);
+        }
 
-        List<RegionResponse> items = regionRepository.findAll(Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"))).stream()
-                .filter(region -> expanded == null || expanded.regionIds().contains(region.getId()))
-                .filter(region -> matchesSearch(region, normalizedSearch))
-                .map(this::toResponse)
-                .toList();
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, code, parent_region_id, currency_code, name, tax_code, timezone_name, created_at, updated_at
+                FROM org.region
+                WHERE 1 = 1
+                """);
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("limit", clampedSize + 1)
+                .addValue("offset", offset);
+        if (expanded != null) {
+            sql.append(" AND id IN (:regionIds)");
+            parameters.addValue("regionIds", expanded.regionIds());
+        }
+        if (!normalizedSearch.isBlank()) {
+            sql.append("""
+                     AND (
+                        CAST(id AS text) ILIKE :search
+                        OR code ILIKE :search
+                        OR name ILIKE :search
+                        OR currency_code ILIKE :search
+                        OR COALESCE(tax_code, '') ILIKE :search
+                        OR timezone_name ILIKE :search
+                     )
+                    """);
+            parameters.addValue("search", "%" + normalizedSearch + "%");
+        }
+        sql.append("""
+                 ORDER BY name ASC, id ASC
+                 LIMIT :limit OFFSET :offset
+                """);
 
-        return toPageResponse(items, page, clampedSize);
+        List<RegionResponse> items = jdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> new RegionResponse(
+                rs.getLong("id"),
+                rs.getString("code"),
+                rs.getObject("parent_region_id") == null ? null : rs.getLong("parent_region_id"),
+                rs.getString("currency_code"),
+                rs.getString("name"),
+                rs.getString("tax_code"),
+                rs.getString("timezone_name"),
+                rs.getTimestamp("created_at").toInstant(),
+                rs.getTimestamp("updated_at").toInstant()
+        ));
+
+        return toPageResponseFromWindow(items, safePage, clampedSize);
     }
 
     @Transactional(readOnly = true)
@@ -150,32 +195,9 @@ public class RegionService {
         );
     }
 
-    private boolean matchesSearch(RegionEntity entity, String normalizedSearch) {
-        if (normalizedSearch.isBlank()) {
-            return true;
-        }
-        return contains(entity.getId(), normalizedSearch)
-                || contains(entity.getCode(), normalizedSearch)
-                || contains(entity.getName(), normalizedSearch)
-                || contains(entity.getCurrencyCode(), normalizedSearch)
-                || contains(entity.getTaxCode(), normalizedSearch)
-                || contains(entity.getTimezoneName(), normalizedSearch);
-    }
-
-    private boolean contains(Object value, String normalizedSearch) {
-        return value != null && String.valueOf(value).toLowerCase(Locale.ROOT).contains(normalizedSearch);
-    }
-
-    private <T> PageResponse<T> toPageResponse(List<T> items, Integer page, int size) {
-        int safePage = page == null || page < 0 ? 0 : page;
-        int offset = Math.toIntExact(ListQueryDefaults.offsetFrom(page, size));
-        if (offset >= items.size()) {
-            return new PageResponse<>(List.of(), safePage, size, false);
-        }
-        int endExclusive = Math.min(items.size(), offset + size + 1);
-        List<T> window = items.subList(offset, endExclusive);
-        boolean hasMore = window.size() > size;
-        List<T> pagedItems = hasMore ? List.copyOf(window.subList(0, size)) : List.copyOf(window);
-        return new PageResponse<>(pagedItems, safePage, size, hasMore);
+    private <T> PageResponse<T> toPageResponseFromWindow(List<T> items, int page, int size) {
+        boolean hasMore = items.size() > size;
+        List<T> pagedItems = hasMore ? List.copyOf(items.subList(0, size)) : List.copyOf(items);
+        return new PageResponse<>(pagedItems, page, size, hasMore);
     }
 }

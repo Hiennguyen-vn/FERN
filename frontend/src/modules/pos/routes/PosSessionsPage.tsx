@@ -22,6 +22,7 @@ import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { useNetworkStatus } from '@shared/hooks/useNetworkStatus'
 import { formatDateTime, formatMoney } from '@shared/formatters'
+import { useRegion } from '@modules/org/hooks/useOrg'
 import { useClosePosSession, useOpenPosSession, usePosSessions } from '../hooks/usePosSession'
 import type { PosSession, PosSessionStatus } from '../model/pos.types'
 import {
@@ -42,6 +43,7 @@ export function PosSessionsPage() {
   const [businessDate, setBusinessDate] = useState(getTodayBusinessDate())
   const [statusFilter, setStatusFilter] = useState<PosSessionStatus | ''>('')
   const [openNote, setOpenNote] = useState('')
+  const [terminalId, setTerminalId] = useState('')
   const [reusedSessionCode, setReusedSessionCode] = useState('')
   const [sessionToClose, setSessionToClose] = useState<PosSession | null>(null)
   const [page, setPage] = useState(0)
@@ -64,6 +66,9 @@ export function PosSessionsPage() {
   const closeSessionMutation = useClosePosSession()
   const rows = sessionsQuery.data ?? []
   const effectiveRegionId = selectedRegionId ?? rows[0]?.regionId ?? null
+  // Fetch region to get the correct currencyCode — never hardcode.
+  const regionQuery = useRegion(effectiveRegionId ?? 0, { enabled: effectiveRegionId !== null })
+  const currencyCode = regionQuery.data?.currencyCode ?? null
   const pagedRows = rows.slice(page * size, page * size + size)
 
   const columns: Array<DataTableColumn<PosSession>> = [
@@ -139,7 +144,18 @@ export function PosSessionsPage() {
           <Input label="Region ID" readOnly value={effectiveRegionId} />
           <Input label="Outlet ID" readOnly value={selectedOutletId} />
           <Input label="Business date" onChange={(event) => setBusinessDate(event.target.value)} type="date" value={businessDate} />
-          <Input label="Currency" readOnly value="VND" />
+          <Input label="Currency" readOnly value={currencyCode ?? (regionQuery.isLoading ? 'Loading...' : '—')} />
+          <div>
+            <Input
+              label="Terminal ID"
+              onChange={(event) => setTerminalId(event.target.value.replace(/[^A-Za-z0-9_-]/g, ''))}
+              placeholder="TILL-01"
+              value={terminalId}
+            />
+            <p className="muted-text" style={{ fontSize: 'var(--text-xs)', marginTop: '0.25rem' }}>
+              Optional. Backend uses this for session affinity — same cashier+terminal replays the open session (X-Session-Existed). Max 64 chars, letters/numbers/_/- only.
+            </p>
+          </div>
         </div>
         <Textarea
           label="Note"
@@ -151,18 +167,21 @@ export function PosSessionsPage() {
         <FormActions
           primaryAction={
             <Button
-              disabled={!canOpenSessionPermission}
-              loading={openSessionMutation.isPending}
+              disabled={!canOpenSessionPermission || !currencyCode}
+              loading={openSessionMutation.isPending || regionQuery.isLoading}
               onClick={async () => {
+                if (!currencyCode) return
                 const result = await openSessionMutation.mutateAsync({
                   regionId: effectiveRegionId,
                   outletId: selectedOutletId,
                   businessDate,
-                  currencyCode: 'VND',
+                  currencyCode,
+                  terminalId: terminalId || undefined,
                   note: openNote || undefined,
                 })
                 setReusedSessionCode(result.sessionExisted ? result.session.sessionCode : '')
                 setOpenNote('')
+                setTerminalId('')
               }}
             >
               Open session

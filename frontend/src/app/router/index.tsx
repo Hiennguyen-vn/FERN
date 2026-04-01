@@ -196,6 +196,21 @@ const RegionalOutletDetailPage = lazy(() =>
 const ExchangeRateManagementPage = lazy(() =>
   import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.ExchangeRateManagementPage })),
 )
+const OrgRegionsPage = lazy(() =>
+  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.RegionsPage })),
+)
+const OrgRegionDetailPage = lazy(() =>
+  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.RegionDetailPage })),
+)
+const OrgOutletsPage = lazy(() =>
+  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletsPage })),
+)
+const OrgOutletDetailPage = lazy(() =>
+  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletDetailPage })),
+)
+const OrgOutletCreatePage = lazy(() =>
+  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletCreatePage })),
+)
 
 // ─── Lazy imports: HR ────────────────────────────────────────────────────────
 const EmployeesPage = lazy(() =>
@@ -750,6 +765,52 @@ export const router = createBrowserRouter([
             path: 'request-traces/:traceId',
             element: <RequestTraceDetailPage />,
           },
+            ],
+          },
+        ],
+      },
+
+      // ── Org (admin management) ────────────────────────────
+      {
+        path: 'org',
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.org.regionRead,
+              permissionConstants.org.outletRead,
+              permissionConstants.org.regionWrite,
+              permissionConstants.org.outletWrite,
+            ]}
+          />
+        ),
+        children: [
+          {
+            element: <LazyRouteBoundary moduleName="Org" label="Loading org management" />,
+            children: [
+              {
+                index: true,
+                element: <Navigate replace to="/org/outlets" />,
+              },
+              {
+                path: 'regions',
+                element: <OrgRegionsPage />,
+              },
+              {
+                path: 'regions/:regionId',
+                element: <OrgRegionDetailPage />,
+              },
+              {
+                path: 'outlets',
+                element: <OrgOutletsPage />,
+              },
+              {
+                path: 'outlets/new',
+                element: <OrgOutletCreatePage />,
+              },
+              {
+                path: 'outlets/:outletId',
+                element: <OrgOutletDetailPage />,
+              },
             ],
           },
         ],

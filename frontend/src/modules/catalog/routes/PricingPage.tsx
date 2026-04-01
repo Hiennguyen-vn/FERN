@@ -27,18 +27,23 @@ import {
   type PriceEffectiveState,
 } from '../services/catalogReadModel.service'
 
+// Backend PriceScopeType: GLOBAL, COUNTRY, REGION, OUTLET
 const scopeOptions: SelectOption[] = [
   { label: 'Tất cả scope', value: 'ALL' },
-  { label: 'GLOBAL', value: 'GLOBAL' },
-  { label: 'REGION', value: 'REGION' },
-  { label: 'OUTLET', value: 'OUTLET' },
+  { label: 'Global', value: 'GLOBAL' },
+  { label: 'Country', value: 'COUNTRY' },
+  { label: 'Region', value: 'REGION' },
+  { label: 'Outlet', value: 'OUTLET' },
 ]
 
+// Backend PriceType: RETAIL, DINE_IN, TAKEAWAY, DELIVERY, WHOLESALE
 const priceTypeOptions: SelectOption[] = [
   { label: 'Tất cả loại giá', value: 'ALL' },
-  { label: 'STANDARD', value: 'STANDARD' },
-  { label: 'PROMOTIONAL', value: 'PROMOTIONAL' },
-  { label: 'COST', value: 'COST' },
+  { label: 'Retail', value: 'RETAIL' },
+  { label: 'Dine-in', value: 'DINE_IN' },
+  { label: 'Takeaway', value: 'TAKEAWAY' },
+  { label: 'Delivery', value: 'DELIVERY' },
+  { label: 'Wholesale', value: 'WHOLESALE' },
 ]
 
 const effectiveStateOptions: SelectOption[] = [
@@ -170,9 +175,9 @@ export function PricingPage() {
           />
         </div>
         <div className="meta-grid">
-          <span>Tổng dòng giá: {pricesQuery.data?.length ?? 0}</span>
+          <span>Đã tải: {pricesQuery.data?.length ?? 0} dòng giá</span>
           <span>Kết quả sau lọc: {filteredRows.length}</span>
-          <span>Filtering: client-side only</span>
+          <span>Tìm kiếm áp dụng trên dữ liệu đã tải</span>
         </div>
       </Card>
 

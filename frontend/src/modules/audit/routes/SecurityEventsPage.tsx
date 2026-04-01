@@ -14,6 +14,7 @@ import {
 } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { maskedEmptyState } from '@shared/utils/tableHelpers'
 import { useSecurityEvents } from '../hooks/useAudit'
 import type { SecurityEventSummary } from '../model/audit.types'
 import { getAuditErrorMessage } from '../services/auditError.service'
@@ -69,6 +70,8 @@ export function SecurityEventsPage() {
   usePageTitle('Security Events')
   const principal = usePrincipal()
   const canOpen = canReadAudit(principal)
+  // Backend silently returns empty list for non-system users — not a 403.
+  const hasSystemScope = principal?.scopeRoots.system === true
   const [draft, setDraft] = useState(initialDraft)
   const [filters, setFilters] = useState(initialDraft)
 
@@ -160,6 +163,11 @@ export function SecurityEventsPage() {
       title="Security Events"
       description="Filter-heavy security event console for failed logins, auth incidents, and governance investigations."
     >
+      {!hasSystemScope ? (
+        <div className="inline-banner inline-banner-warning">
+          Security events chỉ visible với system-scoped principals. Backend trả về danh sách rỗng (không phải 403) khi principal không có system scope.
+        </div>
+      ) : null}
       <form
         onSubmit={(event) => {
           event.preventDefault()
@@ -184,7 +192,7 @@ export function SecurityEventsPage() {
               }
             />
           }
-          description="Use backend filters to isolate event type, outcome, time range, and correlation identifiers."
+          description="Backend filters run first; quick search then narrows the loaded result set. Requires system scope to receive any data."
           title="Security filters"
         >
           <Input
@@ -256,8 +264,13 @@ export function SecurityEventsPage() {
 
       <DataTable
         columns={columns}
-        emptyDescription="Không có security event nào khớp bộ lọc hiện tại."
-        emptyTitle="No security events"
+        {...maskedEmptyState(
+          !hasSystemScope,
+          'System scope required',
+          'Backend trả về danh sách rỗng cho non-system principals. Cần system scope để xem security events.',
+          'No security events',
+          'Không có security event nào khớp bộ lọc hiện tại.',
+        )}
         error={eventsQuery.error ? getAuditErrorMessage(eventsQuery.error, 'Không thể tải security events.') : null}
         loading={eventsQuery.isLoading}
         loadingDescription="Đang tải security event trail..."

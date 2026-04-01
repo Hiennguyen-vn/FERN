@@ -4,7 +4,7 @@ import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, Perm
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useInventoryTransactions } from '../hooks/useInventoryTransactions'
 import type { InventoryTransaction } from '../model/inventory.types'
 import { buildInventoryTransactionSummary } from '../services/inventoryWorkflow.service'
@@ -23,7 +23,7 @@ function toOptionalNumber(value: string): number | undefined {
 export function InventoryTransactionsPage() {
   usePageTitle('Inventory Transactions')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const { selectedOutletId } = useScopeContext()
   const canRead = canReadInventoryLedger(principal)
 

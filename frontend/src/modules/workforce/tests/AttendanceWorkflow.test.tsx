@@ -31,8 +31,8 @@ function createApproval(overrides: Partial<AttendanceApproval> = {}): Attendance
     approvedAt: overrides.approvedAt ?? null,
     approvedByUserId: overrides.approvedByUserId ?? null,
     attendanceStatus: overrides.attendanceStatus ?? 'PRESENT',
-    workHours: overrides.workHours ?? '8',
-    overtimeHours: overrides.overtimeHours ?? '0',
+    workHours: overrides.workHours ?? 8,
+    overtimeHours: overrides.overtimeHours ?? 0,
     businessDate: overrides.businessDate ?? '2026-03-30',
   }
 }

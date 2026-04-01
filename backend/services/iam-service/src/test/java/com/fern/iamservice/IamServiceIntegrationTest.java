@@ -287,6 +287,7 @@ class IamServiceIntegrationTest {
     void shouldBrowseUsersBySearchAndStatus() throws Exception {
         String adminToken = issueBootstrapAdminToken();
         createUser(adminToken, "ops-reader", "OpsReader123!");
+        createUser(adminToken, "ops-writer", "OpsWriter123!");
 
         adminToken = issueBootstrapAdminToken();
         mockMvc.perform(post("/users")
@@ -309,12 +310,37 @@ class IamServiceIntegrationTest {
                         .param("search", "ops")
                         .param("status", "ACTIVE")
                         .param("page", "0")
-                        .param("size", "5"))
+                        .param("size", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].username").value("ops-reader"))
                 .andExpect(jsonPath("$.items[?(@.username=='ops-locked')]").doesNotExist())
                 .andExpect(jsonPath("$.page").value(0))
-                .andExpect(jsonPath("$.size").value(5));
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.hasMore").value(true));
+    }
+
+    @Test
+    void shouldPublishAuditViewerRoleWithoutIamAdminPermissions() throws Exception {
+        String adminToken = issueBootstrapAdminToken();
+        Long userId = createUser(adminToken, "audit-viewer-user", "Audit123!").get("id").asLong();
+
+        mockMvc.perform(post("/users/%d/roles".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"roleCodes":["audit_viewer"]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roleCodes[0]").value("audit_viewer"));
+
+        adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='audit.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='audit.detail.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='iam.user.write')]").doesNotExist());
     }
 
     @Test

@@ -109,12 +109,12 @@ describe('export workflows', () => {
     })
 
     expect(screen.getByText(/^Create-only mode:/i)).toBeInTheDocument()
-    expect(screen.getByText('Recent export inspection requires read access')).toBeInTheDocument()
+    expect(screen.getByText('Export history inspection requires read access')).toBeInTheDocument()
     expect(reportsApi.getExportJob).not.toHaveBeenCalled()
     expect(screen.queryByRole('link', { name: 'Details' })).not.toBeInTheDocument()
   })
 
-  it('shows readable recent jobs and hides restricted ones for partial-read users', async () => {
+  it('shows readable export history from the server-backed queue for partial-read users', async () => {
     setAuthenticatedSession({
       principal: {
         permissions: [permissionConstants.report.read],

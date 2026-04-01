@@ -13,7 +13,7 @@ import {
 } from '@design-system/index'
 import type { SelectOption } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useCreateSupplierPayment } from '../hooks/useSupplierPayment'
 import type { PaymentMethod } from '../model/procurement.types'
 import { canRecordPayment } from '../services/procurementPermission.service'
@@ -31,7 +31,7 @@ const paymentMethodOptions: SelectOption[] = [
 export function SupplierPaymentCreatePage() {
   usePageTitle('Record Supplier Payment')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const navigate = useNavigate()
   const canCreate = canRecordPayment(principal)
   const createMutation = useCreateSupplierPayment()

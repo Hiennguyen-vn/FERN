@@ -4,7 +4,7 @@ import { Button, Card, DataTable, EmptyState, EntityHeader, ErrorState, Permissi
 import type { DataTableColumn } from '@design-system/index'
 import { useConfirmAction } from '@shared/hooks/useConfirmAction'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useGoodsReceipt, useGoodsReceiptAction } from '../hooks/useGoodsReceipt'
 import type { GoodsReceiptLine } from '../model/procurement.types'
 import {
@@ -15,7 +15,7 @@ import {
 import { canReadGoodsReceipts } from '../services/procurementPermission.service'
 
 export function GoodsReceiptDetailPage() {
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const params = useParams<{ goodsReceiptId: string }>()
   const goodsReceiptId = params.goodsReceiptId ? Number(params.goodsReceiptId) : null
   const confirmAction = useConfirmAction()

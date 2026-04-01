@@ -267,7 +267,9 @@ public class HrService {
         hrAuthorizer.requireSystemPermission(principal, PermissionCodes.HR_EMPLOYEE_READ);
         String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
         String normalizedStatus = status == null ? null : status.trim();
+        int safePage = page == null || page < 0 ? 0 : page;
         int clampedSize = ListQueryDefaults.clampLimit(size);
+        long offset = ListQueryDefaults.offsetFrom(safePage, clampedSize);
 
         StringBuilder sql = new StringBuilder("""
                 SELECT id, employee_code, full_name, dob, gender, email, phone, status, hired_at, user_account_id
@@ -291,7 +293,9 @@ public class HrService {
             sql.append(" AND status = :status");
             parameters.addValue("status", normalizedStatus);
         }
-        sql.append(" ORDER BY full_name ASC, id ASC");
+        sql.append(" ORDER BY full_name ASC, id ASC LIMIT :limit OFFSET :offset");
+        parameters.addValue("limit", clampedSize + 1);
+        parameters.addValue("offset", offset);
 
         List<EmployeeResponse> items = masterJdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> new EmployeeResponse(
                 rs.getLong("id"),
@@ -305,7 +309,7 @@ public class HrService {
                 rs.getObject("hired_at", LocalDate.class),
                 nullableLong(rs, "user_account_id")
         ));
-        return toPageResponse(items, page, clampedSize);
+        return toPageResponseFromWindow(items, safePage, clampedSize);
     }
 
     public List<ContractResponse> listContracts(FernPrincipal principal, Long employeeId) {
@@ -337,7 +341,9 @@ public class HrService {
         hrAuthorizer.requirePermission(principal, PermissionCodes.HR_CONTRACT_READ);
         String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
         String normalizedStatus = status == null ? null : status.trim();
+        int safePage = page == null || page < 0 ? 0 : page;
         int clampedSize = ListQueryDefaults.clampLimit(size);
+        long offset = ListQueryDefaults.offsetFrom(safePage, clampedSize);
 
         StringBuilder sql = new StringBuilder("""
                 SELECT c.id,
@@ -365,6 +371,14 @@ public class HrService {
             sql.append(" AND c.region_id = :regionId");
             parameters.addValue("regionId", regionId);
         }
+        if (!ScopeAccess.isSystemScoped(principal)) {
+            List<Long> allowedRegionIds = principal.scopeRoots().regions();
+            if (allowedRegionIds.isEmpty()) {
+                return new PageResponse<>(List.of(), safePage, clampedSize, false);
+            }
+            sql.append(" AND c.region_id IN (:allowedRegionIds)");
+            parameters.addValue("allowedRegionIds", allowedRegionIds);
+        }
         if (normalizedStatus != null && !normalizedStatus.isBlank()) {
             sql.append(" AND c.contract_status = :status");
             parameters.addValue("status", normalizedStatus);
@@ -383,12 +397,12 @@ public class HrService {
                     """);
             parameters.addValue("search", "%" + normalizedSearch + "%");
         }
-        sql.append(" ORDER BY c.start_date DESC, c.id DESC");
+        sql.append(" ORDER BY c.start_date DESC, c.id DESC LIMIT :limit OFFSET :offset");
+        parameters.addValue("limit", clampedSize + 1);
+        parameters.addValue("offset", offset);
 
-        List<ContractResponse> items = masterJdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> mapContract(rs)).stream()
-                .filter(contract -> ScopeAccess.isSystemScoped(principal) || ScopeAccess.allowsRegion(principal, contract.regionId()))
-                .toList();
-        return toPageResponse(items, page, clampedSize);
+        List<ContractResponse> items = masterJdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> mapContract(rs));
+        return toPageResponseFromWindow(items, safePage, clampedSize);
     }
 
     public List<AssignmentResponse> listAssignments(FernPrincipal principal, Long employeeId) {
@@ -848,6 +862,12 @@ public class HrService {
         boolean hasMore = window.size() > size;
         List<T> pagedItems = hasMore ? List.copyOf(window.subList(0, size)) : List.copyOf(window);
         return new PageResponse<>(pagedItems, safePage, size, hasMore);
+    }
+
+    private <T> PageResponse<T> toPageResponseFromWindow(List<T> items, int page, int size) {
+        boolean hasMore = items.size() > size;
+        List<T> pagedItems = hasMore ? List.copyOf(items.subList(0, size)) : List.copyOf(items);
+        return new PageResponse<>(pagedItems, page, size, hasMore);
     }
 
     private record ShiftAssignmentRecord(

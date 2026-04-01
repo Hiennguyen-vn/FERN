@@ -10,7 +10,6 @@ import {
   ErrorState,
   FormSection,
   PermissionDeniedInline,
-  ReadonlyBanner,
   StatusBadge,
 } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
@@ -131,8 +130,6 @@ export function OutletDetailPage() {
         </Button>
       }
     >
-      <ReadonlyBanner message="Outlet detail đang ở chế độ read-only. Chưa publish create/edit workflow trong bước này." />
-
       <EntityHeader
         eyebrow="Org / Outlet"
         metadata={

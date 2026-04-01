@@ -1,9 +1,12 @@
-// ─── Enums (mirror backend domain enums) ─────────────────────────────────────
-export type ProductStatus = 'ACTIVE' | 'INACTIVE' | 'DISCONTINUED'
-export type IngredientStatus = 'ACTIVE' | 'INACTIVE'
+// ─── Enums (mirror backend domain enums exactly) ─────────────────────────────
+// Backend reference: com.fern.catalogservice.domain.*
+export type ProductStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'DISCONTINUED'
+export type IngredientStatus = 'ACTIVE' | 'INACTIVE' | 'DISCONTINUED'
 export type RecipeVersionStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
-export type PriceScopeType = 'GLOBAL' | 'REGION' | 'OUTLET'
-export type PriceType = 'STANDARD' | 'PROMOTIONAL' | 'COST'
+// Backend PriceScopeType: GLOBAL, COUNTRY, REGION, OUTLET
+export type PriceScopeType = 'GLOBAL' | 'COUNTRY' | 'REGION' | 'OUTLET'
+// Backend PriceType: RETAIL, DINE_IN, TAKEAWAY, DELIVERY, WHOLESALE
+export type PriceType = 'RETAIL' | 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY' | 'WHOLESALE'
 export type PromotionStatus = 'ACTIVE' | 'INACTIVE' | 'EXPIRED'
 export type PromotionType = 'PERCENT_DISCOUNT' | 'FIXED_DISCOUNT' | 'BUY_X_GET_Y' | 'FREE_ITEM'
 
@@ -21,10 +24,14 @@ export interface UnitOfMeasure {
   symbol: string
 }
 
+/**
+ * Backend UomConversionResponse: fromUomCode, toUomCode, conversionFactor (BigDecimal)
+ * Note: the response field is conversionFactor, not factor.
+ */
 export interface UomConversion {
   fromUomCode: string
   toUomCode: string
-  factor: number
+  conversionFactor: number
 }
 
 // ─── Product ──────────────────────────────────────────────────────────────────
@@ -158,25 +165,33 @@ export interface ProductAvailabilityUpsertRequest {
 }
 
 // ─── Tax rates ────────────────────────────────────────────────────────────────
+/**
+ * Backend TaxRateResponse fields:
+ *   Long id, Long productId, BigDecimal taxPercent,
+ *   LocalDate effectiveFrom, LocalDate effectiveTo
+ *
+ * Note: tax rates in this system are per-product effective-date entries,
+ * not global named rates. There is no code/name/ratePercent/countryCode.
+ */
 export interface TaxRate {
   id: number
-  code: string
-  name: string
-  ratePercent: number
-  countryCode: string | null
-  regionId: number | null
-  effectiveFrom: string | null
+  productId: number
+  taxPercent: number
+  effectiveFrom: string
   effectiveTo: string | null
-  status: string
 }
 
+/**
+ * Backend TaxRateUpsertRequest:
+ *   @NotNull Long productId
+ *   @NotNull @DecimalMin("0.00") @DecimalMax("100.00") BigDecimal taxPercent
+ *   @NotNull LocalDate effectiveFrom
+ *   LocalDate effectiveTo (optional)
+ */
 export interface TaxRateUpsertRequest {
-  code: string
-  name: string
-  ratePercent: number
-  countryCode?: string | null
-  regionId?: number | null
-  effectiveFrom?: string | null
+  productId: number
+  taxPercent: number
+  effectiveFrom: string
   effectiveTo?: string | null
 }
 
@@ -232,8 +247,12 @@ export interface UnitOfMeasureUpsertRequest {
   symbol: string
 }
 
+/**
+ * Backend UomConversionRequest: fromUomCode @NotBlank, toUomCode @NotBlank,
+ *   conversionFactor @NotNull @DecimalMin("0.00000001")
+ */
 export interface UomConversionUpsertRequest {
   fromUomCode: string
   toUomCode: string
-  factor: number
+  conversionFactor: number
 }

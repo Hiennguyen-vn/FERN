@@ -5,11 +5,17 @@ export interface ApiResponse<T> {
   meta?: any
 }
 
+/**
+ * Shape emitted by every downstream service's GlobalExceptionHandler.
+ * The gateway itself writes a minimal subset: only `message` is guaranteed
+ * (e.g. token errors, rate-limit responses).
+ */
 export interface ApiErrorResponse {
-  error: string
   code: string
-  details?: unknown
-  message?: string
+  message: string
+  timestamp?: string
+  correlationId?: string
+  details?: Record<string, unknown>
 }
 
 export interface PageResponse<T> {

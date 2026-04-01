@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { Card } from '../components/card'
 import { EmptyState } from '../components/empty-state'
 import { ErrorState } from '../components/error-state'
+import { Pagination } from '../components/pagination'
 
 export interface DataTableColumn<T> {
   key: string
@@ -11,7 +12,10 @@ export interface DataTableColumn<T> {
 }
 
 interface DataTableProps<T> {
+  canNext?: boolean
+  canPrevious?: boolean
   columns: Array<DataTableColumn<T>>
+  currentPage?: number
   emptyDescription?: string
   emptyTitle?: string
   error?: string | null
@@ -19,7 +23,9 @@ interface DataTableProps<T> {
   loading?: boolean
   loadingDescription?: string
   loadingTitle?: string
+  onNext?: () => void
   onRowClick?: (row: T) => void
+  onPrevious?: () => void
   onRetry?: () => void
   rowClassName?: (row: T) => string | undefined
   rowKey?: (row: T, index: number) => string | number
@@ -35,6 +41,11 @@ export function DataTable<T>({
   loading,
   loadingDescription = 'Loading table data...',
   loadingTitle = 'Loading',
+  canNext,
+  canPrevious,
+  currentPage,
+  onNext,
+  onPrevious,
   onRowClick,
   onRetry,
   rowClassName,
@@ -90,6 +101,15 @@ export function DataTable<T>({
           ))}
         </tbody>
       </table>
+      {typeof currentPage === 'number' && onNext && onPrevious && typeof canNext === 'boolean' && typeof canPrevious === 'boolean' ? (
+        <Pagination
+          canNext={canNext}
+          canPrevious={canPrevious}
+          currentPage={currentPage}
+          onNext={onNext}
+          onPrevious={onPrevious}
+        />
+      ) : null}
     </div>
   )
 }

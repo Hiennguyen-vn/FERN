@@ -19,10 +19,13 @@ export function ExportDownloadPage() {
 
   usePageTitle(jobId ? `Export Download #${jobId}` : 'Export Download')
 
-  // Use backend-provided signed download URL when available (e.g. S3 presigned).
-  // Fall back to the gateway streaming endpoint only if the job has no downloadUrl.
+  // Use the backend-provided signed URL (e.g. S3 presigned) when available.
+  // Fall back to the gateway streaming endpoint ONLY when the job is COMPLETED but the
+  // backend chose not to supply a presigned URL. Never construct a fallback for non-COMPLETED
+  // jobs — the backend won't have an artifact to serve and the endpoint will return 404/409.
+  const isCompleted = job?.status.toUpperCase() === 'COMPLETED'
   const downloadUrl = jobId !== null
-    ? (job?.downloadUrl ?? `${appConfig.apiBaseUrl}/reports/exports/${jobId}/download`)
+    ? (job?.downloadUrl ?? (isCompleted ? `${appConfig.apiBaseUrl}/reports/exports/${jobId}/download` : null))
     : null
   const canStartDownload = Boolean(job && downloadUrl && canDownloadExport(principal, job))
 

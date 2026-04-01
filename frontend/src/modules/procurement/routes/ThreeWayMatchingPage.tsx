@@ -3,7 +3,7 @@ import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { Badge, Card, EmptyState, ErrorState, Input, PermissionDeniedInline } from '@design-system/index'
 import { DataTable } from '@design-system/tables/DataTable'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { usePurchaseOrder } from '../hooks/usePurchaseOrder'
 import { useGoodsReceipts } from '../hooks/useGoodsReceipt'
 import { useSupplierInvoices } from '../hooks/useSupplierInvoice'
@@ -39,7 +39,7 @@ function statusTone(status: MatchedLine['status']): 'success' | 'warning' | 'dan
 
 export function ThreeWayMatchingPage() {
   usePageTitle('Three-Way Matching')
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const canRead = canReadPurchaseOrders(principal)
 
   const [poId, setPoId] = useState('')

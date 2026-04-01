@@ -13,7 +13,7 @@ import {
 } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useSupplierInvoices } from '../hooks/useSupplierInvoice'
 import type { SupplierInvoice } from '../model/procurement.types'
 import { canReadInvoices, canReviewInvoice } from '../services/procurementPermission.service'
@@ -30,7 +30,7 @@ const statusOptions: SelectOption[] = [
 export function SupplierInvoiceListPage() {
   usePageTitle('Supplier Invoices')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const [supplierId, setSupplierId] = useState('')
   const [outletId, setOutletId] = useState('')
   const [status, setStatus] = useState('')

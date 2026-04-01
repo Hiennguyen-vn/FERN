@@ -15,9 +15,10 @@ import {
   PermissionDeniedInline,
 } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
+import { usePrincipal } from '@core/auth/auth.selectors'
+import { useFieldErrors } from '@core/api/useFieldErrors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
 import { useAttendanceEvents } from '../hooks/useAttendanceEvents'
 import { useRecordAttendanceEvent } from '../hooks/useRecordAttendanceEvent'
 import type { AttendanceEventListItem } from '../model/workforce.types'
@@ -35,7 +36,7 @@ function toOptionalNumber(value: string): number | undefined {
 export function MyAttendancePage() {
   usePageTitle('My Attendance')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const { selectedOutletId, selectedRegionId } = useScopeContext()
   const canRecord = canRecordAttendance(principal)
 
@@ -52,6 +53,7 @@ export function MyAttendancePage() {
     eventTime: new Date().toISOString().slice(0, 16),
     sourceSystem: 'FERN_FRONTEND',
   })
+  const [formError, setFormError] = useState<string | null>(null)
   const size = 20
 
   const eventsQuery = useAttendanceEvents(
@@ -69,6 +71,7 @@ export function MyAttendancePage() {
       : null,
   )
   const recordMutation = useRecordAttendanceEvent()
+  const { getError: getRecordError } = useFieldErrors(recordMutation.error)
 
   if (!canRecord) {
     return (
@@ -107,11 +110,13 @@ export function MyAttendancePage() {
       <FormSection description="Record a new attendance event using the live HR service endpoint." title="Record attendance event">
         <div className="field-grid">
           <Input
+            error={getRecordError('employeeId')}
             label="Employee ID"
             onChange={(event) => setForm((current) => ({ ...current, employeeId: event.target.value }))}
             value={form.employeeId}
           />
           <Input
+            error={getRecordError('shiftAssignmentId')}
             label="Shift Assignment ID"
             onChange={(event) => setForm((current) => ({ ...current, shiftAssignmentId: event.target.value }))}
             value={form.shiftAssignmentId}
@@ -144,14 +149,40 @@ export function MyAttendancePage() {
                   return
                 }
 
+                const parsedEmployee = Number(form.employeeId)
+                const parsedShift = Number(form.shiftAssignmentId)
+
+                if (!form.employeeId || !Number.isFinite(parsedEmployee) || parsedEmployee <= 0) {
+                  setFormError('Employee ID phải là số nguyên dương.')
+                  return
+                }
+                if (!form.shiftAssignmentId || !Number.isFinite(parsedShift) || parsedShift <= 0) {
+                  setFormError('Shift Assignment ID phải là số nguyên dương.')
+                  return
+                }
+                if (!form.eventTime) {
+                  setFormError('Event time là bắt buộc.')
+                  return
+                }
+
+                setFormError(null)
                 void recordMutation.mutateAsync({
-                  employeeId: Number(form.employeeId),
-                  shiftAssignmentId: Number(form.shiftAssignmentId),
+                  employeeId: parsedEmployee,
+                  shiftAssignmentId: parsedShift,
                   eventType: form.eventType as 'CLOCK_IN' | 'CLOCK_OUT' | 'BREAK_START' | 'BREAK_END',
                   eventTime: new Date(form.eventTime).toISOString(),
                   outletId: selectedOutletId,
                   regionId: selectedRegionId,
                   sourceSystem: form.sourceSystem,
+                }).then(() => {
+                  setForm((current) => ({
+                    ...current,
+                    employeeId: '',
+                    shiftAssignmentId: '',
+                    eventTime: new Date().toISOString().slice(0, 16),
+                  }))
+                }).catch(() => {
+                  // error displayed via recordMutation.error below
                 })
               }}
             >
@@ -159,6 +190,7 @@ export function MyAttendancePage() {
             </Button>
           }
         />
+        {formError ? <p className="error-text">{formError}</p> : null}
         {recordMutation.error ? (
           <ErrorState
             message={recordMutation.error instanceof Error ? recordMutation.error.message : 'Failed to record event'}

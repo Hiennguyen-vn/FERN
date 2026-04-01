@@ -4,7 +4,7 @@ import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { Button, Card, EmptyState, ErrorState, FormActions, FormSection, Input, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useCreatePurchaseOrder } from '../hooks/usePurchaseOrder'
 import { useSuppliers } from '../hooks/useSuppliers'
 import type { Supplier } from '../model/procurement.types'
@@ -23,7 +23,7 @@ function toOptionalNumber(value: string): number | undefined {
 export function PurchaseOrderCreatePage() {
   usePageTitle('Purchase Order Create')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const navigate = useNavigate()
   const { selectedOutletId, selectedRegionId } = useScopeContext()
   const canCreate = canCreatePurchaseOrder(principal)

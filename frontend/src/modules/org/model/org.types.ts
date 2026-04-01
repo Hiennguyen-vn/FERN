@@ -10,12 +10,15 @@ export interface OrgRegion {
   updatedAt: string
 }
 
+/** Exact enum values from backend OutletStatus. */
+export type OrgOutletStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'CLOSED'
+
 export interface OrgOutlet {
   id: number
   regionId: number
   code: string
   name: string
-  status: string
+  status: OrgOutletStatus
   address: string | null
   phone: string | null
   email: string | null
@@ -46,15 +49,31 @@ export interface CreateOutletPayload {
   regionId: number
   code: string
   name: string
+  /** @NotNull on backend — omitting causes 400 validation_error. */
+  status: OrgOutletStatus
   address?: string | null
   phone?: string | null
   email?: string | null
+  /** LocalDate serialised as "YYYY-MM-DD" */
+  openedAt?: string | null
+  /** LocalDate serialised as "YYYY-MM-DD" */
+  closedAt?: string | null
 }
 
+/**
+ * Backend UpdateOutletRequest fields — `code` is immutable after creation and
+ * is NOT accepted by the PATCH endpoint.
+ */
 export interface UpdateOutletPayload {
-  code?: string
+  regionId?: number
   name?: string
+  /** OutletStatus — backend @NotNull only on create, optional on update. */
+  status?: OrgOutletStatus
   address?: string | null
   phone?: string | null
   email?: string | null
+  /** LocalDate serialised as "YYYY-MM-DD" */
+  openedAt?: string | null
+  /** LocalDate serialised as "YYYY-MM-DD" */
+  closedAt?: string | null
 }

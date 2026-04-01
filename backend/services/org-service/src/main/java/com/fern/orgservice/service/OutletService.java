@@ -14,9 +14,10 @@ import com.fern.orgservice.repository.RegionRepository;
 import java.time.Clock;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Sort;
 
 @Service
 public class OutletService {
@@ -26,6 +27,7 @@ public class OutletService {
     private final ScopeExpansionService scopeExpansionService;
     private final ScopeVersionService scopeVersionService;
     private final OrgOutboxService outboxService;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final Clock clock;
 
     public OutletService(
@@ -35,6 +37,7 @@ public class OutletService {
             ScopeExpansionService scopeExpansionService,
             ScopeVersionService scopeVersionService,
             OrgOutboxService outboxService,
+            NamedParameterJdbcTemplate jdbcTemplate,
             Clock clock
     ) {
         this.outletRepository = outletRepository;
@@ -43,6 +46,7 @@ public class OutletService {
         this.scopeExpansionService = scopeExpansionService;
         this.scopeVersionService = scopeVersionService;
         this.outboxService = outboxService;
+        this.jdbcTemplate = jdbcTemplate;
         this.clock = clock;
     }
 
@@ -79,20 +83,71 @@ public class OutletService {
         orgAuthorizer.requirePermission(principal, "org.outlet.read");
         String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
         String normalizedStatus = status == null ? null : status.trim();
+        int safePage = page == null || page < 0 ? 0 : page;
         int clampedSize = ListQueryDefaults.clampLimit(size);
+        long offset = ListQueryDefaults.offsetFrom(safePage, clampedSize);
         var expanded = principal.scopeRoots().system()
                 ? null
                 : scopeExpansionService.expand(principal.scopeRoots().regions(), principal.scopeRoots().outlets());
+        if (expanded != null && expanded.outletIds().isEmpty()) {
+            return new PageResponse<>(List.of(), safePage, clampedSize, false);
+        }
 
-        List<OutletResponse> items = outletRepository.findAll(Sort.by(Sort.Order.asc("name"), Sort.Order.asc("id"))).stream()
-                .filter(outlet -> expanded == null || expanded.outletIds().contains(outlet.getId()))
-                .filter(outlet -> regionId == null || regionId.equals(outlet.getRegionId()))
-                .filter(outlet -> normalizedStatus == null || normalizedStatus.equalsIgnoreCase(outlet.getStatus().name()))
-                .filter(outlet -> matchesSearch(outlet, normalizedSearch))
-                .map(this::toResponse)
-                .toList();
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, region_id, code, name, status, address, phone, email, opened_at, closed_at, created_at, updated_at
+                FROM org.outlet
+                WHERE 1 = 1
+                """);
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("limit", clampedSize + 1)
+                .addValue("offset", offset);
+        if (expanded != null) {
+            sql.append(" AND id IN (:outletIds)");
+            parameters.addValue("outletIds", expanded.outletIds());
+        }
+        if (regionId != null) {
+            sql.append(" AND region_id = :regionId");
+            parameters.addValue("regionId", regionId);
+        }
+        if (normalizedStatus != null) {
+            sql.append(" AND status = :status");
+            parameters.addValue("status", normalizedStatus);
+        }
+        if (!normalizedSearch.isBlank()) {
+            sql.append("""
+                     AND (
+                        CAST(id AS text) ILIKE :search
+                        OR code ILIKE :search
+                        OR name ILIKE :search
+                        OR status ILIKE :search
+                        OR COALESCE(address, '') ILIKE :search
+                        OR COALESCE(phone, '') ILIKE :search
+                        OR COALESCE(email, '') ILIKE :search
+                     )
+                    """);
+            parameters.addValue("search", "%" + normalizedSearch + "%");
+        }
+        sql.append("""
+                 ORDER BY name ASC, id ASC
+                 LIMIT :limit OFFSET :offset
+                """);
 
-        return toPageResponse(items, page, clampedSize);
+        List<OutletResponse> items = jdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> new OutletResponse(
+                rs.getLong("id"),
+                rs.getLong("region_id"),
+                rs.getString("code"),
+                rs.getString("name"),
+                com.fern.orgservice.domain.OutletStatus.valueOf(rs.getString("status")),
+                rs.getString("address"),
+                rs.getString("phone"),
+                rs.getString("email"),
+                rs.getObject("opened_at", java.time.LocalDate.class),
+                rs.getObject("closed_at", java.time.LocalDate.class),
+                rs.getTimestamp("created_at").toInstant(),
+                rs.getTimestamp("updated_at").toInstant()
+        ));
+
+        return toPageResponseFromWindow(items, safePage, clampedSize);
     }
 
     @Transactional(readOnly = true)
@@ -163,33 +218,9 @@ public class OutletService {
         return toResponse(entity);
     }
 
-    private boolean matchesSearch(OutletEntity entity, String normalizedSearch) {
-        if (normalizedSearch.isBlank()) {
-            return true;
-        }
-        return contains(entity.getId(), normalizedSearch)
-                || contains(entity.getCode(), normalizedSearch)
-                || contains(entity.getName(), normalizedSearch)
-                || contains(entity.getStatus(), normalizedSearch)
-                || contains(entity.getAddress(), normalizedSearch)
-                || contains(entity.getPhone(), normalizedSearch)
-                || contains(entity.getEmail(), normalizedSearch);
-    }
-
-    private boolean contains(Object value, String normalizedSearch) {
-        return value != null && String.valueOf(value).toLowerCase(Locale.ROOT).contains(normalizedSearch);
-    }
-
-    private <T> PageResponse<T> toPageResponse(List<T> items, Integer page, int size) {
-        int safePage = page == null || page < 0 ? 0 : page;
-        int offset = Math.toIntExact(ListQueryDefaults.offsetFrom(page, size));
-        if (offset >= items.size()) {
-            return new PageResponse<>(List.of(), safePage, size, false);
-        }
-        int endExclusive = Math.min(items.size(), offset + size + 1);
-        List<T> window = items.subList(offset, endExclusive);
-        boolean hasMore = window.size() > size;
-        List<T> pagedItems = hasMore ? List.copyOf(window.subList(0, size)) : List.copyOf(window);
-        return new PageResponse<>(pagedItems, safePage, size, hasMore);
+    private <T> PageResponse<T> toPageResponseFromWindow(List<T> items, int page, int size) {
+        boolean hasMore = items.size() > size;
+        List<T> pagedItems = hasMore ? List.copyOf(items.subList(0, size)) : List.copyOf(items);
+        return new PageResponse<>(pagedItems, page, size, hasMore);
     }
 }

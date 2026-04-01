@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { Button, Card, EmptyState, ErrorState, ReadonlyBanner, StatusBadge, PermissionDeniedInline } from '@design-system/index'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
 import { useAttendanceApprovals } from '../hooks/useAttendanceApprovals'
 import { canApproveAttendance } from '../services/workforcePermission.service'
 
 export function AttendanceReviewPage() {
   usePageTitle('Attendance Review')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const { selectedOutletId, selectedRegionId } = useScopeContext()
   const canApprove = canApproveAttendance(principal)
 

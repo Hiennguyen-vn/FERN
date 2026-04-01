@@ -36,12 +36,15 @@ function toOptionalNumber(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
 }
 
+const PAGE_SIZE = 50
+
 export function AttendanceSummaryPage() {
   usePageTitle('HR Attendance Summary')
   const navigate = useNavigate()
   const principal = usePrincipal()
   const { selectedOutletId, selectedRegionId } = useScopeContext()
   const canReadSummary = canReadAttendanceSummary(principal)
+  const [eventPage, setEventPage] = useState(0)
   const [filters, setFilters] = useState({
     employeeId: '',
     fromDate: '',
@@ -55,13 +58,13 @@ export function AttendanceSummaryPage() {
       employeeId: toOptionalNumber(filters.employeeId),
       fromDate: filters.fromDate || undefined,
       outletId: toOptionalNumber(filters.outletId),
-      page: 0,
+      page: eventPage,
       regionId: toOptionalNumber(filters.regionId),
-      size: 100,
+      size: PAGE_SIZE,
       sort: 'desc',
       toDate: filters.toDate || undefined,
     }),
-    [filters],
+    [filters, eventPage],
   )
 
   const approvalFilters = useMemo(
@@ -177,34 +180,34 @@ export function AttendanceSummaryPage() {
         <div className="field-grid">
           <Input
             label="Employee ID"
-            onChange={(event) => setFilters((current) => ({ ...current, employeeId: event.target.value }))}
+            onChange={(event) => { setFilters((current) => ({ ...current, employeeId: event.target.value })); setEventPage(0) }}
             placeholder="Optional"
             type="number"
             value={filters.employeeId}
           />
           <Input
             label="Region ID"
-            onChange={(event) => setFilters((current) => ({ ...current, regionId: event.target.value }))}
+            onChange={(event) => { setFilters((current) => ({ ...current, regionId: event.target.value })); setEventPage(0) }}
             placeholder="Optional"
             type="number"
             value={filters.regionId}
           />
           <Input
             label="Outlet ID"
-            onChange={(event) => setFilters((current) => ({ ...current, outletId: event.target.value }))}
+            onChange={(event) => { setFilters((current) => ({ ...current, outletId: event.target.value })); setEventPage(0) }}
             placeholder="Optional"
             type="number"
             value={filters.outletId}
           />
           <Input
             label="From date"
-            onChange={(event) => setFilters((current) => ({ ...current, fromDate: event.target.value }))}
+            onChange={(event) => { setFilters((current) => ({ ...current, fromDate: event.target.value })); setEventPage(0) }}
             type="date"
             value={filters.fromDate}
           />
           <Input
             label="To date"
-            onChange={(event) => setFilters((current) => ({ ...current, toDate: event.target.value }))}
+            onChange={(event) => { setFilters((current) => ({ ...current, toDate: event.target.value })); setEventPage(0) }}
             type="date"
             value={filters.toDate}
           />
@@ -217,7 +220,7 @@ export function AttendanceSummaryPage() {
             Refresh summary
           </Button>
           <Button
-            onClick={() =>
+            onClick={() => {
               setFilters({
                 employeeId: '',
                 fromDate: '',
@@ -225,7 +228,8 @@ export function AttendanceSummaryPage() {
                 regionId: selectedRegionId ? String(selectedRegionId) : '',
                 toDate: '',
               })
-            }
+              setEventPage(0)
+            }}
             size="sm"
             variant="ghost"
           >
@@ -268,7 +272,10 @@ export function AttendanceSummaryPage() {
 
       <FormSection description="Recent attendance events để hỗ trợ payroll preparation và anomaly review." title="Recent attendance events">
         <DataTable
+          canNext={eventsQuery.data?.hasMore ?? false}
+          canPrevious={eventPage > 0}
           columns={eventColumns}
+          currentPage={eventPage}
           emptyDescription="Không có attendance event nào khớp bộ lọc hiện tại."
           emptyTitle="No attendance events"
           error={eventsQuery.error ? getHrErrorMessage(eventsQuery.error, 'Không thể tải attendance events.') : null}
@@ -276,6 +283,8 @@ export function AttendanceSummaryPage() {
           loading={eventsQuery.isLoading}
           loadingDescription="Đang tải attendance events..."
           loadingTitle="Loading attendance events"
+          onNext={() => setEventPage((p) => p + 1)}
+          onPrevious={() => setEventPage((p) => Math.max(0, p - 1))}
           onRetry={() => void eventsQuery.refetch()}
           rowKey={(event) => event.id}
           rows={eventsQuery.data?.items ?? []}

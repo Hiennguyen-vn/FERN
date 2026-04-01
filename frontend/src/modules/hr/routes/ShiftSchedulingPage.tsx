@@ -11,6 +11,7 @@ import {
   ReadonlyBanner,
 } from '@design-system/index'
 import { DataTable } from '@design-system/tables/DataTable'
+import { useFieldErrors } from '@core/api/useFieldErrors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { usePrincipal } from '@core/auth/auth.selectors'
@@ -68,6 +69,8 @@ export function ShiftSchedulingPage() {
 
   const createScheduleMutation = useCreateShiftSchedule()
   const createAssignmentMutation = useCreateShiftAssignment()
+  const { getError: getScheduleFieldError } = useFieldErrors(createScheduleMutation.error)
+  const { getError: getAssignFieldError } = useFieldErrors(createAssignmentMutation.error)
 
   if (!canRead) {
     return (
@@ -115,24 +118,28 @@ export function ShiftSchedulingPage() {
           <FormSection title="New Shift Schedule">
             <div className="field-grid">
               <Input
+                error={getScheduleFieldError('shiftName')}
                 label="Shift Name"
                 onChange={(e) => setNewSchedule((prev) => ({ ...prev, shiftName: e.target.value }))}
                 placeholder="e.g. Morning, Afternoon, Evening"
                 value={newSchedule.shiftName}
               />
               <Input
+                error={getScheduleFieldError('shiftDate')}
                 label="Shift Date"
                 onChange={(e) => setNewSchedule((prev) => ({ ...prev, shiftDate: e.target.value }))}
                 type="date"
                 value={newSchedule.shiftDate}
               />
               <Input
+                error={getScheduleFieldError('startTime')}
                 label="Start Time"
                 onChange={(e) => setNewSchedule((prev) => ({ ...prev, startTime: e.target.value }))}
                 type="time"
                 value={newSchedule.startTime}
               />
               <Input
+                error={getScheduleFieldError('endTime')}
                 label="End Time"
                 onChange={(e) => setNewSchedule((prev) => ({ ...prev, endTime: e.target.value }))}
                 type="time"
@@ -266,18 +273,21 @@ export function ShiftSchedulingPage() {
               <FormSection title="Assign Employee to Shift">
                 <div className="field-grid">
                   <Input
+                    error={getAssignFieldError('employeeId')}
                     label="Employee ID"
                     onChange={(e) => setNewAssignment((prev) => ({ ...prev, employeeId: e.target.value }))}
                     type="number"
                     value={newAssignment.employeeId}
                   />
                   <Input
+                    error={getAssignFieldError('assignedRole')}
                     label="Assigned Role"
                     onChange={(e) => setNewAssignment((prev) => ({ ...prev, assignedRole: e.target.value }))}
                     placeholder="e.g. Cashier, Chef, Server"
                     value={newAssignment.assignedRole}
                   />
                   <Input
+                    error={getAssignFieldError('note')}
                     label="Note"
                     onChange={(e) => setNewAssignment((prev) => ({ ...prev, note: e.target.value }))}
                     value={newAssignment.note}

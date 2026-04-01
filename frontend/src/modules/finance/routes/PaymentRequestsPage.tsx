@@ -36,7 +36,9 @@ export function PaymentRequestsPage() {
   const paymentRequestsQuery = usePaymentRequests(
     {
       status: statusFilter === 'ALL' ? undefined : statusFilter,
-      limit: 100,
+      // Backend GET /supplier-invoices is a flat list (no hasMore), default limit is 200.
+      // Client-side search below operates on this batch.
+      limit: 200,
     },
     { enabled: canOpen },
   )
@@ -139,18 +141,28 @@ export function PaymentRequestsPage() {
       description="Supplier invoice review console backed by the real invoice queue."
     >
       <div className="field-grid">
-        <Input
-          label="Search payment requests"
-          onChange={(event) => setSearchText(event.target.value)}
-          placeholder="Invoice number, supplier, status..."
-          value={searchText}
-        />
-        <Select
-          label="Status filter"
-          onChange={(event) => setStatusFilter(event.target.value)}
-          options={statusOptions}
-          value={statusFilter}
-        />
+        <div>
+          <Input
+            label="Search payment requests"
+            onChange={(event) => setSearchText(event.target.value)}
+            placeholder="Invoice number, supplier, status..."
+            value={searchText}
+          />
+          <p className="muted-text" style={{ fontSize: 'var(--text-xs)', marginTop: '0.25rem' }}>
+            Lọc trên tập dữ liệu đã tải (tối đa 200 invoice). Backend không hỗ trợ server-side search.
+          </p>
+        </div>
+        <div>
+          <Select
+            label="Status filter"
+            onChange={(event) => setStatusFilter(event.target.value)}
+            options={statusOptions}
+            value={statusFilter}
+          />
+          <p className="muted-text" style={{ fontSize: 'var(--text-xs)', marginTop: '0.25rem' }}>
+            Status filter được gửi lên backend — chỉ trả về invoices khớp status.
+          </p>
+        </div>
       </div>
 
       <DataTable

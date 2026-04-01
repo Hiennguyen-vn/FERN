@@ -80,8 +80,8 @@ export async function supplierInvoiceAction(id: number, action: 'approve' | 'dis
 }
 
 // ─── Supplier payments ────────────────────────────────────────────────────────
-export async function listSupplierPayments() {
-  const { data } = await gatewayClient.get<SupplierPayment[]>('/supplier-payments')
+export async function listSupplierPayments(params?: { supplierId?: number; limit?: number }) {
+  const { data } = await gatewayClient.get<SupplierPayment[]>('/supplier-payments', { params })
   return data
 }
 

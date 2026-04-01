@@ -11,7 +11,9 @@ import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.ListQueryDefaults;
 import com.fern.platform.common.PageResponse;
+import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
+import com.fern.platform.common.ScopeAccess;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.reportservice.config.ReportExportProperties;
 import com.fern.reportservice.dto.ReportCommands.CreateExportRequest;
@@ -42,6 +44,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.function.Consumer;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.RowCallbackHandler;
@@ -240,40 +243,57 @@ class ReportExportService {
             Long regionId,
             Long outletId
     ) {
+        int safePage = page == null || page < 0 ? 0 : page;
         int clampedSize = ListQueryDefaults.clampLimit(size);
+        long offset = ListQueryDefaults.offsetFrom(safePage, clampedSize);
         String normalizedDataset = dataset == null || dataset.isBlank() ? null : dataset.trim().toUpperCase(Locale.ROOT);
         String normalizedStatus = status == null || status.isBlank() ? null : status.trim().toUpperCase(Locale.ROOT);
+        List<String> readableDatasets = readableDatasets(principal);
+        if (readableDatasets.isEmpty()) {
+            return new PageResponse<>(List.of(), safePage, clampedSize, false);
+        }
 
-        List<ExportJobResponse> items = jdbcTemplate.query("""
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("datasets", readableDatasets)
+                .addValue("limit", clampedSize + 1)
+                .addValue("offset", offset);
+        StringBuilder sql = new StringBuilder("""
                 SELECT export_job_id, report_type, format, status, requested_by, requested_at, started_at, completed_at, failed_at,
                        row_count, file_path, expires_at, error_message, correlation_id, payload::text AS payload, preview_payload::text AS preview_payload
                 FROM report.export_job
-                ORDER BY requested_at DESC, export_job_id DESC
-                """, rs -> {
-            List<ExportJobResponse> rows = new ArrayList<>();
-            while (rs.next()) {
-                ExportJobRecord record = mapExportJob(rs);
-                if (normalizedDataset != null && !normalizedDataset.equalsIgnoreCase(record.dataset())) {
-                    continue;
-                }
-                if (normalizedStatus != null && !normalizedStatus.equalsIgnoreCase(record.status())) {
-                    continue;
-                }
-                if (regionId != null && !regionId.equals(extractRegionId(record))) {
-                    continue;
-                }
-                if (outletId != null && !outletId.equals(extractOutletId(record))) {
-                    continue;
-                }
-                if (!canInspectExportRecord(principal, record)) {
-                    continue;
-                }
-                rows.add(toExportJobResponse(record));
+                WHERE report_type IN (:datasets)
+                """);
+        if (normalizedDataset != null) {
+            sql.append(" AND report_type = :dataset");
+            parameters.addValue("dataset", normalizedDataset);
+        }
+        if (normalizedStatus != null) {
+            sql.append(" AND status = :status");
+            parameters.addValue("status", normalizedStatus);
+        }
+        if (regionId != null) {
+            sql.append(" AND NULLIF(payload ->> 'regionId', '')::bigint = :regionId");
+            parameters.addValue("regionId", regionId);
+        }
+        if (outletId != null) {
+            sql.append(" AND NULLIF(payload ->> 'outletId', '')::bigint = :outletId");
+            parameters.addValue("outletId", outletId);
+        }
+        if (!ScopeAccess.isSystemScoped(principal)) {
+            List<Long> allowedRegionIds = principal.scopeRoots().regions().stream().distinct().toList();
+            if (allowedRegionIds.isEmpty()) {
+                return new PageResponse<>(List.of(), safePage, clampedSize, false);
             }
-            return rows;
-        });
+            sql.append(" AND NULLIF(payload ->> 'regionId', '')::bigint IN (:allowedRegionIds)");
+            parameters.addValue("allowedRegionIds", allowedRegionIds);
+        }
+        sql.append("""
+                 ORDER BY requested_at DESC, export_job_id DESC
+                 LIMIT :limit OFFSET :offset
+                """);
 
-        return toPageResponse(items, page, clampedSize);
+        List<ExportJobResponse> items = jdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> toExportJobResponse(mapExportJob(rs)));
+        return toPageResponseFromWindow(items, safePage, clampedSize);
     }
 
     public ExportPreviewResponse previewExport(FernPrincipal principal, Long jobId) {
@@ -710,6 +730,20 @@ class ReportExportService {
         }
     }
 
+    private List<String> readableDatasets(FernPrincipal principal) {
+        if (principal == null) {
+            return List.of();
+        }
+        if (!principal.permissions().contains(PermissionCodes.REPORT_READ)
+                && !principal.permissions().contains(PermissionCodes.REPORT_PAYROLL_READ)) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(Dataset.values())
+                .map(Dataset::name)
+                .filter(dataset -> ScopeAccess.isSystemScoped(principal) || !Dataset.COMPANY_DAILY_SUMMARY.name().equals(dataset))
+                .collect(Collectors.toList());
+    }
+
     private List<Long> claimQueuedExportJobs() {
         return transactionTemplate.execute(status -> jdbcTemplate.query("""
                 UPDATE report.export_job job
@@ -956,6 +990,12 @@ class ReportExportService {
         boolean hasMore = window.size() > size;
         List<T> pagedItems = hasMore ? List.copyOf(window.subList(0, size)) : List.copyOf(window);
         return new PageResponse<>(pagedItems, safePage, size, hasMore);
+    }
+
+    private <T> PageResponse<T> toPageResponseFromWindow(List<T> items, int page, int size) {
+        boolean hasMore = items.size() > size;
+        List<T> pagedItems = hasMore ? List.copyOf(items.subList(0, size)) : List.copyOf(items);
+        return new PageResponse<>(pagedItems, page, size, hasMore);
     }
 
     public record ExportDownload(Resource resource, String fileName, String contentType) {

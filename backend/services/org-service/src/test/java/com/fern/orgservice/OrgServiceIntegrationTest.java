@@ -147,6 +147,20 @@ class OrgServiceIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isOk());
+        token = issueToken(currentScopeVersion());
+        mockMvc.perform(post("/regions")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "REGION-BROWSE-2",
+                                  "parentRegionId": 1,
+                                  "currencyCode": "VND",
+                                  "name": "Browse Region Two",
+                                  "timezoneName": "Asia/Ho_Chi_Minh"
+                                }
+                                """))
+                .andExpect(status().isOk());
 
         Long regionId = jdbcTemplate.queryForObject("SELECT id FROM org.region WHERE code = 'REGION-BROWSE-1'", Long.class);
         token = issueToken(currentScopeVersion());
@@ -163,6 +177,19 @@ class OrgServiceIntegrationTest {
                                 }
                                 """.formatted(regionId)))
                 .andExpect(status().isOk());
+        token = issueToken(currentScopeVersion());
+        mockMvc.perform(post("/outlets")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "regionId": %d,
+                                  "code": "OUTLET-BROWSE-2",
+                                  "name": "Browse Outlet Two",
+                                  "status": "ACTIVE"
+                                }
+                                """.formatted(regionId)))
+                .andExpect(status().isOk());
 
         token = issueToken(currentScopeVersion());
 
@@ -170,12 +197,13 @@ class OrgServiceIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .param("search", "Browse")
                         .param("page", "0")
-                        .param("size", "10"))
+                        .param("size", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].code").value("REGION-BROWSE-1"))
                 .andExpect(jsonPath("$.items[0].name").value("Browse Region"))
                 .andExpect(jsonPath("$.page").value(0))
-                .andExpect(jsonPath("$.size").value(10));
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.hasMore").value(true));
 
         mockMvc.perform(get("/outlets")
                         .header("Authorization", "Bearer " + token)
@@ -183,12 +211,13 @@ class OrgServiceIntegrationTest {
                         .param("status", "ACTIVE")
                         .param("search", "Browse")
                         .param("page", "0")
-                        .param("size", "10"))
+                        .param("size", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].code").value("OUTLET-BROWSE-1"))
                 .andExpect(jsonPath("$.items[0].status").value("ACTIVE"))
                 .andExpect(jsonPath("$.page").value(0))
-                .andExpect(jsonPath("$.size").value(10));
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.hasMore").value(true));
     }
 
     @Test

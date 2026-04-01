@@ -26,6 +26,8 @@ const statusOptions: SelectOption[] = [
   { label: 'TERMINATED', value: 'TERMINATED' },
 ]
 
+const PAGE_SIZE = 50
+
 export function ContractsPage() {
   usePageTitle('HR Contracts')
   const navigate = useNavigate()
@@ -35,17 +37,20 @@ export function ContractsPage() {
   const [employeeFilter, setEmployeeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [searchText, setSearchText] = useState('')
+  const [page, setPage] = useState(0)
   const parsedEmployeeId = Number(employeeFilter)
   const contractsQuery = useHrContractBrowse(
     {
       employeeId: Number.isInteger(parsedEmployeeId) && parsedEmployeeId > 0 ? parsedEmployeeId : undefined,
       search: searchText.trim() || undefined,
       status: statusFilter === 'ALL' ? undefined : statusFilter,
-      page: 0,
-      size: 100,
+      page,
+      size: PAGE_SIZE,
     },
     { enabled: canReadContracts },
   )
+
+  const hasMore = contractsQuery.data?.hasMore ?? false
 
   const columns = useMemo<Array<DataTableColumn<HrContract>>>(
     () => [
@@ -85,6 +90,17 @@ export function ContractsPage() {
           />
         ),
       },
+      {
+        key: 'taxCode',
+        header: canViewSalary ? 'Tax code' : 'Tax code (masked)',
+        render: (contract) => (
+          <MaskedField
+            label=""
+            mode={canViewSalary ? 'readonly-visible' : 'masked'}
+            value={contract.taxCode ?? '—'}
+          />
+        ),
+      },
     ],
     [canViewSalary],
   )
@@ -105,33 +121,38 @@ export function ContractsPage() {
       <div className="field-grid">
         <Input
           label="Employee ID"
-          onChange={(event) => setEmployeeFilter(event.target.value)}
+          onChange={(event) => { setEmployeeFilter(event.target.value); setPage(0) }}
           placeholder="Lọc theo employee ID"
           type="number"
           value={employeeFilter}
         />
         <Input
           label="Search contracts"
-          onChange={(event) => setSearchText(event.target.value)}
+          onChange={(event) => { setSearchText(event.target.value); setPage(0) }}
           placeholder="Contract ID, employee, type..."
           value={searchText}
         />
         <Select
           label="Status filter"
-          onChange={(event) => setStatusFilter(event.target.value)}
+          onChange={(event) => { setStatusFilter(event.target.value); setPage(0) }}
           options={statusOptions}
           value={statusFilter}
         />
       </div>
 
       <DataTable
+        canNext={hasMore}
+        canPrevious={page > 0}
         columns={columns}
+        currentPage={page}
         emptyDescription="Không có contract nào khớp bộ lọc hiện tại."
         emptyTitle="No matching contracts"
         error={contractsQuery.error ? getHrErrorMessage(contractsQuery.error, 'Không thể tải danh sách contracts.') : null}
         loading={contractsQuery.isLoading}
         loadingDescription="Đang tải contracts..."
         loadingTitle="Đang tải contracts"
+        onNext={() => setPage((p) => p + 1)}
+        onPrevious={() => setPage((p) => Math.max(0, p - 1))}
         onRetry={() => void contractsQuery.refetch()}
         onRowClick={(contract) => navigate(`/hr/contracts/${contract.id}?employeeId=${contract.employeeId}`)}
         rowKey={(contract) => contract.id}

@@ -11,7 +11,7 @@ import {
 } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useSupplierPayments } from '../hooks/useSupplierPayment'
 import type { SupplierPayment } from '../model/procurement.types'
 import { canReadPayments, canRecordPayment } from '../services/procurementPermission.service'
@@ -19,7 +19,7 @@ import { canReadPayments, canRecordPayment } from '../services/procurementPermis
 export function SupplierPaymentListPage() {
   usePageTitle('Supplier Payments')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const [supplierId, setSupplierId] = useState('')
 
   const canRead = canReadPayments(principal)

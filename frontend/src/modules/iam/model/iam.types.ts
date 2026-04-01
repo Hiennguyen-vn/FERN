@@ -27,8 +27,10 @@ export interface AssignUserRolesRequest {
 
 export interface AssignUserScopesRequest {
   system?: boolean
-  regions?: number[]
-  outlets?: number[]
+  /** Backend field name is regionIds — not regions. */
+  regionIds?: number[]
+  /** Backend field name is outletIds — not outlets. */
+  outletIds?: number[]
 }
 
 export interface PutUserPermissionOverridesRequest {

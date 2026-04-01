@@ -13,7 +13,7 @@ import {
 } from '@design-system/index'
 import type { SelectOption } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { useCreateSupplierInvoice } from '../hooks/useSupplierInvoice'
 import type { InvoiceLineType } from '../model/procurement.types'
@@ -36,7 +36,7 @@ function toOptionalNumber(value: string): number | undefined {
 export function SupplierInvoiceCreatePage() {
   usePageTitle('Create Supplier Invoice')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { selectedOutletId, selectedRegionId } = useScopeContext()

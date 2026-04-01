@@ -31,7 +31,7 @@ export function ExportJobsPage() {
   if (!canOpenPage) {
     return (
       <DashboardLayout
-        description="Create export jobs and monitor recent jobs as part of the broader reports workspace."
+        description="Create export jobs and inspect server-backed export history as part of the broader reports workspace."
         title="Export Jobs"
       >
         <PermissionDeniedInline message="Bạn cần report.read, report.export, report.payroll.read hoặc report.payroll.export để mở export jobs." />
@@ -53,14 +53,14 @@ export function ExportJobsPage() {
           ) : null}
         </div>
       }
-      description="Create export jobs and monitor recent jobs as part of the broader reports workspace."
+      description="Create export jobs and inspect server-backed export history as part of the broader reports workspace."
       title="Export Jobs"
     >
       <ReadonlyBanner
         message={
           canInspectJobs
             ? 'Export jobs hiển thị preview/download theo quyền đọc dataset tương ứng. Export creation vẫn tách biệt khỏi read access.'
-            : 'Create-only mode: bạn có thể queue export jobs cho dataset được phép, nhưng recent job inspection, preview và download vẫn cần quyền đọc report tương ứng.'
+            : 'Create-only mode: bạn có thể queue export jobs cho dataset được phép, nhưng export history inspection, preview và download vẫn cần quyền đọc report tương ứng.'
         }
       />
 
@@ -128,7 +128,7 @@ export function ExportJobsPage() {
           ) : null}
         </section>
       ) : (
-        <Card title="Recent export inspection requires read access">
+        <Card title="Export history inspection requires read access">
           <p className="muted-text">The backend only exposes export job detail endpoints behind report read permissions, so this screen stays in create-only mode for export-only users.</p>
         </Card>
       )}

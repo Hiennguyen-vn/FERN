@@ -4,7 +4,7 @@ import { Button, Card, DataTable, EmptyState, EntityHeader, ErrorState, Permissi
 import type { DataTableColumn } from '@design-system/index'
 import { useConfirmAction } from '@shared/hooks/useConfirmAction'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { usePurchaseOrder, usePurchaseOrderAction } from '../hooks/usePurchaseOrder'
 import type { PurchaseOrderLine } from '../model/procurement.types'
 import {
@@ -16,7 +16,7 @@ import {
 import { canReadPurchaseOrders } from '../services/procurementPermission.service'
 
 export function PurchaseOrderDetailPage() {
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const params = useParams<{ purchaseOrderId: string }>()
   const purchaseOrderId = params.purchaseOrderId ? Number(params.purchaseOrderId) : null
   const confirmAction = useConfirmAction()

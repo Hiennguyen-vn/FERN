@@ -5,6 +5,7 @@ import { Card, DataTable, Input, PermissionDeniedInline, ReadonlyBanner, Select 
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { LoadedSubsetMeta } from '@shared/ui/LoadedSubsetMeta'
 import { ProductStatusBadge, STATUS_LABELS } from '../components/ProductStatusBadge'
 import { useProductCategories, useProducts } from '../hooks/useProducts'
 import type { Product, ProductStatus } from '../model/catalog.types'
@@ -12,8 +13,10 @@ import { getCatalogErrorMessage } from '../services/catalogError.service'
 import { canReadProducts } from '../services/catalogPermission.service'
 import { matchesSearch } from '../services/catalogReadModel.service'
 
+// Backend ProductStatus: DRAFT, ACTIVE, INACTIVE, DISCONTINUED
 const statusOptions: SelectOption[] = [
   { label: 'Tất cả trạng thái', value: 'ALL' },
+  { label: STATUS_LABELS.DRAFT, value: 'DRAFT' },
   { label: STATUS_LABELS.ACTIVE, value: 'ACTIVE' },
   { label: STATUS_LABELS.INACTIVE, value: 'INACTIVE' },
   { label: STATUS_LABELS.DISCONTINUED, value: 'DISCONTINUED' },
@@ -133,11 +136,11 @@ export function ProductsPage() {
             value={categoryFilter}
           />
         </div>
-        <div className="meta-grid">
-          <span>Tổng sản phẩm: {products.length}</span>
-          <span>Kết quả sau lọc: {filteredRows.length}</span>
-          <span>Chế độ: Read-first catalog browse</span>
-        </div>
+        <LoadedSubsetMeta
+          entityLabel="sản phẩm"
+          filteredCount={filteredRows.length}
+          loadedCount={products.length}
+        />
       </Card>
 
       {categoriesError ? (

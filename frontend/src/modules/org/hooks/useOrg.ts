@@ -1,7 +1,7 @@
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { orgApi } from '../api/org.api'
 import { orgQueryKeys } from '../api/org.queries'
-import type { OrgOutlet, OrgRegion } from '../model/org.types'
+import type { CreateOutletPayload, OrgOutlet, OrgRegion } from '../model/org.types'
 
 interface OrgQueryOptions {
   enabled?: boolean
@@ -62,6 +62,16 @@ export function useRegions(regionIds: number[], options: OrgQueryOptions = {}) {
       await Promise.all(queries.map((query) => query.refetch()))
     },
   }
+}
+
+export function useCreateOutlet() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: CreateOutletPayload) => orgApi.createOutlet(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['org', 'outlets'] })
+    },
+  })
 }
 
 export function useOutlets(outletIds: number[], options: OrgQueryOptions = {}) {

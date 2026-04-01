@@ -1063,6 +1063,17 @@ class HrServiceIntegrationTest {
                 LocalDate.of(2026, 1, 10),
                 null
         )).id();
+        long employeeId2 = hrService.createEmployee(principal, new CreateEmployeeRequest(
+                "EMP-BROWSE-002",
+                "Browse Target Two",
+                null,
+                null,
+                "browse-two@fern.local",
+                "0909000001",
+                "ACTIVE",
+                LocalDate.of(2026, 1, 11),
+                null
+        )).id();
         hrService.createContract(principal, new CreateContractRequest(
                 employeeId,
                 "FULL_TIME",
@@ -1072,6 +1083,17 @@ class HrServiceIntegrationTest {
                 "TAX-BROWSE-001",
                 "ACTIVE",
                 LocalDate.of(2026, 1, 10),
+                null
+        ));
+        hrService.createContract(principal, new CreateContractRequest(
+                employeeId2,
+                "FULL_TIME",
+                "MONTHLY",
+                new BigDecimal("16000000"),
+                1L,
+                "TAX-BROWSE-002",
+                "ACTIVE",
+                LocalDate.of(2026, 1, 11),
                 null
         ));
 
@@ -1087,24 +1109,24 @@ class HrServiceIntegrationTest {
                         .param("search", "Browse")
                         .param("status", "ACTIVE")
                         .param("page", "0")
-                        .param("size", "5"))
+                        .param("size", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].employeeCode").value("EMP-BROWSE-001"))
                 .andExpect(jsonPath("$.items[0].fullName").value("Browse Target"))
                 .andExpect(jsonPath("$.page").value(0))
-                .andExpect(jsonPath("$.size").value(5));
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.hasMore").value(true));
 
         mockMvc.perform(get("/employee-contracts")
                         .header("Authorization", authorization)
-                        .param("employeeId", Long.toString(employeeId))
                         .param("status", "ACTIVE")
                         .param("page", "0")
-                        .param("size", "5"))
+                        .param("size", "1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items[0].employeeId").value(employeeId))
                 .andExpect(jsonPath("$.items[0].contractStatus").value("ACTIVE"))
                 .andExpect(jsonPath("$.page").value(0))
-                .andExpect(jsonPath("$.size").value(5));
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.hasMore").value(true));
     }
 
     @Test

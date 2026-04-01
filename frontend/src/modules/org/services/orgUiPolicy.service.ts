@@ -1,5 +1,5 @@
 import type { FernPrincipal } from '@core/auth/auth.types'
-import { canReadOutlets, canReadRegions } from './orgPermission.service'
+import { canReadOutlets, canReadRegions, canWriteOutlets } from './orgPermission.service'
 
 export const orgUiPolicy = {
   canOpenRegionsPage(principal: FernPrincipal | null) {
@@ -18,7 +18,7 @@ export const orgUiPolicy = {
     return canReadOutlets(principal)
   },
 
-  isReadonly() {
-    return true
+  canOpenOutletCreate(principal: FernPrincipal | null) {
+    return canWriteOutlets(principal)
   },
 }

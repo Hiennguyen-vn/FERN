@@ -21,12 +21,15 @@ import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.ScopeType;
 import com.fern.platform.security.FernPasswordHasher;
 import java.time.Clock;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.Sort;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 @Service
 public class UserService {
@@ -41,6 +44,7 @@ public class UserService {
     private final IamOutboxService outboxService;
     private final IamAuditService iamAuditService;
     private final RefreshTokenService refreshTokenService;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final Clock clock;
 
     public UserService(
@@ -55,6 +59,7 @@ public class UserService {
             IamOutboxService outboxService,
             IamAuditService iamAuditService,
             RefreshTokenService refreshTokenService,
+            NamedParameterJdbcTemplate jdbcTemplate,
             Clock clock
     ) {
         this.userAccountRepository = userAccountRepository;
@@ -68,6 +73,7 @@ public class UserService {
         this.outboxService = outboxService;
         this.iamAuditService = iamAuditService;
         this.refreshTokenService = refreshTokenService;
+        this.jdbcTemplate = jdbcTemplate;
         this.clock = clock;
     }
 
@@ -115,18 +121,54 @@ public class UserService {
     @Transactional(readOnly = true)
     public PageResponse<UserResponse> list(String search, UserStatus status, Integer page, Integer size) {
         String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        int safePage = page == null || page < 0 ? 0 : page;
         int clampedSize = ListQueryDefaults.clampLimit(size);
+        long offset = ListQueryDefaults.offsetFrom(safePage, clampedSize);
 
-        List<UserResponse> users = userAccountRepository.findAll(Sort.by(
-                        Sort.Order.asc("username"),
-                        Sort.Order.asc("id")
-                )).stream()
-                .filter(user -> status == null || user.getStatus() == status)
-                .filter(user -> matchesSearch(user, normalizedSearch))
+        StringBuilder sql = new StringBuilder("""
+                SELECT id
+                FROM iam.user_account
+                WHERE 1 = 1
+                """);
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("limit", clampedSize + 1)
+                .addValue("offset", offset);
+        if (status != null) {
+            sql.append(" AND status = :status");
+            parameters.addValue("status", status.name());
+        }
+        if (!normalizedSearch.isBlank()) {
+            sql.append("""
+                     AND (
+                        CAST(id AS text) ILIKE :search
+                        OR username ILIKE :search
+                        OR COALESCE(full_name, '') ILIKE :search
+                        OR COALESCE(email, '') ILIKE :search
+                        OR COALESCE(phone, '') ILIKE :search
+                     )
+                    """);
+            parameters.addValue("search", "%" + normalizedSearch + "%");
+        }
+        sql.append("""
+                 ORDER BY username ASC, id ASC
+                 LIMIT :limit OFFSET :offset
+                """);
+
+        List<Long> userIds = jdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> rs.getLong("id"));
+        boolean hasMore = userIds.size() > clampedSize;
+        List<Long> pageIds = hasMore ? List.copyOf(userIds.subList(0, clampedSize)) : List.copyOf(userIds);
+        if (pageIds.isEmpty()) {
+            return new PageResponse<>(List.of(), safePage, clampedSize, false);
+        }
+
+        Map<Long, UserAccountEntity> usersById = new LinkedHashMap<>();
+        userAccountRepository.findAllById(pageIds).forEach(user -> usersById.put(user.getId(), user));
+        List<UserResponse> users = pageIds.stream()
+                .map(usersById::get)
+                .filter(Objects::nonNull)
                 .map(userViewService::toResponse)
                 .toList();
-
-        return toPageResponse(users, page, clampedSize);
+        return new PageResponse<>(users, safePage, clampedSize, hasMore);
     }
 
     @Transactional
@@ -227,31 +269,4 @@ public class UserService {
         userScopeAssignmentRepository.save(assignment);
     }
 
-    private boolean matchesSearch(UserAccountEntity user, String normalizedSearch) {
-        if (normalizedSearch.isBlank()) {
-            return true;
-        }
-        return contains(user.getId(), normalizedSearch)
-                || contains(user.getUsername(), normalizedSearch)
-                || contains(user.getFullName(), normalizedSearch)
-                || contains(user.getEmail(), normalizedSearch)
-                || contains(user.getPhone(), normalizedSearch);
-    }
-
-    private boolean contains(Object value, String normalizedSearch) {
-        return value != null && String.valueOf(value).toLowerCase(Locale.ROOT).contains(normalizedSearch);
-    }
-
-    private <T> PageResponse<T> toPageResponse(List<T> items, Integer page, int size) {
-        int safePage = page == null || page < 0 ? 0 : page;
-        int offset = Math.toIntExact(ListQueryDefaults.offsetFrom(page, size));
-        if (offset >= items.size()) {
-            return new PageResponse<>(List.of(), safePage, size, false);
-        }
-        int endExclusive = Math.min(items.size(), offset + size + 1);
-        List<T> window = items.subList(offset, endExclusive);
-        boolean hasMore = window.size() > size;
-        List<T> pagedItems = hasMore ? List.copyOf(window.subList(0, size)) : List.copyOf(window);
-        return new PageResponse<>(pagedItems, safePage, size, hasMore);
-    }
 }

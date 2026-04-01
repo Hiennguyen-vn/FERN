@@ -1,19 +1,21 @@
 import { hasPermission } from '@core/permissions/permission.checker'
+import { permissionConstants } from '@core/permissions/permission.constants'
 import type { FernPrincipal } from '@core/auth/auth.types'
 import type { PosSession } from '../model/pos.types'
 
+/** @deprecated Use permissionConstants.pos directly. */
 export const POS_PERMISSIONS = {
-  catalogPriceRead: 'catalog.price.read',
-  catalogProductRead: 'catalog.product.read',
-  orderCancel: 'pos.order.cancel',
-  orderComplete: 'pos.order.complete',
-  orderCreate: 'pos.order.create',
-  orderRead: 'pos.order.read',
-  orderUpdate: 'pos.order.update',
-  sessionClose: 'pos.session.close',
-  sessionOpen: 'pos.session.open',
-  sessionRead: 'pos.session.read',
-  sessionReconcile: 'pos.session.reconcile',
+  catalogPriceRead: permissionConstants.catalog.priceRead,
+  catalogProductRead: permissionConstants.catalog.productRead,
+  orderCancel: permissionConstants.pos.orderCancel,
+  orderComplete: permissionConstants.pos.orderComplete,
+  orderCreate: permissionConstants.pos.orderCreate,
+  orderRead: permissionConstants.pos.orderRead,
+  orderUpdate: permissionConstants.pos.orderUpdate,
+  sessionClose: permissionConstants.pos.sessionClose,
+  sessionOpen: permissionConstants.pos.sessionOpen,
+  sessionRead: permissionConstants.pos.sessionRead,
+  sessionReconcile: permissionConstants.pos.sessionReconcile,
 } as const
 
 export function canReadCatalog(principal: FernPrincipal | null) {

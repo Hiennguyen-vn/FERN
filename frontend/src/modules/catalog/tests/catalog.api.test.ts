@@ -75,4 +75,93 @@ describe('catalog.api', () => {
     expect(postSpy).toHaveBeenCalledWith('/units-of-measure', { code: 'G' })
     expect(postSpy).toHaveBeenCalledWith('/uom-conversions', { fromUomCode: 'G', toUomCode: 'KG' })
   })
+
+  /**
+   * Backend TaxRateUpsertRequest fields:
+   *   @NotNull Long productId
+   *   @NotNull BigDecimal taxPercent
+   *   @NotNull LocalDate effectiveFrom
+   *   LocalDate effectiveTo (optional)
+   *
+   * Previously the frontend used code/name/ratePercent — these must never
+   * regress to those wrong field names.
+   */
+  it('sends TaxRate upsert with productId + taxPercent field names (not code/name/ratePercent)', async () => {
+    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+    const putSpy = vi.spyOn(httpClient, 'put').mockResolvedValue({ data: {} } as any)
+
+    await catalogApi.createTaxRate({
+      productId: 42,
+      taxPercent: 10,
+      effectiveFrom: '2026-01-01',
+    })
+    await catalogApi.updateTaxRate(7, {
+      productId: 42,
+      taxPercent: 8.5,
+      effectiveFrom: '2026-04-01',
+      effectiveTo: '2026-12-31',
+    })
+
+    expect(postSpy).toHaveBeenCalledWith('/tax-rates', {
+      productId: 42,
+      taxPercent: 10,
+      effectiveFrom: '2026-01-01',
+    })
+    expect(putSpy).toHaveBeenCalledWith('/tax-rates/7', {
+      productId: 42,
+      taxPercent: 8.5,
+      effectiveFrom: '2026-04-01',
+      effectiveTo: '2026-12-31',
+    })
+  })
+
+  /**
+   * Backend UomConversionRequest/Response uses `conversionFactor` (not `factor`).
+   * Sending `factor` would leave conversionFactor null and fail @NotNull validation.
+   */
+  it('sends UomConversion upsert with conversionFactor field name (not factor)', async () => {
+    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+
+    await catalogApi.createUomConversion({
+      fromUomCode: 'G',
+      toUomCode: 'KG',
+      conversionFactor: 0.001,
+    })
+
+    expect(postSpy).toHaveBeenCalledWith('/uom-conversions', {
+      fromUomCode: 'G',
+      toUomCode: 'KG',
+      conversionFactor: 0.001,
+    })
+    // Confirm the wrong field name is never sent
+    expect(postSpy).not.toHaveBeenCalledWith('/uom-conversions', expect.objectContaining({ factor: expect.anything() }))
+  })
+
+  /**
+   * Backend ProductPriceUpsertRequest uses backend PriceType enum:
+   *   RETAIL, DINE_IN, TAKEAWAY, DELIVERY, WHOLESALE
+   * (NOT the old frontend values: STANDARD, PROMOTIONAL, COST)
+   *
+   * Backend PriceScopeType enum:
+   *   GLOBAL, COUNTRY, REGION, OUTLET (COUNTRY was missing from the frontend)
+   */
+  it('sends ProductPrice with correct PriceType and PriceScopeType enum values', async () => {
+    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+
+    await catalogApi.createProductPrice({
+      productId: 1,
+      scopeType: 'COUNTRY',
+      scopeId: null,
+      priceType: 'RETAIL',
+      currencyCode: 'VND',
+      priceValue: 50000,
+      effectiveFrom: '2026-01-01',
+      effectiveTo: null,
+    })
+
+    expect(postSpy).toHaveBeenCalledWith('/product-prices', expect.objectContaining({
+      scopeType: 'COUNTRY',
+      priceType: 'RETAIL',
+    }))
+  })
 })

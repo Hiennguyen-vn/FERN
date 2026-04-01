@@ -93,6 +93,11 @@ export const navigationConfig: NavigationItem[] = [
     visible: (principal) => hasAnyPermissions(principal, auditReadPermissions),
   },
   {
+    label: 'Org',
+    to: '/org',
+    visible: (principal) => hasAnyPermissions(principal, regionalOpsPermissions),
+  },
+  {
     label: 'Regional Ops',
     to: '/regional-ops',
     visible: (principal) => hasAnyPermissions(principal, regionalOpsPermissions),

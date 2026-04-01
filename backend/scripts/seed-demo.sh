@@ -407,7 +407,7 @@ bootstrap_request() {
   done
 }
 
-# Create-or-resolve: attempts POST, on 409 or 5xx with existing DB row, resolves ID via psql
+# Create-or-resolve: attempts POST, on 409 or 5xx resolves the existing entity via live browse/list APIs
 create_or_resolve() {
   local resolver_func="$1"; local code="$2"; local method="$3"; local path="$4"; local body="$5"
   shift 5 || true
@@ -511,7 +511,7 @@ create_demo_user() {
   local user_id
   if [[ "${HTTP_STATUS}" == "409" ]]; then
     user_id="$(find_user_id_by_username "${username}")"
-    [[ -n "${user_id}" ]] || fail "409 for user ${username} but not in DB"
+    [[ -n "${user_id}" ]] || fail "409 for user ${username} but not resolvable from live APIs"
     log "  ${username} already exists → id=${user_id}" >&2
   elif [[ "${HTTP_STATUS}" -ge 200 && "${HTTP_STATUS}" -lt 300 ]]; then
     user_id="$(json_id "${HTTP_BODY}")"
@@ -566,7 +566,7 @@ SYSADMIN_ID="$(create_demo_user "demo-sysadmin" "Demo System Admin" \
   "{\"systemScope\":true}")"
 
 AUDIT_ID="$(create_demo_user "demo-audit" "Demo Audit Reviewer" \
-  '["system_admin"]' \
+  '["audit_viewer"]' \
   "{\"systemScope\":true}")"
 
 READONLY_ID="$(create_demo_user "demo-readonly" "Demo Read-Only Edge" \
@@ -588,7 +588,7 @@ FINANCE_TOKEN="$(get_user_token "demo-finance" "${DEMO_PASSWORD}")"
 log ""
 log "=== [3/9] CATALOG ==="
 
-# UOM — check existence via psql, create if missing
+# UOM — check existence via live API, create if missing
 create_uom_if_missing() {
   local code="$1"; local name="$2"; local symbol="$3"
   local cnt
@@ -1015,10 +1015,8 @@ DEMO ACCOUNTS  (all password: ${DEMO_PASSWORD})
   demo-finance       finance             SYSTEM
   demo-product-mgr   product_manager     SYSTEM
   demo-sysadmin      system_admin        SYSTEM
-  demo-audit         system_admin(*)     SYSTEM
+  demo-audit         audit_viewer        SYSTEM
   demo-readonly      regional_finance    DIST3(${OUTLET_D3}) only
-
-  (*) fallback until a dedicated audit-only role is published in IAM.
 
 Frontend: http://localhost:3000
 ======================================================================

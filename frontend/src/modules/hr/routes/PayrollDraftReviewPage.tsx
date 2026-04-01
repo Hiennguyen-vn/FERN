@@ -16,6 +16,7 @@ import {
 } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { maskedEmptyState } from '@shared/utils/tableHelpers'
 import { usePayrollRun } from '../hooks/useHr'
 import type { PayrollEmployeeResult } from '../model/hr.types'
 import { getHrErrorMessage } from '../services/hrError.service'
@@ -245,8 +246,13 @@ export function PayrollDraftReviewPage() {
       <FormSection description="Toàn bộ employee results trong payroll draft hiện tại." title="Employee results">
         <DataTable
           columns={employeeColumns}
-          emptyDescription="Payroll run này chưa có employee results."
-          emptyTitle="No employee results"
+          {...maskedEmptyState(
+            !canReadDetail,
+            'Results masked by backend',
+            'Employee results bị backend ẩn vì thiếu finance.payroll.detail.read. Liên hệ admin để được cấp quyền.',
+            'No employee results',
+            'Payroll run này chưa có employee results.',
+          )}
           rowKey={(employee) => employee.id}
           rows={run.employees}
         />

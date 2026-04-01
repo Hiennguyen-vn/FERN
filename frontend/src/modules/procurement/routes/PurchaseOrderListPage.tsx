@@ -14,7 +14,7 @@ import {
 import type { DataTableColumn } from '@design-system/index'
 import type { SelectOption } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { usePurchaseOrders } from '../hooks/usePurchaseOrder'
 import type { PurchaseOrder } from '../model/procurement.types'
 import { canReadPurchaseOrders } from '../services/procurementPermission.service'
@@ -33,7 +33,7 @@ const statusOptions: SelectOption[] = [
 export function PurchaseOrderListPage() {
   usePageTitle('Purchase Orders')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const [outletId, setOutletId] = useState('')
   const [supplierId, setSupplierId] = useState('')
   const [status, setStatus] = useState('')

@@ -3,10 +3,10 @@ import { generateIdempotencyKey } from '@core/api/idempotency'
 import { createSupplierPayment, listSupplierPayments } from '../api/procurement.api'
 import type { CreateSupplierPaymentPayload } from '../model/procurement.types'
 
-export function useSupplierPayments() {
+export function useSupplierPayments(params?: { supplierId?: number; limit?: number }) {
   return useQuery({
-    queryKey: ['procurement', 'supplier-payments'],
-    queryFn: () => listSupplierPayments(),
+    queryKey: ['procurement', 'supplier-payments', params],
+    queryFn: () => listSupplierPayments(params),
   })
 }
 

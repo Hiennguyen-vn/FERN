@@ -13,7 +13,7 @@ import {
 } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useGoodsReceipts } from '../hooks/useGoodsReceipt'
 import type { GoodsReceipt } from '../model/procurement.types'
 import { canReadGoodsReceipts } from '../services/procurementPermission.service'
@@ -29,7 +29,7 @@ const statusOptions: SelectOption[] = [
 export function GoodsReceiptListPage() {
   usePageTitle('Goods Receipts')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const [purchaseOrderId, setPurchaseOrderId] = useState('')
   const [outletId, setOutletId] = useState('')
   const [status, setStatus] = useState('')

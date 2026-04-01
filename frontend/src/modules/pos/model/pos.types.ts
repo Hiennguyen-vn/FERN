@@ -119,6 +119,11 @@ export interface ResolvedMenuItem {
 export interface OpenPosSessionPayload {
   regionId: number
   outletId: number
+  /** Optional terminal identifier — max 64 chars, pattern ^[A-Za-z0-9_-]+$.
+   *  Backend uses this for session affinity: same cashier + same terminal
+   *  replays the existing OPEN session (X-Session-Existed: true header)
+   *  rather than opening a duplicate. */
+  terminalId?: string
   currencyCode: string
   businessDate: string
   note?: string

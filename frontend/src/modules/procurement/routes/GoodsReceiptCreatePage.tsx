@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { Button, Card, EmptyState, ErrorState, FormActions, FormSection, Input, PermissionDeniedInline } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useCreateGoodsReceipt } from '../hooks/useGoodsReceipt'
 import { usePurchaseOrder } from '../hooks/usePurchaseOrder'
 import { createDefaultGoodsReceiptLine } from '../services/procurementWorkflow.service'
@@ -21,7 +21,7 @@ function toOptionalNumber(value: string): number | undefined {
 export function GoodsReceiptCreatePage() {
   usePageTitle('Goods Receipt Create')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const canCreate = canCreateGoodsReceipt(principal)

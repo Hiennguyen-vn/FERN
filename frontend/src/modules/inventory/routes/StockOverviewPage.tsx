@@ -4,7 +4,7 @@ import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, Perm
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { useAuthStore } from '@core/auth/auth.store'
+import { usePrincipal } from '@core/auth/auth.selectors'
 import { useStockBalances } from '../hooks/useStockBalances'
 import type { StockBalance } from '../model/inventory.types'
 import { canReadStockBalances } from '../services/inventoryPermission.service'
@@ -21,7 +21,7 @@ function toOptionalNumber(value: string): number | undefined {
 export function StockOverviewPage() {
   usePageTitle('Stock Overview')
 
-  const principal = useAuthStore((state) => state.principal)
+  const principal = usePrincipal()
   const { selectedOutletId, outletIds, setSelectedOutletId } = useScopeContext()
   const [ingredientId, setIngredientId] = useState('')
   const [page, setPage] = useState(0)

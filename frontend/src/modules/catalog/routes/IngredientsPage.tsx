@@ -4,6 +4,7 @@ import { Card, DataTable, Input, PermissionDeniedInline, ReadonlyBanner, Select 
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { LoadedSubsetMeta } from '@shared/ui/LoadedSubsetMeta'
 import { useIngredients } from '../hooks/useIngredients'
 import { useIngredientCategories } from '../hooks/useProducts'
 import type { Ingredient, IngredientStatus } from '../model/catalog.types'
@@ -11,19 +12,32 @@ import { getCatalogErrorMessage } from '../services/catalogError.service'
 import { canReadIngredients } from '../services/catalogPermission.service'
 import { matchesSearch } from '../services/catalogReadModel.service'
 
+// Backend IngredientStatus: ACTIVE, INACTIVE, DISCONTINUED
 const STATUS_LABELS: Record<IngredientStatus, string> = {
   ACTIVE: 'Đang dùng',
   INACTIVE: 'Ngừng dùng',
+  DISCONTINUED: 'Ngừng kinh doanh',
 }
 
 const statusOptions: SelectOption[] = [
   { label: 'Tất cả trạng thái', value: 'ALL' },
   { label: STATUS_LABELS.ACTIVE, value: 'ACTIVE' },
   { label: STATUS_LABELS.INACTIVE, value: 'INACTIVE' },
+  { label: STATUS_LABELS.DISCONTINUED, value: 'DISCONTINUED' },
 ]
 
+const STATUS_BADGE_CLASS: Record<IngredientStatus, string> = {
+  ACTIVE: 'badge badge-success',
+  INACTIVE: 'badge badge-neutral',
+  DISCONTINUED: 'badge badge-danger',
+}
+
 function IngredientStatusBadge({ status }: { status: IngredientStatus }) {
-  return <span className={status === 'ACTIVE' ? 'badge badge-success' : 'badge badge-neutral'}>{STATUS_LABELS[status]}</span>
+  return (
+    <span className={STATUS_BADGE_CLASS[status] ?? 'badge badge-neutral'}>
+      {STATUS_LABELS[status] ?? status}
+    </span>
+  )
 }
 
 export function IngredientsPage() {
@@ -137,11 +151,11 @@ export function IngredientsPage() {
             value={categoryFilter}
           />
         </div>
-        <div className="meta-grid">
-          <span>Tổng nguyên liệu: {ingredients.length}</span>
-          <span>Kết quả sau lọc: {filteredRows.length}</span>
-          <span>Use case: recipe browse, stock planning, procurement reference</span>
-        </div>
+        <LoadedSubsetMeta
+          entityLabel="nguyên liệu"
+          filteredCount={filteredRows.length}
+          loadedCount={ingredients.length}
+        />
       </Card>
 
       {categoriesError ? (

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
-import { DataTable, Input, PermissionDeniedInline } from '@design-system/index'
+import { DataTable, Input, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { useRegionList } from '../hooks/useOrg'
@@ -11,21 +11,23 @@ import { getOrgErrorMessage } from '../services/orgError.service'
 import { buildParentRegionLabel, formatOrgInstant } from '../services/orgReadModel.service'
 import { orgUiPolicy } from '../services/orgUiPolicy.service'
 
+const PAGE_SIZE = 50
+
 export function RegionsPage() {
   usePageTitle('Regions — Org')
   const navigate = useNavigate()
   const principal = usePrincipal()
   const canOpen = orgUiPolicy.canOpenRegionsPage(principal)
   const [searchText, setSearchText] = useState('')
+  const [page, setPage] = useState(0)
   const regionsQuery = useRegionList(
-    { search: searchText.trim() || undefined, page: 0, size: 100 },
+    { search: searchText.trim() || undefined, page, size: PAGE_SIZE },
     { enabled: canOpen },
   )
 
-  const rows = useMemo(
-    () => [...(regionsQuery.data?.items ?? [])].sort((left, right) => left.name.localeCompare(right.name, 'vi')),
-    [regionsQuery.data],
-  )
+  // Server returns rows sorted by name asc — no client-side sort needed.
+  const rows = regionsQuery.data?.items ?? []
+  const hasMore = regionsQuery.data?.hasMore ?? false
   const parentRegionLookup = useMemo(
     () => new Map(rows.map((row) => [row.id, row] as const)),
     [rows],
@@ -87,19 +89,27 @@ export function RegionsPage() {
     >
       <Input
         label="Search regions"
-        onChange={(event) => setSearchText(event.target.value)}
+        onChange={(event) => { setSearchText(event.target.value); setPage(0) }}
         placeholder="Tên, mã, timezone, currency..."
         value={searchText}
       />
+      {!regionsQuery.isLoading && !regionsQuery.error && rows.length === 0 && searchText ? (
+        <ReadonlyBanner message={`Không tìm thấy region nào khớp "${searchText}". Thử từ khoá khác hoặc xoá bộ lọc.`} />
+      ) : null}
 
       <DataTable
+        canNext={hasMore}
+        canPrevious={page > 0}
         columns={columns}
+        currentPage={page}
         emptyDescription="Không có region nào khớp bộ lọc hiện tại hoặc scope hiện tại."
         emptyTitle="No matching regions"
         error={regionsQuery.error ? getOrgErrorMessage(regionsQuery.error, 'Không thể tải region trong scope hiện tại.') : null}
         loading={regionsQuery.isLoading}
         loadingDescription="Đang tải regions trong scope hiện tại..."
         loadingTitle="Đang tải regions"
+        onNext={() => setPage((p) => p + 1)}
+        onPrevious={() => setPage((p) => Math.max(0, p - 1))}
         onRetry={() => void regionsQuery.refetch()}
         onRowClick={(region) => navigate(`/org/regions/${region.id}`)}
         rowKey={(region) => region.id}
