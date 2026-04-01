@@ -12,9 +12,16 @@ import type { RevenueReportFilters, RevenueReportRunRequest, RevenueReportSummar
 
 const dateFormatter = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' })
 
-export function formatReportDateLabel(value: string | null | undefined) {
-  if (!value) {
+export function formatReportDateLabel(value: number[] | string | null | undefined) {
+  if (value == null || value === '') {
     return 'N/A'
+  }
+
+  // Backend Java LocalDate serialized as array [year, month, day]
+  if (Array.isArray(value)) {
+    if (value.length !== 3) return 'N/A'
+    const date = new Date(value[0], value[1] - 1, value[2])
+    return Number.isNaN(date.getTime()) ? 'N/A' : dateFormatter.format(date)
   }
 
   const date = new Date(value)

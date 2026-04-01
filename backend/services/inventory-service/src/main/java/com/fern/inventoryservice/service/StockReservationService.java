@@ -6,6 +6,7 @@ import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
+import com.fern.platform.contracts.InventoryAdjustmentPostedEvent;
 import com.fern.platform.contracts.PosSaleCompletedEvent;
 import com.fern.platform.contracts.RecipeUsageItem;
 import com.fern.platform.contracts.SaleReservationItem;
@@ -20,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,7 @@ public class StockReservationService {
     private final InventoryAuthorizer inventoryAuthorizer;
     private final InventoryRepository inventoryRepository;
     private final InventoryProperties inventoryProperties;
+    private final InventoryOutboxService inventoryOutboxService;
     private final Clock clock;
 
     public StockReservationService(
@@ -37,12 +40,14 @@ public class StockReservationService {
             InventoryAuthorizer inventoryAuthorizer,
             InventoryRepository inventoryRepository,
             InventoryProperties inventoryProperties,
+            InventoryOutboxService inventoryOutboxService,
             Clock clock
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.inventoryAuthorizer = inventoryAuthorizer;
         this.inventoryRepository = inventoryRepository;
         this.inventoryProperties = inventoryProperties;
+        this.inventoryOutboxService = inventoryOutboxService;
         this.clock = clock;
     }
 
@@ -148,7 +153,9 @@ public class StockReservationService {
         lockReservationBalances(event.outletId(), aggregates.values().stream()
                 .map(ReservationAggregate::ingredientId)
                 .toList());
+        Instant now = Instant.now(clock);
         for (ReservationAggregate aggregate : aggregates.values()) {
+            BigDecimal unitCost = inventoryRepository.currentUnitCost(event.outletId(), aggregate.ingredientId());
             inventoryRepository.appendTransaction(
                     event.regionId(),
                     event.outletId(),
@@ -156,12 +163,13 @@ public class StockReservationService {
                     aggregate.qty().negate(),
                     event.businessDate(),
                     InventoryTxnType.SALE_USAGE.name(),
-                    null,
+                    unitCost,
                     "SALE_ORDER",
                     event.saleOrderId().toString(),
                     event.completedByUserId()
             );
             commitReservationDelta(event.outletId(), aggregate.ingredientId(), aggregate.qty());
+            enqueueSaleUsageEvent(event, aggregate, unitCost, now);
         }
         jdbcTemplate.update("""
                 UPDATE inventory.stock_reservation
@@ -369,5 +377,37 @@ public class StockReservationService {
             Long ingredientId,
             BigDecimal qty
     ) {
+    }
+
+    private void enqueueSaleUsageEvent(PosSaleCompletedEvent event, ReservationAggregate aggregate, BigDecimal unitCost, Instant now) {
+        String idempotencyKey = "inventory.sale_usage.posted:sale_order:" + event.saleOrderId() + ":ingredient:" + aggregate.ingredientId();
+        InventoryAdjustmentPostedEvent usageEvent = new InventoryAdjustmentPostedEvent(
+                UUID.randomUUID().toString(),
+                "inventory.adjustment.posted",
+                now,
+                "inventory-service",
+                null,
+                idempotencyKey,
+                null,
+                event.regionId(),
+                event.outletId(),
+                aggregate.ingredientId(),
+                event.businessDate(),
+                now,
+                event.completedByUserId(),
+                "OUT",
+                "SALE_USAGE",
+                aggregate.qty().negate(),
+                unitCost,
+                "SALE_ORDER",
+                event.saleOrderId().toString()
+        );
+        inventoryOutboxService.enqueueOutbox(
+                "SALE_ORDER",
+                event.saleOrderId() + ":ingredient:" + aggregate.ingredientId(),
+                usageEvent.eventType(),
+                event.outletId().toString(),
+                usageEvent
+        );
     }
 }

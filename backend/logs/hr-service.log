@@ -1,0 +1,86 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------------------< com.fern:hr-service >-------------------------
+[INFO] Building hr-service 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.5.8:run (default-cli) > test-compile @ hr-service >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ hr-service ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 8 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ hr-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ hr-service ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ hr-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:3.5.8:run (default-cli) < test-compile @ hr-service <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.5.8:run (default-cli) @ hr-service ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2026-04-01T13:32:56.074+07:00  INFO 87221 --- [hr-service] [           main] c.fern.hrservice.HrServiceApplication    : Starting HrServiceApplication using Java 24.0.2 with PID 87221 (/Users/nguyenhien/Documents/FERN/backend/services/hr-service/target/classes started by nguyenhien in /Users/nguyenhien/Documents/FERN/backend/services/hr-service)
+2026-04-01T13:32:56.076+07:00  INFO 87221 --- [hr-service] [           main] c.fern.hrservice.HrServiceApplication    : The following 1 profile is active: "local"
+2026-04-01T13:32:57.297+07:00  INFO 87221 --- [hr-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-04-01T13:32:57.298+07:00  INFO 87221 --- [hr-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-04-01T13:32:57.318+07:00  INFO 87221 --- [hr-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 12 ms. Found 0 Redis repository interfaces.
+2026-04-01T13:32:57.946+07:00  INFO 87221 --- [hr-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8089 (http)
+2026-04-01T13:32:57.953+07:00  INFO 87221 --- [hr-service] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-01T13:32:57.953+07:00  INFO 87221 --- [hr-service] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2026-04-01T13:32:57.988+07:00  INFO 87221 --- [hr-service] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-01T13:32:57.988+07:00  INFO 87221 --- [hr-service] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1881 ms
+2026-04-01T13:32:58.370+07:00  INFO 87221 --- [hr-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-01T13:32:58.495+07:00  INFO 87221 --- [hr-service] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@3eb9c575
+2026-04-01T13:32:58.496+07:00  INFO 87221 --- [hr-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-01T13:32:58.513+07:00  INFO 87221 --- [hr-service] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:55432/fern_operational?currentSchema=hr (PostgreSQL 17.9)
+2026-04-01T13:32:58.577+07:00  INFO 87221 --- [hr-service] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 7 migrations (execution time 00:00.026s)
+2026-04-01T13:32:58.613+07:00  INFO 87221 --- [hr-service] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "hr": 6
+2026-04-01T13:32:58.617+07:00  INFO 87221 --- [hr-service] [           main] o.f.core.internal.command.DbMigrate      : Schema "hr" is up to date. No migration necessary.
+2026-04-01T13:32:58.642+07:00  INFO 87221 --- [hr-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2026-04-01T13:32:58.685+07:00  INFO 87221 --- [hr-service] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Added connection org.postgresql.jdbc.PgConnection@1d3a03fe
+2026-04-01T13:32:58.685+07:00  INFO 87221 --- [hr-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+2026-04-01T13:32:58.688+07:00  INFO 87221 --- [hr-service] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=hr_master (PostgreSQL 17.9)
+2026-04-01T13:32:58.735+07:00  INFO 87221 --- [hr-service] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 3 migrations (execution time 00:00.010s)
+2026-04-01T13:32:58.822+07:00  INFO 87221 --- [hr-service] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "hr_master": 2
+2026-04-01T13:32:58.823+07:00  INFO 87221 --- [hr-service] [           main] o.f.core.internal.command.DbMigrate      : Schema "hr_master" is up to date. No migration necessary.
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::allocateMemory has been called by io.netty.util.internal.PlatformDependent0$2 (file:/Users/nguyenhien/.m2/repository/io/netty/netty-common/4.1.128.Final/netty-common-4.1.128.Final.jar)
+WARNING: Please consider reporting this to the maintainers of class io.netty.util.internal.PlatformDependent0$2
+WARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release
+2026-04-01T13:32:59.201+07:00  WARN 87221 --- [hr-service] [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 6365ba3e-837a-41cf-b470-e1d1a471ee6b
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-04-01T13:32:59.205+07:00  INFO 87221 --- [hr-service] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-04-01T13:32:59.402+07:00  INFO 87221 --- [hr-service] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-04-01T13:32:59.839+07:00  INFO 87221 --- [hr-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8089 (http) with context path '/'
+2026-04-01T13:32:59.850+07:00  INFO 87221 --- [hr-service] [           main] c.fern.hrservice.HrServiceApplication    : Started HrServiceApplication in 4.506 seconds (process running for 4.748)
+2026-04-01T13:44:20.159+07:00  WARN 87221 --- [hr-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2m44s331ms).
+2026-04-01T13:44:20.338+07:00  WARN 87221 --- [hr-service] [l-2:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Thread starvation or clock leap detected (housekeeper delta=2m44s325ms).
+2026-04-01T13:48:06.132+07:00  WARN 87221 --- [hr-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=3m45s969ms).
+2026-04-01T13:48:06.279+07:00  WARN 87221 --- [hr-service] [l-2:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Thread starvation or clock leap detected (housekeeper delta=3m45s941ms).
+2026-04-01T13:49:22.870+07:00  WARN 87221 --- [hr-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s735ms).
+2026-04-01T13:49:23.030+07:00  WARN 87221 --- [hr-service] [l-2:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Thread starvation or clock leap detected (housekeeper delta=46s739ms).
+2026-04-01T14:01:09.271+07:00  WARN 87221 --- [hr-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=11m46s401ms).
+2026-04-01T14:01:09.434+07:00  WARN 87221 --- [hr-service] [l-2:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Thread starvation or clock leap detected (housekeeper delta=11m46s405ms).
+2026-04-01T14:23:45.169+07:00  INFO 87221 --- [hr-service] [nio-8089-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-01T14:23:45.170+07:00  INFO 87221 --- [hr-service] [nio-8089-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-04-01T14:23:45.172+07:00  INFO 87221 --- [hr-service] [nio-8089-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms

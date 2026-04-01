@@ -25,7 +25,11 @@ export function GoodsReceiptDetailPage() {
   usePageTitle(goodsReceiptId ? `Goods Receipt #${goodsReceiptId}` : 'Goods Receipt Detail')
 
   if (!canReadGoodsReceipts(principal)) {
-    return <PermissionDeniedInline message="Bạn cần quyền procurement.gr.read để xem goods receipt." />
+    return (
+      <DashboardLayout description="Inspect goods receipt lifecycle and post inventory-affecting actions." title="Goods Receipt Detail">
+        <PermissionDeniedInline message="Bạn cần quyền procurement.gr.read để xem goods receipt." />
+      </DashboardLayout>
+    )
   }
 
   const receipt = query.data

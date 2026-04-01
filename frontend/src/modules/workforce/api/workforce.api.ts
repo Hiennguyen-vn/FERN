@@ -14,7 +14,15 @@ export async function getAttendanceEvents(filters: AttendanceEventFilters) {
 }
 
 export async function recordAttendanceEvent(payload: RecordAttendanceEventPayload) {
-  const { data } = await gatewayClient.post('/attendance-events', payload)
+  // Idempotency key derived from the natural business key of an attendance event:
+  // same employee + shift + type + day always produces the same key, preventing
+  // duplicate clock-in/out even when the request is retried after a network failure.
+  const eventDay = payload.eventTime.slice(0, 10) // YYYY-MM-DD
+  const idempotencyKey = `attendance:${payload.employeeId}:${payload.shiftAssignmentId}:${payload.eventType}:${eventDay}`
+
+  const { data } = await gatewayClient.post('/attendance-events', payload, {
+    headers: { 'Idempotency-Key': idempotencyKey },
+  })
   return data
 }
 

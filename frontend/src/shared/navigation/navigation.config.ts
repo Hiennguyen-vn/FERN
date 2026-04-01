@@ -109,7 +109,7 @@ export const navigationConfig: NavigationItem[] = [
   },
   {
     label: 'Procurement',
-    to: '/procurement/purchase-orders/new',
+    to: '/procurement',
     visible: (principal) => hasAnyPermissions(principal, procurementNavigationPermissions),
   },
   {

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -29,14 +30,14 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductResponse> list(@AuthenticationPrincipal FernPrincipal principal, @org.springframework.web.bind.annotation.RequestParam(required = false) Integer limit) {
-        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_READ);
+    public List<ProductResponse> list(@AuthenticationPrincipal FernPrincipal principal, @RequestParam(required = false) Integer limit) {
+        catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRODUCT_READ);
         return productService.list(com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @GetMapping("/{id}")
     public ProductResponse get(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_READ);
+        catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRODUCT_READ);
         return productService.get(id);
     }
 

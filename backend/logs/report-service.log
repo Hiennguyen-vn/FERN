@@ -1,0 +1,1720 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.fern:report-service >-----------------------
+[INFO] Building report-service 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.5.8:run (default-cli) > test-compile @ report-service >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ report-service ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 6 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ report-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ report-service ---
+[INFO] Copying 1 resource from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ report-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:3.5.8:run (default-cli) < test-compile @ report-service <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.5.8:run (default-cli) @ report-service ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2026-04-01T13:32:57.816+07:00  INFO 87228 --- [report-service] [           main] c.f.r.ReportServiceApplication           : Starting ReportServiceApplication using Java 24.0.2 with PID 87228 (/Users/nguyenhien/Documents/FERN/backend/services/report-service/target/classes started by nguyenhien in /Users/nguyenhien/Documents/FERN/backend/services/report-service)
+2026-04-01T13:32:57.817+07:00  INFO 87228 --- [report-service] [           main] c.f.r.ReportServiceApplication           : The following 1 profile is active: "local"
+2026-04-01T13:32:58.658+07:00  INFO 87228 --- [report-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-04-01T13:32:58.659+07:00  INFO 87228 --- [report-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-04-01T13:32:58.678+07:00  INFO 87228 --- [report-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 9 ms. Found 0 Redis repository interfaces.
+2026-04-01T13:32:59.303+07:00  INFO 87228 --- [report-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8090 (http)
+2026-04-01T13:32:59.309+07:00  INFO 87228 --- [report-service] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-01T13:32:59.309+07:00  INFO 87228 --- [report-service] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2026-04-01T13:32:59.381+07:00  INFO 87228 --- [report-service] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-01T13:32:59.381+07:00  INFO 87228 --- [report-service] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1539 ms
+2026-04-01T13:32:59.738+07:00  INFO 87228 --- [report-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-01T13:32:59.862+07:00  INFO 87228 --- [report-service] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@213012a0
+2026-04-01T13:32:59.864+07:00  INFO 87228 --- [report-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-01T13:32:59.880+07:00  INFO 87228 --- [report-service] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=report (PostgreSQL 17.9)
+2026-04-01T13:32:59.966+07:00  INFO 87228 --- [report-service] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 7 migrations (execution time 00:00.042s)
+2026-04-01T13:33:00.050+07:00  INFO 87228 --- [report-service] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "raw_events": 6
+2026-04-01T13:33:00.057+07:00  INFO 87228 --- [report-service] [           main] o.f.core.internal.command.DbMigrate      : Schema "raw_events" is up to date. No migration necessary.
+2026-04-01T13:33:00.277+07:00  WARN 87228 --- [report-service] [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: e0251fa3-fe82-49c6-898f-800f54bab307
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-04-01T13:33:00.281+07:00  INFO 87228 --- [report-service] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::allocateMemory has been called by io.netty.util.internal.PlatformDependent0$2 (file:/Users/nguyenhien/.m2/repository/io/netty/netty-common/4.1.128.Final/netty-common-4.1.128.Final.jar)
+WARNING: Please consider reporting this to the maintainers of class io.netty.util.internal.PlatformDependent0$2
+WARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release
+2026-04-01T13:33:00.560+07:00  INFO 87228 --- [report-service] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 4 endpoints beneath base path '/actuator'
+2026-04-01T13:33:00.848+07:00  INFO 87228 --- [report-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8090 (http) with context path '/'
+2026-04-01T13:33:00.875+07:00  INFO 87228 --- [report-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-report-service-1
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = report-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:00.906+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.077+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.077+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.077+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181076
+2026-04-01T13:33:01.083+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-report-service-1, groupId=report-service] Subscribed to topic(s): inventory.adjustment.posted
+2026-04-01T13:33:01.102+07:00  INFO 87228 --- [report-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-report-service-2
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = report-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.102+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.114+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.115+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.115+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181114
+2026-04-01T13:33:01.122+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-report-service-2, groupId=report-service] Subscribed to topic(s): inventory.waste.posted
+2026-04-01T13:33:01.126+07:00  INFO 87228 --- [report-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-report-service-3
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = report-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.126+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.132+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.132+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.132+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181132
+2026-04-01T13:33:01.136+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-report-service-3, groupId=report-service] Subscribed to topic(s): inventory.stock_count.posted
+2026-04-01T13:33:01.141+07:00  INFO 87228 --- [report-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-report-service-4
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = report-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.142+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.145+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.145+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.145+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181145
+2026-04-01T13:33:01.149+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-report-service-4, groupId=report-service] Subscribed to topic(s): attendance.approved
+2026-04-01T13:33:01.151+07:00  INFO 87228 --- [report-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-report-service-5
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = report-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.151+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.153+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.153+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.153+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181152
+2026-04-01T13:33:01.156+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-report-service-5, groupId=report-service] Subscribed to topic(s): payroll.calculated
+2026-04-01T13:33:01.158+07:00  INFO 87228 --- [report-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-report-service-6
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = report-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.158+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.161+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.161+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.161+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181161
+2026-04-01T13:33:01.163+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-report-service-6, groupId=report-service] Subscribed to topic(s): payroll.posted
+2026-04-01T13:33:01.164+07:00  INFO 87228 --- [report-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-report-service-7
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = report-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.164+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.182+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.182+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.182+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181182
+2026-04-01T13:33:01.184+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-report-service-7, groupId=report-service] Subscribed to topic(s): finance.expense.posted
+2026-04-01T13:33:01.185+07:00  INFO 87228 --- [report-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-report-service-8
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = report-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.185+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.186+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.186+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.186+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181186
+2026-04-01T13:33:01.189+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-report-service-8, groupId=report-service] Subscribed to topic(s): pos.sale.completed
+2026-04-01T13:33:01.192+07:00  INFO 87228 --- [report-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-report-service-9
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = report-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.192+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.196+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.196+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.196+07:00  INFO 87228 --- [report-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181196
+2026-04-01T13:33:01.199+07:00  INFO 87228 --- [report-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-report-service-9, groupId=report-service] Subscribed to topic(s): procurement.goods_receipt.posted
+2026-04-01T13:33:01.215+07:00  INFO 87228 --- [report-service] [           main] c.f.r.ReportServiceApplication           : Started ReportServiceApplication in 3.916 seconds (process running for 4.145)
+2026-04-01T13:33:01.357+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-report-service-7, groupId=report-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.357+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-report-service-2, groupId=report-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.357+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-report-service-8, groupId=report-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.358+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.358+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.358+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-report-service-1, groupId=report-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.358+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.359+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-report-service-4, groupId=report-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.359+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-report-service-5, groupId=report-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.359+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.359+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-report-service-6, groupId=report-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.357+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-report-service-9, groupId=report-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.359+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.359+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.359+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.360+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.360+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.360+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.360+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.360+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.360+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.361+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.369+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-report-service-3, groupId=report-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.370+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.369+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.371+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.377+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Request joining group due to: need to re-join with the given member-id: consumer-report-service-7-22a8a9b6-2618-4a55-935a-e23d679f25fc
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Request joining group due to: need to re-join with the given member-id: consumer-report-service-4-f6097e28-8b51-4ea0-9f57-fe32194e1c54
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Request joining group due to: need to re-join with the given member-id: consumer-report-service-5-c75e74b6-a336-4c96-8513-f3b0a6012be1
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Request joining group due to: need to re-join with the given member-id: consumer-report-service-2-ed8c3fbd-c076-437b-8ac8-d521098fc094
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Request joining group due to: need to re-join with the given member-id: consumer-report-service-9-af27ef64-d17f-4d9e-ada6-4ce4211da86b
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.385+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.385+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Request joining group due to: need to re-join with the given member-id: consumer-report-service-6-2a92eadc-9496-4a46-8447-2293e91db288
+2026-04-01T13:33:01.385+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Request joining group due to: need to re-join with the given member-id: consumer-report-service-3-310638aa-3072-49ae-b7af-36ca40e00f19
+2026-04-01T13:33:01.385+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.385+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Request joining group due to: need to re-join with the given member-id: consumer-report-service-8-fc6c9e61-9c35-47b8-9632-d8149678f2bb
+2026-04-01T13:33:01.384+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.386+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:01.386+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Request joining group due to: need to re-join with the given member-id: consumer-report-service-1-ac8b1538-054e-4250-89b6-4b6d8e47c1e1
+2026-04-01T13:33:01.387+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] (Re-)joining group
+2026-04-01T13:33:07.408+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-report-service-6-2a92eadc-9496-4a46-8447-2293e91db288', protocol='range'}
+2026-04-01T13:33:07.408+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-report-service-5-c75e74b6-a336-4c96-8513-f3b0a6012be1', protocol='range'}
+2026-04-01T13:33:07.409+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-report-service-2-ed8c3fbd-c076-437b-8ac8-d521098fc094', protocol='range'}
+2026-04-01T13:33:07.410+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-report-service-7-22a8a9b6-2618-4a55-935a-e23d679f25fc', protocol='range'}
+2026-04-01T13:33:07.414+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-report-service-3-310638aa-3072-49ae-b7af-36ca40e00f19', protocol='range'}
+2026-04-01T13:33:07.414+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-report-service-4-f6097e28-8b51-4ea0-9f57-fe32194e1c54', protocol='range'}
+2026-04-01T13:33:07.414+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-report-service-1-ac8b1538-054e-4250-89b6-4b6d8e47c1e1', protocol='range'}
+2026-04-01T13:33:07.414+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-report-service-8-fc6c9e61-9c35-47b8-9632-d8149678f2bb', protocol='range'}
+2026-04-01T13:33:07.410+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-report-service-9-af27ef64-d17f-4d9e-ada6-4ce4211da86b', protocol='range'}
+2026-04-01T13:33:07.423+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Finished assignment for group at generation 17: {consumer-report-service-9-af27ef64-d17f-4d9e-ada6-4ce4211da86b=Assignment(partitions=[procurement.goods_receipt.posted-0]), consumer-report-service-6-2a92eadc-9496-4a46-8447-2293e91db288=Assignment(partitions=[payroll.posted-0]), consumer-report-service-1-ac8b1538-054e-4250-89b6-4b6d8e47c1e1=Assignment(partitions=[inventory.adjustment.posted-0]), consumer-report-service-2-ed8c3fbd-c076-437b-8ac8-d521098fc094=Assignment(partitions=[inventory.waste.posted-0]), consumer-report-service-7-22a8a9b6-2618-4a55-935a-e23d679f25fc=Assignment(partitions=[finance.expense.posted-0]), consumer-report-service-3-310638aa-3072-49ae-b7af-36ca40e00f19=Assignment(partitions=[inventory.stock_count.posted-0]), consumer-report-service-8-fc6c9e61-9c35-47b8-9632-d8149678f2bb=Assignment(partitions=[pos.sale.completed-0]), consumer-report-service-5-c75e74b6-a336-4c96-8513-f3b0a6012be1=Assignment(partitions=[payroll.calculated-0]), consumer-report-service-4-f6097e28-8b51-4ea0-9f57-fe32194e1c54=Assignment(partitions=[attendance.approved-0])}
+2026-04-01T13:33:07.434+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-report-service-6-2a92eadc-9496-4a46-8447-2293e91db288', protocol='range'}
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-report-service-1-ac8b1538-054e-4250-89b6-4b6d8e47c1e1', protocol='range'}
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-report-service-8-fc6c9e61-9c35-47b8-9632-d8149678f2bb', protocol='range'}
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-report-service-5-c75e74b6-a336-4c96-8513-f3b0a6012be1', protocol='range'}
+2026-04-01T13:33:07.434+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-report-service-3-310638aa-3072-49ae-b7af-36ca40e00f19', protocol='range'}
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-report-service-2-ed8c3fbd-c076-437b-8ac8-d521098fc094', protocol='range'}
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Notifying assignor about the new Assignment(partitions=[inventory.adjustment.posted-0])
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Notifying assignor about the new Assignment(partitions=[inventory.stock_count.posted-0])
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Notifying assignor about the new Assignment(partitions=[payroll.calculated-0])
+2026-04-01T13:33:07.434+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-report-service-9-af27ef64-d17f-4d9e-ada6-4ce4211da86b', protocol='range'}
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-report-service-7-22a8a9b6-2618-4a55-935a-e23d679f25fc', protocol='range'}
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-report-service-4-f6097e28-8b51-4ea0-9f57-fe32194e1c54', protocol='range'}
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Notifying assignor about the new Assignment(partitions=[pos.sale.completed-0])
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Notifying assignor about the new Assignment(partitions=[payroll.posted-0])
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Notifying assignor about the new Assignment(partitions=[attendance.approved-0])
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Notifying assignor about the new Assignment(partitions=[procurement.goods_receipt.posted-0])
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Notifying assignor about the new Assignment(partitions=[inventory.waste.posted-0])
+2026-04-01T13:33:07.435+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Notifying assignor about the new Assignment(partitions=[finance.expense.posted-0])
+2026-04-01T13:33:07.436+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-report-service-7, groupId=report-service] Adding newly assigned partitions: finance.expense.posted-0
+2026-04-01T13:33:07.436+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-report-service-9, groupId=report-service] Adding newly assigned partitions: procurement.goods_receipt.posted-0
+2026-04-01T13:33:07.437+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-report-service-3, groupId=report-service] Adding newly assigned partitions: inventory.stock_count.posted-0
+2026-04-01T13:33:07.437+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-report-service-4, groupId=report-service] Adding newly assigned partitions: attendance.approved-0
+2026-04-01T13:33:07.437+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-report-service-2, groupId=report-service] Adding newly assigned partitions: inventory.waste.posted-0
+2026-04-01T13:33:07.437+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-report-service-6, groupId=report-service] Adding newly assigned partitions: payroll.posted-0
+2026-04-01T13:33:07.437+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-report-service-1, groupId=report-service] Adding newly assigned partitions: inventory.adjustment.posted-0
+2026-04-01T13:33:07.437+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-report-service-5, groupId=report-service] Adding newly assigned partitions: payroll.calculated-0
+2026-04-01T13:33:07.437+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-report-service-8, groupId=report-service] Adding newly assigned partitions: pos.sale.completed-0
+2026-04-01T13:33:07.445+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Found no committed offset for partition inventory.stock_count.posted-0
+2026-04-01T13:33:07.445+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Found no committed offset for partition inventory.waste.posted-0
+2026-04-01T13:33:07.446+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition inventory.adjustment.posted-0 to the committed offset FetchPosition{offset=3, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-04-01T13:33:07.446+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition attendance.approved-0 to the committed offset FetchPosition{offset=5, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-04-01T13:33:07.446+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition pos.sale.completed-0 to the committed offset FetchPosition{offset=2, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-04-01T13:33:07.446+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition payroll.calculated-0 to the committed offset FetchPosition{offset=2, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-04-01T13:33:07.446+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition payroll.posted-0 to the committed offset FetchPosition{offset=2, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-04-01T13:33:07.447+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : report-service: partitions assigned: [inventory.adjustment.posted-0]
+2026-04-01T13:33:07.446+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition finance.expense.posted-0 to the committed offset FetchPosition{offset=3, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-04-01T13:33:07.447+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : report-service: partitions assigned: [payroll.posted-0]
+2026-04-01T13:33:07.447+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : report-service: partitions assigned: [finance.expense.posted-0]
+2026-04-01T13:33:07.446+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition procurement.goods_receipt.posted-0 to the committed offset FetchPosition{offset=3, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-04-01T13:33:07.447+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : report-service: partitions assigned: [attendance.approved-0]
+2026-04-01T13:33:07.447+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : report-service: partitions assigned: [pos.sale.completed-0]
+2026-04-01T13:33:07.447+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : report-service: partitions assigned: [payroll.calculated-0]
+2026-04-01T13:33:07.447+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : report-service: partitions assigned: [procurement.goods_receipt.posted-0]
+2026-04-01T13:33:07.452+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-report-service-3, groupId=report-service] Resetting offset for partition inventory.stock_count.posted-0 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}.
+2026-04-01T13:33:07.452+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.SubscriptionState    : [Consumer clientId=consumer-report-service-2, groupId=report-service] Resetting offset for partition inventory.waste.posted-0 to position FetchPosition{offset=0, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}.
+2026-04-01T13:33:07.452+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : report-service: partitions assigned: [inventory.stock_count.posted-0]
+2026-04-01T13:33:07.452+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : report-service: partitions assigned: [inventory.waste.posted-0]
+2026-04-01T13:35:50.397+07:00  INFO 87228 --- [report-service] [nio-8090-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-01T13:35:50.397+07:00  INFO 87228 --- [report-service] [nio-8090-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-04-01T13:35:50.399+07:00  INFO 87228 --- [report-service] [nio-8090-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-04-01T13:43:55.658+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.779+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.659+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.779+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-1, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.779+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.779+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-4, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.658+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.780+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.659+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.780+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.780+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-5, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.659+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.780+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-6, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.780+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.658+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.780+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-2, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.780+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.780+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-7, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.659+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.781+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.781+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-9, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.658+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.781+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.781+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-3, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.658+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.781+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.781+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-8, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.788+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.789+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.880+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.881+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.881+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.882+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.896+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.897+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.898+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.898+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.898+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:44:21.520+07:00  WARN 87228 --- [report-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2m44s325ms).
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-7, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-9, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-3, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-2, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-8, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.321+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-4, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.320+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.321+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-1, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.321+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-6, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.321+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-5, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.411+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.411+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.415+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.433+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.433+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.433+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.437+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.439+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.442+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:48:07.461+07:00  WARN 87228 --- [report-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=3m45s941ms).
+2026-04-01T13:48:55.741+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-3, groupId=report-service] Disconnecting from node -1 due to socket connection setup timeout. The timeout value is 10898 ms.
+2026-04-01T13:49:24.196+07:00  WARN 87228 --- [report-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s734ms).
+2026-04-01T14:00:55.276+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.295+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.297+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-3, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.276+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.298+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.298+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-5, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.276+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.299+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.299+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-4, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.300+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.300+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.300+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.276+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.277+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.300+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.300+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.300+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-1, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.277+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.301+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.301+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-2, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.302+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.302+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.302+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.300+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-9, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.302+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.302+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.302+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.303+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.303+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.303+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.303+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.303+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.303+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.303+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.304+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.304+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.431+07:00  INFO 87228 --- [report-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-4, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.432+07:00  INFO 87228 --- [report-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-9, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.440+07:00  INFO 87228 --- [report-service] [ntainer#3-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-5, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.441+07:00  INFO 87228 --- [report-service] [ntainer#6-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-1, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.441+07:00  INFO 87228 --- [report-service] [ntainer#8-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-3, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.441+07:00  INFO 87228 --- [report-service] [ntainer#7-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-2, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.442+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.442+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.442+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-7, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.445+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.445+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.445+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-6, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.446+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.447+07:00  INFO 87228 --- [report-service] [ report-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.447+07:00  INFO 87228 --- [report-service] [ report-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-report-service-8, groupId=report-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.455+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.456+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.456+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.467+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.467+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.467+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.470+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.470+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.470+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.565+07:00  INFO 87228 --- [report-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-8, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.565+07:00  INFO 87228 --- [report-service] [ntainer#4-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-6, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.586+07:00  INFO 87228 --- [report-service] [ntainer#5-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-report-service-7, groupId=report-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:01:10.600+07:00  WARN 87228 --- [report-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=11m46s404ms).
+2026-04-01T17:14:51.333+07:00 ERROR 87228 --- [report-service] [nio-8090-exec-4] c.f.r.controller.GlobalExceptionHandler  : report_unhandled_exception correlationId=8f204e3d-915a-4993-b239-1fd40a2adba4 path=/reports/revenue exceptionType=org.springframework.web.servlet.resource.NoResourceFoundException
+
+org.springframework.web.servlet.resource.NoResourceFoundException: No static resource reports/revenue.
+	at org.springframework.web.servlet.resource.ResourceHttpRequestHandler.handleRequest(ResourceHttpRequestHandler.java:585) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter.handle(HttpRequestHandlerAdapter.java:52) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.49.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.49.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:490) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:351) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator.lambda$wrapSecured$0(ObservationFilterChainDecorator.java:83) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:129) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at com.fern.platform.security.FernJwtAuthenticationFilter.doFilterInternal(FernJwtAuthenticationFilter.java:55) ~[platform-security-1.0-SNAPSHOT.jar:1.0-SNAPSHOT]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at com.fern.platform.observability.ServletCorrelationIdFilter.doFilterInternal(ServletCorrelationIdFilter.java:24) ~[platform-observability-1.0-SNAPSHOT.jar:1.0-SNAPSHOT]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$0(ObservationFilterChainDecorator.java:334) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:225) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319) ~[spring-security-config-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240) ~[spring-security-config-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:110) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1774) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at java.base/java.lang.Thread.run(Thread.java:1447) ~[na:na]
+
+2026-04-01T17:14:51.351+07:00 ERROR 87228 --- [report-service] [nio-8090-exec-5] c.f.r.controller.GlobalExceptionHandler  : report_unhandled_exception correlationId=c2aee138-74ac-4a39-8f3e-ab6e1f284080 path=/reports exceptionType=org.springframework.web.servlet.resource.NoResourceFoundException
+
+org.springframework.web.servlet.resource.NoResourceFoundException: No static resource reports.
+	at org.springframework.web.servlet.resource.ResourceHttpRequestHandler.handleRequest(ResourceHttpRequestHandler.java:585) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter.handle(HttpRequestHandlerAdapter.java:52) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.49.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.49.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:490) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:351) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator.lambda$wrapSecured$0(ObservationFilterChainDecorator.java:83) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:129) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at com.fern.platform.security.FernJwtAuthenticationFilter.doFilterInternal(FernJwtAuthenticationFilter.java:55) ~[platform-security-1.0-SNAPSHOT.jar:1.0-SNAPSHOT]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at com.fern.platform.observability.ServletCorrelationIdFilter.doFilterInternal(ServletCorrelationIdFilter.java:24) ~[platform-observability-1.0-SNAPSHOT.jar:1.0-SNAPSHOT]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$0(ObservationFilterChainDecorator.java:334) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:225) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319) ~[spring-security-config-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240) ~[spring-security-config-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:110) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1774) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at java.base/java.lang.Thread.run(Thread.java:1447) ~[na:na]
+
+2026-04-01T17:15:06.676+07:00 ERROR 87228 --- [report-service] [nio-8090-exec-6] c.f.r.controller.GlobalExceptionHandler  : report_unhandled_exception correlationId=50f8f84b-78ed-4d40-949b-59f7a684f47f path=/reports/export-jobs exceptionType=org.springframework.web.servlet.resource.NoResourceFoundException
+
+org.springframework.web.servlet.resource.NoResourceFoundException: No static resource reports/export-jobs.
+	at org.springframework.web.servlet.resource.ResourceHttpRequestHandler.handleRequest(ResourceHttpRequestHandler.java:585) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter.handle(HttpRequestHandlerAdapter.java:52) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:903) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:564) ~[tomcat-embed-core-10.1.49.jar:6.0]
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658) ~[tomcat-embed-core-10.1.49.jar:6.0]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51) ~[tomcat-embed-websocket-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:108) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.FilterChainProxy.lambda$doFilterInternal$3(FilterChainProxy.java:231) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$FilterObservation$SimpleFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:490) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$1(ObservationFilterChainDecorator.java:351) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator.lambda$wrapSecured$0(ObservationFilterChainDecorator.java:83) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:129) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.intercept.AuthorizationFilter.doFilter(AuthorizationFilter.java:101) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:125) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:119) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:131) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:85) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:100) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:179) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at com.fern.platform.security.FernJwtAuthenticationFilter.doFilterInternal(FernJwtAuthenticationFilter.java:55) ~[platform-security-1.0-SNAPSHOT.jar:1.0-SNAPSHOT]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at com.fern.platform.observability.ServletCorrelationIdFilter.doFilterInternal(ServletCorrelationIdFilter.java:24) ~[platform-observability-1.0-SNAPSHOT.jar:1.0-SNAPSHOT]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:107) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:93) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:82) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.SecurityContextHolderFilter.doFilter(SecurityContextHolderFilter.java:69) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:62) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:228) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.wrapFilter(ObservationFilterChainDecorator.java:241) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$AroundFilterObservation$SimpleAroundFilterObservation.lambda$wrap$0(ObservationFilterChainDecorator.java:334) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$ObservationFilter.doFilter(ObservationFilterChainDecorator.java:225) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.ObservationFilterChainDecorator$VirtualFilterChain.doFilter(ObservationFilterChainDecorator.java:138) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:233) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:191) ~[spring-security-web-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.ServletRequestPathFilter.doFilter(ServletRequestPathFilter.java:52) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebSecurityConfiguration.java:319) ~[spring-security-config-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.servlet.handler.HandlerMappingIntrospector.lambda$createCacheFilter$4(HandlerMappingIntrospector.java:267) ~[spring-webmvc-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter$VirtualFilterChain.doFilter(CompositeFilter.java:113) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.CompositeFilter.doFilter(CompositeFilter.java:74) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.security.config.annotation.web.configuration.WebMvcSecurityConfiguration$CompositeFilterChainProxy.doFilter(WebMvcSecurityConfiguration.java:240) ~[spring-security-config-6.5.7.jar:6.5.7]
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:362) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:278) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.ServerHttpObservationFilter.doFilterInternal(ServerHttpObservationFilter.java:110) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116) ~[spring-web-6.2.14.jar:6.2.14]
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:482) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1774) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.49.jar:10.1.49]
+	at java.base/java.lang.Thread.run(Thread.java:1447) ~[na:na]
+

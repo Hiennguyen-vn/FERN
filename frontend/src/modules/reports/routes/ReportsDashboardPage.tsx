@@ -29,6 +29,13 @@ export function ReportsDashboardPage() {
           to: '/reports/revenue',
         }
       : null,
+    canReadRevenueReport(principal)
+      ? {
+          description: 'Thống kê doanh thu realtime theo từng outlet hôm nay. CSV export.',
+          title: 'Outlet Revenue Summary',
+          to: '/reports/outlet-revenue',
+        }
+      : null,
     canReadInventoryReport(principal)
       ? {
           description: 'Stock snapshot and inventory movement breakdown by outlet.',

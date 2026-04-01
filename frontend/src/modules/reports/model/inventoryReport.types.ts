@@ -12,7 +12,7 @@ export interface ReportStockBalance {
 }
 
 export interface ReportInventoryTransaction {
-  businessDate: string
+  businessDate: number[] | string
   createdByUserId: number | null
   id: number
   ingredientId: number

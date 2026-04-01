@@ -38,6 +38,22 @@ export function canReadPayments(principal: FernPrincipal | null): boolean {
   return hasPermission(principal, permissionConstants.procurement.paymentRead)
 }
 
+export function canReviewInvoice(principal: FernPrincipal | null): boolean {
+  return hasPermission(principal, permissionConstants.procurement.invoiceReview)
+}
+
+export function canApproveInvoice(principal: FernPrincipal | null): boolean {
+  return hasPermission(principal, permissionConstants.procurement.invoiceApprove)
+}
+
+export function canDisputeInvoice(principal: FernPrincipal | null): boolean {
+  return hasPermission(principal, permissionConstants.procurement.invoiceDispute)
+}
+
+export function canRecordPayment(principal: FernPrincipal | null): boolean {
+  return hasPermission(principal, permissionConstants.procurement.paymentRecord)
+}
+
 export function canSeeProcurementNavigation(principal: FernPrincipal | null): boolean {
   return hasAnyPermissions(principal, procurementNavigationPermissions)
 }

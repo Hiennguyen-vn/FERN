@@ -35,13 +35,13 @@ public class CatalogPricingController {
 
     @GetMapping("/tax-rates")
     public List<TaxRateResponse> listTaxRates(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.listTaxRates();
     }
 
     @GetMapping("/tax-rates/{id}")
     public TaxRateResponse getTaxRate(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.getTaxRate(id);
     }
 
@@ -63,13 +63,13 @@ public class CatalogPricingController {
 
     @GetMapping("/product-prices")
     public List<ProductPriceResponse> listProductPrices(@AuthenticationPrincipal FernPrincipal principal) {
-        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.listProductPrices();
     }
 
     @GetMapping("/product-prices/{id}")
     public ProductPriceResponse getProductPrice(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.getProductPrice(id);
     }
 
@@ -95,7 +95,7 @@ public class CatalogPricingController {
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) Long outletId
     ) {
-        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRICE_READ);
+        catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRICE_READ);
         return catalogPricingService.listAvailability(productId, outletId);
     }
 

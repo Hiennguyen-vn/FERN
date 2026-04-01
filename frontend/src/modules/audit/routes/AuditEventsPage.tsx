@@ -72,6 +72,34 @@ function toInstant(value: string) {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
 }
 
+function exportAuditCsv(rows: AuditEventSummary[]) {
+  const headers = ['ID', 'Occurred At', 'Event Type', 'Source Service', 'Module', 'Action', 'Resource Type', 'Resource ID', 'Outcome', 'Correlation ID', 'Region ID', 'Outlet ID', 'User ID', 'Detail']
+  const csvRows = rows.map((r) => [
+    r.id,
+    r.occurredAt ?? '',
+    r.eventType ?? '',
+    r.sourceService ?? '',
+    r.module ?? '',
+    r.action ?? '',
+    r.resourceType ?? '',
+    r.resourceId ?? '',
+    r.outcome ?? '',
+    r.correlationId ?? '',
+    r.regionId ?? '',
+    r.outletId ?? '',
+    r.userId ?? '',
+    r.detailSummary ?? '',
+  ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+  const content = [headers.join(','), ...csvRows].join('\n')
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `audit-export-${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 export function AuditEventsPage() {
   usePageTitle('Audit Events')
   const principal = usePrincipal()
@@ -179,16 +207,27 @@ export function AuditEventsPage() {
             <FormActions
               primaryAction={<Button type="submit">Apply filters</Button>}
               secondaryAction={
-                <Button
-                  onClick={() => {
-                    setDraft(initialDraft)
-                    setFilters(initialDraft)
-                  }}
-                  type="button"
-                  variant="secondary"
-                >
-                  Reset
-                </Button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <Button
+                    id="btn-export-audit-csv"
+                    onClick={() => exportAuditCsv(filteredRows)}
+                    type="button"
+                    variant="secondary"
+                    disabled={filteredRows.length === 0}
+                  >
+                    ⬇ Export CSV ({filteredRows.length})
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setDraft(initialDraft)
+                      setFilters(initialDraft)
+                    }}
+                    type="button"
+                    variant="secondary"
+                  >
+                    Reset
+                  </Button>
+                </div>
               }
             />
           }

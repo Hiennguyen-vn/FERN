@@ -5,6 +5,7 @@ import {
   completeSaleOrder,
   createSaleOrder,
   getSaleOrder,
+  listSessionOrders,
   updateSaleOrder,
 } from '../api/pos.api'
 import { posMutationKeys, posQueryKeys } from '../api/pos.queries'
@@ -17,6 +18,15 @@ export function usePosOrder(orderId: number | null, enabled = true) {
     enabled: orderId !== null && enabled,
     queryKey: orderId !== null ? posQueryKeys.order(orderId) : ['pos', 'order', 'disabled'],
     queryFn: () => getSaleOrder(orderId as number),
+  })
+}
+
+export function useSessionOrders(posSessionId: number | null, enabled = true) {
+  return useQuery({
+    enabled: posSessionId !== null && enabled,
+    queryKey: posSessionId !== null ? ['pos', 'session-orders', posSessionId] : ['pos', 'session-orders', 'disabled'],
+    queryFn: () => listSessionOrders(posSessionId as number),
+    refetchInterval: 10_000, // auto-refresh every 10s
   })
 }
 
@@ -79,6 +89,7 @@ export function useCompletePosOrder() {
     onSuccess: (order) => {
       queryClient.setQueryData(posQueryKeys.order(order.id), order)
       void queryClient.invalidateQueries({ queryKey: ['pos', 'sessions'] })
+      void queryClient.invalidateQueries({ queryKey: ['pos', 'session-orders', order.posSessionId] })
     },
   })
 }
@@ -96,6 +107,7 @@ export function useCancelPosOrder() {
     onSuccess: (order) => {
       queryClient.setQueryData(posQueryKeys.order(order.id), order)
       void queryClient.invalidateQueries({ queryKey: ['pos', 'sessions'] })
+      void queryClient.invalidateQueries({ queryKey: ['pos', 'session-orders', order.posSessionId] })
     },
   })
 }

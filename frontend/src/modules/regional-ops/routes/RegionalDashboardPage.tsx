@@ -16,7 +16,9 @@ import {
 } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { formatMoney } from '@shared/formatters'
 import { useRegionalOutlets, useRegionalRegion } from '../hooks/useRegionalOps'
+import { useOutletTodayStats } from '../../pos/hooks/useOutletStats'
 import type { RegionalOutlet } from '../model/regionalOps.types'
 import { getRegionalOpsErrorMessage } from '../services/regionalError.service'
 import {
@@ -40,6 +42,10 @@ export function RegionalDashboardPage() {
   const outletsQuery = useRegionalOutlets(outletIds, {
     enabled: canOpen && regionalContext.status === 'resolved',
   })
+  const outletStatsQuery = useOutletTodayStats(
+    outletIds,
+    canOpen && regionalContext.status === 'resolved',
+  )
 
   const visibleOutlets = useMemo(
     () => outletsQuery.rows.filter((outlet) => outlet.regionId === regionalContext.resolvedRegionId),
@@ -164,6 +170,72 @@ export function RegionalDashboardPage() {
         rowKey={(outlet) => outlet.id}
         rows={visibleOutlets}
       />
+
+      <Card title="📊 Thống kê cuối ca theo outlet (hôm nay)">
+        <DataTable
+          columns={[
+            {
+              key: 'outletId',
+              header: 'Outlet',
+              render: (row) => {
+                const outlet = visibleOutlets.find((o) => o.id === row.outletId)
+                return (
+                  <div className="page-stack" style={{ gap: '0.25rem' }}>
+                    <strong>{outlet?.name ?? `#${row.outletId}`}</strong>
+                    <span className="muted-text">{outlet?.code ?? ''}</span>
+                  </div>
+                )
+              },
+            },
+            {
+              key: 'sessionStatus',
+              header: 'Phiên POS',
+              render: (row) => <StatusBadge status={row.sessionStatus} />,
+            },
+            {
+              key: 'totalRevenue',
+              header: 'Doanh thu',
+              render: (row) => (
+                <strong style={{ color: 'var(--color-success, #16a34a)' }}>
+                  {row.isLoading ? '...' : formatMoney(row.totalRevenue, row.currencyCode)}
+                </strong>
+              ),
+            },
+            {
+              key: 'cashCollected',
+              header: 'Tiền mặt',
+              render: (row) => (row.isLoading ? '...' : formatMoney(row.cashCollected, row.currencyCode)),
+            },
+            {
+              key: 'nonCashCollected',
+              header: 'Thẻ/Ví',
+              render: (row) => (row.isLoading ? '...' : formatMoney(row.nonCashCollected, row.currencyCode)),
+            },
+            {
+              key: 'completed',
+              header: 'Đơn xong',
+              render: (row) => (
+                <strong style={{ color: row.completed > 0 ? 'var(--color-success, #16a34a)' : undefined }}>
+                  {row.isLoading ? '...' : row.completed}
+                </strong>
+              ),
+            },
+            {
+              key: 'open',
+              header: 'Đơn mở',
+              render: (row) => <span style={{ color: row.open > 0 ? 'var(--color-warning, #d97706)' : undefined }}>
+                {row.isLoading ? '...' : row.open}
+              </span>,
+            },
+          ]}
+          emptyDescription="Không có outlet nào có session hôm nay."
+          emptyTitle="Chưa có dữ liệu ca"
+          loading={outletStatsQuery.isLoading}
+          loadingTitle="Đang tải thống kê cuối ca..."
+          rowKey={(row) => row.outletId}
+          rows={outletStatsQuery.outletStats}
+        />
+      </Card>
     </DashboardLayout>
   )
 }

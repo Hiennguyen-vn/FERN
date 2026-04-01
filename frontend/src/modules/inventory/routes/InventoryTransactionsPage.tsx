@@ -9,6 +9,7 @@ import { useInventoryTransactions } from '../hooks/useInventoryTransactions'
 import type { InventoryTransaction } from '../model/inventory.types'
 import { buildInventoryTransactionSummary } from '../services/inventoryWorkflow.service'
 import { canReadInventoryLedger } from '../services/inventoryPermission.service'
+import { formatDate, formatDateTime } from '@shared/formatters'
 
 function toOptionalNumber(value: string): number | undefined {
   if (!value) {
@@ -24,10 +25,8 @@ export function InventoryTransactionsPage() {
 
   const principal = useAuthStore((state) => state.principal)
   const { selectedOutletId } = useScopeContext()
+  const canRead = canReadInventoryLedger(principal)
 
-  if (!canReadInventoryLedger(principal)) {
-    return <PermissionDeniedInline message="Bạn cần quyền inventory.ledger.read để xem giao dịch kho." />
-  }
   const [filters, setFilters] = useState({
     ingredientId: '',
     txnType: '',
@@ -38,7 +37,7 @@ export function InventoryTransactionsPage() {
   const size = 20
 
   const query = useInventoryTransactions(
-    selectedOutletId
+    canRead && selectedOutletId
       ? {
           outletId: selectedOutletId,
           ingredientId: toOptionalNumber(filters.ingredientId),
@@ -51,9 +50,17 @@ export function InventoryTransactionsPage() {
       : null,
   )
 
+  if (!canRead) {
+    return (
+      <DashboardLayout description="Inspect inventory movement history for the selected outlet." title="Inventory Transactions">
+        <PermissionDeniedInline message="Bạn cần quyền inventory.ledger.read để xem giao dịch kho." />
+      </DashboardLayout>
+    )
+  }
+
   const columns: Array<DataTableColumn<InventoryTransaction>> = [
     { key: 'id', header: 'Txn ID', render: (row) => `#${row.id}` },
-    { key: 'businessDate', header: 'Business date', render: (row) => row.businessDate },
+    { key: 'businessDate', header: 'Business date', render: (row) => formatDate(row.businessDate) },
     { key: 'txnType', header: 'Type', render: (row) => <Badge>{row.txnType}</Badge> },
     { key: 'qtyChange', header: 'Qty change', render: (row) => row.qtyChange },
     { key: 'unitCost', header: 'Unit cost', render: (row) => row.unitCost },
@@ -62,7 +69,7 @@ export function InventoryTransactionsPage() {
       header: 'Source',
       render: (row) => buildInventoryTransactionSummary(row.txnType, row.sourceReferenceType),
     },
-    { key: 'txnTime', header: 'Txn time', render: (row) => new Date(row.txnTime).toLocaleString() },
+    { key: 'txnTime', header: 'Txn time', render: (row) => formatDateTime(row.txnTime) },
   ]
 
   return (

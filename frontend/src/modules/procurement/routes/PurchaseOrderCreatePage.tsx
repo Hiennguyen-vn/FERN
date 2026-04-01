@@ -26,10 +26,8 @@ export function PurchaseOrderCreatePage() {
   const principal = useAuthStore((state) => state.principal)
   const navigate = useNavigate()
   const { selectedOutletId, selectedRegionId } = useScopeContext()
+  const canCreate = canCreatePurchaseOrder(principal)
 
-  if (!canCreatePurchaseOrder(principal)) {
-    return <PermissionDeniedInline message="Bạn cần quyền procurement.po.create để tạo purchase order." />
-  }
   const suppliersQuery = useSuppliers()
   const createMutation = useCreatePurchaseOrder()
   const [form, setForm] = useState({
@@ -48,6 +46,14 @@ export function PurchaseOrderCreatePage() {
       })),
     [suppliersQuery.data],
   )
+
+  if (!canCreate) {
+    return (
+      <DashboardLayout description="Tạo purchase order mới." title="Purchase Order Create">
+        <PermissionDeniedInline message="Bạn cần quyền procurement.po.create để tạo purchase order." />
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout

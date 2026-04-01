@@ -1,0 +1,350 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------------------< com.fern:inventory-service >---------------------
+[INFO] Building inventory-service 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.5.8:run (default-cli) > test-compile @ inventory-service >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ inventory-service ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 4 resources from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.14.1:compile (default-compile) @ inventory-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ inventory-service ---
+[INFO] skip non existing resourceDirectory /Users/nguyenhien/Documents/FERN/backend/services/inventory-service/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.14.1:testCompile (default-testCompile) @ inventory-service ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:3.5.8:run (default-cli) < test-compile @ inventory-service <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.5.8:run (default-cli) @ inventory-service ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.8)
+
+2026-04-01T13:32:58.225+07:00  INFO 87236 --- [inventory-service] [           main] c.f.i.InventoryServiceApplication        : Starting InventoryServiceApplication using Java 24.0.2 with PID 87236 (/Users/nguyenhien/Documents/FERN/backend/services/inventory-service/target/classes started by nguyenhien in /Users/nguyenhien/Documents/FERN/backend/services/inventory-service)
+2026-04-01T13:32:58.227+07:00  INFO 87236 --- [inventory-service] [           main] c.f.i.InventoryServiceApplication        : The following 1 profile is active: "local"
+2026-04-01T13:32:59.044+07:00  INFO 87236 --- [inventory-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-04-01T13:32:59.045+07:00  INFO 87236 --- [inventory-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-04-01T13:32:59.082+07:00  INFO 87236 --- [inventory-service] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 14 ms. Found 0 Redis repository interfaces.
+2026-04-01T13:32:59.684+07:00  INFO 87236 --- [inventory-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8087 (http)
+2026-04-01T13:32:59.691+07:00  INFO 87236 --- [inventory-service] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-04-01T13:32:59.692+07:00  INFO 87236 --- [inventory-service] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.49]
+2026-04-01T13:32:59.718+07:00  INFO 87236 --- [inventory-service] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-04-01T13:32:59.718+07:00  INFO 87236 --- [inventory-service] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1474 ms
+2026-04-01T13:33:00.087+07:00  INFO 87236 --- [inventory-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-01T13:33:00.252+07:00  INFO 87236 --- [inventory-service] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@7d1cb59f
+2026-04-01T13:33:00.253+07:00  INFO 87236 --- [inventory-service] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-01T13:33:00.271+07:00  INFO 87236 --- [inventory-service] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://127.0.0.1:55432/fern_operational?currentSchema=inventory (PostgreSQL 17.9)
+2026-04-01T13:33:00.322+07:00  INFO 87236 --- [inventory-service] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 5 migrations (execution time 00:00.024s)
+2026-04-01T13:33:00.369+07:00  INFO 87236 --- [inventory-service] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "inventory": 4
+2026-04-01T13:33:00.372+07:00  INFO 87236 --- [inventory-service] [           main] o.f.core.internal.command.DbMigrate      : Schema "inventory" is up to date. No migration necessary.
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::allocateMemory has been called by io.netty.util.internal.PlatformDependent0$2 (file:/Users/nguyenhien/.m2/repository/io/netty/netty-common/4.1.128.Final/netty-common-4.1.128.Final.jar)
+WARNING: Please consider reporting this to the maintainers of class io.netty.util.internal.PlatformDependent0$2
+WARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release
+2026-04-01T13:33:00.742+07:00  WARN 87236 --- [inventory-service] [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: cd84ba8a-ed32-42ab-b62d-6bc7db888ba9
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-04-01T13:33:00.750+07:00  INFO 87236 --- [inventory-service] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-04-01T13:33:00.945+07:00  INFO 87236 --- [inventory-service] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 4 endpoints beneath base path '/actuator'
+2026-04-01T13:33:01.280+07:00  INFO 87236 --- [inventory-service] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8087 (http) with context path '/'
+2026-04-01T13:33:01.299+07:00  INFO 87236 --- [inventory-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-inventory-service-1
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = inventory-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.323+07:00  INFO 87236 --- [inventory-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.415+07:00  INFO 87236 --- [inventory-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.415+07:00  INFO 87236 --- [inventory-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.415+07:00  INFO 87236 --- [inventory-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181411
+2026-04-01T13:33:01.430+07:00  INFO 87236 --- [inventory-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Subscribed to topic(s): pos.sale.completed
+2026-04-01T13:33:01.437+07:00  INFO 87236 --- [inventory-service] [           main] o.a.k.clients.consumer.ConsumerConfig    : ConsumerConfig values: 
+	allow.auto.create.topics = true
+	auto.commit.interval.ms = 5000
+	auto.include.jmx.reporter = true
+	auto.offset.reset = earliest
+	bootstrap.servers = [localhost:9092]
+	check.crcs = true
+	client.dns.lookup = use_all_dns_ips
+	client.id = consumer-inventory-service-2
+	client.rack = 
+	connections.max.idle.ms = 540000
+	default.api.timeout.ms = 60000
+	enable.auto.commit = false
+	enable.metrics.push = true
+	exclude.internal.topics = true
+	fetch.max.bytes = 52428800
+	fetch.max.wait.ms = 500
+	fetch.min.bytes = 1
+	group.id = inventory-service
+	group.instance.id = null
+	group.protocol = classic
+	group.remote.assignor = null
+	heartbeat.interval.ms = 3000
+	interceptor.classes = []
+	internal.leave.group.on.close = true
+	internal.throw.on.fetch.stable.offset.unsupported = false
+	isolation.level = read_uncommitted
+	key.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+	max.partition.fetch.bytes = 1048576
+	max.poll.interval.ms = 300000
+	max.poll.records = 500
+	metadata.max.age.ms = 300000
+	metadata.recovery.strategy = none
+	metric.reporters = []
+	metrics.num.samples = 2
+	metrics.recording.level = INFO
+	metrics.sample.window.ms = 30000
+	partition.assignment.strategy = [class org.apache.kafka.clients.consumer.RangeAssignor, class org.apache.kafka.clients.consumer.CooperativeStickyAssignor]
+	receive.buffer.bytes = 65536
+	reconnect.backoff.max.ms = 1000
+	reconnect.backoff.ms = 50
+	request.timeout.ms = 30000
+	retry.backoff.max.ms = 1000
+	retry.backoff.ms = 100
+	sasl.client.callback.handler.class = null
+	sasl.jaas.config = null
+	sasl.kerberos.kinit.cmd = /usr/bin/kinit
+	sasl.kerberos.min.time.before.relogin = 60000
+	sasl.kerberos.service.name = null
+	sasl.kerberos.ticket.renew.jitter = 0.05
+	sasl.kerberos.ticket.renew.window.factor = 0.8
+	sasl.login.callback.handler.class = null
+	sasl.login.class = null
+	sasl.login.connect.timeout.ms = null
+	sasl.login.read.timeout.ms = null
+	sasl.login.refresh.buffer.seconds = 300
+	sasl.login.refresh.min.period.seconds = 60
+	sasl.login.refresh.window.factor = 0.8
+	sasl.login.refresh.window.jitter = 0.05
+	sasl.login.retry.backoff.max.ms = 10000
+	sasl.login.retry.backoff.ms = 100
+	sasl.mechanism = GSSAPI
+	sasl.oauthbearer.clock.skew.seconds = 30
+	sasl.oauthbearer.expected.audience = null
+	sasl.oauthbearer.expected.issuer = null
+	sasl.oauthbearer.header.urlencode = false
+	sasl.oauthbearer.jwks.endpoint.refresh.ms = 3600000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.max.ms = 10000
+	sasl.oauthbearer.jwks.endpoint.retry.backoff.ms = 100
+	sasl.oauthbearer.jwks.endpoint.url = null
+	sasl.oauthbearer.scope.claim.name = scope
+	sasl.oauthbearer.sub.claim.name = sub
+	sasl.oauthbearer.token.endpoint.url = null
+	security.protocol = PLAINTEXT
+	security.providers = null
+	send.buffer.bytes = 131072
+	session.timeout.ms = 45000
+	socket.connection.setup.timeout.max.ms = 30000
+	socket.connection.setup.timeout.ms = 10000
+	ssl.cipher.suites = null
+	ssl.enabled.protocols = [TLSv1.2, TLSv1.3]
+	ssl.endpoint.identification.algorithm = https
+	ssl.engine.factory.class = null
+	ssl.key.password = null
+	ssl.keymanager.algorithm = SunX509
+	ssl.keystore.certificate.chain = null
+	ssl.keystore.key = null
+	ssl.keystore.location = null
+	ssl.keystore.password = null
+	ssl.keystore.type = JKS
+	ssl.protocol = TLSv1.3
+	ssl.provider = null
+	ssl.secure.random.implementation = null
+	ssl.trustmanager.algorithm = PKIX
+	ssl.truststore.certificates = null
+	ssl.truststore.location = null
+	ssl.truststore.password = null
+	ssl.truststore.type = JKS
+	value.deserializer = class org.apache.kafka.common.serialization.StringDeserializer
+
+2026-04-01T13:33:01.437+07:00  INFO 87236 --- [inventory-service] [           main] o.a.k.c.t.i.KafkaMetricsCollector        : initializing Kafka metrics collector
+2026-04-01T13:33:01.440+07:00  INFO 87236 --- [inventory-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka version: 3.9.1
+2026-04-01T13:33:01.440+07:00  INFO 87236 --- [inventory-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka commitId: f745dfdcee2b9851
+2026-04-01T13:33:01.440+07:00  INFO 87236 --- [inventory-service] [           main] o.a.kafka.common.utils.AppInfoParser     : Kafka startTimeMs: 1775025181440
+2026-04-01T13:33:01.442+07:00  INFO 87236 --- [inventory-service] [           main] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Subscribed to topic(s): procurement.goods_receipt.posted
+2026-04-01T13:33:01.452+07:00  INFO 87236 --- [inventory-service] [           main] c.f.i.InventoryServiceApplication        : Started InventoryServiceApplication in 3.772 seconds (process running for 3.978)
+2026-04-01T13:33:01.575+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.575+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] org.apache.kafka.clients.Metadata        : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Cluster ID: 5L6g3nShT-eMCtK--X86sw
+2026-04-01T13:33:01.576+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.576+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:33:01.576+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] (Re-)joining group
+2026-04-01T13:33:01.576+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] (Re-)joining group
+2026-04-01T13:33:01.582+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Request joining group due to: need to re-join with the given member-id: consumer-inventory-service-2-80b1f994-3729-4b2b-a2c6-2727e58dc667
+2026-04-01T13:33:01.582+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Request joining group due to: need to re-join with the given member-id: consumer-inventory-service-1-e1eb1ed9-893d-40d7-91ef-11cfb7ba7ccb
+2026-04-01T13:33:01.583+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] (Re-)joining group
+2026-04-01T13:33:01.583+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] (Re-)joining group
+2026-04-01T13:33:07.591+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-inventory-service-1-e1eb1ed9-893d-40d7-91ef-11cfb7ba7ccb', protocol='range'}
+2026-04-01T13:33:07.591+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Successfully joined group with generation Generation{generationId=17, memberId='consumer-inventory-service-2-80b1f994-3729-4b2b-a2c6-2727e58dc667', protocol='range'}
+2026-04-01T13:33:07.602+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Finished assignment for group at generation 17: {consumer-inventory-service-1-e1eb1ed9-893d-40d7-91ef-11cfb7ba7ccb=Assignment(partitions=[pos.sale.completed-0]), consumer-inventory-service-2-80b1f994-3729-4b2b-a2c6-2727e58dc667=Assignment(partitions=[procurement.goods_receipt.posted-0])}
+2026-04-01T13:33:07.612+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-inventory-service-1-e1eb1ed9-893d-40d7-91ef-11cfb7ba7ccb', protocol='range'}
+2026-04-01T13:33:07.612+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Successfully synced group in generation Generation{generationId=17, memberId='consumer-inventory-service-2-80b1f994-3729-4b2b-a2c6-2727e58dc667', protocol='range'}
+2026-04-01T13:33:07.613+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Notifying assignor about the new Assignment(partitions=[procurement.goods_receipt.posted-0])
+2026-04-01T13:33:07.613+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Notifying assignor about the new Assignment(partitions=[pos.sale.completed-0])
+2026-04-01T13:33:07.614+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Adding newly assigned partitions: procurement.goods_receipt.posted-0
+2026-04-01T13:33:07.614+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Adding newly assigned partitions: pos.sale.completed-0
+2026-04-01T13:33:07.620+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition pos.sale.completed-0 to the committed offset FetchPosition{offset=2, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-04-01T13:33:07.620+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerUtils        : Setting offset for partition procurement.goods_receipt.posted-0 to the committed offset FetchPosition{offset=3, offsetEpoch=Optional.empty, currentLeader=LeaderAndEpoch{leader=Optional[localhost:9092 (id: 1 rack: null)], epoch=0}}
+2026-04-01T13:33:07.621+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : inventory-service: partitions assigned: [pos.sale.completed-0]
+2026-04-01T13:33:07.621+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : inventory-service: partitions assigned: [procurement.goods_receipt.posted-0]
+2026-04-01T13:43:55.660+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.779+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.659+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.779+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.779+07:00  INFO 87236 --- [inventory-service] [ventory-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.779+07:00  INFO 87236 --- [inventory-service] [ventory-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Client requested disconnect from node 2147483646
+2026-04-01T13:43:55.789+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.789+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:43:55.789+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.789+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.880+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:43:55.918+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:44:21.894+07:00  WARN 87236 --- [inventory-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=2m44s328ms).
+2026-04-01T13:47:52.320+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.320+07:00  INFO 87236 --- [inventory-service] [ventory-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.320+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.320+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.321+07:00  INFO 87236 --- [inventory-service] [ventory-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Client requested disconnect from node 2147483646
+2026-04-01T13:47:52.324+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.324+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T13:47:52.324+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.426+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:47:52.427+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T13:48:07.831+07:00  WARN 87236 --- [inventory-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=3m45s938ms).
+2026-04-01T13:49:24.573+07:00  WARN 87236 --- [inventory-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s738ms).
+2026-04-01T14:00:55.277+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.277+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.277+07:00  INFO 87236 --- [inventory-service] [ventory-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.278+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.278+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.278+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.377+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.442+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: session timed out without receiving a heartbeat response. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.442+07:00  INFO 87236 --- [inventory-service] [ventory-service] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.449+07:00  INFO 87236 --- [inventory-service] [ventory-service] org.apache.kafka.clients.NetworkClient   : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Client requested disconnect from node 2147483646
+2026-04-01T14:00:55.468+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.468+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Group coordinator localhost:9092 (id: 2147483646 rack: null) is unavailable or invalid due to cause: coordinator unavailable. isDisconnected: false. Rediscovery will be attempted.
+2026-04-01T14:00:55.468+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:00:55.587+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
+2026-04-01T14:01:10.976+07:00  WARN 87236 --- [inventory-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=11m46s403ms).
+2026-04-01T14:23:46.307+07:00  INFO 87236 --- [inventory-service] [nio-8087-exec-3] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-01T14:23:46.307+07:00  INFO 87236 --- [inventory-service] [nio-8087-exec-3] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-04-01T14:23:46.310+07:00  INFO 87236 --- [inventory-service] [nio-8087-exec-3] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms

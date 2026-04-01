@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createGoodsReceipt, getGoodsReceipt, goodsReceiptAction } from '../api/procurement.api'
+import { createGoodsReceipt, getGoodsReceipt, goodsReceiptAction, listGoodsReceipts } from '../api/procurement.api'
 import type { CreateGoodsReceiptPayload } from '../model/procurement.types'
+
+export function useGoodsReceipts(params?: { purchaseOrderId?: number; outletId?: number; status?: string; limit?: number }) {
+  return useQuery({
+    queryKey: ['procurement', 'goods-receipts', 'list', params],
+    queryFn: () => listGoodsReceipts(params),
+  })
+}
 
 export function useGoodsReceipt(id: number | null) {
   return useQuery({

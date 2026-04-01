@@ -45,6 +45,7 @@ public class PosOrderService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final OperationalAlertPublisher operationalAlertPublisher;
+    private final PosAuditService posAuditService;
     private final Counter paymentFailureCounter;
 
     public PosOrderService(
@@ -58,6 +59,7 @@ public class PosOrderService {
             ObjectMapper objectMapper,
             Clock clock,
             OperationalAlertPublisher operationalAlertPublisher,
+            PosAuditService posAuditService,
             MeterRegistry meterRegistry
     ) {
         this.jdbcTemplate = jdbcTemplate;
@@ -70,6 +72,7 @@ public class PosOrderService {
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.operationalAlertPublisher = operationalAlertPublisher;
+        this.posAuditService = posAuditService;
         this.paymentFailureCounter = Counter.builder("fern_payment_failures_total").register(meterRegistry);
     }
 
@@ -118,6 +121,24 @@ public class PosOrderService {
         OrderRecord order = store.requireOrder(id);
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_READ);
         return store.mapOrder(order);
+    }
+
+    public java.util.Map<String, Object> getSaleOrderSnapshot(FernPrincipal principal, Long id) {
+        OrderRecord order = store.requireOrder(id);
+        posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_READ);
+        java.util.Map<String, Object> snapshot = store.getSaleSnapshot(id);
+        if (snapshot == null) {
+            throw new com.fern.platform.common.ResourceNotFoundException("Sale snapshot not available for this order");
+        }
+        return snapshot;
+    }
+
+    public List<SaleOrderResponse> listOrdersBySession(FernPrincipal principal, Long posSessionId, int limit) {
+        SessionRecord session = store.requireSession(posSessionId);
+        posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_ORDER_READ);
+        return store.listOrdersBySession(posSessionId, limit).stream()
+                .map(order -> store.mapOrder(order, store.queryOrderLines(order.id()), store.queryPayments(order.id())))
+                .toList();
     }
 
     public SaleOrderResponse updateOrder(FernPrincipal principal, Long id, UpdateSaleOrderRequest request) {
@@ -398,6 +419,14 @@ public class PosOrderService {
         if (store.successfulPaymentTotal(id).compareTo(BigDecimal.ZERO) > 0) {
             throw new ConflictException("Orders with successful payments cannot be cancelled");
         }
+        // AUD-006: capture before snapshot for audit
+        Map<String, Object> beforeSnapshot = Map.of(
+                "orderId", order.id(),
+                "orderNumber", order.orderNumber(),
+                "status", order.status(),
+                "totalAmount", order.totalAmount(),
+                "lineCount", store.queryOrderLines(order.id()).size()
+        );
         transactionTemplate.executeWithoutResult(status -> {
             OrderRecord currentOrder = store.requireOrderForUpdate(id);
             ensureOrderOpen(currentOrder);
@@ -418,6 +447,18 @@ public class PosOrderService {
                     "id", id
             ));
         });
+        // AUD-006: publish cancel audit with before/after snapshot
+        posAuditService.publishOrderEvent(
+                "pos.order.cancelled.audit",
+                principal,
+                order.regionId(),
+                order.outletId(),
+                "CANCEL_ORDER",
+                id,
+                beforeSnapshot,
+                Map.of("status", SaleOrderStatus.CANCELLED.name()),
+                Map.of("orderNumber", order.orderNumber(), "sessionId", order.posSessionId())
+        );
         return getOrder(principal, id);
     }
 

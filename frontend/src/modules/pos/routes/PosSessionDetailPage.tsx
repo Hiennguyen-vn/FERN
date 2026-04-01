@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import {
   Button,
   Card,
   ConfirmActionDialog,
   CurrencyInput,
+  DataTable,
   EmptyState,
   EntityHeader,
   ErrorState,
@@ -17,9 +18,11 @@ import {
   Textarea,
 } from '@design-system/index'
 import { useNetworkStatus } from '@shared/hooks/useNetworkStatus'
-import { formatDateTime, formatMoney } from '@shared/formatters'
+import { formatDateTime, formatDate, formatMoney } from '@shared/formatters'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { useClosePosSession, usePosSession, useReconcilePosSession } from '../hooks/usePosSession'
+import { useSessionOrders } from '../hooks/usePosOrder'
+import { PosSessionShiftSummary } from '../components/PosSessionShiftSummary'
 import {
   canCloseSessionAction,
   canReadSessions,
@@ -40,6 +43,7 @@ export function PosSessionDetailPage() {
   const canClosePermission = canCloseSessionAction(principal)
   const canReconcilePermission = canReconcileSessionAction(principal)
   const sessionQuery = usePosSession(sessionId, canReadSessionsPermission)
+  const ordersQuery = useSessionOrders(sessionId, canReadSessionsPermission)
   const closeMutation = useClosePosSession()
   const reconcileMutation = useReconcilePosSession()
 
@@ -109,7 +113,7 @@ export function PosSessionDetailPage() {
           <>
             <span>Outlet #{session.outletId}</span>
             <span>Region #{session.regionId}</span>
-            <span>Business date: {session.businessDate}</span>
+            <span>Business date: {formatDate(session.businessDate)}</span>
             <span>Opened: {formatDateTime(session.openedAt)}</span>
             <span>Closed: {formatDateTime(session.closedAt)}</span>
             <span>Reconciled: {formatDateTime(session.reconciledAt)}</span>
@@ -138,6 +142,43 @@ export function PosSessionDetailPage() {
         </div>
         {session.note ? <p className="muted-text">{session.note}</p> : null}
       </Card>
+      <Card title={`Đơn hàng trong phiên (${ordersQuery.data?.length ?? 0})`}>
+        <DataTable
+          columns={[
+            {
+              key: 'orderNumber',
+              header: 'Số đơn',
+              render: (row) => (
+                <Link style={{ color: 'var(--color-accent)', fontWeight: 500 }} to={`/pos/orders/${row.id}`}>
+                  {row.orderNumber}
+                </Link>
+              ),
+            },
+            { key: 'orderType', header: 'Loại', render: (row) => row.orderType },
+            { key: 'status', header: 'Trạng thái', render: (row) => <StatusBadge status={row.status} /> },
+            { key: 'paymentStatus', header: 'Thanh toán', render: (row) => <StatusBadge status={row.paymentStatus} /> },
+            {
+              key: 'totalAmount',
+              header: 'Tổng tiền',
+              render: (row) => formatMoney(row.totalAmount, row.currencyCode),
+            },
+            {
+              key: 'completedAt',
+              header: 'Hoàn thành lúc',
+              render: (row) => formatDateTime(row.completedAt),
+            },
+          ]}
+          emptyDescription="Chưa có đơn nào trong phiên này."
+          emptyTitle="Chưa có đơn"
+          rows={ordersQuery.data ?? []}
+        />
+      </Card>
+
+      <PosSessionShiftSummary
+        currencyCode={session.currencyCode}
+        isLoading={ordersQuery.isLoading}
+        orders={ordersQuery.data ?? []}
+      />
 
       {session.status.toUpperCase() === 'CLOSED' && !canReconcilePermission ? (
         <PermissionDeniedInline

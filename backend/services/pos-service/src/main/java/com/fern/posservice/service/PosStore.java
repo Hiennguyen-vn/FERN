@@ -7,6 +7,7 @@ import com.fern.posservice.dto.PosResponses.SaleOrderResponse;
 import com.fern.posservice.dto.PosResponses.SalePaymentResponse;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
@@ -102,6 +103,35 @@ public class PosStore {
         return record;
     }
 
+    public List<OrderRecord> listOrdersBySession(Long posSessionId, int limit) {
+        return jdbcTemplate.query("""
+                SELECT id, order_number, region_id, outlet_id, pos_session_id, currency_code, order_type, status, payment_status,
+                       subtotal, discount_amount, tax_amount, total_amount, note, created_at, completed_at, reservation_id
+                FROM pos.sale_order
+                WHERE pos_session_id = :posSessionId
+                ORDER BY created_at DESC, id DESC
+                LIMIT :limit
+                """, PosSql.params("posSessionId", posSessionId, "limit", limit), (rs, rowNum) -> new OrderRecord(
+                rs.getLong("id"),
+                rs.getString("order_number"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getLong("pos_session_id"),
+                rs.getString("currency_code"),
+                rs.getString("order_type"),
+                rs.getString("status"),
+                rs.getString("payment_status"),
+                rs.getBigDecimal("subtotal"),
+                rs.getBigDecimal("discount_amount"),
+                rs.getBigDecimal("tax_amount"),
+                rs.getBigDecimal("total_amount"),
+                rs.getString("note"),
+                PosSql.instant(rs, "created_at"),
+                PosSql.instant(rs, "completed_at"),
+                rs.getObject("reservation_id", Long.class)
+        ));
+    }
+
     public List<SaleOrderLineResponse> queryOrderLines(Long saleOrderId) {
         return jdbcTemplate.query("""
                 SELECT line_number, product_id, product_code, product_name_snapshot, unit_price, qty, discount_amount, tax_amount, line_total, note
@@ -172,6 +202,17 @@ public class PosStore {
                     "note", line.note()
             ));
         }
+    }
+
+    public Map<String, Object> getSaleSnapshot(Long saleOrderId) {
+        return jdbcTemplate.query("""
+                SELECT order_snapshot
+                FROM pos.sale_snapshot
+                WHERE sale_order_id = :saleOrderId
+                """, PosSql.params("saleOrderId", saleOrderId), rs -> {
+            if (!rs.next()) return null;
+            return rs.getObject("order_snapshot", Map.class);
+        });
     }
 
     public void refreshPaymentStatus(Long saleOrderId) {

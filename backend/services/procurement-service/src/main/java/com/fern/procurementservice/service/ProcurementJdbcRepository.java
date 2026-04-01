@@ -421,6 +421,135 @@ class ProcurementJdbcRepository {
                 """, params("limit", limit), Long.class);
     }
 
+    List<Long> listSupplierPaymentIds(Long supplierId, int limit) {
+        if (supplierId == null) {
+            return listSupplierPaymentIds(limit);
+        }
+        return jdbcTemplate.queryForList("""
+                SELECT id
+                FROM procurement.supplier_payment
+                WHERE supplier_id = :supplierId
+                ORDER BY payment_time DESC, id DESC
+                LIMIT :limit
+                """, params("supplierId", supplierId, "limit", limit), Long.class);
+    }
+
+    List<PurchaseOrderRecord> listPurchaseOrders(Long outletId, Long supplierId, String status, int limit) {
+        MapSqlParameterSource p = params("limit", limit);
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, po_number, region_id, outlet_id, supplier_id, order_date, expected_delivery_date, status, subtotal_amount, tax_amount, total_amount, note, approved_at, issued_at
+                FROM procurement.purchase_order
+                WHERE 1=1
+                """);
+        if (outletId != null) {
+            sql.append(" AND outlet_id = :outletId");
+            p.addValue("outletId", outletId);
+        }
+        if (supplierId != null) {
+            sql.append(" AND supplier_id = :supplierId");
+            p.addValue("supplierId", supplierId);
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append(" AND status = :status");
+            p.addValue("status", status);
+        }
+        sql.append(" ORDER BY created_at DESC LIMIT :limit");
+        return jdbcTemplate.query(sql.toString(), p, (rs, rowNum) -> new PurchaseOrderRecord(
+                rs.getLong("id"),
+                rs.getString("po_number"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getLong("supplier_id"),
+                rs.getObject("order_date", LocalDate.class),
+                rs.getObject("expected_delivery_date", LocalDate.class),
+                rs.getString("status"),
+                rs.getBigDecimal("subtotal_amount"),
+                rs.getBigDecimal("tax_amount"),
+                rs.getBigDecimal("total_amount"),
+                rs.getString("note"),
+                instant(rs, "approved_at"),
+                instant(rs, "issued_at")
+        ));
+    }
+
+    List<GoodsReceiptRecord> listGoodsReceipts(Long purchaseOrderId, Long outletId, String status, int limit) {
+        MapSqlParameterSource p = params("limit", limit);
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date,
+                       status, total_amount, supplier_lot_number, note, received_at, posted_at
+                FROM procurement.goods_receipt
+                WHERE 1=1
+                """);
+        if (purchaseOrderId != null) {
+            sql.append(" AND purchase_order_id = :purchaseOrderId");
+            p.addValue("purchaseOrderId", purchaseOrderId);
+        }
+        if (outletId != null) {
+            sql.append(" AND outlet_id = :outletId");
+            p.addValue("outletId", outletId);
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append(" AND status = :status");
+            p.addValue("status", status);
+        }
+        sql.append(" ORDER BY receipt_time DESC LIMIT :limit");
+        return jdbcTemplate.query(sql.toString(), p, (rs, rowNum) -> new GoodsReceiptRecord(
+                rs.getLong("id"),
+                rs.getString("receipt_number"),
+                rs.getLong("purchase_order_id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getLong("supplier_id"),
+                instant(rs, "receipt_time"),
+                rs.getObject("business_date", LocalDate.class),
+                rs.getString("status"),
+                rs.getBigDecimal("total_amount"),
+                rs.getString("supplier_lot_number"),
+                rs.getString("note"),
+                instant(rs, "received_at"),
+                instant(rs, "posted_at")
+        ));
+    }
+
+    List<SupplierInvoiceRecord> listSupplierInvoices(Long supplierId, Long outletId, String status, int limit) {
+        MapSqlParameterSource p = params("limit", limit);
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, supplier_id, region_id, outlet_id, currency_code, invoice_number, invoice_date, due_date,
+                       subtotal, tax_amount, total_amount, status, note, approved_at
+                FROM procurement.supplier_invoice
+                WHERE 1=1
+                """);
+        if (supplierId != null) {
+            sql.append(" AND supplier_id = :supplierId");
+            p.addValue("supplierId", supplierId);
+        }
+        if (outletId != null) {
+            sql.append(" AND outlet_id = :outletId");
+            p.addValue("outletId", outletId);
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append(" AND status = :status");
+            p.addValue("status", status);
+        }
+        sql.append(" ORDER BY invoice_date DESC, id DESC LIMIT :limit");
+        return jdbcTemplate.query(sql.toString(), p, (rs, rowNum) -> new SupplierInvoiceRecord(
+                rs.getLong("id"),
+                rs.getLong("supplier_id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getString("currency_code"),
+                rs.getString("invoice_number"),
+                rs.getObject("invoice_date", LocalDate.class),
+                rs.getObject("due_date", LocalDate.class),
+                rs.getBigDecimal("subtotal"),
+                rs.getBigDecimal("tax_amount"),
+                rs.getBigDecimal("total_amount"),
+                rs.getString("status"),
+                rs.getString("note"),
+                instant(rs, "approved_at")
+        ));
+    }
+
     void replacePurchaseOrderLines(Long purchaseOrderId, List<PurchaseOrderLineInput> lines) {
         jdbcTemplate.update("DELETE FROM procurement.purchase_order_line WHERE purchase_order_id = :purchaseOrderId", params("purchaseOrderId", purchaseOrderId));
         int lineNumber = 1;

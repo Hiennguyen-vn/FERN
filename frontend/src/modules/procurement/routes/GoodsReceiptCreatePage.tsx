@@ -24,10 +24,8 @@ export function GoodsReceiptCreatePage() {
   const principal = useAuthStore((state) => state.principal)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const canCreate = canCreateGoodsReceipt(principal)
 
-  if (!canCreateGoodsReceipt(principal)) {
-    return <PermissionDeniedInline message="Bạn cần quyền procurement.gr.create để tạo goods receipt." />
-  }
   const initialPurchaseOrderId = searchParams.get('purchaseOrderId') ?? ''
   const [form, setForm] = useState({
     purchaseOrderId: initialPurchaseOrderId,
@@ -37,7 +35,7 @@ export function GoodsReceiptCreatePage() {
     note: '',
   })
   const [lines, setLines] = useState([createDefaultGoodsReceiptLine()])
-  const purchaseOrderQuery = usePurchaseOrder(toOptionalNumber(form.purchaseOrderId) ?? null)
+  const purchaseOrderQuery = usePurchaseOrder(canCreate ? (toOptionalNumber(form.purchaseOrderId) ?? null) : null)
   const createMutation = useCreateGoodsReceipt()
 
   useEffect(() => {
@@ -56,6 +54,14 @@ export function GoodsReceiptCreatePage() {
       })),
     )
   }, [purchaseOrderQuery.data])
+
+  if (!canCreate) {
+    return (
+      <DashboardLayout description="Tạo goods receipt cho purchase order." title="Goods Receipt Create">
+        <PermissionDeniedInline message="Bạn cần quyền procurement.gr.create để tạo goods receipt." />
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout

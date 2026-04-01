@@ -7,6 +7,9 @@ import { exportDatasetOptions, exportFormatOptions } from '../model/reports.enum
 import type { ExportDataset } from '../model/reportExport.types'
 import { requiresDateRange, requiresPayrollRunId, requiresRegion } from '../services/reportFilter.service'
 
+const LARGE_EXPORT_LIMIT = 500
+const LARGE_DATE_RANGE_DAYS = 90
+
 interface ReportFilterPanelProps {
   allowedDatasets: ExportDataset[]
   isSubmitting?: boolean
@@ -72,12 +75,35 @@ export function ReportFilterPanel({ allowedDatasets, isSubmitting = false, onSub
     await onSubmit(mapExportFormToPayload(parsed.data))
   }
 
+  const limitNum = Number(values.limit)
+  const isLargeLimit = !Number.isNaN(limitNum) && limitNum > LARGE_EXPORT_LIMIT
+
+  const isLargeDateRange = (() => {
+    if (!values.fromDate || !values.toDate) return false
+    const from = new Date(values.fromDate)
+    const to = new Date(values.toDate)
+    const diffDays = (to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)
+    return diffDays > LARGE_DATE_RANGE_DAYS
+  })()
+
+  const sizeWarning =
+    isLargeLimit
+      ? `Preview limit đang đặt ở ${String(limitNum)} rows — export job lớn có thể mất nhiều thời gian xử lý và ảnh hưởng hiệu năng server.`
+      : isLargeDateRange
+      ? `Khoảng thời gian vượt quá ${String(LARGE_DATE_RANGE_DAYS)} ngày — export job có thể sinh ra file lớn. Cân nhắc thu hẹp khoảng lọc.`
+      : null
+
   return (
     <form onSubmit={handleSubmit}>
       <FormSection
         description="Create a report export job against the existing backend report-service contract."
         title="Create export job"
       >
+        {sizeWarning ? (
+          <div className="inline-banner inline-banner-warning" role="alert">
+            <span>⚠ {sizeWarning}</span>
+          </div>
+        ) : null}
         <div className="field-grid">
           <Select
             error={errors.dataset}
@@ -138,7 +164,7 @@ export function ReportFilterPanel({ allowedDatasets, isSubmitting = false, onSub
           ) : null}
           <Input
             error={errors.limit}
-            label="Preview limit"
+            label={`Preview limit${isLargeLimit ? ' ⚠' : ''}`}
             onChange={(event) => setValues((current) => ({ ...current, limit: event.target.value }))}
             placeholder="20"
             value={values.limit}

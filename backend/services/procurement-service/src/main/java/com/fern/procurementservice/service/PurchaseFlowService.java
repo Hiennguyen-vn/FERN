@@ -245,6 +245,24 @@ public class PurchaseFlowService {
     }
 
     @Transactional(readOnly = true)
+    public List<PurchaseOrderResponse> listPurchaseOrders(FernPrincipal principal, Long outletId, Long supplierId, String status, int limit) {
+        procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_PO_READ);
+        return procurementJdbcRepository.listPurchaseOrders(outletId, supplierId, status, limit).stream()
+                .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
+                .map(procurementJdbcRepository::mapPurchaseOrder)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<GoodsReceiptResponse> listGoodsReceipts(FernPrincipal principal, Long purchaseOrderId, Long outletId, String status, int limit) {
+        procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_GR_READ);
+        return procurementJdbcRepository.listGoodsReceipts(purchaseOrderId, outletId, status, limit).stream()
+                .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
+                .map(procurementJdbcRepository::mapGoodsReceipt)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public GoodsReceiptResponse getGoodsReceipt(FernPrincipal principal, Long id) {
         GoodsReceiptRecord record = requireGoodsReceipt(id);
         procurementAuthorizer.requireRouteRead(principal, record.regionId(), record.outletId(), PermissionCodes.PROCUREMENT_GR_READ);

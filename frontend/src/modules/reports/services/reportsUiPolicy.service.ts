@@ -1,5 +1,6 @@
 import type { FernPrincipal } from '@core/auth/auth.types'
-import { hasAnyPermissions, hasPermission } from '@core/permissions/permission.checker'
+import { hasPermission } from '@core/permissions/permission.checker'
+import { canExportGenericReports, canExportPayrollReports } from '@core/permissions/exportPermission.checker'
 import { permissionConstants } from '@core/permissions/permission.constants'
 import type { ExportDataset, ExportJob } from '../model/reportExport.types'
 
@@ -105,17 +106,18 @@ export function canReadPayrollReport(principal: FernPrincipal | null) {
 
 export function canCreateExport(principal: FernPrincipal | null, dataset?: ExportDataset) {
   if (!dataset) {
-    return hasAnyPermissions(principal, [permissionConstants.report.export, permissionConstants.report.payrollExport])
+    // Delegate to centralized exportPermission.checker
+    return canExportGenericReports(principal) || canExportPayrollReports(principal)
   }
 
   const family = resolveDatasetFamily(dataset)
 
   if (family === 'generic') {
-    return hasPermission(principal, permissionConstants.report.export)
+    return canExportGenericReports(principal)
   }
 
   if (family === 'payroll') {
-    return hasPermission(principal, permissionConstants.report.payrollExport)
+    return canExportPayrollReports(principal)
   }
 
   return false

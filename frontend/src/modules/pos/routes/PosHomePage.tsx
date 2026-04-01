@@ -19,6 +19,7 @@ import {
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { useNetworkStatus } from '@shared/hooks/useNetworkStatus'
 import { ApiError } from '@core/api/apiError'
+import { formatDate } from '@shared/formatters'
 import { PosCatalogGrid } from '../components/PosCatalogGrid'
 import { PosCartPanel } from '../components/PosCartPanel'
 import { PosSessionSummaryCard } from '../components/PosSessionSummaryCard'
@@ -45,7 +46,7 @@ export function PosHomePage() {
   const navigate = useNavigate()
   const principal = usePrincipal()
   const isOnline = useNetworkStatus()
-  const { selectedOutletId, selectedRegionId } = useScopeContext()
+  const { selectedOutletId, selectedRegionId, outletIds, setSelectedOutletId } = useScopeContext()
   const previousOutletId = useRef<number | null>(null)
   const [openSessionNote, setOpenSessionNote] = useState('')
   const [sessionNoteError, setSessionNoteError] = useState<string | null>(null)
@@ -105,12 +106,23 @@ export function PosHomePage() {
   )
   const currentSession = openSessionsQuery.data?.[0] ?? null
 
+  // Normalize BackendDate ([year,month,day] or ISO string) → 'YYYY-MM-DD' string for API
+  const sessionBusinessDateStr = (() => {
+    const raw = currentSession?.businessDate
+    if (!raw) return businessDate
+    if (Array.isArray(raw) && raw.length === 3) {
+      const [y, m, d] = raw as number[]
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    }
+    return String(raw)
+  })()
+
   const catalogQuery = usePosCatalog(
     currentSession && selectedOutletId
       ? {
           outletId: selectedOutletId,
           regionId: selectedRegionId ?? undefined,
-          businessDate: currentSession.businessDate,
+          businessDate: sessionBusinessDateStr,
           orderType: orderType as PosOrderType,
         }
       : null,
@@ -135,11 +147,31 @@ export function PosHomePage() {
   if (!selectedOutletId || !selectedRegionId) {
     return (
       <section className="page-stack pos-home-page">
-        <ReadonlyBanner message="Chọn outlet và region ở app shell trước khi dùng POS." />
+        <ReadonlyBanner message="POS cần outlet context để kiểm tra session và tạo order. Chọn outlet bên dưới hoặc dùng bộ chọn ở góc phải phía trên." />
         <EmptyState
-          description="POS cần context outlet và region để kiểm tra session, resolve catalog và tạo order đúng scope."
-          title="POS context missing"
-        />
+          description="Chọn outlet trong danh sách bên dưới để bắt đầu ca bán hàng."
+          title="Chưa chọn outlet"
+        >
+          {outletIds.length > 0 ? (
+            <div style={{ marginTop: '1rem', maxWidth: '320px' }}>
+              <Select
+                label="Chọn outlet vận hành"
+                onChange={(event) => {
+                  if (event.target.value) {
+                    setSelectedOutletId(Number(event.target.value))
+                  }
+                }}
+                options={outletIds.map((id) => ({ label: `Outlet #${id}`, value: String(id) }))}
+                placeholder="-- Chọn outlet --"
+                value={selectedOutletId ? String(selectedOutletId) : ''}
+              />
+            </div>
+          ) : (
+            <p className="muted-text" style={{ marginTop: '0.5rem' }}>
+              Tài khoản này chưa được gán outlet. Liên hệ System Admin để được cấp phạm vi outlet.
+            </p>
+          )}
+        </EmptyState>
       </section>
     )
   }
@@ -318,7 +350,7 @@ export function PosHomePage() {
                     ]}
                     value={orderType}
                   />
-                  <Input label="Business date" readOnly value={currentSession.businessDate} />
+                  <Input label="Business date" readOnly value={formatDate(currentSession.businessDate)} />
                 </div>
               </Card>
 

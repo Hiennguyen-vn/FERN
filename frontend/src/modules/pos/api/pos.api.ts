@@ -63,6 +63,13 @@ export async function getSaleOrder(orderId: number) {
   return data
 }
 
+export async function listSessionOrders(posSessionId: number, limit = 50) {
+  const { data } = await gatewayClient.get<SaleOrder[]>('/sale-orders', {
+    params: { posSessionId, limit },
+  })
+  return data
+}
+
 export async function updateSaleOrder(orderId: number, payload: UpdateSaleOrderPayload) {
   const { data } = await gatewayClient.patch<SaleOrder>(`/sale-orders/${orderId}`, payload)
   return data

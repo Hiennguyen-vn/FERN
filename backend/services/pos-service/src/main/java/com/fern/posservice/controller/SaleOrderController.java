@@ -1,6 +1,7 @@
 package com.fern.posservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ListQueryDefaults;
 import com.fern.platform.observability.CorrelationId;
 import com.fern.posservice.dto.PosCommands.AddPaymentRequest;
 import com.fern.posservice.dto.PosCommands.CreateSaleOrderRequest;
@@ -8,6 +9,8 @@ import com.fern.posservice.dto.PosCommands.UpdateSaleOrderRequest;
 import com.fern.posservice.dto.PosResponses.SaleOrderResponse;
 import com.fern.posservice.service.PosOrderService;
 import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -35,12 +39,30 @@ public class SaleOrderController {
         return posOrderService.createOrder(principal, request);
     }
 
+    @GetMapping
+    public List<SaleOrderResponse> listOrders(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam Long posSessionId,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return posOrderService.listOrdersBySession(principal, posSessionId,
+                ListQueryDefaults.clampLimit(limit));
+    }
+
     @GetMapping("/{id}")
     public SaleOrderResponse getOrder(
             @AuthenticationPrincipal FernPrincipal principal,
             @PathVariable Long id
     ) {
         return posOrderService.getOrder(principal, id);
+    }
+
+    @GetMapping("/{id}/snapshot")
+    public Map<String, Object> getSaleOrderSnapshot(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @PathVariable Long id
+    ) {
+        return posOrderService.getSaleOrderSnapshot(principal, id);
     }
 
     @PatchMapping("/{id}")

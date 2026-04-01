@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
+import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
@@ -22,14 +22,12 @@ export function StockOverviewPage() {
   usePageTitle('Stock Overview')
 
   const principal = useAuthStore((state) => state.principal)
-  const { selectedOutletId } = useScopeContext()
-
-  if (!canReadStockBalances(principal)) {
-    return <PermissionDeniedInline message="Bạn cần quyền inventory.balance.read để xem tồn kho." />
-  }
+  const { selectedOutletId, outletIds, setSelectedOutletId } = useScopeContext()
   const [ingredientId, setIngredientId] = useState('')
   const [page, setPage] = useState(0)
   const size = 20
+
+  const hasPermission = canReadStockBalances(principal)
 
   const query = useStockBalances(
     selectedOutletId
@@ -57,6 +55,14 @@ export function StockOverviewPage() {
     { key: 'lastCountDate', header: 'Last count', render: (row) => row.lastCountDate ?? 'N/A' },
   ]
 
+  if (!hasPermission) {
+    return (
+      <DashboardLayout description="Read live stock balances for the currently selected outlet." title="Stock Overview">
+        <PermissionDeniedInline message="Bạn cần quyền inventory.balance.read để xem tồn kho." />
+      </DashboardLayout>
+    )
+  }
+
   return (
     <DashboardLayout
       description="Read live stock balances for the currently selected outlet."
@@ -64,11 +70,31 @@ export function StockOverviewPage() {
     >
       {!selectedOutletId ? (
         <>
-          <ReadonlyBanner message="Select an outlet in the app shell to load stock balances." />
+          <ReadonlyBanner message="Chọn outlet để xem tồn kho. Dùng bộ chọn outlet bên dưới hoặc ở góc trên cùng bên phải." />
           <EmptyState
             description="Stock Overview chỉ hiển thị dữ liệu khi outlet context đã được chọn rõ ràng trong app shell."
-            title="Outlet context required"
-          />
+            title="Chưa chọn outlet"
+          >
+            {outletIds.length > 0 ? (
+              <div style={{ marginTop: '1rem', maxWidth: '320px' }}>
+                <Select
+                  label="Chọn outlet"
+                  onChange={(event) => {
+                    if (event.target.value) {
+                      setSelectedOutletId(Number(event.target.value))
+                    }
+                  }}
+                  options={outletIds.map((id) => ({ label: `Outlet #${id}`, value: String(id) }))}
+                  placeholder="-- Chọn outlet --"
+                  value={selectedOutletId ? String(selectedOutletId) : ''}
+                />
+              </div>
+            ) : (
+              <p className="muted-text" style={{ marginTop: '0.5rem' }}>
+                Tài khoản này chưa được gán outlet. Liên hệ System Admin để được cấp phạm vi outlet.
+              </p>
+            )}
+          </EmptyState>
         </>
       ) : null}
       {selectedOutletId && query.error ? (

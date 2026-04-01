@@ -154,6 +154,9 @@ export function PosOrderDetailPage() {
   const canUpdateCurrentOrder = Boolean(order && canUpdatePermission && canUpdateOrder(order, isOnline))
   const canAddPaymentForOrder = Boolean(order && canUpdatePermission && canAddPayment(order, isOnline))
   const paymentSectionReadonly = Boolean(order && (!canUpdatePermission || !canAddPayment(order, isOnline)))
+  // Block duplicate payment when there's a PENDING or RETRYING queued payment for this order.
+  const hasPendingQueuedPayment = queuedPaymentCounts.pendingCount > 0 || queuedPaymentCounts.retryingCount > 0
+  const canSubmitNewPayment = canAddPaymentForOrder && !hasPendingQueuedPayment
 
   if (!order) {
     return (
@@ -313,6 +316,7 @@ export function PosOrderDetailPage() {
             {queuedPaymentCounts.retryingCount > 0 ? (
               <p>
                 Đang retry {queuedPaymentCounts.retryingCount} payment queued cho order này với đúng Idempotency-Key ban đầu.
+                {' '}<strong>Không thể thêm payment mới cho đến khi queue hoàn tất.</strong>
               </p>
             ) : queuedPaymentCounts.failedCount > 0 ? (
               <p>
@@ -322,6 +326,7 @@ export function PosOrderDetailPage() {
             ) : (
               <p>
                 {queuedPaymentCounts.pendingCount} payment đã được giữ ở hàng chờ cho order này và sẽ retry khi POS reconnect.
+                {' '}<strong>Không thể thêm payment mới cho đến khi queue xử lý xong.</strong>
               </p>
             )}
           </div>
@@ -381,7 +386,7 @@ export function PosOrderDetailPage() {
         <FormActions
           primaryAction={
             <Button
-              disabled={!canAddPaymentForOrder || Number(paymentAmount) <= 0}
+              disabled={!canSubmitNewPayment || Number(paymentAmount) <= 0}
               loading={addPaymentMutation.isPending}
               onClick={async () => {
                 const result = await addPaymentMutation.mutateAsync({
@@ -406,7 +411,7 @@ export function PosOrderDetailPage() {
                 }
               }}
             >
-              {isOnline ? 'Add payment' : 'Queue payment'}
+              {hasPendingQueuedPayment ? 'Blocked — payment in queue' : isOnline ? 'Add payment' : 'Queue payment'}
             </Button>
           }
         />

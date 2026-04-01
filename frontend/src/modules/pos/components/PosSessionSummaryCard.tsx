@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, Card, StatusBadge } from '@design-system/index'
-import { formatDateTime, formatMoney } from '@shared/formatters'
+import { formatDateTime, formatDate, formatMoney } from '@shared/formatters'
 import type { PosSession } from '../model/pos.types'
 
 interface PosSessionSummaryCardProps {
@@ -28,7 +28,7 @@ export function PosSessionSummaryCard({ actions, session }: PosSessionSummaryCar
         <div className="pos-summary-grid">
           <span>Outlet #{session.outletId}</span>
           <span>Region #{session.regionId}</span>
-          <span>Business date: {session.businessDate}</span>
+          <span>Business date: {formatDate(session.businessDate)}</span>
           <span>Opened: {formatDateTime(session.openedAt)}</span>
           <span>Expected cash: {formatMoney(session.expectedCashAmount, session.currencyCode)}</span>
           <span>Discrepancy: {formatMoney(session.discrepancyAmount, session.currencyCode)}</span>

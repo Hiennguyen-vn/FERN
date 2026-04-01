@@ -1,11 +1,13 @@
 package com.fern.procurementservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ListQueryDefaults;
 import com.fern.procurementservice.dto.ProcurementCommands.CreatePurchaseOrderRequest;
 import com.fern.procurementservice.dto.ProcurementCommands.UpdatePurchaseOrderRequest;
 import com.fern.procurementservice.dto.ProcurementResponses.PurchaseOrderResponse;
 import com.fern.procurementservice.service.PurchaseFlowService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -22,6 +25,17 @@ public class PurchaseOrderController {
 
     public PurchaseOrderController(PurchaseFlowService purchaseFlowService) {
         this.purchaseFlowService = purchaseFlowService;
+    }
+
+    @GetMapping
+    public List<PurchaseOrderResponse> listPurchaseOrders(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(required = false) Long outletId,
+            @RequestParam(required = false) Long supplierId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return purchaseFlowService.listPurchaseOrders(principal, outletId, supplierId, status, ListQueryDefaults.clampLimit(limit));
     }
 
     @PostMapping

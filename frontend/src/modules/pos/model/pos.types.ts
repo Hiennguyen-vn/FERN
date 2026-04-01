@@ -7,6 +7,11 @@ export type PosPaymentMethod = 'CASH' | 'CARD' | 'EWALLET' | 'BANK_TRANSFER' | '
 export type PriceScopeType = 'GLOBAL' | 'COUNTRY' | 'REGION' | 'OUTLET'
 export type CatalogPriceType = 'RETAIL' | 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY' | 'WHOLESALE'
 
+// Backend serialises Java LocalDate as [year, month, day] array or ISO string
+export type BackendDate = number[] | string | null
+// Backend serialises Java Instant as epoch seconds (float) or ISO string  
+export type BackendInstant = number | string | null
+
 export interface PosSession {
   id: number
   sessionCode: string
@@ -16,15 +21,15 @@ export interface PosSession {
   currencyCode: string
   cashierUserId: number | null
   managerUserId: number | null
-  businessDate: string
+  businessDate: BackendDate
   status: PosSessionStatus
   note: string | null
-  openedAt: string
-  closedAt: string | null
-  reconciledAt: string | null
-  expectedCashAmount: string | null
-  countedCashAmount: string | null
-  discrepancyAmount: string | null
+  openedAt: BackendInstant
+  closedAt: BackendInstant
+  reconciledAt: BackendInstant
+  expectedCashAmount: number | string | null
+  countedCashAmount: number | string | null
+  discrepancyAmount: number | string | null
 }
 
 export interface SaleOrderLine {
@@ -43,9 +48,9 @@ export interface SaleOrderLine {
 export interface SalePayment {
   id: number
   paymentMethod: PosPaymentMethod | string
-  amount: string
+  amount: number | string
   status: SalePaymentStatus | string
-  paymentTime: string
+  paymentTime: BackendInstant
   transactionRef: string | null
 }
 
@@ -59,13 +64,13 @@ export interface SaleOrder {
   orderType: PosOrderType | string
   status: SaleOrderStatus | string
   paymentStatus: SaleOrderPaymentStatus | string
-  subtotal: string
-  discountAmount: string
-  taxAmount: string
-  totalAmount: string
+  subtotal: number | string
+  discountAmount: number | string
+  taxAmount: number | string
+  totalAmount: number | string
   note: string | null
-  createdAt: string
-  completedAt: string | null
+  createdAt: BackendInstant
+  completedAt: BackendInstant
   lines: SaleOrderLine[]
   payments: SalePayment[]
 }

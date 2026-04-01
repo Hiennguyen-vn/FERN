@@ -107,7 +107,7 @@ export interface CreateGoodsReceiptPayload {
 }
 
 // ─── Supplier invoice ─────────────────────────────────────────────────────────
-export type SupplierInvoiceStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'DISPUTED' | 'PAID'
+export type SupplierInvoiceStatus = 'RECEIVED' | 'MATCHED' | 'APPROVED' | 'DISPUTED' | 'CANCELLED'
 export type InvoiceLineType = 'STOCK' | 'PARTIAL_MATCH' | 'NON_PO_RECEIPT' | 'NON_STOCK'
 
 export interface SupplierInvoiceLine {

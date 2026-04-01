@@ -12,6 +12,10 @@ public class CatalogAuthorizer {
         }
     }
 
+    public void requirePermissionAnyScope(FernPrincipal principal, String permission) {
+        requirePermission(principal, permission);
+    }
+
     public void requireSystemPermission(FernPrincipal principal, String permission) {
         requirePermission(principal, permission);
         if (!principal.scopeRoots().system()) {

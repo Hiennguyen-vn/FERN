@@ -26,7 +26,11 @@ export function PurchaseOrderDetailPage() {
   usePageTitle(purchaseOrderId ? `Purchase Order #${purchaseOrderId}` : 'Purchase Order Detail')
 
   if (!canReadPurchaseOrders(principal)) {
-    return <PermissionDeniedInline message="Bạn cần quyền procurement.po.read để xem purchase order." />
+    return (
+      <DashboardLayout description="Inspect purchase order lifecycle and trigger workflow transitions." title="Purchase Order Detail">
+        <PermissionDeniedInline message="Bạn cần quyền procurement.po.read để xem purchase order." />
+      </DashboardLayout>
+    )
   }
 
   const columns: Array<DataTableColumn<PurchaseOrderLine>> = [

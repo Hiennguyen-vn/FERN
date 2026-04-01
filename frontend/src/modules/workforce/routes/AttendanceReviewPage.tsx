@@ -12,19 +12,24 @@ export function AttendanceReviewPage() {
 
   const principal = useAuthStore((state) => state.principal)
   const { selectedOutletId, selectedRegionId } = useScopeContext()
-
-  if (!canApproveAttendance(principal)) {
-    return <PermissionDeniedInline message="You don't have permission to review attendance approvals" />
-  }
+  const canApprove = canApproveAttendance(principal)
 
   const approvalsQuery = useAttendanceApprovals(
-    selectedOutletId || selectedRegionId
+    canApprove && (selectedOutletId || selectedRegionId)
       ? {
           outletId: selectedOutletId ?? undefined,
           regionId: selectedRegionId ?? undefined,
         }
       : null,
   )
+
+  if (!canApprove) {
+    return (
+      <DashboardLayout description="Review attendance approvals for the selected region or outlet." title="Attendance Review">
+        <PermissionDeniedInline message="Bạn cần quyền hr.attendance.review để phê duyệt chấm công." />
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout

@@ -1,0 +1,5 @@
+
+> fern-frontend@0.1.0 dev
+> node ./dev-server.mjs
+
+FERN dev server ready at http://127.0.0.1:3000/

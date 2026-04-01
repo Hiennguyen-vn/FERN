@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createPurchaseOrder, getPurchaseOrder, purchaseOrderAction } from '../api/procurement.api'
+import { createPurchaseOrder, getPurchaseOrder, listPurchaseOrders, purchaseOrderAction } from '../api/procurement.api'
 import type { CreatePurchaseOrderPayload } from '../model/procurement.types'
+
+export function usePurchaseOrders(params?: { outletId?: number; supplierId?: number; status?: string; limit?: number }) {
+  return useQuery({
+    queryKey: ['procurement', 'purchase-orders', 'list', params],
+    queryFn: () => listPurchaseOrders(params),
+  })
+}
 
 export function usePurchaseOrder(id: number | null) {
   return useQuery({

@@ -100,6 +100,24 @@ public class PayablesService {
     }
 
     @Transactional(readOnly = true)
+    public List<SupplierInvoiceResponse> listSupplierInvoices(FernPrincipal principal, Long supplierId, Long outletId, String status, int limit) {
+        procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_INVOICE_READ);
+        return procurementJdbcRepository.listSupplierInvoices(supplierId, outletId, status, limit).stream()
+                .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
+                .map(procurementJdbcRepository::mapSupplierInvoice)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupplierPaymentResponse> listSupplierPaymentsBySupplier(FernPrincipal principal, Long supplierId, int limit) {
+        procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_PAYMENT_READ);
+        return procurementJdbcRepository.listSupplierPaymentIds(supplierId, limit).stream()
+                .map(procurementJdbcRepository::getSupplierPayment)
+                .filter(payment -> isSupplierPaymentReadable(principal, payment))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public SupplierInvoiceResponse getSupplierInvoice(FernPrincipal principal, Long id) {
         SupplierInvoiceRecord record = requireSupplierInvoice(id);
         procurementAuthorizer.requireRouteRead(principal, record.regionId(), record.outletId(), PermissionCodes.PROCUREMENT_INVOICE_READ);

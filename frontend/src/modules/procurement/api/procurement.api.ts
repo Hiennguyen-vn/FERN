@@ -1,3 +1,4 @@
+import { generateIdempotencyKey } from '@core/api/idempotency'
 import { gatewayClient } from '@core/api/gatewayClient'
 import type {
   CreateGoodsReceiptPayload,
@@ -21,6 +22,11 @@ export async function createPurchaseOrder(payload: CreatePurchaseOrderPayload) {
   return data
 }
 
+export async function listPurchaseOrders(params?: { outletId?: number; supplierId?: number; status?: string; limit?: number }) {
+  const { data } = await gatewayClient.get<PurchaseOrder[]>('/purchase-orders', { params })
+  return data
+}
+
 export async function getPurchaseOrder(id: number) {
   const { data } = await gatewayClient.get<PurchaseOrder>(`/purchase-orders/${id}`)
   return data
@@ -36,17 +42,28 @@ export async function createGoodsReceipt(payload: CreateGoodsReceiptPayload) {
   return data
 }
 
+export async function listGoodsReceipts(params?: { purchaseOrderId?: number; outletId?: number; status?: string; limit?: number }) {
+  const { data } = await gatewayClient.get<GoodsReceipt[]>('/goods-receipts', { params })
+  return data
+}
+
 export async function getGoodsReceipt(id: number) {
   const { data } = await gatewayClient.get<GoodsReceipt>(`/goods-receipts/${id}`)
   return data
 }
 
 export async function goodsReceiptAction(id: number, action: 'receive' | 'post' | 'cancel') {
-  const { data } = await gatewayClient.post<GoodsReceipt>(`/goods-receipts/${id}/${action}`)
+  const config = action === 'post' ? { headers: { 'Idempotency-Key': generateIdempotencyKey() } } : undefined
+  const { data } = await gatewayClient.post<GoodsReceipt>(`/goods-receipts/${id}/${action}`, undefined, config)
   return data
 }
 
 // ─── Supplier invoices ────────────────────────────────────────────────────────
+export async function listSupplierInvoices(params?: { supplierId?: number; outletId?: number; status?: string; limit?: number }) {
+  const { data } = await gatewayClient.get<SupplierInvoice[]>('/supplier-invoices', { params })
+  return data
+}
+
 export async function createSupplierInvoice(payload: CreateSupplierInvoicePayload) {
   const { data } = await gatewayClient.post<SupplierInvoice>('/supplier-invoices', payload)
   return data

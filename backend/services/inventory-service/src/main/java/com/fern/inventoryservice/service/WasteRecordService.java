@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.UUID;
 import org.slf4j.MDC;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -30,6 +31,7 @@ public class WasteRecordService {
     private final InventoryRepository inventoryRepository;
     private final InventoryOutboxService inventoryOutboxService;
     private final InventoryOrgClient inventoryOrgClient;
+    private final InventoryAuditService inventoryAuditService;
     private final Clock clock;
 
     public WasteRecordService(
@@ -38,6 +40,7 @@ public class WasteRecordService {
             InventoryRepository inventoryRepository,
             InventoryOutboxService inventoryOutboxService,
             InventoryOrgClient inventoryOrgClient,
+            InventoryAuditService inventoryAuditService,
             Clock clock
     ) {
         this.jdbcTemplate = jdbcTemplate;
@@ -45,6 +48,7 @@ public class WasteRecordService {
         this.inventoryRepository = inventoryRepository;
         this.inventoryOutboxService = inventoryOutboxService;
         this.inventoryOrgClient = inventoryOrgClient;
+        this.inventoryAuditService = inventoryAuditService;
         this.clock = clock;
     }
 
@@ -137,6 +141,21 @@ public class WasteRecordService {
         }
         WasteRecordResponse response = getWasteRecord(id);
         enqueueWasteRecordPosted(response, record, principal, signedQty, unitCost);
+        // AUD-002: publish audit event for waste post with snapshot
+        inventoryAuditService.publishInventoryEvent(
+                "inventory.waste.posted.audit",
+                principal,
+                record.regionId(),
+                record.outletId(),
+                "POST_WASTE_RECORD",
+                "WASTE_RECORD",
+                id,
+                Map.of("status", "DRAFT"),
+                Map.of("status", "POSTED", "ingredientId", record.ingredientId(),
+                       "qty", record.qty(), "unitCost", unitCost == null ? 0 : unitCost,
+                       "transactionId", transactionId),
+                Map.of("reason", record.reason(), "businessDate", record.businessDate().toString())
+        );
         return response;
     }
 
@@ -160,6 +179,19 @@ public class WasteRecordService {
         if (updated != 1) {
             throw new ConflictException("Only draft waste records can be cancelled");
         }
+        // AUD-002: publish audit event for waste cancel
+        inventoryAuditService.publishInventoryEvent(
+                "inventory.waste.cancelled.audit",
+                principal,
+                record.regionId(),
+                record.outletId(),
+                "CANCEL_WASTE_RECORD",
+                "WASTE_RECORD",
+                id,
+                Map.of("status", "DRAFT"),
+                Map.of("status", "CANCELLED"),
+                Map.of("ingredientId", record.ingredientId(), "reason", record.reason())
+        );
         return getWasteRecord(id);
     }
 

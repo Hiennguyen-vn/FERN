@@ -37,10 +37,7 @@ export function MyAttendancePage() {
 
   const principal = useAuthStore((state) => state.principal)
   const { selectedOutletId, selectedRegionId } = useScopeContext()
-
-  if (!canRecordAttendance(principal)) {
-    return <PermissionDeniedInline message="You don't have permission to record attendance events" />
-  }
+  const canRecord = canRecordAttendance(principal)
 
   const [page, setPage] = useState(0)
   const [filters, setFilters] = useState({
@@ -58,7 +55,7 @@ export function MyAttendancePage() {
   const size = 20
 
   const eventsQuery = useAttendanceEvents(
-    selectedOutletId && selectedRegionId
+    canRecord && selectedOutletId && selectedRegionId
       ? {
           outletId: selectedOutletId,
           regionId: selectedRegionId,
@@ -72,6 +69,14 @@ export function MyAttendancePage() {
       : null,
   )
   const recordMutation = useRecordAttendanceEvent()
+
+  if (!canRecord) {
+    return (
+      <DashboardLayout description="Chấm công, xem attendance events." title="My Attendance">
+        <PermissionDeniedInline message="Bạn cần quyền hr.attendance.write để truy cập trang chấm công." />
+      </DashboardLayout>
+    )
+  }
 
   const columns: Array<DataTableColumn<AttendanceEventListItem>> = [
     { key: 'id', header: 'Event ID', render: (row) => `#${row.id}` },

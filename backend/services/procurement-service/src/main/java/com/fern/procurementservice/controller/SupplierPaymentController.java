@@ -29,8 +29,12 @@ public class SupplierPaymentController {
     @GetMapping
     public java.util.List<SupplierPaymentResponse> listSupplierPayments(
             @AuthenticationPrincipal FernPrincipal principal,
+            @RequestParam(required = false) Long supplierId,
             @RequestParam(required = false) Integer limit
     ) {
+        if (supplierId != null) {
+            return payablesService.listSupplierPaymentsBySupplier(principal, supplierId, ListQueryDefaults.clampLimit(limit));
+        }
         return payablesService.listSupplierPayments(principal, ListQueryDefaults.clampLimit(limit));
     }
 

@@ -18,6 +18,10 @@ import { useAuthStore } from '@core/auth/auth.store'
 import { Button, Card, Input, ReadonlyBanner } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { buildNavigation } from '@shared/navigation/navigation.builder'
+import {
+  canReadPurchaseOrders,
+  canReadGoodsReceipts,
+} from '@modules/procurement/services/procurementPermission.service'
 
 // ─── Lazy imports: POS ────────────────────────────────────────────────────────
 const PosHomePage = lazy(() =>
@@ -52,6 +56,41 @@ const GoodsReceiptCreatePage = lazy(() =>
 const GoodsReceiptDetailPage = lazy(() =>
   import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
     default: m.GoodsReceiptDetailPage,
+  })),
+)
+const SupplierInvoiceCreatePage = lazy(() =>
+  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
+    default: m.SupplierInvoiceCreatePage,
+  })),
+)
+const SupplierInvoiceDetailPage = lazy(() =>
+  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
+    default: m.SupplierInvoiceDetailPage,
+  })),
+)
+const SupplierPaymentCreatePage = lazy(() =>
+  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
+    default: m.SupplierPaymentCreatePage,
+  })),
+)
+const PurchaseOrderListPage = lazy(() =>
+  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
+    default: m.PurchaseOrderListPage,
+  })),
+)
+const GoodsReceiptListPage = lazy(() =>
+  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
+    default: m.GoodsReceiptListPage,
+  })),
+)
+const SupplierInvoiceListPage = lazy(() =>
+  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
+    default: m.SupplierInvoiceListPage,
+  })),
+)
+const SupplierPaymentListPage = lazy(() =>
+  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
+    default: m.SupplierPaymentListPage,
   })),
 )
 
@@ -208,6 +247,9 @@ const ExportPreviewPage = lazy(() =>
 const ExportDownloadPage = lazy(() =>
   import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.ExportDownloadPage })),
 )
+const OutletRevenueReportPage = lazy(() =>
+  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.OutletRevenueReportPage })),
+)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function AuthPageFrame({ children }: { children: ReactNode }) {
@@ -216,6 +258,19 @@ function AuthPageFrame({ children }: { children: ReactNode }) {
       <AuthLayout>{children}</AuthLayout>
     </EmptyLayout>
   )
+}
+
+// Redirects /procurement to the appropriate landing page based on permissions.
+function ProcurementLandingRedirect() {
+  const principal = useAuthStore((state) => state.principal)
+  if (canReadPurchaseOrders(principal)) {
+    return <Navigate replace to="purchase-orders" />
+  }
+  if (canReadGoodsReceipts(principal)) {
+    return <Navigate replace to="goods-receipts" />
+  }
+  // Fallback: let the module guard handle the redirect to /unauthorized.
+  return <Navigate replace to="/unauthorized" />
 }
 
 // ─── Auth pages (inline — small, always needed) ───────────────────────────────
@@ -338,7 +393,7 @@ export function HomePage() {
     { to: '/regional-ops', title: 'Regional Ops', description: 'Regional dashboard, outlet scan và drill-down oversight.', status: 'live' as const },
     { to: '/hr/employees', title: 'HR', description: 'Nhân viên, hợp đồng, chấm công tổng hợp, payroll prep.', status: 'live' as const },
     { to: '/finance/payroll-approvals', title: 'Finance', description: 'Nhà cung cấp, payment requests, payroll approvals, mark paid.', status: 'live' as const },
-    { to: '/procurement/purchase-orders/new', title: 'Procurement', description: 'Đặt hàng nhà cung cấp, nhận hàng.', status: 'live' as const },
+    { to: '/procurement', title: 'Procurement', description: 'Đặt hàng nhà cung cấp, nhận hàng.', status: 'live' as const },
     { to: '/inventory/stock-balances', title: 'Inventory', description: 'Tồn kho, giao dịch kho.', status: 'live' as const },
     { to: '/workforce/my-attendance', title: 'Workforce', description: 'Chấm công, duyệt ca.', status: 'live' as const },
     { to: '/reports', title: 'Reports', description: 'Dashboard, revenue, inventory, payroll và export jobs.', status: 'live' as const },
@@ -350,7 +405,7 @@ export function HomePage() {
       description: 'Bắt đầu ca bán hàng, cart và payment flow.',
     },
     {
-      to: '/procurement/purchase-orders/new',
+      to: '/procurement',
       title: 'Create purchase order',
       description: 'Tạo PO mới theo outlet hiện tại.',
     },
@@ -384,7 +439,7 @@ export function HomePage() {
       return visibleModulePaths.has('/pos')
     }
     if (action.to.startsWith('/procurement')) {
-      return visibleModulePaths.has('/procurement/purchase-orders/new')
+      return visibleModulePaths.has('/procurement')
     }
     if (action.to.startsWith('/inventory')) {
       return visibleModulePaths.has('/inventory/stock-balances')
@@ -779,6 +834,26 @@ export const router = createBrowserRouter([
             path: 'payroll-paid/:runId',
             element: <PayrollPaidPage />,
           },
+          {
+            path: 'supplier-invoices',
+            element: <SupplierInvoiceListPage />,
+          },
+          {
+            path: 'supplier-invoices/new',
+            element: <SupplierInvoiceCreatePage />,
+          },
+          {
+            path: 'supplier-invoices/:invoiceId',
+            element: <SupplierInvoiceDetailPage />,
+          },
+          {
+            path: 'supplier-payments',
+            element: <SupplierPaymentListPage />,
+          },
+          {
+            path: 'supplier-payments/new',
+            element: <SupplierPaymentCreatePage />,
+          },
             ],
           },
         ],
@@ -819,13 +894,37 @@ export const router = createBrowserRouter([
       },
 
       // ── Procurement ───────────────────────────────────────
+      // Guard accepts any procurement read/write permission.
+      // Individual pages apply stricter action checks (e.g. po.create, gr.create).
       {
         path: 'procurement',
-        element: <RequirePermission permissions={[permissionConstants.procurement.purchaseOrderRead]} />,
+        element: (
+          <RequireAnyPermission
+            permissions={[
+              permissionConstants.procurement.purchaseOrderRead,
+              permissionConstants.procurement.purchaseOrderCreate,
+              permissionConstants.procurement.goodsReceiptRead,
+              permissionConstants.procurement.goodsReceiptCreate,
+              permissionConstants.procurement.invoiceRead,
+              permissionConstants.procurement.invoiceReview,
+              permissionConstants.procurement.invoiceApprove,
+              permissionConstants.procurement.paymentRead,
+              permissionConstants.procurement.paymentRecord,
+            ]}
+          />
+        ),
         children: [
           {
             element: <LazyRouteBoundary moduleName="Procurement" label="Loading procurement" />,
             children: [
+          {
+            index: true,
+            element: <ProcurementLandingRedirect />,
+          },
+          {
+            path: 'purchase-orders',
+            element: <PurchaseOrderListPage />,
+          },
           {
             path: 'purchase-orders/new',
             element: <PurchaseOrderCreatePage />,
@@ -835,12 +934,28 @@ export const router = createBrowserRouter([
             element: <PurchaseOrderDetailPage />,
           },
           {
+            path: 'goods-receipts',
+            element: <GoodsReceiptListPage />,
+          },
+          {
             path: 'goods-receipts/new',
             element: <GoodsReceiptCreatePage />,
           },
           {
             path: 'goods-receipts/:goodsReceiptId',
             element: <GoodsReceiptDetailPage />,
+          },
+          {
+            path: 'supplier-invoices/new',
+            element: <SupplierInvoiceCreatePage />,
+          },
+          {
+            path: 'supplier-invoices/:invoiceId',
+            element: <SupplierInvoiceDetailPage />,
+          },
+          {
+            path: 'supplier-payments/new',
+            element: <SupplierPaymentCreatePage />,
           },
             ],
           },
@@ -855,6 +970,10 @@ export const router = createBrowserRouter([
           {
             element: <LazyRouteBoundary moduleName="Inventory" label="Loading inventory" />,
             children: [
+              {
+                index: true,
+                element: <Navigate replace to="stock-balances" />,
+              },
               {
                 path: 'stock-balances',
                 element: <StockOverviewPage />,
@@ -886,6 +1005,10 @@ export const router = createBrowserRouter([
           {
             element: <LazyRouteBoundary moduleName="Workforce" label="Loading workforce" />,
             children: [
+              {
+                index: true,
+                element: <Navigate replace to="my-attendance" />,
+              },
               {
                 path: 'my-attendance',
                 element: <MyAttendancePage />,
@@ -942,6 +1065,10 @@ export const router = createBrowserRouter([
           {
             path: 'export-jobs/:jobId/download',
             element: <ExportDownloadPage />,
+          },
+          {
+            path: 'outlet-revenue',
+            element: <OutletRevenueReportPage />,
           },
             ],
           },
