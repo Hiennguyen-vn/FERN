@@ -143,6 +143,55 @@ class ReportEventLandingReplayIntegrationTest {
     }
 
     @Test
+    void shouldCompleteProjectionWhenLandingIsStuckInReceivedStatus() throws Exception {
+        // Simulate crash between transaction 1 (beginLanding → RECEIVED) and
+        // transaction 2 (work + markLandingProcessed). The record stays in RECEIVED.
+        // On Kafka re-delivery, ingestWithLanding must detect RECEIVED and retry.
+        ExpensePostedEvent event = new ExpensePostedEvent(
+                "expense-event-received-stuck",
+                "finance.expense.posted",
+                Instant.parse("2026-03-27T11:00:00Z"),
+                "finance-service",
+                "corr-expense-event-received-stuck",
+                "expense-idem-received-stuck",
+                9904L,
+                1L,
+                101L,
+                504L,
+                7004L,
+                LocalDate.parse("2026-03-27"),
+                "PAYROLL",
+                new BigDecimal("33.00"),
+                "PAYROLL_RUN",
+                "7004"
+        );
+        String payload = objectMapper.writeValueAsString(event);
+
+        // Manually insert a RECEIVED landing row to simulate the crashed-between-transactions state
+        jdbcTemplate.update("""
+                INSERT INTO raw_events.event_landing (landing_id, source_event_id, source_service, event_type, occurred_at,
+                    ingested_at, idempotency_key, kafka_topic, payload, status)
+                VALUES (999999, 'expense-event-received-stuck', 'finance-service', 'finance.expense.posted',
+                    '2026-03-27T11:00:00Z', CURRENT_TIMESTAMP, 'expense-idem-received-stuck',
+                    'finance.expense.posted', CAST(? AS jsonb), 'RECEIVED')
+                """, payload);
+
+        assertThat(landingStatus("expense-event-received-stuck")).isEqualTo("RECEIVED");
+        assertThat(count("SELECT COUNT(*) FROM report.expense_fact WHERE source_event_id = 'expense-event-received-stuck'")).isZero();
+
+        // Re-delivery: should detect RECEIVED and complete the projection
+        reportService.ingestExpensePosted(payload, event);
+
+        assertThat(landingStatus("expense-event-received-stuck")).isEqualTo("PROCESSED");
+        assertThat(count("SELECT COUNT(*) FROM report.expense_fact WHERE source_event_id = 'expense-event-received-stuck'")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT total_expense
+                FROM report.region_daily_summary
+                WHERE region_id = 1 AND business_date = DATE '2026-03-27'
+                """, BigDecimal.class)).isEqualByComparingTo("33.00");
+    }
+
+    @Test
     void shouldRejectConflictingReplayWhenIdempotencyKeyIsReusedWithDifferentPayload() throws Exception {
         ExpensePostedEvent first = new ExpensePostedEvent(
                 "expense-event-conflict-1",

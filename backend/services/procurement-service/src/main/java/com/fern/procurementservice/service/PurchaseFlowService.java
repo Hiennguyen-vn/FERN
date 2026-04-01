@@ -16,6 +16,7 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -247,18 +248,34 @@ public class PurchaseFlowService {
     @Transactional(readOnly = true)
     public List<PurchaseOrderResponse> listPurchaseOrders(FernPrincipal principal, Long outletId, Long supplierId, String status, int limit) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_PO_READ);
-        return procurementJdbcRepository.listPurchaseOrders(outletId, supplierId, status, limit).stream()
+        var records = procurementJdbcRepository.listPurchaseOrders(outletId, supplierId, status, limit).stream()
                 .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
-                .map(procurementJdbcRepository::mapPurchaseOrder)
+                .toList();
+        if (records.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = records.stream().map(r -> r.id()).toList();
+        Map<Long, List<com.fern.procurementservice.dto.ProcurementResponses.PurchaseOrderLineResponse>> linesByPoId =
+                procurementJdbcRepository.batchLoadPurchaseOrderLines(ids);
+        return records.stream()
+                .map(r -> procurementJdbcRepository.mapPurchaseOrderWithLines(r, linesByPoId.getOrDefault(r.id(), List.of())))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<GoodsReceiptResponse> listGoodsReceipts(FernPrincipal principal, Long purchaseOrderId, Long outletId, String status, int limit) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_GR_READ);
-        return procurementJdbcRepository.listGoodsReceipts(purchaseOrderId, outletId, status, limit).stream()
+        var records = procurementJdbcRepository.listGoodsReceipts(purchaseOrderId, outletId, status, limit).stream()
                 .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
-                .map(procurementJdbcRepository::mapGoodsReceipt)
+                .toList();
+        if (records.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = records.stream().map(r -> r.id()).toList();
+        Map<Long, List<com.fern.procurementservice.dto.ProcurementResponses.GoodsReceiptLineResponse>> linesByGrId =
+                procurementJdbcRepository.batchLoadGoodsReceiptLines(ids);
+        return records.stream()
+                .map(r -> procurementJdbcRepository.mapGoodsReceiptWithLines(r, linesByGrId.getOrDefault(r.id(), List.of())))
                 .toList();
     }
 

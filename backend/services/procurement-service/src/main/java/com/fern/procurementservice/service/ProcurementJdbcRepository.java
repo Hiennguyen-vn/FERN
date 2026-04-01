@@ -25,7 +25,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -288,6 +290,10 @@ class ProcurementJdbcRepository {
                 rs.getString("status"),
                 rs.getString("note")
         ));
+        return mapPurchaseOrderWithLines(record, lines);
+    }
+
+    PurchaseOrderResponse mapPurchaseOrderWithLines(PurchaseOrderRecord record, List<PurchaseOrderLineResponse> lines) {
         return new PurchaseOrderResponse(
                 record.id(),
                 record.poNumber(),
@@ -323,6 +329,10 @@ class ProcurementJdbcRepository {
                 rs.getBigDecimal("line_total"),
                 rs.getString("note")
         ));
+        return mapGoodsReceiptWithLines(record, lines);
+    }
+
+    GoodsReceiptResponse mapGoodsReceiptWithLines(GoodsReceiptRecord record, List<GoodsReceiptLineResponse> lines) {
         return new GoodsReceiptResponse(
                 record.id(),
                 record.receiptNumber(),
@@ -361,6 +371,10 @@ class ProcurementJdbcRepository {
                 rs.getBigDecimal("line_total"),
                 rs.getString("note")
         ));
+        return mapSupplierInvoiceWithLines(record, lines);
+    }
+
+    SupplierInvoiceResponse mapSupplierInvoiceWithLines(SupplierInvoiceRecord record, List<SupplierInvoiceLineResponse> lines) {
         return new SupplierInvoiceResponse(
                 record.id(),
                 record.supplierId(),
@@ -697,5 +711,98 @@ class ProcurementJdbcRepository {
     Instant instant(ResultSet resultSet, String column) throws SQLException {
         OffsetDateTime value = resultSet.getObject(column, OffsetDateTime.class);
         return value == null ? null : value.toInstant();
+    }
+
+    // ── Batch line loaders (avoids N+1 in list endpoints) ────────────────────
+
+    Map<Long, List<PurchaseOrderLineResponse>> batchLoadPurchaseOrderLines(List<Long> purchaseOrderIds) {
+        if (purchaseOrderIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<PurchaseOrderLineResponse>> result = new java.util.HashMap<>();
+        purchaseOrderIds.forEach(id -> result.put(id, new ArrayList<>()));
+        jdbcTemplate.query("""
+                SELECT purchase_order_id, id, line_number, ingredient_id, uom_code, qty_ordered, qty_received,
+                       expected_unit_price, tax_percent, status, note
+                FROM procurement.purchase_order_line
+                WHERE purchase_order_id IN (:ids)
+                ORDER BY purchase_order_id, line_number
+                """, params("ids", purchaseOrderIds), (rs, rowNum) -> {
+            long poId = rs.getLong("purchase_order_id");
+            result.computeIfAbsent(poId, k -> new ArrayList<>()).add(new PurchaseOrderLineResponse(
+                    rs.getLong("id"),
+                    rs.getInt("line_number"),
+                    rs.getLong("ingredient_id"),
+                    rs.getString("uom_code"),
+                    rs.getBigDecimal("qty_ordered"),
+                    rs.getBigDecimal("qty_received"),
+                    rs.getBigDecimal("expected_unit_price"),
+                    rs.getBigDecimal("tax_percent"),
+                    rs.getString("status"),
+                    rs.getString("note")
+            ));
+            return null;
+        });
+        return result;
+    }
+
+    Map<Long, List<GoodsReceiptLineResponse>> batchLoadGoodsReceiptLines(List<Long> goodsReceiptIds) {
+        if (goodsReceiptIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<GoodsReceiptLineResponse>> result = new java.util.HashMap<>();
+        goodsReceiptIds.forEach(id -> result.put(id, new ArrayList<>()));
+        jdbcTemplate.query("""
+                SELECT goods_receipt_id, id, purchase_order_line_id, ingredient_id, uom_code, qty_received, unit_cost, line_total, note
+                FROM procurement.goods_receipt_line
+                WHERE goods_receipt_id IN (:ids)
+                ORDER BY goods_receipt_id, id
+                """, params("ids", goodsReceiptIds), (rs, rowNum) -> {
+            long grId = rs.getLong("goods_receipt_id");
+            result.computeIfAbsent(grId, k -> new ArrayList<>()).add(new GoodsReceiptLineResponse(
+                    rs.getLong("id"),
+                    rs.getObject("purchase_order_line_id", Long.class),
+                    rs.getLong("ingredient_id"),
+                    rs.getString("uom_code"),
+                    rs.getBigDecimal("qty_received"),
+                    rs.getBigDecimal("unit_cost"),
+                    rs.getBigDecimal("line_total"),
+                    rs.getString("note")
+            ));
+            return null;
+        });
+        return result;
+    }
+
+    Map<Long, List<SupplierInvoiceLineResponse>> batchLoadSupplierInvoiceLines(List<Long> invoiceIds) {
+        if (invoiceIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<SupplierInvoiceLineResponse>> result = new java.util.HashMap<>();
+        invoiceIds.forEach(id -> result.put(id, new ArrayList<>()));
+        jdbcTemplate.query("""
+                SELECT supplier_invoice_id, id, line_number, line_type, goods_receipt_line_id, description,
+                       qty_invoiced, unit_price, tax_percent, tax_amount, line_total, note
+                FROM procurement.supplier_invoice_line
+                WHERE supplier_invoice_id IN (:ids)
+                ORDER BY supplier_invoice_id, line_number
+                """, params("ids", invoiceIds), (rs, rowNum) -> {
+            long invId = rs.getLong("supplier_invoice_id");
+            result.computeIfAbsent(invId, k -> new ArrayList<>()).add(new SupplierInvoiceLineResponse(
+                    rs.getLong("id"),
+                    rs.getInt("line_number"),
+                    rs.getString("line_type"),
+                    rs.getObject("goods_receipt_line_id", Long.class),
+                    rs.getString("description"),
+                    rs.getBigDecimal("qty_invoiced"),
+                    rs.getBigDecimal("unit_price"),
+                    rs.getBigDecimal("tax_percent"),
+                    rs.getBigDecimal("tax_amount"),
+                    rs.getBigDecimal("line_total"),
+                    rs.getString("note")
+            ));
+            return null;
+        });
+        return result;
     }
 }

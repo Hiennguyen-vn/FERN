@@ -171,7 +171,11 @@ public class ReportIngestionSupport {
         LandingRecord existing = findLandingRecord(sourceEventId, idempotencyKey);
         if (existing != null) {
             requireMatchingLanding(existing, sourceService, eventType, occurredAt, idempotencyKey, topic, payload);
-            if (sourceEventId.equals(existing.sourceEventId()) && "FAILED".equals(existing.status())) {
+            // RECEIVED means the landing row was persisted but the projection work transaction
+            // never committed (e.g. app crashed between the two transactions). Treat it the same
+            // as FAILED so that re-delivery of the Kafka message can complete the projection.
+            if (sourceEventId.equals(existing.sourceEventId())
+                    && ("FAILED".equals(existing.status()) || "RECEIVED".equals(existing.status()))) {
                 jdbcTemplate.update("""
                         UPDATE raw_events.event_landing
                         SET source_service = :sourceService,

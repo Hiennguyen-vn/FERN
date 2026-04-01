@@ -102,9 +102,17 @@ public class PayablesService {
     @Transactional(readOnly = true)
     public List<SupplierInvoiceResponse> listSupplierInvoices(FernPrincipal principal, Long supplierId, Long outletId, String status, int limit) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_INVOICE_READ);
-        return procurementJdbcRepository.listSupplierInvoices(supplierId, outletId, status, limit).stream()
+        var records = procurementJdbcRepository.listSupplierInvoices(supplierId, outletId, status, limit).stream()
                 .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
-                .map(procurementJdbcRepository::mapSupplierInvoice)
+                .toList();
+        if (records.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = records.stream().map(r -> r.id()).toList();
+        Map<Long, List<com.fern.procurementservice.dto.ProcurementResponses.SupplierInvoiceLineResponse>> linesByInvoiceId =
+                procurementJdbcRepository.batchLoadSupplierInvoiceLines(ids);
+        return records.stream()
+                .map(r -> procurementJdbcRepository.mapSupplierInvoiceWithLines(r, linesByInvoiceId.getOrDefault(r.id(), List.of())))
                 .toList();
     }
 
