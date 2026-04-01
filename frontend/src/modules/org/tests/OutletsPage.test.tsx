@@ -34,38 +34,43 @@ describe('OutletsPage', () => {
         },
       },
     })
-    mocks.useOutletList.mockReturnValue({
+    const ALL_OUTLETS = [
+      {
+        id: 101,
+        regionId: 1,
+        code: 'OUT-101',
+        name: 'District 1 Flagship',
+        status: 'ACTIVE',
+        address: '1 Nguyen Hue',
+        phone: '0901000101',
+        email: 'd1@fern.local',
+        openedAt: '2025-01-10',
+        closedAt: null,
+        createdAt: '2025-01-01T08:00:00Z',
+        updatedAt: '2026-03-10T08:00:00Z',
+      },
+      {
+        id: 202,
+        regionId: 2,
+        code: 'OUT-202',
+        name: 'Hanoi Center',
+        status: 'SUSPENDED',
+        address: '99 Ba Trieu',
+        phone: '0902000202',
+        email: 'hn@fern.local',
+        openedAt: '2024-06-01',
+        closedAt: null,
+        createdAt: '2024-05-20T08:00:00Z',
+        updatedAt: '2026-03-12T08:00:00Z',
+      },
+    ]
+    // OutletsPage passes `search` to the server (not client-side filter). The mock must
+    // respect the search param to simulate server-side filtering in tests.
+    mocks.useOutletList.mockImplementation(({ search }: { search?: string }) => ({
       data: {
-        items: [
-          {
-            id: 101,
-            regionId: 1,
-            code: 'OUT-101',
-            name: 'District 1 Flagship',
-            status: 'ACTIVE',
-            address: '1 Nguyen Hue',
-            phone: '0901000101',
-            email: 'd1@fern.local',
-            openedAt: '2025-01-10',
-            closedAt: null,
-            createdAt: '2025-01-01T08:00:00Z',
-            updatedAt: '2026-03-10T08:00:00Z',
-          },
-          {
-            id: 202,
-            regionId: 2,
-            code: 'OUT-202',
-            name: 'Hanoi Center',
-            status: 'SUSPENDED',
-            address: '99 Ba Trieu',
-            phone: '0902000202',
-            email: 'hn@fern.local',
-            openedAt: '2024-06-01',
-            closedAt: null,
-            createdAt: '2024-05-20T08:00:00Z',
-            updatedAt: '2026-03-12T08:00:00Z',
-          },
-        ],
+        items: search
+          ? ALL_OUTLETS.filter((o) => o.name.toLowerCase().includes(search.toLowerCase()) || o.code.toLowerCase().includes(search.toLowerCase()))
+          : ALL_OUTLETS,
         page: 0,
         size: 50,
         hasMore: false,
@@ -73,7 +78,7 @@ describe('OutletsPage', () => {
       isLoading: false,
       error: null,
       refetch: vi.fn(),
-    })
+    }))
     mocks.useRegionList.mockReturnValue({
       data: {
         items: [
