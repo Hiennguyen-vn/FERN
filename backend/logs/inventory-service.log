@@ -348,3 +348,48 @@ This generated password is for development use only. Your security configuration
 2026-04-01T14:23:46.307+07:00  INFO 87236 --- [inventory-service] [nio-8087-exec-3] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
 2026-04-01T14:23:46.307+07:00  INFO 87236 --- [inventory-service] [nio-8087-exec-3] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
 2026-04-01T14:23:46.310+07:00  INFO 87236 --- [inventory-service] [nio-8087-exec-3] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-04-01T17:46:09.261+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Revoke previously assigned partitions procurement.goods_receipt.posted-0
+2026-04-01T17:46:09.262+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Revoke previously assigned partitions pos.sale.completed-0
+2026-04-01T17:46:09.264+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : inventory-service: partitions revoked: [pos.sale.completed-0]
+2026-04-01T17:46:09.264+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : inventory-service: partitions revoked: [procurement.goods_receipt.posted-0]
+2026-04-01T17:46:09.264+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Member consumer-inventory-service-1-e1eb1ed9-893d-40d7-91ef-11cfb7ba7ccb sending LeaveGroup request to coordinator localhost:9092 (id: 2147483646 rack: null) due to the consumer unsubscribed from all topics
+2026-04-01T17:46:09.265+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Member consumer-inventory-service-2-80b1f994-3729-4b2b-a2c6-2727e58dc667 sending LeaveGroup request to coordinator localhost:9092 (id: 2147483646 rack: null) due to the consumer unsubscribed from all topics
+2026-04-01T17:46:09.266+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.266+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.266+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Unsubscribed all topics or patterns and assigned partitions
+2026-04-01T17:46:09.267+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.267+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.267+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Unsubscribed all topics or patterns and assigned partitions
+2026-04-01T17:46:09.276+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.276+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-2, groupId=inventory-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.276+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.277+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-inventory-service-1, groupId=inventory-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.482+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-04-01T17:46:09.482+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-04-01T17:46:09.483+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-04-01T17:46:09.483+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-04-01T17:46:09.484+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-04-01T17:46:09.484+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-04-01T17:46:09.484+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-04-01T17:46:09.485+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-04-01T17:46:09.496+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-inventory-service-2 unregistered
+2026-04-01T17:46:09.498+07:00  INFO 87236 --- [inventory-service] [ntainer#1-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : inventory-service: Consumer stopped
+2026-04-01T17:46:09.499+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-inventory-service-1 unregistered
+2026-04-01T17:46:09.499+07:00  INFO 87236 --- [inventory-service] [ntainer#0-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : inventory-service: Consumer stopped
+2026-04-01T17:46:09.502+07:00  INFO 87236 --- [inventory-service] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-01T17:46:09.506+07:00  INFO 87236 --- [inventory-service] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-04-01T17:46:09.538+07:00  INFO 87236 --- [inventory-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-04-01T17:46:09.543+07:00  INFO 87236 --- [inventory-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  04:13 h
+[INFO] Finished at: 2026-04-01T17:46:09+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.5.8:run (default-cli) on project inventory-service: Process terminated with exit code: 143 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

@@ -370,3 +370,52 @@ This generated password is for development use only. Your security configuration
 2026-04-01T14:01:11.030+07:00  WARN 87237 --- [finance-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=11m46s410ms).
 2026-04-01T14:01:11.244+07:00  WARN 87237 --- [finance-service] [l-2:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-2 - Thread starvation or clock leap detected (housekeeper delta=11m46s401ms).
 2026-04-01T14:01:11.411+07:00  WARN 87237 --- [finance-service] [l-3:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-3 - Thread starvation or clock leap detected (housekeeper delta=11m46s409ms).
+2026-04-01T17:46:09.279+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-finance-service-1, groupId=finance-service] Revoke previously assigned partitions procurement.goods_receipt.posted-0
+2026-04-01T17:46:09.279+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-finance-service-2, groupId=finance-service] Revoke previously assigned partitions procurement.supplier.payment.recorded-0
+2026-04-01T17:46:09.282+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : finance-service: partitions revoked: [procurement.supplier.payment.recorded-0]
+2026-04-01T17:46:09.282+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : finance-service: partitions revoked: [procurement.goods_receipt.posted-0]
+2026-04-01T17:46:09.282+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-2, groupId=finance-service] Member consumer-finance-service-2-bc535ef5-02b9-409f-9c89-9518b55e5648 sending LeaveGroup request to coordinator localhost:9092 (id: 2147483646 rack: null) due to the consumer unsubscribed from all topics
+2026-04-01T17:46:09.282+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-1, groupId=finance-service] Member consumer-finance-service-1-f7601220-25eb-4be8-81bd-2b3768dca835 sending LeaveGroup request to coordinator localhost:9092 (id: 2147483646 rack: null) due to the consumer unsubscribed from all topics
+2026-04-01T17:46:09.283+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-2, groupId=finance-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.283+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-2, groupId=finance-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.284+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-1, groupId=finance-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.284+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-1, groupId=finance-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.284+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-finance-service-1, groupId=finance-service] Unsubscribed all topics or patterns and assigned partitions
+2026-04-01T17:46:09.284+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-finance-service-2, groupId=finance-service] Unsubscribed all topics or patterns and assigned partitions
+2026-04-01T17:46:09.296+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-1, groupId=finance-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.296+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-1, groupId=finance-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.296+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-2, groupId=finance-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.296+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-finance-service-2, groupId=finance-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.481+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-04-01T17:46:09.482+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-04-01T17:46:09.482+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-04-01T17:46:09.482+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-04-01T17:46:09.483+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-04-01T17:46:09.483+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-04-01T17:46:09.483+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-04-01T17:46:09.483+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-04-01T17:46:09.489+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-finance-service-2 unregistered
+2026-04-01T17:46:09.490+07:00  INFO 87237 --- [finance-service] [ntainer#1-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : finance-service: Consumer stopped
+2026-04-01T17:46:09.494+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-finance-service-1 unregistered
+2026-04-01T17:46:09.495+07:00  INFO 87237 --- [finance-service] [ntainer#0-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : finance-service: Consumer stopped
+2026-04-01T17:46:09.500+07:00  INFO 87237 --- [finance-service] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-01T17:46:09.505+07:00  INFO 87237 --- [finance-service] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-04-01T17:46:09.537+07:00  INFO 87237 --- [finance-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown initiated...
+2026-04-01T17:46:09.539+07:00  INFO 87237 --- [finance-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-3 - Shutdown completed.
+2026-04-01T17:46:09.540+07:00  INFO 87237 --- [finance-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown initiated...
+2026-04-01T17:46:09.542+07:00  INFO 87237 --- [finance-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown completed.
+2026-04-01T17:46:09.542+07:00  INFO 87237 --- [finance-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-04-01T17:46:09.545+07:00  INFO 87237 --- [finance-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  04:13 h
+[INFO] Finished at: 2026-04-01T17:46:09+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.5.8:run (default-cli) on project finance-service: Process terminated with exit code: 143 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

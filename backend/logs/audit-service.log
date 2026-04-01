@@ -485,3 +485,62 @@ WARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release
 2026-04-01T14:00:55.473+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-2, groupId=audit-service] Requesting disconnect from last known coordinator localhost:9092 (id: 2147483646 rack: null)
 2026-04-01T14:00:55.571+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-2, groupId=audit-service] Discovered group coordinator localhost:9092 (id: 2147483646 rack: null)
 2026-04-01T14:01:10.659+07:00  WARN 87230 --- [audit-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=11m46s403ms).
+2026-04-01T17:46:09.260+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-audit-service-3, groupId=audit-service] Revoke previously assigned partitions audit.security-0
+2026-04-01T17:46:09.260+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-audit-service-1, groupId=audit-service] Revoke previously assigned partitions request.trace-0
+2026-04-01T17:46:09.263+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] k.c.c.i.ConsumerRebalanceListenerInvoker : [Consumer clientId=consumer-audit-service-2, groupId=audit-service] Revoke previously assigned partitions audit.event-0
+2026-04-01T17:46:09.264+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : audit-service: partitions revoked: [request.trace-0]
+2026-04-01T17:46:09.264+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : audit-service: partitions revoked: [audit.security-0]
+2026-04-01T17:46:09.264+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : audit-service: partitions revoked: [audit.event-0]
+2026-04-01T17:46:09.265+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-2, groupId=audit-service] Member consumer-audit-service-2-432432cf-d44f-405d-a17d-6234416ebbf3 sending LeaveGroup request to coordinator localhost:9092 (id: 2147483646 rack: null) due to the consumer unsubscribed from all topics
+2026-04-01T17:46:09.265+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-1, groupId=audit-service] Member consumer-audit-service-1-2d33d148-9479-433c-b9c9-f0c2397a00fa sending LeaveGroup request to coordinator localhost:9092 (id: 2147483646 rack: null) due to the consumer unsubscribed from all topics
+2026-04-01T17:46:09.265+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-3, groupId=audit-service] Member consumer-audit-service-3-eb06fcaa-9f75-40ea-877b-b37246c474f1 sending LeaveGroup request to coordinator localhost:9092 (id: 2147483646 rack: null) due to the consumer unsubscribed from all topics
+2026-04-01T17:46:09.268+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-2, groupId=audit-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.268+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-2, groupId=audit-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.268+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-3, groupId=audit-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.268+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-3, groupId=audit-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.269+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-audit-service-3, groupId=audit-service] Unsubscribed all topics or patterns and assigned partitions
+2026-04-01T17:46:09.270+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-1, groupId=audit-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.270+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-1, groupId=audit-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.270+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-audit-service-1, groupId=audit-service] Unsubscribed all topics or patterns and assigned partitions
+2026-04-01T17:46:09.268+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.a.k.c.c.i.ClassicKafkaConsumer         : [Consumer clientId=consumer-audit-service-2, groupId=audit-service] Unsubscribed all topics or patterns and assigned partitions
+2026-04-01T17:46:09.282+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-3, groupId=audit-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.282+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-3, groupId=audit-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.282+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-1, groupId=audit-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.283+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-1, groupId=audit-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.283+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-2, groupId=audit-service] Resetting generation and member id due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.283+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.a.k.c.c.internals.ConsumerCoordinator  : [Consumer clientId=consumer-audit-service-2, groupId=audit-service] Request joining group due to: consumer pro-actively leaving the group
+2026-04-01T17:46:09.482+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-04-01T17:46:09.482+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-04-01T17:46:09.482+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-04-01T17:46:09.482+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-04-01T17:46:09.485+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-04-01T17:46:09.485+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-04-01T17:46:09.485+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-04-01T17:46:09.485+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-04-01T17:46:09.489+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-04-01T17:46:09.489+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-04-01T17:46:09.490+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-04-01T17:46:09.490+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-04-01T17:46:09.498+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-audit-service-1 unregistered
+2026-04-01T17:46:09.500+07:00  INFO 87230 --- [audit-service] [ntainer#2-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : audit-service: Consumer stopped
+2026-04-01T17:46:09.501+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-audit-service-2 unregistered
+2026-04-01T17:46:09.501+07:00  INFO 87230 --- [audit-service] [ntainer#0-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : audit-service: Consumer stopped
+2026-04-01T17:46:09.503+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.a.kafka.common.utils.AppInfoParser     : App info kafka.consumer for consumer-audit-service-3 unregistered
+2026-04-01T17:46:09.503+07:00  INFO 87230 --- [audit-service] [ntainer#1-0-C-1] o.s.k.l.KafkaMessageListenerContainer    : audit-service: Consumer stopped
+2026-04-01T17:46:09.506+07:00  INFO 87230 --- [audit-service] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-01T17:46:09.509+07:00  INFO 87230 --- [audit-service] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-04-01T17:46:09.557+07:00  INFO 87230 --- [audit-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-04-01T17:46:09.566+07:00  INFO 87230 --- [audit-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  04:13 h
+[INFO] Finished at: 2026-04-01T17:46:09+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.5.8:run (default-cli) on project audit-service: Process terminated with exit code: 143 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

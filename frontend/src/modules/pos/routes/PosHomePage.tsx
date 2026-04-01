@@ -105,6 +105,7 @@ export function PosHomePage() {
     canReadSessionsPermission,
   )
   const currentSession = openSessionsQuery.data?.[0] ?? null
+  const effectiveRegionId = selectedRegionId ?? currentSession?.regionId ?? null
 
   // Normalize BackendDate ([year,month,day] or ISO string) → 'YYYY-MM-DD' string for API
   const sessionBusinessDateStr = (() => {
@@ -121,7 +122,7 @@ export function PosHomePage() {
     currentSession && selectedOutletId
       ? {
           outletId: selectedOutletId,
-          regionId: selectedRegionId ?? undefined,
+          regionId: effectiveRegionId ?? undefined,
           businessDate: sessionBusinessDateStr,
           orderType: orderType as PosOrderType,
         }
@@ -144,7 +145,7 @@ export function PosHomePage() {
   })
   const categories = Array.from(new Set((catalogQuery.data ?? []).map((item) => item.categoryCode))).sort()
 
-  if (!selectedOutletId || !selectedRegionId) {
+  if (!selectedOutletId || !effectiveRegionId) {
     return (
       <section className="page-stack pos-home-page">
         <ReadonlyBanner message="POS cần outlet context để kiểm tra session và tạo order. Chọn outlet bên dưới hoặc dùng bộ chọn ở góc phải phía trên." />
@@ -239,7 +240,7 @@ export function PosHomePage() {
             />
           ) : null}
           <div className="field-grid">
-            <Input label="Region ID" readOnly value={selectedRegionId} />
+            <Input label="Region ID" readOnly value={effectiveRegionId} />
             <Input label="Outlet ID" readOnly value={selectedOutletId} />
             <Input
               label="Business date"
@@ -266,7 +267,7 @@ export function PosHomePage() {
                   setSessionNoteError(null)
                   try {
                     const result = await openSessionMutation.mutateAsync({
-                      regionId: selectedRegionId,
+                      regionId: effectiveRegionId,
                       outletId: selectedOutletId,
                       businessDate,
                       currencyCode: 'VND',
@@ -289,7 +290,7 @@ export function PosHomePage() {
               message={openSessionMutation.error instanceof Error ? openSessionMutation.error.message : 'Failed to open POS session'}
               onAction={() =>
                 void openSessionMutation.mutateAsync({
-                  regionId: selectedRegionId,
+                  regionId: effectiveRegionId,
                   outletId: selectedOutletId,
                   businessDate,
                   currencyCode: 'VND',

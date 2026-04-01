@@ -63,6 +63,9 @@ class PosOrderServiceTest {
     @Mock
     private OperationalAlertPublisher operationalAlertPublisher;
 
+    @Mock
+    private PosAuditService posAuditService;
+
     private PosOrderService service;
     private FernPrincipal principal;
 
@@ -89,6 +92,7 @@ class PosOrderServiceTest {
                 new ObjectMapper(),
                 Clock.fixed(Instant.parse("2026-03-29T08:00:00Z"), ZoneOffset.UTC),
                 operationalAlertPublisher,
+                posAuditService,
                 new SimpleMeterRegistry()
         );
         principal = new FernPrincipal(

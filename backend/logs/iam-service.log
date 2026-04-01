@@ -198,3 +198,27 @@ WARNING: sun.misc.Unsafe::allocateMemory will be removed in a future release
 2026-04-01T13:48:08.006+07:00  WARN 87240 --- [iam-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=3m45s938ms).
 2026-04-01T13:49:24.756+07:00  WARN 87240 --- [iam-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=46s739ms).
 2026-04-01T14:01:11.158+07:00  WARN 87240 --- [iam-service] [l-1:housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=11m46s402ms).
+2026-04-01T17:46:09.292+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-01T17:46:09.301+07:00  INFO 87240 --- [iam-service] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-04-01T17:46:09.336+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] o.a.k.clients.producer.KafkaProducer     : [Producer clientId=iam-service-producer-1] Closing the Kafka producer with timeoutMillis = 30000 ms.
+2026-04-01T17:46:09.350+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-04-01T17:46:09.350+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-04-01T17:46:09.350+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-04-01T17:46:09.350+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-04-01T17:46:09.351+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] o.a.kafka.common.utils.AppInfoParser     : App info kafka.producer for iam-service-producer-1 unregistered
+2026-04-01T17:46:09.371+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-04-01T17:46:09.377+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-04-01T17:46:09.388+07:00  INFO 87240 --- [iam-service] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  04:13 h
+[INFO] Finished at: 2026-04-01T17:46:09+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.5.8:run (default-cli) on project iam-service: Process terminated with exit code: 143 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

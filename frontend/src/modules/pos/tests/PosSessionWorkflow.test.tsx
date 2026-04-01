@@ -158,6 +158,41 @@ describe('POS session workflows', () => {
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
   })
 
+  it('shows session control for outlet-only cashier when sessions provide region context', async () => {
+    resetTestStores()
+    setAuthenticatedSession({
+      principal: {
+        permissions: ['pos.session.read', 'pos.session.open'],
+        scopeRoots: { system: false, regions: [], outlets: [101] },
+        accessibleScope: { system: false, regions: [], outlets: [101] },
+      },
+      user: {
+        scopeRoots: { system: false, regions: [], outlets: [101] },
+      },
+    })
+
+    sessions = [
+      createSession({
+        id: 701,
+        sessionCode: 'POS-701',
+        regionId: 14,
+        outletId: 101,
+        status: 'OPEN',
+      }),
+    ]
+
+    renderWithProviders(
+      <Routes>
+        <Route path="/pos/sessions" element={<PosSessionsPage />} />
+      </Routes>,
+      { route: '/pos/sessions' },
+    )
+
+    expect(await screen.findByText('POS-701')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('14')).toBeInTheDocument()
+    expect(screen.queryByText('POS session context missing')).not.toBeInTheDocument()
+  })
+
   it('reconciles a closed session from the detail page', async () => {
     const user = userEvent.setup()
 

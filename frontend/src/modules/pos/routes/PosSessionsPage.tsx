@@ -63,6 +63,7 @@ export function PosSessionsPage() {
   const openSessionMutation = useOpenPosSession()
   const closeSessionMutation = useClosePosSession()
   const rows = sessionsQuery.data ?? []
+  const effectiveRegionId = selectedRegionId ?? rows[0]?.regionId ?? null
   const pagedRows = rows.slice(page * size, page * size + size)
 
   const columns: Array<DataTableColumn<PosSession>> = [
@@ -90,7 +91,7 @@ export function PosSessionsPage() {
     },
   ]
 
-  if (!selectedOutletId || !selectedRegionId) {
+  if (!selectedOutletId || !effectiveRegionId) {
     return (
       <section className="page-stack">
         <ReadonlyBanner message="Chọn outlet và region trước khi quản lý POS sessions." />
@@ -135,7 +136,7 @@ export function PosSessionsPage() {
           />
         ) : null}
         <div className="field-grid">
-          <Input label="Region ID" readOnly value={selectedRegionId} />
+          <Input label="Region ID" readOnly value={effectiveRegionId} />
           <Input label="Outlet ID" readOnly value={selectedOutletId} />
           <Input label="Business date" onChange={(event) => setBusinessDate(event.target.value)} type="date" value={businessDate} />
           <Input label="Currency" readOnly value="VND" />
@@ -154,7 +155,7 @@ export function PosSessionsPage() {
               loading={openSessionMutation.isPending}
               onClick={async () => {
                 const result = await openSessionMutation.mutateAsync({
-                  regionId: selectedRegionId,
+                  regionId: effectiveRegionId,
                   outletId: selectedOutletId,
                   businessDate,
                   currencyCode: 'VND',

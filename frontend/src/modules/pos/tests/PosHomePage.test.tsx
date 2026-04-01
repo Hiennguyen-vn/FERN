@@ -7,6 +7,15 @@ import { usePosUiStore } from '../state/posUi.store'
 import { getTodayBusinessDate } from '../services/posDate.service'
 
 const openSessionMutateAsync = vi.fn()
+const usePosSessionsMock = vi.fn()
+const mockScopeContext = {
+  selectedOutletId: 101,
+  selectedRegionId: 1,
+  outletIds: [101],
+  regionIds: [1],
+  setSelectedOutletId: vi.fn(),
+  setSelectedRegionId: vi.fn(),
+}
 
 vi.mock('@core/auth/auth.selectors', () => ({
   usePrincipal: () => ({
@@ -21,14 +30,7 @@ vi.mock('@core/auth/auth.selectors', () => ({
 }))
 
 vi.mock('@core/scopes/useScopeContext', () => ({
-  useScopeContext: () => ({
-    selectedOutletId: 101,
-    selectedRegionId: 1,
-    outletIds: [101],
-    regionIds: [1],
-    setSelectedOutletId: vi.fn(),
-    setSelectedRegionId: vi.fn(),
-  }),
+  useScopeContext: () => mockScopeContext,
 }))
 
 vi.mock('@shared/hooks/useNetworkStatus', () => ({
@@ -36,11 +38,7 @@ vi.mock('@shared/hooks/useNetworkStatus', () => ({
 }))
 
 vi.mock('../hooks/usePosSession', () => ({
-  usePosSessions: () => ({
-    data: [],
-    error: null,
-    isLoading: false,
-  }),
+  usePosSessions: (...args: unknown[]) => usePosSessionsMock(...args),
   useOpenPosSession: () => ({
     isPending: false,
     error: null,
@@ -71,6 +69,16 @@ vi.mock('../hooks/usePosOrder', () => ({
 describe('PosHomePage', () => {
   beforeEach(() => {
     openSessionMutateAsync.mockReset()
+    usePosSessionsMock.mockReset()
+    usePosSessionsMock.mockReturnValue({
+      data: [],
+      error: null,
+      isLoading: false,
+    })
+    mockScopeContext.selectedOutletId = 101
+    mockScopeContext.selectedRegionId = 1
+    mockScopeContext.outletIds = [101]
+    mockScopeContext.regionIds = [1]
     useCartStore.getState().clearAllDrafts()
     usePosUiStore.setState({
       businessDates: {},
@@ -103,5 +111,41 @@ describe('PosHomePage', () => {
       currencyCode: 'VND',
       note: undefined,
     })
+  })
+
+  it('uses region inferred from current session when shell region is missing', () => {
+    mockScopeContext.selectedRegionId = null
+    mockScopeContext.regionIds = []
+    usePosSessionsMock.mockReturnValue({
+      data: [
+        {
+          id: 1,
+          sessionCode: 'POS-001',
+          regionId: 14,
+          outletId: 101,
+          terminalId: null,
+          currencyCode: 'VND',
+          cashierUserId: 7,
+          managerUserId: null,
+          businessDate: '2026-04-01',
+          status: 'OPEN',
+          note: null,
+          openedAt: '2026-04-01T08:00:00.000Z',
+          closedAt: null,
+          reconciledAt: null,
+          expectedCashAmount: null,
+          countedCashAmount: null,
+          discrepancyAmount: null,
+        },
+      ],
+      error: null,
+      isLoading: false,
+    })
+
+    renderWithProviders(<PosHomePage />)
+
+    expect(screen.getByText('POS-001')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('14')).toBeInTheDocument()
+    expect(screen.queryByText('Chưa chọn outlet')).not.toBeInTheDocument()
   })
 })

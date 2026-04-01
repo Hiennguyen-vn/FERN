@@ -935,3 +935,26 @@ WARNING: Restricted methods will be blocked in a future release unless native ac
 2026-04-01T17:38:10.584+07:00  INFO 87229 --- [api-gateway] [ctor-http-nio-5] c.f.a.security.GatewayLoggingFilter      : gateway_request method=GET path=/sale-orders/13 status=200 OK durationMs=61
 2026-04-01T17:38:10.587+07:00  INFO 87229 --- [api-gateway] [ctor-http-nio-4] c.f.a.security.GatewayLoggingFilter      : gateway_request method=GET path=/pos-sessions status=200 OK durationMs=70
 2026-04-01T17:38:10.595+07:00  INFO 87229 --- [api-gateway] [ctor-http-nio-3] c.f.a.security.GatewayLoggingFilter      : gateway_request method=GET path=/sale-orders/14 status=200 OK durationMs=8
+2026-04-01T17:46:09.296+07:00  INFO 87229 --- [api-gateway] [ionShutdownHook] o.s.b.w.embedded.netty.GracefulShutdown  : Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-01T17:46:09.304+07:00  INFO 87229 --- [api-gateway] [ netty-shutdown] o.s.b.w.embedded.netty.GracefulShutdown  : Graceful shutdown complete
+2026-04-01T17:46:11.419+07:00  INFO 87229 --- [api-gateway] [ionShutdownHook] o.a.k.clients.producer.KafkaProducer     : [Producer clientId=api-gateway-producer-1] Closing the Kafka producer with timeoutMillis = 30000 ms.
+2026-04-01T17:46:11.423+07:00  INFO 87229 --- [api-gateway] [ionShutdownHook] o.apache.kafka.common.metrics.Metrics    : Metrics scheduler closed
+2026-04-01T17:46:11.423+07:00  INFO 87229 --- [api-gateway] [ionShutdownHook] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.metrics.JmxReporter
+2026-04-01T17:46:11.423+07:00  INFO 87229 --- [api-gateway] [ionShutdownHook] o.apache.kafka.common.metrics.Metrics    : Closing reporter org.apache.kafka.common.telemetry.internals.ClientTelemetryReporter
+2026-04-01T17:46:11.423+07:00  INFO 87229 --- [api-gateway] [ionShutdownHook] o.apache.kafka.common.metrics.Metrics    : Metrics reporters closed
+2026-04-01T17:46:11.424+07:00  INFO 87229 --- [api-gateway] [ionShutdownHook] o.a.kafka.common.utils.AppInfoParser     : App info kafka.producer for api-gateway-producer-1 unregistered
+2026-04-01T17:46:11.430+07:00  INFO 87229 --- [api-gateway] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-04-01T17:46:11.431+07:00  INFO 87229 --- [api-gateway] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  04:13 h
+[INFO] Finished at: 2026-04-01T17:46:11+07:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.5.8:run (default-cli) on project api-gateway: Process terminated with exit code: 143 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
