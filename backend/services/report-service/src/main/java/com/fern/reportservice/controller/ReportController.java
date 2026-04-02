@@ -17,9 +17,12 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/reports/payroll")
+@Tag(name = "Report")
 public class ReportController {
     private final ReportService reportService;
 
@@ -27,7 +30,8 @@ public class ReportController {
         this.reportService = reportService;
     }
 
-    @GetMapping("/summary")
+@Operation(summary = "Get")
+        @GetMapping("/summary")
     public PayrollSummaryResponse summary(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam Long regionId,
@@ -37,6 +41,7 @@ public class ReportController {
         return reportService.payrollSummary(principal, regionId, fromDate, toDate);
     }
 
+    @Operation(summary = "Get Report")
     @GetMapping("/runs/{runId}")
     public PayrollRunReportResponse payrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -45,6 +50,7 @@ public class ReportController {
         return reportService.payrollRun(principal, runId);
     }
 
+    @Operation(summary = "Create or execute Report")
     @PostMapping("/export")
     public ExportJobResponse export(
             @AuthenticationPrincipal FernPrincipal principal,

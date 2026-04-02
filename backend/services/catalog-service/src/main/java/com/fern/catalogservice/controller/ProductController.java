@@ -17,9 +17,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/products")
+@Tag(name = "Catalog — Products")
 public class ProductController {
     private final CatalogAuthorizer catalogAuthorizer;
     private final ProductService productService;
@@ -29,24 +32,28 @@ public class ProductController {
         this.productService = productService;
     }
 
+    @Operation(summary = "Get Catalog — Products")
     @GetMapping
     public List<ProductResponse> list(@AuthenticationPrincipal FernPrincipal principal, @RequestParam(required = false) Integer limit) {
         catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRODUCT_READ);
         return productService.list(com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
+    @Operation(summary = "Get Catalog — Products")
     @GetMapping("/{id}")
     public ProductResponse get(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRODUCT_READ);
         return productService.get(id);
     }
 
+    @Operation(summary = "Create or execute Catalog — Products")
     @PostMapping
     public ProductResponse create(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody ProductUpsertRequest request) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
         return productService.create(principal, request);
     }
 
+    @Operation(summary = "Update Catalog — Products")
     @PutMapping("/{id}")
     public ProductResponse update(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -55,5 +62,12 @@ public class ProductController {
     ) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
         return productService.update(principal, id, request);
+    }
+
+    @Operation(summary = "Create or execute Catalog — Products")
+    @PostMapping("/{id}/deactivate")
+    public ProductResponse deactivate(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
+        catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PRODUCT_WRITE);
+        return productService.deactivate(principal, id);
     }
 }

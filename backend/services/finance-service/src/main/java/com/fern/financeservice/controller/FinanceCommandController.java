@@ -22,9 +22,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping
+@Tag(name = "Finance — Commands")
 public class FinanceCommandController {
     private final FinancePayrollService financePayrollService;
 
@@ -32,6 +35,7 @@ public class FinanceCommandController {
         this.financePayrollService = financePayrollService;
     }
 
+    @Operation(summary = "Create or execute Finance — Commands")
     @PostMapping("/payroll-periods")
     public PayrollPeriodResponse createPayrollPeriod(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -41,6 +45,7 @@ public class FinanceCommandController {
         return financePayrollService.createPayrollPeriod(principal, request, correlationId);
     }
 
+    @Operation(summary = "Create or execute Finance — Commands")
     @PostMapping("/payroll-runs")
     public PayrollRunResponse createPayrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -50,6 +55,7 @@ public class FinanceCommandController {
         return financePayrollService.createPayrollRun(principal, request, correlationId);
     }
 
+    @Operation(summary = "Create or execute Finance — Commands")
     @PostMapping("/payroll-runs/{id}/submit")
     public PayrollRunResponse submitPayrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -60,6 +66,7 @@ public class FinanceCommandController {
         return financePayrollService.submitPayrollRun(principal, id, request == null ? null : request.note(), correlationId);
     }
 
+    @Operation(summary = "Create or execute Finance — Commands")
     @PostMapping("/payroll-runs/{id}/approve")
     public PayrollRunResponse approvePayrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -70,6 +77,7 @@ public class FinanceCommandController {
         return financePayrollService.approvePayrollRun(principal, id, request == null ? null : request.note(), correlationId);
     }
 
+    @Operation(summary = "Create or execute Finance — Commands")
     @PostMapping("/payroll-runs/{id}/reject")
     public PayrollRunResponse rejectPayrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -80,6 +88,7 @@ public class FinanceCommandController {
         return financePayrollService.rejectPayrollRun(principal, id, request == null ? null : request.note(), correlationId);
     }
 
+    @Operation(summary = "Create or execute Finance — Commands")
     @PostMapping("/payroll-runs/{id}/cancel")
     public PayrollRunResponse cancelPayrollRun(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -90,6 +99,7 @@ public class FinanceCommandController {
         return financePayrollService.cancelPayrollRun(principal, id, request == null ? null : request.note(), correlationId);
     }
 
+    @Operation(summary = "Create or execute Finance — Commands")
     @PostMapping("/payroll-runs/{id}/mark-paid")
     public PayrollRunResponse markPayrollPaid(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -100,6 +110,7 @@ public class FinanceCommandController {
         return financePayrollService.markPayrollPaid(principal, id, request, correlationId);
     }
 
+    @Operation(summary = "Update Finance — Commands")
     @PutMapping("/finance-config/numbering-rules/{documentType}")
     public NumberingRuleResponse putNumberingRule(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -109,6 +120,7 @@ public class FinanceCommandController {
         return financePayrollService.putNumberingRule(principal, documentType, request);
     }
 
+    @Operation(summary = "Update Finance — Commands")
     @PutMapping("/finance-config/system-policies/{policyKey}")
     public SystemPolicyResponse putSystemPolicy(
             @AuthenticationPrincipal FernPrincipal principal,

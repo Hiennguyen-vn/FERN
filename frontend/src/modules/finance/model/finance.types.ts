@@ -108,3 +108,41 @@ export interface RecentFinancePaymentRequestLookup {
   supplierCode?: string | null
   supplierName?: string | null
 }
+
+// ─── Finance Config ───────────────────────────────────────────────────────────
+
+export interface NumberingRule {
+  id: number
+  documentType: string
+  prefix: string | null
+  regionId: number | null
+  outletId: number | null
+  nextNumber: number
+  resetPeriod: string | null
+  formatPattern: string | null
+  active: boolean
+}
+
+export interface SystemPolicy {
+  policyKey: string
+  // policyValue is a free-form JSON node on the backend; we treat it as unknown here
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  policyValue: any
+  description: string | null
+}
+
+export interface PutNumberingRulePayload {
+  prefix?: string | null
+  regionId?: number | null
+  outletId?: number | null
+  nextNumber?: number | null
+  resetPeriod?: string | null
+  formatPattern?: string | null
+  active?: boolean | null
+}
+
+export interface PutSystemPolicyPayload {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  policyValue: any
+  description?: string | null
+}

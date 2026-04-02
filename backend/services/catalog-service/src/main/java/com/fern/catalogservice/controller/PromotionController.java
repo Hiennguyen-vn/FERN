@@ -17,9 +17,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/catalog/promotions")
+@Tag(name = "Catalog — Promotions")
 public class PromotionController {
     private final CatalogAuthorizer catalogAuthorizer;
     private final PromotionService promotionService;
@@ -29,6 +32,7 @@ public class PromotionController {
         this.promotionService = promotionService;
     }
 
+    @Operation(summary = "Get Catalog — Promotions")
     @GetMapping
     public List<PromotionResponse> list(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -39,12 +43,14 @@ public class PromotionController {
         return promotionService.listPromotions(principal, scopeType, scopeId);
     }
 
+    @Operation(summary = "Create or execute Catalog — Promotions")
     @PostMapping
     public PromotionResponse create(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody PromotionUpsertRequest request) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PROMOTION_WRITE);
         return promotionService.createPromotion(principal, request);
     }
 
+    @Operation(summary = "Update Catalog — Promotions")
     @PutMapping("/{id}")
     public PromotionResponse update(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -55,6 +61,7 @@ public class PromotionController {
         return promotionService.updatePromotion(principal, id, request);
     }
 
+    @Operation(summary = "Create or execute Catalog — Promotions")
     @PostMapping("/{id}/deactivate")
     public PromotionResponse deactivate(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PROMOTION_WRITE);

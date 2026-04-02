@@ -25,6 +25,7 @@ import {
   resolveHrLandingPath,
   resolveIamLandingPath,
   resolveInventoryLandingPath,
+  resolveOrgLandingPath,
   resolveReportsLandingPath,
   resolveWorkforceLandingPath,
 } from './moduleLanding.service'
@@ -118,6 +119,21 @@ const InventoryTransactionsPage = lazy(() =>
     default: m.InventoryTransactionsPage,
   })),
 )
+const StockAdjustmentCreatePage = lazy(() =>
+  import('@modules/inventory/routes/inventoryRoutes.bundle').then((m) => ({
+    default: m.StockAdjustmentCreatePage,
+  })),
+)
+const WasteRecordCreatePage = lazy(() =>
+  import('@modules/inventory/routes/inventoryRoutes.bundle').then((m) => ({
+    default: m.WasteRecordCreatePage,
+  })),
+)
+const StockCountSessionCreatePage = lazy(() =>
+  import('@modules/inventory/routes/inventoryRoutes.bundle').then((m) => ({
+    default: m.StockCountSessionCreatePage,
+  })),
+)
 
 // ─── Lazy imports: Workforce ──────────────────────────────────────────────────
 const MyAttendancePage = lazy(() =>
@@ -136,11 +152,23 @@ const AttendanceDetailPage = lazy(() =>
 const ProductsPage = lazy(() =>
   import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.ProductsPage })),
 )
+const ProductCreatePage = lazy(() =>
+  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.ProductCreatePage })),
+)
 const ProductDetailPage = lazy(() =>
   import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.ProductDetailPage })),
 )
+const ProductEditPage = lazy(() =>
+  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.ProductEditPage })),
+)
 const IngredientsPage = lazy(() =>
   import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.IngredientsPage })),
+)
+const IngredientCreatePage = lazy(() =>
+  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.IngredientCreatePage })),
+)
+const IngredientEditPage = lazy(() =>
+  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.IngredientEditPage })),
 )
 const RecipesPage = lazy(() =>
   import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.RecipesPage })),
@@ -150,6 +178,9 @@ const PricingPage = lazy(() =>
 )
 const AvailabilityPage = lazy(() =>
   import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.AvailabilityPage })),
+)
+const PromotionsPage = lazy(() =>
+  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.PromotionsPage })),
 )
 
 // ─── Lazy imports: IAM ───────────────────────────────────────────────────────
@@ -202,6 +233,12 @@ const OrgRegionsPage = lazy(() =>
 const OrgRegionDetailPage = lazy(() =>
   import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.RegionDetailPage })),
 )
+const OrgRegionCreatePage = lazy(() =>
+  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.RegionCreatePage })),
+)
+const OrgRegionEditPage = lazy(() =>
+  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.RegionEditPage })),
+)
 const OrgOutletsPage = lazy(() =>
   import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletsPage })),
 )
@@ -211,10 +248,16 @@ const OrgOutletDetailPage = lazy(() =>
 const OrgOutletCreatePage = lazy(() =>
   import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletCreatePage })),
 )
+const OrgOutletEditPage = lazy(() =>
+  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletEditPage })),
+)
 
 // ─── Lazy imports: HR ────────────────────────────────────────────────────────
 const EmployeesPage = lazy(() =>
   import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.EmployeesPage })),
+)
+const EmployeeCreatePage = lazy(() =>
+  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.EmployeeCreatePage })),
 )
 const EmployeeDetailPage = lazy(() =>
   import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.EmployeeDetailPage })),
@@ -222,8 +265,14 @@ const EmployeeDetailPage = lazy(() =>
 const ContractsPage = lazy(() =>
   import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.ContractsPage })),
 )
+const ContractCreatePage = lazy(() =>
+  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.ContractCreatePage })),
+)
 const ContractDetailPage = lazy(() =>
   import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.ContractDetailPage })),
+)
+const AssignmentCreatePage = lazy(() =>
+  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.AssignmentCreatePage })),
 )
 const AttendanceSummaryPage = lazy(() =>
   import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.AttendanceSummaryPage })),
@@ -256,6 +305,12 @@ const PayrollApprovalDetailPage = lazy(() =>
 )
 const PayrollPaidPage = lazy(() =>
   import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.PayrollPaidPage })),
+)
+const FinanceConfigPage = lazy(() =>
+  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.FinanceConfigPage })),
+)
+const PayrollPeriodsPage = lazy(() =>
+  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.PayrollPeriodsPage })),
 )
 
 // ─── Lazy imports: Reports ────────────────────────────────────────────────────
@@ -554,6 +609,11 @@ export function HomePage() {
         title: 'Browse suppliers',
         description: 'Kiểm tra supplier master và payment request context.',
       },
+      {
+        to: '/finance/payroll-periods',
+        title: 'Manage payroll periods',
+        description: 'Tạo và quản lý các kỳ lương.',
+      },
     )
   }
 
@@ -645,9 +705,15 @@ export const router = createBrowserRouter([
           <RequireAnyPermission
             permissions={[
               permissionConstants.catalog.productRead,
+              permissionConstants.catalog.productWrite,
               permissionConstants.catalog.ingredientRead,
+              permissionConstants.catalog.ingredientWrite,
               permissionConstants.catalog.recipeRead,
+              permissionConstants.catalog.recipeWrite,
               permissionConstants.catalog.priceRead,
+              permissionConstants.catalog.priceWrite,
+              permissionConstants.catalog.promotionRead,
+              permissionConstants.catalog.promotionWrite,
             ]}
           />
         ),
@@ -664,12 +730,28 @@ export const router = createBrowserRouter([
             element: <ProductsPage />,
           },
           {
+            path: 'products/new',
+            element: <ProductCreatePage />,
+          },
+          {
             path: 'products/:productId',
             element: <ProductDetailPage />,
           },
           {
+            path: 'products/:productId/edit',
+            element: <ProductEditPage />,
+          },
+          {
             path: 'ingredients',
             element: <IngredientsPage />,
+          },
+          {
+            path: 'ingredients/new',
+            element: <IngredientCreatePage />,
+          },
+          {
+            path: 'ingredients/:ingredientId/edit',
+            element: <IngredientEditPage />,
           },
           {
             path: 'recipes',
@@ -682,6 +764,10 @@ export const router = createBrowserRouter([
           {
             path: 'availability',
             element: <AvailabilityPage />,
+          },
+          {
+            path: 'promotions',
+            element: <PromotionsPage />,
           },
             ],
           },
@@ -789,15 +875,23 @@ export const router = createBrowserRouter([
             children: [
               {
                 index: true,
-                element: <Navigate replace to="/org/outlets" />,
+                element: <ModuleLandingRedirect resolve={resolveOrgLandingPath} />,
               },
               {
                 path: 'regions',
                 element: <OrgRegionsPage />,
               },
               {
+                path: 'regions/new',
+                element: <OrgRegionCreatePage />,
+              },
+              {
                 path: 'regions/:regionId',
                 element: <OrgRegionDetailPage />,
+              },
+              {
+                path: 'regions/:regionId/edit',
+                element: <OrgRegionEditPage />,
               },
               {
                 path: 'outlets',
@@ -810,6 +904,10 @@ export const router = createBrowserRouter([
               {
                 path: 'outlets/:outletId',
                 element: <OrgOutletDetailPage />,
+              },
+              {
+                path: 'outlets/:outletId/edit',
+                element: <OrgOutletEditPage />,
               },
             ],
           },
@@ -855,8 +953,12 @@ export const router = createBrowserRouter([
           <RequireAnyPermission
             permissions={[
               permissionConstants.hr.employeeRead,
+              permissionConstants.hr.employeeWrite,
               permissionConstants.hr.contractRead,
+              permissionConstants.hr.contractWrite,
               permissionConstants.hr.shiftRead,
+              permissionConstants.hr.shiftWrite,
+              permissionConstants.hr.payrollPrepare,
               permissionConstants.hr.attendanceReview,
               permissionConstants.finance.payrollRead,
               permissionConstants.finance.payrollPrepare,
@@ -876,6 +978,10 @@ export const router = createBrowserRouter([
             element: <EmployeesPage />,
           },
           {
+            path: 'employees/new',
+            element: <EmployeeCreatePage />,
+          },
+          {
             path: 'employees/:employeeId',
             element: <EmployeeDetailPage />,
           },
@@ -884,8 +990,16 @@ export const router = createBrowserRouter([
             element: <ContractsPage />,
           },
           {
+            path: 'contracts/new',
+            element: <ContractCreatePage />,
+          },
+          {
             path: 'contracts/:contractId',
             element: <ContractDetailPage />,
+          },
+          {
+            path: 'assignments/new',
+            element: <AssignmentCreatePage />,
           },
           {
             path: 'attendance-summary',
@@ -924,9 +1038,13 @@ export const router = createBrowserRouter([
               permissionConstants.procurement.invoiceDispute,
               permissionConstants.procurement.paymentRead,
               permissionConstants.procurement.paymentRecord,
+              permissionConstants.procurement.supplierWrite,
               permissionConstants.finance.payrollRead,
+              permissionConstants.finance.payrollPrepare,
               permissionConstants.finance.payrollApprove,
               permissionConstants.finance.payrollPay,
+              permissionConstants.finance.configRead,
+              permissionConstants.finance.configWrite,
             ]}
           />
         ),
@@ -949,6 +1067,10 @@ export const router = createBrowserRouter([
           {
             path: 'payment-requests',
             element: <PaymentRequestsPage />,
+          },
+          {
+            path: 'payroll-periods',
+            element: <PayrollPeriodsPage />,
           },
           {
             path: 'payroll-approvals',
@@ -985,6 +1107,10 @@ export const router = createBrowserRouter([
           {
             path: 'exchange-rates',
             element: <ExchangeRateManagementPage />,
+          },
+          {
+            path: 'config',
+            element: <FinanceConfigPage />,
           },
             ],
           },
@@ -1114,6 +1240,10 @@ export const router = createBrowserRouter([
             permissions={[
               permissionConstants.inventory.balanceRead,
               permissionConstants.inventory.ledgerRead,
+              permissionConstants.inventory.adjustmentWrite,
+              permissionConstants.inventory.wasteWrite,
+              permissionConstants.inventory.stockCountWrite,
+              permissionConstants.inventory.stockCountPost,
             ]}
           />
         ),
@@ -1132,6 +1262,18 @@ export const router = createBrowserRouter([
               {
                 path: 'transactions',
                 element: <InventoryTransactionsPage />,
+              },
+              {
+                path: 'stock-adjustments/new',
+                element: <StockAdjustmentCreatePage />,
+              },
+              {
+                path: 'waste-records/new',
+                element: <WasteRecordCreatePage />,
+              },
+              {
+                path: 'stock-count-sessions/new',
+                element: <StockCountSessionCreatePage />,
               },
             ],
           },

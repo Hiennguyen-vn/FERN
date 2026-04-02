@@ -14,7 +14,7 @@ public class GatewayRoutesProperties {
     void validateRoutes() {
         String activeProfiles = System.getenv("SPRING_PROFILES_ACTIVE");
         if (activeProfiles != null && activeProfiles.contains("prod")) {
-            Stream.of(iam, org, catalog, audit, pos, inventory, procurement, hr, report, finance)
+            Stream.of(iam, org, catalog, audit, pos, inventory, procurement, hr, report, finance, notification)
                     .filter(uri -> uri != null && uri.startsWith("http://"))
                     .findFirst()
                     .ifPresent(uri -> {
@@ -22,7 +22,7 @@ public class GatewayRoutesProperties {
                                 "Inter-service routes must use HTTPS in production. Found: " + uri);
                     });
         } else {
-            Stream.of(iam, org, catalog, audit, pos, inventory, procurement, hr, report, finance)
+            Stream.of(iam, org, catalog, audit, pos, inventory, procurement, hr, report, finance, notification)
                     .filter(uri -> uri != null && uri.startsWith("http://"))
                     .findFirst()
                     .ifPresent(uri -> LOGGER.warn("Inter-service routes use HTTP — ensure HTTPS in production"));
@@ -39,6 +39,7 @@ public class GatewayRoutesProperties {
     private String hr = "http://localhost:8089";
     private String report = "http://localhost:8090";
     private String finance = "http://localhost:8091";
+    private String notification = "http://localhost:8092";
 
     public String getIam() {
         return iam;
@@ -118,5 +119,13 @@ public class GatewayRoutesProperties {
 
     public void setFinance(String finance) {
         this.finance = finance;
+    }
+
+    public String getNotification() {
+        return notification;
+    }
+
+    public void setNotification(String notification) {
+        this.notification = notification;
     }
 }

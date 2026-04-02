@@ -16,9 +16,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/outlets")
+@Tag(name = "Outlet")
 public class OutletController {
     private final OutletService outletService;
 
@@ -26,6 +29,7 @@ public class OutletController {
         this.outletService = outletService;
     }
 
+    @Operation(summary = "Create or execute Outlet")
     @PostMapping
     public OutletResponse create(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -34,6 +38,7 @@ public class OutletController {
         return outletService.create(principal, request);
     }
 
+    @Operation(summary = "Get Outlet")
     @GetMapping
     public PageResponse<OutletResponse> list(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -46,11 +51,13 @@ public class OutletController {
         return outletService.list(principal, regionId, status, search, page, size);
     }
 
+    @Operation(summary = "Get Outlet")
     @GetMapping("/{id}")
     public OutletResponse get(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         return outletService.get(principal, id);
     }
 
+    @Operation(summary = "Patch Outlet")
     @PatchMapping("/{id}")
     public OutletResponse update(
             @AuthenticationPrincipal FernPrincipal principal,

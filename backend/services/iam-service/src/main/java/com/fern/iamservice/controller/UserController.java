@@ -31,9 +31,12 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/users")
+@Tag(name = "Users")
 public class UserController {
     private final UserService userService;
     private final IamAuthorizer iamAuthorizer;
@@ -52,6 +55,7 @@ public class UserController {
         this.userViewService = userViewService;
     }
 
+    @Operation(summary = "Create or execute Users")
     @PostMapping
     public UserResponse create(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -63,6 +67,7 @@ public class UserController {
         return userService.create(principal, request, IamRequestMetadata.from(httpRequest, correlationId));
     }
 
+    @Operation(summary = "Get Users")
     @GetMapping
     public PageResponse<UserResponse> list(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -75,12 +80,14 @@ public class UserController {
         return userService.list(search, status, page, size);
     }
 
+    @Operation(summary = "Get Users")
     @GetMapping("/{id}")
     public UserResponse get(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         iamAuthorizer.requirePermission(principal, PermissionCodes.IAM_USER_READ);
         return userService.get(id);
     }
 
+    @Operation(summary = "Patch Users")
     @PatchMapping("/{id}")
     public UserResponse update(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -93,6 +100,7 @@ public class UserController {
         return userService.update(principal, id, request, IamRequestMetadata.from(httpRequest, correlationId));
     }
 
+    @Operation(summary = "Create or execute Users")
     @PostMapping("/{id}/roles")
     public UserResponse assignRoles(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -105,6 +113,7 @@ public class UserController {
         return userService.assignRoles(principal, id, request, IamRequestMetadata.from(httpRequest, correlationId));
     }
 
+    @Operation(summary = "Create or execute Users")
     @PostMapping("/{id}/scopes")
     public UserResponse assignScopes(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -117,6 +126,7 @@ public class UserController {
         return userService.assignScopes(principal, id, request, IamRequestMetadata.from(httpRequest, correlationId));
     }
 
+    @Operation(summary = "Get Users")
     @GetMapping("/{id}/permission-overrides")
     public UserPermissionOverridesResponse getPermissionOverrides(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -126,6 +136,7 @@ public class UserController {
         return userPermissionOverrideService.get(id);
     }
 
+    @Operation(summary = "Update Users")
     @PutMapping("/{id}/permission-overrides")
     public UserPermissionOverridesResponse replacePermissionOverrides(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -138,6 +149,7 @@ public class UserController {
         return userPermissionOverrideService.replace(principal, id, request, IamRequestMetadata.from(httpRequest, correlationId));
     }
 
+    @Operation(summary = "Get Users")
     @GetMapping("/{id}/effective-access")
     public EffectiveAccessResponse effectiveAccess(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         iamAuthorizer.requirePermission(principal, PermissionCodes.IAM_USER_READ);

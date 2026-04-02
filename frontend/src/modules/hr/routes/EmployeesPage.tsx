@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import {
+  Button,
   DataTable,
   Input,
   PermissionDeniedInline,
@@ -15,6 +16,7 @@ import { useHrEmployees } from '../hooks/useHr'
 import type { HrEmployee } from '../model/hr.types'
 import { employeeUiPolicy } from '../services/employeeUiPolicy.service'
 import { getHrErrorMessage } from '../services/hrError.service'
+import { canWriteEmployees } from '../services/hrPermission.service'
 import { formatDateLabel } from '../services/hrReadModel.service'
 
 const statusOptions: SelectOption[] = [
@@ -32,6 +34,7 @@ export function EmployeesPage() {
   const navigate = useNavigate()
   const principal = usePrincipal()
   const canReadEmployees = employeeUiPolicy.canOpenEmployeesPage(principal)
+  const canCreateEmployees = canWriteEmployees(principal)
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [page, setPage] = useState(0)
@@ -93,6 +96,13 @@ export function EmployeesPage() {
     <DashboardLayout
       title="Nhân viên"
       description="Employee browse workspace cho HR master data và contract drill-down."
+      actions={
+        canCreateEmployees ? (
+          <Button asChild size="sm">
+            <Link to="/hr/employees/new">Create employee</Link>
+          </Button>
+        ) : null
+      }
     >
       <div className="field-grid">
         <Input

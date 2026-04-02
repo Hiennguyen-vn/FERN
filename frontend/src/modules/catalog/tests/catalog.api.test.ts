@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { httpClient } from '@core/api/httpClient'
+import { gatewayClient } from '@core/api/gatewayClient'
 import { catalogApi } from '../api/catalog.api'
 
 describe('catalog.api', () => {
@@ -8,7 +8,7 @@ describe('catalog.api', () => {
   })
 
   it('uses gateway root paths for product and reference endpoints', async () => {
-    const getSpy = vi.spyOn(httpClient, 'get').mockResolvedValue({ data: [] } as any)
+    const getSpy = vi.spyOn(gatewayClient, 'get').mockResolvedValue({ data: [] } as any)
 
     await catalogApi.listProducts()
     await catalogApi.listProductCategories()
@@ -24,9 +24,9 @@ describe('catalog.api', () => {
   })
 
   it('calls correct paths for promotion CRUD operations', async () => {
-    const getSpy = vi.spyOn(httpClient, 'get').mockResolvedValue({ data: [] } as any)
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
-    const putSpy = vi.spyOn(httpClient, 'put').mockResolvedValue({ data: {} } as any)
+    const getSpy = vi.spyOn(gatewayClient, 'get').mockResolvedValue({ data: [] } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
+    const putSpy = vi.spyOn(gatewayClient, 'put').mockResolvedValue({ data: {} } as any)
 
     await catalogApi.listPromotions()
     await catalogApi.listPromotions({ scopeType: 'GLOBAL' })
@@ -42,9 +42,9 @@ describe('catalog.api', () => {
   })
 
   it('calls correct paths for tax rate operations', async () => {
-    const getSpy = vi.spyOn(httpClient, 'get').mockResolvedValue({ data: [] } as any)
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
-    const putSpy = vi.spyOn(httpClient, 'put').mockResolvedValue({ data: {} } as any)
+    const getSpy = vi.spyOn(gatewayClient, 'get').mockResolvedValue({ data: [] } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
+    const putSpy = vi.spyOn(gatewayClient, 'put').mockResolvedValue({ data: {} } as any)
 
     await catalogApi.listTaxRates()
     await catalogApi.getTaxRate(3)
@@ -58,8 +58,8 @@ describe('catalog.api', () => {
   })
 
   it('calls correct paths for reference data write operations', async () => {
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
-    const putSpy = vi.spyOn(httpClient, 'put').mockResolvedValue({ data: {} } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
+    const putSpy = vi.spyOn(gatewayClient, 'put').mockResolvedValue({ data: {} } as any)
 
     await catalogApi.createProductCategory({ code: 'BEV', name: 'Beverage', status: 'ACTIVE' })
     await catalogApi.updateProductCategory('BEV', { code: 'BEV', name: 'Beverage', status: 'INACTIVE' })
@@ -87,8 +87,8 @@ describe('catalog.api', () => {
    * regress to those wrong field names.
    */
   it('sends TaxRate upsert with productId + taxPercent field names (not code/name/ratePercent)', async () => {
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
-    const putSpy = vi.spyOn(httpClient, 'put').mockResolvedValue({ data: {} } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
+    const putSpy = vi.spyOn(gatewayClient, 'put').mockResolvedValue({ data: {} } as any)
 
     await catalogApi.createTaxRate({
       productId: 42,
@@ -120,7 +120,7 @@ describe('catalog.api', () => {
    * Sending `factor` would leave conversionFactor null and fail @NotNull validation.
    */
   it('sends UomConversion upsert with conversionFactor field name (not factor)', async () => {
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
 
     await catalogApi.createUomConversion({
       fromUomCode: 'G',
@@ -146,7 +146,7 @@ describe('catalog.api', () => {
    *   GLOBAL, COUNTRY, REGION, OUTLET (COUNTRY was missing from the frontend)
    */
   it('sends ProductPrice with correct PriceType and PriceScopeType enum values', async () => {
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
 
     await catalogApi.createProductPrice({
       productId: 1,
@@ -171,7 +171,7 @@ describe('catalog.api', () => {
    * This test verifies the value is sent as a date string (never null or absent).
    */
   it('sends effectiveFrom as required non-null string in ProductPrice upsert', async () => {
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
 
     await catalogApi.createProductPrice({
       productId: 2,
@@ -196,7 +196,7 @@ describe('catalog.api', () => {
    * passable to the API (runtime).
    */
   it('accepts all five backend PriceType enum values in ProductPrice upsert', async () => {
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
 
     const priceTypes = ['RETAIL', 'DINE_IN', 'TAKEAWAY', 'DELIVERY', 'WHOLESALE'] as const
     for (const priceType of priceTypes) {
@@ -222,7 +222,7 @@ describe('catalog.api', () => {
    * All four values must round-trip correctly.
    */
   it('accepts all four PriceScopeType values including COUNTRY', async () => {
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
 
     const scopeTypes = ['GLOBAL', 'COUNTRY', 'REGION', 'OUTLET'] as const
     for (const scopeType of scopeTypes) {
@@ -248,7 +248,7 @@ describe('catalog.api', () => {
    * The compile-time type enforces this; the runtime test confirms the list endpoint is called.
    */
   it('accepts DISCONTINUED as a valid IngredientStatus in filter params', async () => {
-    const getSpy = vi.spyOn(httpClient, 'get').mockResolvedValue({ data: [] } as any)
+    const getSpy = vi.spyOn(gatewayClient, 'get').mockResolvedValue({ data: [] } as any)
 
     await catalogApi.listIngredients()
 
@@ -260,7 +260,7 @@ describe('catalog.api', () => {
    * Compile-time type enforces this; runtime test confirms the list endpoint is reached.
    */
   it('accepts DRAFT as a valid ProductStatus in filter params', async () => {
-    const getSpy = vi.spyOn(httpClient, 'get').mockResolvedValue({ data: [] } as any)
+    const getSpy = vi.spyOn(gatewayClient, 'get').mockResolvedValue({ data: [] } as any)
 
     await catalogApi.listProducts()
 

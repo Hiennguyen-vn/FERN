@@ -17,9 +17,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/pos-sessions")
+@Tag(name = "Pos Session")
 public class PosSessionController {
     private final PosSessionService posSessionService;
 
@@ -27,6 +30,7 @@ public class PosSessionController {
         this.posSessionService = posSessionService;
     }
 
+    @Operation(summary = "Create or execute Pos Session")
     @PostMapping
     public ResponseEntity<PosSessionResponse> openSession(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -38,6 +42,7 @@ public class PosSessionController {
                 .body(result.session());
     }
 
+    @Operation(summary = "Get Pos Session")
     @GetMapping("/{id}")
     public PosSessionResponse getSession(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -46,6 +51,7 @@ public class PosSessionController {
         return posSessionService.getSession(principal, id);
     }
 
+    @Operation(summary = "Get Pos Session")
     @GetMapping
     public List<PosSessionResponse> listSessions(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -58,6 +64,7 @@ public class PosSessionController {
         return posSessionService.listSessions(principal, outletId, terminalId, status, businessDate, com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
+    @Operation(summary = "Create or execute Pos Session")
     @PostMapping("/{id}/close")
     public PosSessionResponse closeSession(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -66,6 +73,7 @@ public class PosSessionController {
         return posSessionService.closeSession(principal, id);
     }
 
+    @Operation(summary = "Create or execute Pos Session")
     @PostMapping("/{id}/reconcile")
     public PosSessionResponse reconcileSession(
             @AuthenticationPrincipal FernPrincipal principal,

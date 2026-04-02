@@ -18,9 +18,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "Authentication")
 public class AuthController {
     private final AuthService authService;
 
@@ -28,6 +31,7 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @Operation(summary = "Create or execute Authentication")
     @PostMapping("/login")
     public AuthTokenResponse login(
             @Valid @RequestBody AuthLoginRequest request,
@@ -37,6 +41,7 @@ public class AuthController {
         return authService.login(request, IamRequestMetadata.from(httpRequest, correlationId));
     }
 
+    @Operation(summary = "Create or execute Authentication")
     @PostMapping("/refresh")
     public AuthTokenResponse refresh(
             @Valid @RequestBody RefreshTokenRequest request,
@@ -46,6 +51,7 @@ public class AuthController {
         return authService.refresh(request, IamRequestMetadata.from(httpRequest, correlationId));
     }
 
+    @Operation(summary = "Create or execute Authentication")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             @AuthenticationPrincipal FernPrincipal principal,

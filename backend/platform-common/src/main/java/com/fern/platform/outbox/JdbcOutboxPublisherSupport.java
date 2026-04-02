@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 public final class JdbcOutboxPublisherSupport {
     private static final int DEFAULT_BATCH_SIZE = 20;
+    private static final java.util.regex.Pattern CORRELATION_ID_PATTERN = java.util.regex.Pattern.compile("\"correlationId\"\\s*:\\s*\"([^\"]+)\"");
 
     private JdbcOutboxPublisherSupport() {
     }
@@ -127,5 +128,16 @@ public final class JdbcOutboxPublisherSupport {
     }
 
     public record FailureOutcome(boolean terminalFailure, int retryCount, String failureReason) {
+    }
+
+    public static String extractCorrelationId(String payload) {
+        if (payload == null) {
+            return null;
+        }
+        java.util.regex.Matcher matcher = CORRELATION_ID_PATTERN.matcher(payload);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return null;
     }
 }

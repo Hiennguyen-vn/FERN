@@ -156,7 +156,7 @@ export function OutletCreatePage() {
           />
           <Select
             label="Status *"
-            onChange={(value) => setForm((prev) => ({ ...prev, status: value as OrgOutletStatus }))}
+            onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value as OrgOutletStatus }))}
             options={STATUS_OPTIONS}
             value={form.status}
           />

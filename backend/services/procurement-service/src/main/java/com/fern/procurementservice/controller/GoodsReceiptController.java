@@ -17,9 +17,12 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/goods-receipts")
+@Tag(name = "Goods Receipt")
 public class GoodsReceiptController {
     private final PurchaseFlowService purchaseFlowService;
 
@@ -27,6 +30,7 @@ public class GoodsReceiptController {
         this.purchaseFlowService = purchaseFlowService;
     }
 
+    @Operation(summary = "Get Goods Receipt")
     @GetMapping
     public List<GoodsReceiptResponse> listGoodsReceipts(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -38,6 +42,7 @@ public class GoodsReceiptController {
         return purchaseFlowService.listGoodsReceipts(principal, purchaseOrderId, outletId, status, ListQueryDefaults.clampLimit(limit));
     }
 
+    @Operation(summary = "Create or execute Goods Receipt")
     @PostMapping
     public GoodsReceiptResponse createGoodsReceipt(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -46,6 +51,7 @@ public class GoodsReceiptController {
         return purchaseFlowService.createGoodsReceipt(principal, request);
     }
 
+    @Operation(summary = "Get Goods Receipt")
     @GetMapping("/{id}")
     public GoodsReceiptResponse getGoodsReceipt(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -54,6 +60,7 @@ public class GoodsReceiptController {
         return purchaseFlowService.getGoodsReceipt(principal, id);
     }
 
+    @Operation(summary = "Create or execute Goods Receipt")
     @PostMapping("/{id}/receive")
     public GoodsReceiptResponse receiveGoodsReceipt(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -62,6 +69,7 @@ public class GoodsReceiptController {
         return purchaseFlowService.receiveGoodsReceipt(principal, id);
     }
 
+    @Operation(summary = "Create or execute Goods Receipt")
     @PostMapping("/{id}/post")
     public GoodsReceiptResponse postGoodsReceipt(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -72,6 +80,7 @@ public class GoodsReceiptController {
         return purchaseFlowService.postGoodsReceipt(principal, id, idempotencyKey, correlationId);
     }
 
+    @Operation(summary = "Create or execute Goods Receipt")
     @PostMapping("/{id}/cancel")
     public GoodsReceiptResponse cancelGoodsReceipt(
             @AuthenticationPrincipal FernPrincipal principal,

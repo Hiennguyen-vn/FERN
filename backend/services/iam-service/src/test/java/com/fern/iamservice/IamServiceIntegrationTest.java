@@ -344,6 +344,52 @@ class IamServiceIntegrationTest {
     }
 
     @Test
+    void shouldPublishRegionManagerRoleWithRegionalReadPermissionsOnly() throws Exception {
+        String adminToken = issueBootstrapAdminToken();
+        Long userId = createUser(adminToken, "region-manager-user", "Region123!").get("id").asLong();
+
+        mockMvc.perform(post("/users/%d/roles".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"roleCodes":["region_manager"]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roleCodes[0]").value("region_manager"));
+
+        adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(post("/users/%d/scopes".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"regionIds":[1],"outletIds":[]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeRoots.regions[0]").value(1));
+
+        adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roles[?(@=='region_manager')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='org.region.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='org.outlet.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='pos.session.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='pos.order.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='inventory.balance.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='inventory.ledger.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='report.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='report.payroll.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='procurement.po.approve')]").doesNotExist())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='finance.payroll.approve')]").doesNotExist())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='report.export')]").doesNotExist())
+                .andExpect(jsonPath("$.scopeRoots.regions[0]").value(1))
+                .andExpect(jsonPath("$.scopeRoots.system").value(false));
+    }
+
+    @Test
     void shouldRejectManualLockedSuspendedAndInactiveStatuses() throws Exception {
         String adminToken = issueBootstrapAdminToken();
         Long userId = createUser(adminToken, "status-user", "Status123!").get("id").asLong();

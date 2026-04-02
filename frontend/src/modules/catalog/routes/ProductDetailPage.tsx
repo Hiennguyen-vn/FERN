@@ -27,6 +27,7 @@ import {
   canReadPrices,
   canReadProducts,
   canReadRecipes,
+  canWriteProducts,
 } from '../services/catalogPermission.service'
 import {
   formatCurrencyAmount,
@@ -59,6 +60,7 @@ export function ProductDetailPage() {
   const canViewProduct = canReadProducts(principal)
   const canViewRecipes = canReadRecipes(principal)
   const canViewPrices = canReadPrices(principal)
+  const canWriteProduct = canWriteProducts(principal) && principal?.scopeRoots?.system === true
 
   const productQuery = useProduct(productId, { enabled: canViewProduct && Number.isFinite(productId) })
   const recipesQuery = useRecipes({ enabled: canViewProduct && canViewRecipes })
@@ -242,12 +244,25 @@ export function ProductDetailPage() {
       title="Chi tiết sản phẩm"
       description="Read-only inspection cho product, recipe, pricing và outlet availability."
       actions={
-        <Button asChild size="sm" variant="secondary">
-          <Link to="/catalog/products">Quay lại danh sách</Link>
-        </Button>
+        <div className="form-actions align-start">
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/catalog/products">Quay lại danh sách</Link>
+          </Button>
+          {canWriteProduct ? (
+            <Button asChild size="sm">
+              <Link to={`/catalog/products/${productId}/edit`}>Edit product</Link>
+            </Button>
+          ) : null}
+        </div>
       }
     >
-      <ReadonlyBanner message="Catalog detail hiện chỉ publish chế độ read-first. Các thao tác edit/activate/archive chưa được mở ở bước này." />
+      <ReadonlyBanner
+        message={
+          canWriteProduct
+            ? 'Product edit đã được publish cho principal có catalog.product.write + system scope. Recipe/pricing/availability writes vẫn đi theo pass riêng.'
+            : 'Catalog detail hiện vẫn là read-first với tài khoản hiện tại. Product edit cần catalog.product.write + system scope.'
+        }
+      />
 
       <EntityHeader
         actions={

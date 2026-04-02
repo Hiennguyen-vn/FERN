@@ -1,6 +1,9 @@
 import { gatewayClient } from '@core/api/gatewayClient'
 import type { PageResponse } from '@core/types/api'
 import type {
+  CreateAssignmentPayload,
+  CreateContractPayload,
+  CreateEmployeePayload,
   CreatePayrollPeriodPayload,
   CreatePayrollRunPayload,
   CreateShiftAssignmentPayload,
@@ -26,8 +29,16 @@ export const hrApi = {
     return gatewayClient.get<HrEmployee>(`/employees/${employeeId}`).then((response) => response.data)
   },
 
+  createEmployee(payload: CreateEmployeePayload) {
+    return gatewayClient.post<HrEmployee>('/employees', payload).then((response) => response.data)
+  },
+
   listContracts(params?: { employeeId?: number; regionId?: number; search?: string; status?: string; page?: number; size?: number }) {
     return gatewayClient.get<PageResponse<HrContract>>('/employee-contracts', { params }).then((response) => response.data)
+  },
+
+  createContract(payload: CreateContractPayload) {
+    return gatewayClient.post<HrContract>('/employee-contracts', payload).then((response) => response.data)
   },
 
   listEmployeeContracts(employeeId: number) {
@@ -41,6 +52,10 @@ export const hrApi = {
 
   listEmployeeAssignments(employeeId: number) {
     return gatewayClient.get<HrAssignment[]>(`/employees/${employeeId}/assignments`).then((response) => response.data)
+  },
+
+  createEmployeeAssignment(payload: CreateAssignmentPayload) {
+    return gatewayClient.post<HrAssignment>('/employee-assignments', payload).then((response) => response.data)
   },
 
   listAttendanceEvents(filters: HrAttendanceFilters) {

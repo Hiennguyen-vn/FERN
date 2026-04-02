@@ -18,9 +18,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping
+@Tag(name = "HR — Queries")
 public class HrReadController {
     private final HrService hrService;
     private final ContractResponseMasker contractResponseMasker;
@@ -30,11 +33,13 @@ public class HrReadController {
         this.contractResponseMasker = contractResponseMasker;
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/employees/{id}")
     public EmployeeResponse getEmployee(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         return hrService.getEmployee(principal, id);
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/employees")
     public PageResponse<EmployeeResponse> listEmployees(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -46,6 +51,7 @@ public class HrReadController {
         return hrService.listEmployees(principal, search, status, page, size);
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/employees/{employeeId}/contracts")
     public List<ContractResponse> listContracts(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long employeeId) {
         return hrService.listContracts(principal, employeeId).stream()
@@ -53,6 +59,7 @@ public class HrReadController {
                 .toList();
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/employee-contracts")
     public PageResponse<ContractResponse> browseContracts(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -74,16 +81,19 @@ public class HrReadController {
         );
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/employees/{employeeId}/assignments")
     public List<AssignmentResponse> listAssignments(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long employeeId) {
         return hrService.listAssignments(principal, employeeId);
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/shift-schedules/{id}")
     public ShiftScheduleResponse getShiftSchedule(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         return hrService.getShiftSchedule(principal, id);
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/shift-schedules")
     public List<ShiftScheduleResponse> listShiftSchedules(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -96,11 +106,13 @@ public class HrReadController {
                 com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/shift-assignments/{id}")
     public ShiftAssignmentResponse getShiftAssignment(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         return hrService.getShiftAssignment(principal, id);
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/shift-assignments")
     public List<ShiftAssignmentResponse> listShiftAssignments(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -111,6 +123,7 @@ public class HrReadController {
                 com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/attendance-approvals/{shiftAssignmentId}")
     public AttendanceApprovalResponse getAttendanceApproval(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -119,6 +132,7 @@ public class HrReadController {
         return hrService.getAttendanceApproval(principal, shiftAssignmentId);
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/attendance-approvals")
     public List<AttendanceApprovalResponse> listAttendanceApprovals(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -129,6 +143,7 @@ public class HrReadController {
         return hrService.listAttendanceApprovals(principal, regionId, outletId, com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
+    @Operation(summary = "Get HR — Queries")
     @GetMapping("/attendance-events")
     public PageResponse<AttendanceEventListItemResponse> listAttendanceEvents(
             @AuthenticationPrincipal FernPrincipal principal,

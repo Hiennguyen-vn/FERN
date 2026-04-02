@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   usePayrollPeriods: vi.fn(),
   usePayrollRun: vi.fn(),
   usePayrollRuns: vi.fn(),
+  useSubmitPayrollRun: vi.fn(),
 }))
 
 vi.mock('../hooks/useHr', () => ({
@@ -22,6 +23,7 @@ vi.mock('../hooks/useHr', () => ({
   usePayrollPeriods: mocks.usePayrollPeriods,
   usePayrollRun: mocks.usePayrollRun,
   usePayrollRuns: mocks.usePayrollRuns,
+  useSubmitPayrollRun: mocks.useSubmitPayrollRun,
 }))
 
 describe('PayrollPreparationPage', () => {
@@ -92,6 +94,13 @@ describe('PayrollPreparationPage', () => {
         id: 77,
       }),
     })
+    mocks.useSubmitPayrollRun.mockReturnValue({
+      isPending: false,
+      mutateAsync: vi.fn().mockResolvedValue({
+        id: 77,
+        status: 'SUBMITTED',
+      }),
+    })
   })
 
   it('validates required payroll period fields', async () => {
@@ -103,8 +112,16 @@ describe('PayrollPreparationPage', () => {
     expect(await screen.findByText('Name, start date và end date là bắt buộc.')).toBeInTheDocument()
   })
 
-  it('prepares a draft run and navigates to review', async () => {
+  it('prepares a draft run, submits it, and navigates to review', async () => {
     const user = userEvent.setup()
+    const submitMutateAsync = vi.fn().mockResolvedValue({
+      id: 77,
+      status: 'SUBMITTED',
+    })
+    mocks.useSubmitPayrollRun.mockReturnValue({
+      isPending: false,
+      mutateAsync: submitMutateAsync,
+    })
 
     renderWithProviders(
       <Routes>
@@ -116,9 +133,49 @@ describe('PayrollPreparationPage', () => {
 
     await user.selectOptions(screen.getByLabelText('Payroll period'), '11')
     await user.type(screen.getByLabelText('Preparation note'), 'Prepare end-of-month draft')
-    await user.click(screen.getByRole('button', { name: 'Prepare draft run' }))
+    await user.click(screen.getByRole('button', { name: 'Prepare and submit payroll run' }))
 
+    expect(submitMutateAsync).toHaveBeenCalledWith({ runId: 77 })
     expect(await screen.findByText('RUN-77')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Payroll Draft Review' })).toBeInTheDocument()
+  })
+
+  it('shows an inline error and skips submit when create returns an invalid run id', async () => {
+    const user = userEvent.setup()
+    const submitMutateAsync = vi.fn()
+    mocks.useCreatePayrollRun.mockReturnValue({
+      isPending: false,
+      mutateAsync: vi.fn().mockResolvedValue({
+        id: Number.NaN,
+      }),
+    })
+    mocks.useSubmitPayrollRun.mockReturnValue({
+      isPending: false,
+      mutateAsync: submitMutateAsync,
+    })
+
+    renderWithProviders(<PayrollPreparationPage />)
+
+    await user.selectOptions(screen.getByLabelText('Payroll period'), '11')
+    await user.click(screen.getByRole('button', { name: 'Prepare and submit payroll run' }))
+
+    expect(await screen.findByText('Payroll draft đã được tạo nhưng response không trả về runId hợp lệ để submit sang Finance.')).toBeInTheDocument()
+    expect(submitMutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('shows recovery state when submit fails after create succeeds', async () => {
+    const user = userEvent.setup()
+    mocks.useSubmitPayrollRun.mockReturnValue({
+      isPending: false,
+      mutateAsync: vi.fn().mockRejectedValue(new Error('Gateway timeout')),
+    })
+
+    renderWithProviders(<PayrollPreparationPage />)
+
+    await user.selectOptions(screen.getByLabelText('Payroll period'), '11')
+    await user.click(screen.getByRole('button', { name: 'Prepare and submit payroll run' }))
+
+    expect(await screen.findByText('Đã tạo payroll draft #77 nhưng chưa submit sang Finance. Gateway timeout')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open created draft run' })).toBeInTheDocument()
   })
 })

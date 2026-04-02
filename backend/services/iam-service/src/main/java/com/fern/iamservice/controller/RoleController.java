@@ -14,9 +14,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/roles")
+@Tag(name = "Roles")
 public class RoleController {
     private final RoleService roleService;
     private final IamAuthorizer iamAuthorizer;
@@ -26,12 +29,14 @@ public class RoleController {
         this.iamAuthorizer = iamAuthorizer;
     }
 
+    @Operation(summary = "Get Roles")
     @GetMapping
     public List<RoleResponse> list(@AuthenticationPrincipal FernPrincipal principal) {
         iamAuthorizer.requirePermission(principal, PermissionCodes.IAM_ROLE_READ);
         return roleService.list();
     }
 
+    @Operation(summary = "Create or execute Roles")
     @PostMapping
     public RoleResponse create(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody CreateRoleRequest request) {
         iamAuthorizer.requirePermission(principal, PermissionCodes.IAM_ROLE_WRITE);

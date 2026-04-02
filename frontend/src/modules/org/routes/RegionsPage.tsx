@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
-import { DataTable, Input, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
+import { Button, DataTable, Input, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { useRegionList } from '../hooks/useOrg'
@@ -18,6 +18,7 @@ export function RegionsPage() {
   const navigate = useNavigate()
   const principal = usePrincipal()
   const canOpen = orgUiPolicy.canOpenRegionsPage(principal)
+  const canCreate = orgUiPolicy.canOpenRegionCreate(principal)
   const [searchText, setSearchText] = useState('')
   const [page, setPage] = useState(0)
   const regionsQuery = useRegionList(
@@ -86,6 +87,13 @@ export function RegionsPage() {
     <DashboardLayout
       title="Regions"
       description="Region administration browse cho organizational hierarchy, timezone và currency reference."
+      actions={
+        canCreate ? (
+          <Button asChild size="sm">
+            <Link to="/org/regions/new">+ Create region</Link>
+          </Button>
+        ) : null
+      }
     >
       <Input
         label="Search regions"
@@ -95,6 +103,8 @@ export function RegionsPage() {
       />
       {!regionsQuery.isLoading && !regionsQuery.error && rows.length === 0 && searchText ? (
         <ReadonlyBanner message={`Không tìm thấy region nào khớp "${searchText}". Thử từ khoá khác hoặc xoá bộ lọc.`} />
+      ) : canCreate ? (
+        <ReadonlyBanner message="Region create/edit workflow đã được publish cho principal có org.region.write." />
       ) : null}
 
       <DataTable

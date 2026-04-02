@@ -13,9 +13,15 @@ export const permissionConstants = {
   },
   catalog: {
     productRead: 'catalog.product.read',
+    productWrite: 'catalog.product.write',
     ingredientRead: 'catalog.ingredient.read',
+    ingredientWrite: 'catalog.ingredient.write',
     recipeRead: 'catalog.recipe.read',
+    recipeWrite: 'catalog.recipe.write',
     priceRead: 'catalog.price.read',
+    priceWrite: 'catalog.price.write',
+    promotionRead: 'catalog.promotion.read',
+    promotionWrite: 'catalog.promotion.write',
   },
   org: {
     regionRead: 'org.region.read',

@@ -1,27 +1,52 @@
 package com.fern.notificationservice.messaging;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.notificationservice.service.NotificationService;
 import com.fern.platform.contracts.OperationalAlertEvent;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 public class NotificationEventConsumer {
     private final ObjectMapper objectMapper;
     private final NotificationService notificationService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public NotificationEventConsumer(ObjectMapper objectMapper, NotificationService notificationService) {
+    public NotificationEventConsumer(
+            ObjectMapper objectMapper, 
+            NotificationService notificationService,
+            SimpMessagingTemplate messagingTemplate
+    ) {
         this.objectMapper = objectMapper;
         this.notificationService = notificationService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @KafkaListener(topics = "ops.alert", groupId = "${spring.kafka.consumer.group-id}")
     public void consumeOperationalAlert(String payload) {
         notificationService.ingestOperationalAlert(payload, read(payload, OperationalAlertEvent.class));
+    }
+
+    @KafkaListener(topicPattern = "pos\\..*", groupId = "${spring.kafka.consumer.group-id}-ws")
+    public void consumePosEvents(
+            String payload,
+            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
+            @Header(KafkaHeaders.RECEIVED_KEY) String key
+    ) {
+        try {
+            JsonNode root = objectMapper.readTree(payload);
+            String outletId = root.has("outletId") ? root.get("outletId").asText() : key;
+            if (outletId != null && !outletId.isBlank()) {
+                messagingTemplate.convertAndSend("/topic/pos/" + outletId, payload);
+            }
+        } catch (Exception e) {
+            // Log and ignore
+        }
     }
 
     @KafkaListener(topics = "#{'${fern.notification.dlq-topics:__no_dlq__}'.split(',')}", groupId = "${spring.kafka.consumer.group-id}-dlq")

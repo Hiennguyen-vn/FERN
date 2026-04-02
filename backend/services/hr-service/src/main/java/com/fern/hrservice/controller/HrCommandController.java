@@ -25,9 +25,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping
+@Tag(name = "HR — Commands")
 public class HrCommandController {
     private final HrService hrService;
 
@@ -35,6 +38,7 @@ public class HrCommandController {
         this.hrService = hrService;
     }
 
+    @Operation(summary = "Create or execute HR — Commands")
     @PostMapping("/employees")
     public EmployeeResponse createEmployee(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -43,6 +47,7 @@ public class HrCommandController {
         return hrService.createEmployee(principal, request);
     }
 
+    @Operation(summary = "Create or execute HR — Commands")
     @PostMapping("/employee-contracts")
     public ContractResponse createContract(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -51,6 +56,7 @@ public class HrCommandController {
         return hrService.createContract(principal, request);
     }
 
+    @Operation(summary = "Create or execute HR — Commands")
     @PostMapping("/employee-assignments")
     public AssignmentResponse createAssignment(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -59,6 +65,7 @@ public class HrCommandController {
         return hrService.createAssignment(principal, request);
     }
 
+    @Operation(summary = "Create or execute HR — Commands")
     @PostMapping("/shift-schedules")
     public ShiftScheduleResponse createShiftSchedule(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -67,6 +74,7 @@ public class HrCommandController {
         return hrService.createShiftSchedule(principal, request);
     }
 
+    @Operation(summary = "Create or execute HR — Commands")
     @PostMapping("/shift-assignments")
     public ShiftAssignmentResponse createShiftAssignment(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -75,6 +83,7 @@ public class HrCommandController {
         return hrService.createShiftAssignment(principal, request);
     }
 
+    @Operation(summary = "Create or execute HR — Commands")
     @PostMapping("/attendance-events")
     public AttendanceEventResponse recordAttendanceEvent(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -84,6 +93,7 @@ public class HrCommandController {
         return hrService.recordAttendanceEvent(principal, idempotencyKey, request);
     }
 
+    @Operation(summary = "Create or execute HR — Commands")
     @PostMapping("/attendance-approvals/{shiftAssignmentId}/approve")
     public AttendanceApprovalResponse approveAttendance(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -94,6 +104,7 @@ public class HrCommandController {
         return hrService.reviewAttendance(principal, shiftAssignmentId, "APPROVED", request == null ? null : request.comments(), correlationId);
     }
 
+    @Operation(summary = "Create or execute HR — Commands")
     @PostMapping("/attendance-approvals/{shiftAssignmentId}/reject")
     public AttendanceApprovalResponse rejectAttendance(
             @AuthenticationPrincipal FernPrincipal principal,

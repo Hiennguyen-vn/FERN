@@ -111,6 +111,7 @@ export function IngredientForm({ initial, categories, uoms, onSubmit, onCancel, 
           >
             <option value="ACTIVE">Đang dùng</option>
             <option value="INACTIVE">Ngừng dùng</option>
+            <option value="DISCONTINUED">Ngừng kinh doanh</option>
           </select>
         </div>
       </div>

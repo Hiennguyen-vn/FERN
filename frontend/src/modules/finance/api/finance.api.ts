@@ -5,7 +5,11 @@ import type {
   FinancePayrollRun,
   FinanceSupplier,
   MarkPayrollPaidPayload,
+  NumberingRule,
+  PutNumberingRulePayload,
+  PutSystemPolicyPayload,
   ReviewPayrollRunPayload,
+  SystemPolicy,
 } from '../model/finance.types'
 
 export const financeApi = {
@@ -33,6 +37,10 @@ export const financeApi = {
     return gatewayClient.get<FinancePayrollRun>(`/payroll-runs/${runId}`).then((response) => response.data)
   },
 
+  submitPayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
+    return gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/submit`, payload).then((response) => response.data)
+  },
+
   approvePayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
     return gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/approve`, payload).then((response) => response.data)
   },
@@ -47,5 +55,22 @@ export const financeApi = {
 
   markPayrollPaid(runId: number, payload: MarkPayrollPaidPayload) {
     return gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/mark-paid`, payload).then((response) => response.data)
+  },
+
+  // ── Finance Config ─────────────────────────────────────────────────────────
+  getNumberingRule(documentType: string) {
+    return gatewayClient.get<NumberingRule>(`/finance-config/numbering-rules/${encodeURIComponent(documentType)}`).then((r) => r.data)
+  },
+
+  putNumberingRule(documentType: string, payload: PutNumberingRulePayload) {
+    return gatewayClient.put<NumberingRule>(`/finance-config/numbering-rules/${encodeURIComponent(documentType)}`, payload).then((r) => r.data)
+  },
+
+  getSystemPolicy(policyKey: string) {
+    return gatewayClient.get<SystemPolicy>(`/finance-config/system-policies/${encodeURIComponent(policyKey)}`).then((r) => r.data)
+  },
+
+  putSystemPolicy(policyKey: string, payload: PutSystemPolicyPayload) {
+    return gatewayClient.put<SystemPolicy>(`/finance-config/system-policies/${encodeURIComponent(policyKey)}`, payload).then((r) => r.data)
   },
 }

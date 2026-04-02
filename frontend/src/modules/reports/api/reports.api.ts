@@ -37,7 +37,7 @@ export async function getExportPreview(jobId: number) {
 }
 
 export async function getReportStockBalances(filters: InventoryReportFilters) {
-  const { data } = await gatewayClient.get<ReportStockBalancePage>('/stock-balances', {
+  const { data } = await gatewayClient.get<ReportStockBalancePage>('/reports/inventory/stock-balances', {
     params: {
       ingredientId: filters.ingredientId,
       outletId: filters.outletId,
@@ -49,7 +49,7 @@ export async function getReportStockBalances(filters: InventoryReportFilters) {
 }
 
 export async function getReportInventoryTransactions(filters: InventoryReportFilters) {
-  const { data } = await gatewayClient.get<ReportInventoryTransactionPage>('/inventory-transactions', {
+  const { data } = await gatewayClient.get<ReportInventoryTransactionPage>('/reports/inventory/inventory-transactions', {
     params: {
       from: filters.from,
       ingredientId: filters.ingredientId,

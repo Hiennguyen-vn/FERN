@@ -1,6 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { financeApi } from '../../finance/api/finance.api'
+import type { ReviewPayrollRunPayload } from '../../finance/model/finance.types'
 import { hrApi } from '../api/hr.api'
-import type { CreatePayrollPeriodPayload, CreatePayrollRunPayload, HrAttendanceFilters } from '../model/hr.types'
+import type {
+  CreateAssignmentPayload,
+  CreateContractPayload,
+  CreateEmployeePayload,
+  CreatePayrollPeriodPayload,
+  CreatePayrollRunPayload,
+  HrAttendanceFilters,
+} from '../model/hr.types'
 
 interface QueryOptions {
   enabled?: boolean
@@ -119,6 +128,47 @@ export function useCreatePayrollPeriod() {
   })
 }
 
+export function useCreateEmployee() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationKey: ['hr', 'employees', 'create'],
+    mutationFn: (payload: CreateEmployeePayload) => hrApi.createEmployee(payload),
+    onSuccess: (employee) => {
+      void queryClient.invalidateQueries({ queryKey: ['hr', 'employees'] })
+      void queryClient.invalidateQueries({ queryKey: KEYS.employee(employee.id) })
+    },
+  })
+}
+
+export function useCreateContract() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationKey: ['hr', 'contracts', 'create'],
+    mutationFn: (payload: CreateContractPayload) => hrApi.createContract(payload),
+    onSuccess: (contract) => {
+      void queryClient.invalidateQueries({ queryKey: ['hr', 'contracts'] })
+      void queryClient.invalidateQueries({ queryKey: KEYS.employeeContracts(contract.employeeId) })
+    },
+  })
+}
+
+export function useCreateEmployeeAssignment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationKey: ['hr', 'assignments', 'create'],
+    mutationFn: (payload: CreateAssignmentPayload) => hrApi.createEmployeeAssignment(payload),
+    onSuccess: (assignment) => {
+      void queryClient.invalidateQueries({ queryKey: KEYS.employeeAssignments(assignment.employeeId) })
+      void queryClient.invalidateQueries({ queryKey: KEYS.employee(assignment.employeeId) })
+      void queryClient.invalidateQueries({ queryKey: ['shift-schedules'] })
+      void queryClient.invalidateQueries({ queryKey: ['shift-assignments'] })
+    },
+  })
+}
+
 export function useCreatePayrollRun() {
   const queryClient = useQueryClient()
 
@@ -129,5 +179,23 @@ export function useCreatePayrollRun() {
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll-runs'] })
       void queryClient.invalidateQueries({ queryKey: KEYS.payrollRun(run.id) })
     },
+  })
+}
+
+function invalidatePayrollRunQueries(queryClient: ReturnType<typeof useQueryClient>, runId: number) {
+  void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll-runs'] })
+  void queryClient.invalidateQueries({ queryKey: KEYS.payrollRun(runId) })
+  void queryClient.invalidateQueries({ queryKey: ['finance', 'payroll-runs'] })
+  void queryClient.invalidateQueries({ queryKey: ['finance', 'payroll-runs', runId] })
+}
+
+export function useSubmitPayrollRun() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationKey: ['hr', 'payroll-runs', 'submit'],
+    mutationFn: ({ payload, runId }: { payload?: ReviewPayrollRunPayload; runId: number }) =>
+      financeApi.submitPayrollRun(runId, payload),
+    onSuccess: (run) => invalidatePayrollRunQueries(queryClient, run.id),
   })
 }

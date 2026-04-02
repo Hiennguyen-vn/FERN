@@ -4,6 +4,8 @@ import { financeApi } from '../api/finance.api'
 import type {
   FinancePayrollFilters,
   MarkPayrollPaidPayload,
+  PutNumberingRulePayload,
+  PutSystemPolicyPayload,
   ReviewPayrollRunPayload,
 } from '../model/finance.types'
 import {
@@ -142,5 +144,42 @@ export function useMarkPayrollPaid() {
     mutationFn: ({ payload, runId }: { payload: MarkPayrollPaidPayload; runId: number }) =>
       financeApi.markPayrollPaid(runId, payload),
     onSuccess: (run) => invalidatePayrollRunQueries(queryClient, run.id),
+  })
+}
+
+// ── Finance Config ────────────────────────────────────────────────────────────
+export function useNumberingRule(documentType: string, options: QueryOptions = {}) {
+  return useQuery({
+    queryKey: ['finance', 'config', 'numbering-rules', documentType],
+    queryFn: () => financeApi.getNumberingRule(documentType),
+    enabled: (options.enabled ?? true) && !!documentType,
+  })
+}
+
+export function usePutNumberingRule(documentType: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: PutNumberingRulePayload) => financeApi.putNumberingRule(documentType, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'config', 'numbering-rules'] })
+    },
+  })
+}
+
+export function useSystemPolicy(policyKey: string, options: QueryOptions = {}) {
+  return useQuery({
+    queryKey: ['finance', 'config', 'system-policies', policyKey],
+    queryFn: () => financeApi.getSystemPolicy(policyKey),
+    enabled: (options.enabled ?? true) && !!policyKey,
+  })
+}
+
+export function usePutSystemPolicy(policyKey: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: PutSystemPolicyPayload) => financeApi.putSystemPolicy(policyKey, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'config', 'system-policies'] })
+    },
   })
 }

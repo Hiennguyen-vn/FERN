@@ -542,7 +542,7 @@ OUTLET_MGR_ID="$(create_demo_user "demo-outlet-mgr" "Demo Outlet Manager" \
   "{\"regionIds\":[],\"outletIds\":[${OUTLET_D1}]}")"
 
 REGION_MGR_ID="$(create_demo_user "demo-region-mgr" "Demo Region Manager" \
-  '["outlet_manager"]' \
+  '["region_manager"]' \
   "{\"regionIds\":[${REGION_ID}],\"outletIds\":[]}")"
 
 REG_FINANCE_ID="$(create_demo_user "demo-reg-finance" "Demo Regional Finance" \
@@ -1009,7 +1009,7 @@ DEMO ACCOUNTS  (all password: ${DEMO_PASSWORD})
 ----------------------------------------------------------------------
   demo-cashier       staff               DIST1(${OUTLET_D1})
   demo-outlet-mgr    outlet_manager      DIST1(${OUTLET_D1}) only
-  demo-region-mgr    outlet_manager      HCM region(${REGION_ID})
+  demo-region-mgr    region_manager      HCM region(${REGION_ID})
   demo-reg-finance   regional_finance    HCM region(${REGION_ID})
   demo-hr            hr                  SYSTEM
   demo-finance       finance             SYSTEM

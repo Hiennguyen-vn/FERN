@@ -19,9 +19,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/internal/catalog")
+@Tag(name = "Catalog — Internal")
 public class InternalCatalogController {
     private final CatalogAuthorizer catalogAuthorizer;
     private final CatalogResolutionService catalogResolutionService;
@@ -40,6 +43,7 @@ public class InternalCatalogController {
         this.clock = clock;
     }
 
+    @Operation(summary = "Get Catalog — Internal")
     @GetMapping("/menu")
     public MenuResponse resolveMenu(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -54,6 +58,7 @@ public class InternalCatalogController {
         return catalogResolutionService.resolveMenu(outletId, businessDate, priceType, regionId, countryId);
     }
 
+    @Operation(summary = "Get Catalog — Internal")
     @GetMapping("/price-resolution")
     public ResolvedPriceResponse resolvePrice(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -69,6 +74,7 @@ public class InternalCatalogController {
         return catalogResolutionService.resolvePrice(productId, outletId, businessDate, priceType, regionId, countryId);
     }
 
+    @Operation(summary = "Get Catalog — Internal")
     @GetMapping("/recipe-resolution")
     public RecipeResolutionResponse resolveRecipe(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -80,6 +86,7 @@ public class InternalCatalogController {
         return catalogResolutionService.resolveRecipe(productId, businessDate);
     }
 
+    @Operation(summary = "Get Catalog — Internal")
     @GetMapping("/recipe-resolutions")
     public java.util.List<RecipeResolutionResponse> resolveRecipes(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -91,6 +98,7 @@ public class InternalCatalogController {
         return catalogResolutionService.resolveRecipes(productIds, businessDate);
     }
 
+    @Operation(summary = "Get Catalog — Internal")
     @GetMapping("/promotion-resolution")
     public PromotionResponse resolvePromotion(
             @AuthenticationPrincipal FernPrincipal principal,

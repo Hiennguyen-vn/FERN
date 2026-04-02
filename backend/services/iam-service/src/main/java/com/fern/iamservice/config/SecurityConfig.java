@@ -1,5 +1,6 @@
 package com.fern.iamservice.config;
 
+import com.fern.iamservice.filter.AuthRateLimitFilter;
 import com.fern.platform.observability.ServletCorrelationIdFilter;
 import com.fern.platform.security.FernJwtAuthenticationFilter;
 import com.fern.platform.security.FernJwtProperties;
@@ -34,6 +35,8 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/auth/login", "/auth/refresh").permitAll()
                         .anyRequest().authenticated()
                 )
+                // Rate limiting runs first — before correlation-id injection and JWT parsing
+                .addFilterBefore(new AuthRateLimitFilter(redisTemplate), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new ServletCorrelationIdFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(
                         new FernJwtAuthenticationFilter(

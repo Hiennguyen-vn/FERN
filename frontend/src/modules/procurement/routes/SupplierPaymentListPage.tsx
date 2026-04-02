@@ -12,6 +12,7 @@ import {
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { usePrincipal } from '@core/auth/auth.selectors'
+import { parsePositiveInt } from '@shared/validators/parseInput'
 import { useSupplierPayments } from '../hooks/useSupplierPayment'
 import type { SupplierPayment } from '../model/procurement.types'
 import { canReadPayments, canRecordPayment } from '../services/procurementPermission.service'
@@ -23,8 +24,9 @@ export function SupplierPaymentListPage() {
   const [supplierId, setSupplierId] = useState('')
 
   const canRead = canReadPayments(principal)
+  const parsedSupplierId = parsePositiveInt(supplierId) ?? undefined
 
-  const query = useSupplierPayments()
+  const query = useSupplierPayments({ supplierId: parsedSupplierId, limit: 50 })
 
   const columns: Array<DataTableColumn<SupplierPayment>> = [
     { key: 'id', header: 'ID', render: (row) => `#${row.id}` },
@@ -60,7 +62,8 @@ export function SupplierPaymentListPage() {
           <Input
             label="Supplier ID"
             onChange={(e) => setSupplierId(e.target.value)}
-            placeholder="Optional — filter not yet applied"
+            placeholder="Optional"
+            type="number"
             value={supplierId}
           />
         </div>

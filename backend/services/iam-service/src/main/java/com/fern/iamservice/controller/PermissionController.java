@@ -10,9 +10,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/permissions")
+@Tag(name = "Permissions")
 public class PermissionController {
     private final PermissionService permissionService;
     private final IamAuthorizer iamAuthorizer;
@@ -22,6 +25,7 @@ public class PermissionController {
         this.iamAuthorizer = iamAuthorizer;
     }
 
+    @Operation(summary = "Get Permissions")
     @GetMapping
     public List<PermissionResponse> list(@AuthenticationPrincipal FernPrincipal principal) {
         iamAuthorizer.requirePermission(principal, PermissionCodes.IAM_PERMISSION_READ);

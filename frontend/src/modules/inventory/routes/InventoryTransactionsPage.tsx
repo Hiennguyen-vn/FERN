@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
+import { Badge, Button, Card, DataTable, EmptyState, ErrorState, Input, Pagination, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
@@ -8,7 +9,11 @@ import { usePrincipal } from '@core/auth/auth.selectors'
 import { useInventoryTransactions } from '../hooks/useInventoryTransactions'
 import type { InventoryTransaction } from '../model/inventory.types'
 import { buildInventoryTransactionSummary } from '../services/inventoryWorkflow.service'
-import { canReadInventoryLedger } from '../services/inventoryPermission.service'
+import {
+  canCreateStockAdjustments,
+  canCreateWasteRecords,
+  canReadInventoryLedger,
+} from '../services/inventoryPermission.service'
 import { formatDate, formatDateTime } from '@shared/formatters'
 import { toOptionalNumber } from '@shared/validators/parseInput'
 
@@ -19,6 +24,8 @@ export function InventoryTransactionsPage() {
   const principal = usePrincipal()
   const { selectedOutletId } = useScopeContext()
   const canRead = canReadInventoryLedger(principal)
+  const canCreateAdjustment = canCreateStockAdjustments(principal)
+  const canCreateWaste = canCreateWasteRecords(principal)
 
   const [filters, setFilters] = useState({
     ingredientId: '',
@@ -69,6 +76,20 @@ export function InventoryTransactionsPage() {
     <DashboardLayout
       description="Inspect inventory movement history for the selected outlet."
       title="Inventory Transactions"
+      actions={
+        <div className="form-actions align-start">
+          {canCreateAdjustment ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to="/inventory/stock-adjustments/new">Stock adjustment</Link>
+            </Button>
+          ) : null}
+          {canCreateWaste ? (
+            <Button asChild size="sm">
+              <Link to="/inventory/waste-records/new">Waste record</Link>
+            </Button>
+          ) : null}
+        </div>
+      }
     >
       {!selectedOutletId ? (
         <>

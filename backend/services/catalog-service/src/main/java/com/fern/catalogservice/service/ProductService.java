@@ -1,6 +1,7 @@
 package com.fern.catalogservice.service;
 
 import com.fern.catalogservice.domain.ProductEntity;
+import com.fern.catalogservice.domain.ProductStatus;
 import com.fern.catalogservice.dto.ProductResponse;
 import com.fern.catalogservice.dto.ProductUpsertRequest;
 import com.fern.catalogservice.repository.ProductRepository;
@@ -62,6 +63,18 @@ public class ProductService {
         }
         ProductResponse before = toResponse(entity);
         apply(entity, principal, request, false);
+        entity = productRepository.save(entity);
+        ProductResponse response = toResponse(entity);
+        publishProductChanged(principal, entity, before, response);
+        return response;
+    }
+
+    @Transactional
+    public ProductResponse deactivate(FernPrincipal principal, Long id) {
+        ProductEntity entity = requireProduct(id);
+        ProductResponse before = toResponse(entity);
+        entity.setStatus(ProductStatus.INACTIVE);
+        entity.setUpdatedByUserId(principal == null ? null : principal.userId());
         entity = productRepository.save(entity);
         ProductResponse response = toResponse(entity);
         publishProductChanged(principal, entity, before, response);

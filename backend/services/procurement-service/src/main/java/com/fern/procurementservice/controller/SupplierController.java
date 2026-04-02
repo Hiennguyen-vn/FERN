@@ -14,9 +14,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/suppliers")
+@Tag(name = "Supplier")
 public class SupplierController {
     private final SupplierService supplierService;
 
@@ -24,11 +27,13 @@ public class SupplierController {
         this.supplierService = supplierService;
     }
 
+    @Operation(summary = "Get Supplier")
     @GetMapping
     public List<SupplierResponse> listSuppliers(@AuthenticationPrincipal FernPrincipal principal) {
         return supplierService.listSuppliers(principal);
     }
 
+    @Operation(summary = "Create or execute Supplier")
     @PostMapping
     public SupplierResponse createSupplier(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -37,6 +42,7 @@ public class SupplierController {
         return supplierService.createSupplier(principal, request);
     }
 
+    @Operation(summary = "Patch Supplier")
     @PatchMapping("/{id}")
     public SupplierResponse updateSupplier(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -46,6 +52,7 @@ public class SupplierController {
         return supplierService.updateSupplier(principal, id, request);
     }
 
+    @Operation(summary = "Create or execute Supplier")
     @PostMapping("/{id}/activate")
     public SupplierResponse activateSupplier(
             @AuthenticationPrincipal FernPrincipal principal,

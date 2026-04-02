@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import {
+  Button,
   DataTable,
   Input,
   MaskedField,
@@ -16,6 +17,7 @@ import { useHrContractBrowse } from '../hooks/useHr'
 import type { HrContract } from '../model/hr.types'
 import { contractUiPolicy } from '../services/contractUiPolicy.service'
 import { getHrErrorMessage } from '../services/hrError.service'
+import { canWriteContracts } from '../services/hrPermission.service'
 import { formatCurrencyAmount, formatDateRange } from '../services/hrReadModel.service'
 
 const statusOptions: SelectOption[] = [
@@ -33,6 +35,7 @@ export function ContractsPage() {
   const navigate = useNavigate()
   const principal = usePrincipal()
   const canReadContracts = contractUiPolicy.canOpenContractsPage(principal)
+  const canCreateContracts = canWriteContracts(principal)
   const canViewSalary = contractUiPolicy.canViewSensitiveFields(principal)
   const [employeeFilter, setEmployeeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -117,6 +120,13 @@ export function ContractsPage() {
     <DashboardLayout
       title="Hợp đồng"
       description="Contract browse workspace cho HR và scope-aware contract review."
+      actions={
+        canCreateContracts ? (
+          <Button asChild size="sm">
+            <Link to="/hr/contracts/new">Create contract</Link>
+          </Button>
+        ) : null
+      }
     >
       <div className="field-grid">
         <Input

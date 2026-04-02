@@ -5,9 +5,15 @@ import type { NavigationItem } from './navigation.types'
 
 const catalogReadPermissions = [
   permissionConstants.catalog.productRead,
+  permissionConstants.catalog.productWrite,
   permissionConstants.catalog.ingredientRead,
+  permissionConstants.catalog.ingredientWrite,
   permissionConstants.catalog.recipeRead,
+  permissionConstants.catalog.recipeWrite,
   permissionConstants.catalog.priceRead,
+  permissionConstants.catalog.priceWrite,
+  permissionConstants.catalog.promotionRead,
+  permissionConstants.catalog.promotionWrite,
 ]
 
 const posNavigationPermissions = [
@@ -27,6 +33,10 @@ const procurementNavigationPermissions = [
 const inventoryNavigationPermissions = [
   permissionConstants.inventory.balanceRead,
   permissionConstants.inventory.ledgerRead,
+  permissionConstants.inventory.adjustmentWrite,
+  permissionConstants.inventory.wasteWrite,
+  permissionConstants.inventory.stockCountWrite,
+  permissionConstants.inventory.stockCountPost,
 ]
 
 const workforceNavigationPermissions = [
@@ -36,6 +46,7 @@ const workforceNavigationPermissions = [
 
 const financeNavigationPermissions = [
   permissionConstants.procurement.supplierRead,
+  permissionConstants.procurement.supplierWrite,
   permissionConstants.procurement.invoiceRead,
   permissionConstants.procurement.invoiceReview,
   permissionConstants.procurement.invoiceApprove,
@@ -43,8 +54,11 @@ const financeNavigationPermissions = [
   permissionConstants.procurement.paymentRead,
   permissionConstants.procurement.paymentRecord,
   permissionConstants.finance.payrollRead,
+  permissionConstants.finance.payrollPrepare,
   permissionConstants.finance.payrollApprove,
   permissionConstants.finance.payrollPay,
+  permissionConstants.finance.configRead,
+  permissionConstants.finance.configWrite,
 ]
 
 const iamReadPermissions = [
@@ -58,8 +72,12 @@ const auditReadPermissions = [permissionConstants.audit.read]
 
 const hrReadPermissions = [
   permissionConstants.hr.employeeRead,
+  permissionConstants.hr.employeeWrite,
   permissionConstants.hr.contractRead,
+  permissionConstants.hr.contractWrite,
   permissionConstants.hr.shiftRead,
+  permissionConstants.hr.shiftWrite,
+  permissionConstants.hr.payrollPrepare,
   permissionConstants.hr.attendanceReview,
   permissionConstants.finance.payrollRead,
   permissionConstants.finance.payrollPrepare,
@@ -68,6 +86,8 @@ const hrReadPermissions = [
 const regionalOpsPermissions = [
   permissionConstants.org.regionRead,
   permissionConstants.org.outletRead,
+  permissionConstants.org.regionWrite,
+  permissionConstants.org.outletWrite,
 ]
 
 export const navigationConfig: NavigationItem[] = [

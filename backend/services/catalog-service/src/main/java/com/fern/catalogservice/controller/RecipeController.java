@@ -19,9 +19,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping
+@Tag(name = "Catalog — Recipes")
 public class RecipeController {
     private final CatalogAuthorizer catalogAuthorizer;
     private final RecipeService recipeService;
@@ -31,24 +34,28 @@ public class RecipeController {
         this.recipeService = recipeService;
     }
 
+    @Operation(summary = "Get Catalog — Recipes")
     @GetMapping("/recipes")
     public List<RecipeResponse> listRecipes(@AuthenticationPrincipal FernPrincipal principal) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
         return recipeService.listRecipes();
     }
 
+    @Operation(summary = "Get Catalog — Recipes")
     @GetMapping("/recipes/{id}")
     public RecipeResponse getRecipe(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
         return recipeService.getRecipe(id);
     }
 
+    @Operation(summary = "Create or execute Catalog — Recipes")
     @PostMapping("/recipes")
     public RecipeResponse createRecipe(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody RecipeUpsertRequest request) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
         return recipeService.createRecipe(principal, request);
     }
 
+    @Operation(summary = "Update Catalog — Recipes")
     @PutMapping("/recipes/{id}")
     public RecipeResponse updateRecipe(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -59,6 +66,7 @@ public class RecipeController {
         return recipeService.updateRecipe(principal, id, request);
     }
 
+    @Operation(summary = "Get Catalog — Recipes")
     @GetMapping("/recipe-versions")
     public List<RecipeVersionResponse> listRecipeVersions(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -68,18 +76,21 @@ public class RecipeController {
         return recipeService.listRecipeVersions(recipeId);
     }
 
+    @Operation(summary = "Get Catalog — Recipes")
     @GetMapping("/recipe-versions/{id}")
     public RecipeVersionResponse getRecipeVersion(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
         return recipeService.getRecipeVersion(id);
     }
 
+    @Operation(summary = "Create or execute Catalog — Recipes")
     @PostMapping("/recipe-versions")
     public RecipeVersionResponse createRecipeVersion(@AuthenticationPrincipal FernPrincipal principal, @Valid @RequestBody RecipeVersionUpsertRequest request) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
         return recipeService.createRecipeVersion(principal, request);
     }
 
+    @Operation(summary = "Update Catalog — Recipes")
     @PutMapping("/recipe-versions/{id}")
     public RecipeVersionResponse updateRecipeVersion(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -90,12 +101,14 @@ public class RecipeController {
         return recipeService.updateRecipeVersion(principal, id, request);
     }
 
+    @Operation(summary = "Create or execute Catalog — Recipes")
     @PostMapping("/recipe-versions/{id}/activate")
     public RecipeVersionResponse activateRecipeVersion(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);
         return recipeService.activateRecipeVersion(principal, id);
     }
 
+    @Operation(summary = "Create or execute Catalog — Recipes")
     @PostMapping("/recipe-versions/{id}/archive")
     public RecipeVersionResponse archiveRecipeVersion(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_WRITE);

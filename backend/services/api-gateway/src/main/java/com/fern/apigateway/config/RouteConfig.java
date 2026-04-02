@@ -60,6 +60,7 @@ public class RouteConfig {
                         "/finance-config/**"
                 ).uri(properties.getFinance()))
                 .route("report-core", r -> r.path("/reports/**").uri(properties.getReport()))
+                .route("notification-ws", r -> r.path("/ws/**").uri(properties.getNotification()))
                 .build();
     }
 }

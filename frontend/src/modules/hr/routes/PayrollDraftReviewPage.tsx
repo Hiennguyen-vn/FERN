@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
@@ -17,7 +17,7 @@ import {
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { maskedEmptyState } from '@shared/utils/tableHelpers'
-import { usePayrollRun } from '../hooks/useHr'
+import { usePayrollRun, useSubmitPayrollRun } from '../hooks/useHr'
 import type { PayrollEmployeeResult } from '../model/hr.types'
 import { getHrErrorMessage } from '../services/hrError.service'
 import {
@@ -37,9 +37,12 @@ export function PayrollDraftReviewPage() {
   const principal = usePrincipal()
   const canReadRun = canReadPayroll(principal)
   const canReadDetail = payrollPrepUiPolicy.canReadDetails(principal)
+  const canPrepareRun = payrollPrepUiPolicy.canPrepare(principal)
   const runQuery = usePayrollRun(runId, {
     enabled: canReadRun && Number.isFinite(runId),
   })
+  const submitPayrollRun = useSubmitPayrollRun()
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const summary = useMemo(
     () => (runQuery.data ? buildPayrollSummary(runQuery.data) : null),
@@ -171,24 +174,46 @@ export function PayrollDraftReviewPage() {
   }
 
   const run = runQuery.data
+  const canSubmitToFinance =
+    canPrepareRun && (run.status.toUpperCase() === 'DRAFT' || run.status.toUpperCase() === 'REJECTED')
+
+  async function handleSubmitToFinance() {
+    setSubmitError(null)
+
+    try {
+      await submitPayrollRun.mutateAsync({ runId: run.id })
+    } catch (error) {
+      setSubmitError(getHrErrorMessage(error, 'Không thể submit payroll run sang Finance.'))
+    }
+  }
 
   return (
     <DashboardLayout
       title="Payroll Draft Review"
       description="Summary + detail + exception review cho payroll draft trước phase finance approval."
       actions={
-        <Button asChild size="sm" variant="secondary">
-          <Link to="/hr/payroll-preparation">Quay lại preparation</Link>
-        </Button>
+        <div className="form-actions">
+          {canSubmitToFinance ? (
+            <Button loading={submitPayrollRun.isPending} onClick={() => void handleSubmitToFinance()} size="sm">
+              Submit to Finance
+            </Button>
+          ) : null}
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/hr/payroll-preparation">Quay lại preparation</Link>
+          </Button>
+        </div>
       }
     >
       <ReadonlyBanner
         message={
-          payrollPrepUiPolicy.isRunReadonly(run.status)
+          run.status.toUpperCase() === 'SUBMITTED'
+            ? 'Payroll run đã được submit sang Finance và sẵn sàng cho approval queue.'
+            : payrollPrepUiPolicy.isRunReadonly(run.status)
             ? 'Payroll run đang ở trạng thái terminal/read-only.'
             : 'HR hiện publish payroll draft review theo chế độ review-first. Approval/payment vẫn thuộc phase Finance tiếp theo.'
         }
       />
+      {submitError ? <ErrorState message={submitError} title="Không thể submit payroll run" /> : null}
 
       <EntityHeader
         eyebrow="HR / Payroll"

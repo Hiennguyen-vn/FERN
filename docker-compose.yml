@@ -1,3 +1,15 @@
+x-app-common: &app-common
+  profiles: [app]
+  restart: unless-stopped
+  environment: &common-env
+    FERN_DB_USERNAME: ${FERN_DB_USERNAME:-fern}
+    FERN_DB_PASSWORD: ${FERN_DB_PASSWORD:-fern}
+    FERN_REDIS_HOST: redis
+    FERN_REDIS_PORT: 6379
+    FERN_REDIS_PASSWORD: ${FERN_REDIS_PASSWORD:-localdev}
+    FERN_KAFKA_BOOTSTRAP_SERVERS: kafka:9094
+    FERN_JWT_SECRET: ${FERN_JWT_SECRET:-fern-local-smoke-secret-0123456789abcdef}
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -61,17 +73,6 @@ services:
   #   docker compose --profile app up -d
   # ---------------------------------------------------------------------------
 
-  x-app-common: &app-common
-    profiles: [app]
-    restart: unless-stopped
-    environment: &common-env
-      FERN_DB_USERNAME: ${FERN_DB_USERNAME:-fern}
-      FERN_DB_PASSWORD: ${FERN_DB_PASSWORD:-fern}
-      FERN_REDIS_HOST: redis
-      FERN_REDIS_PORT: 6379
-      FERN_REDIS_PASSWORD: ${FERN_REDIS_PASSWORD:-localdev}
-      FERN_KAFKA_BOOTSTRAP_SERVERS: kafka:9094
-      FERN_JWT_SECRET: ${FERN_JWT_SECRET:-fern-local-smoke-secret-0123456789abcdef}
 
   iam-service:
     <<: *app-common
@@ -321,6 +322,28 @@ services:
       retries: 10
       start_period: 60s
 
+  notification-service:
+    <<: *app-common
+    image: fern/notification-service:latest
+    container_name: fern-notification
+    ports:
+      - "8092:8092"
+    environment:
+      <<: *common-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8092/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
   api-gateway:
     <<: *app-common
     image: fern/api-gateway:latest
@@ -340,6 +363,7 @@ services:
       FERN_HR_ROUTE_URI: http://hr-service:8089
       FERN_REPORT_ROUTE_URI: http://report-service:8090
       FERN_FINANCE_ROUTE_URI: http://finance-service:8091
+      FERN_NOTIFICATION_ROUTE_URI: http://notification-service:8092
     depends_on:
       postgres:
         condition: service_healthy
@@ -367,9 +391,21 @@ services:
         condition: service_healthy
       finance-service:
         condition: service_healthy
+      notification-service:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 90s
+
+  frontend:
+    image: fern/frontend:latest
+    container_name: fern-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    profiles: [app]

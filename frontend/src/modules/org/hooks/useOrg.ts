@@ -1,7 +1,14 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { orgApi } from '../api/org.api'
 import { orgQueryKeys } from '../api/org.queries'
-import type { CreateOutletPayload, OrgOutlet, OrgRegion } from '../model/org.types'
+import type {
+  CreateOutletPayload,
+  CreateRegionPayload,
+  OrgOutlet,
+  OrgRegion,
+  UpdateOutletPayload,
+  UpdateRegionPayload,
+} from '../model/org.types'
 
 interface OrgQueryOptions {
   enabled?: boolean
@@ -69,6 +76,38 @@ export function useCreateOutlet() {
   return useMutation({
     mutationFn: (payload: CreateOutletPayload) => orgApi.createOutlet(payload),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['org', 'outlets'] })
+    },
+  })
+}
+
+export function useCreateRegion() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: CreateRegionPayload) => orgApi.createRegion(payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['org', 'regions'] })
+    },
+  })
+}
+
+export function useUpdateRegion(regionId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: UpdateRegionPayload) => orgApi.updateRegion(regionId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgQueryKeys.regionDetail(regionId) })
+      void queryClient.invalidateQueries({ queryKey: ['org', 'regions'] })
+    },
+  })
+}
+
+export function useUpdateOutlet(outletId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: UpdateOutletPayload) => orgApi.updateOutlet(outletId, payload),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: orgQueryKeys.outletDetail(outletId) })
       void queryClient.invalidateQueries({ queryKey: ['org', 'outlets'] })
     },
   })

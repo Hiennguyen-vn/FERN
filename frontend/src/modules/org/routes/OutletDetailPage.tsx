@@ -29,6 +29,7 @@ export function OutletDetailPage() {
   const outletId = Number(outletIdParam)
   const principal = usePrincipal()
   const canOpen = orgUiPolicy.canOpenOutletDetail(principal)
+  const canEdit = orgUiPolicy.canOpenOutletEdit(principal)
 
   const outletQuery = useOutlet(outletId, {
     enabled: canOpen && Number.isFinite(outletId) && outletId > 0,
@@ -125,9 +126,16 @@ export function OutletDetailPage() {
       title="Outlet Detail"
       description="Structured detail view cho outlet identity, operational dates và linked region context."
       actions={
-        <Button asChild size="sm" variant="secondary">
-          <Link to="/org/outlets">Back to outlets</Link>
-        </Button>
+        <div className="form-actions align-start">
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/org/outlets">Back to outlets</Link>
+          </Button>
+          {canEdit ? (
+            <Button asChild size="sm">
+              <Link to={`/org/outlets/${outletId}/edit`}>Edit outlet</Link>
+            </Button>
+          ) : null}
+        </div>
       }
     >
       <EntityHeader

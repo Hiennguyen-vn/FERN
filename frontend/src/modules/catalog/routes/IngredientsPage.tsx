@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Card, DataTable, Input, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
+import { Button, Card, DataTable, Input, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
@@ -9,7 +10,7 @@ import { useIngredients } from '../hooks/useIngredients'
 import { useIngredientCategories } from '../hooks/useProducts'
 import type { Ingredient, IngredientStatus } from '../model/catalog.types'
 import { getCatalogErrorMessage } from '../services/catalogError.service'
-import { canReadIngredients } from '../services/catalogPermission.service'
+import { canReadIngredients, canWriteIngredients } from '../services/catalogPermission.service'
 import { matchesSearch } from '../services/catalogReadModel.service'
 
 // Backend IngredientStatus: ACTIVE, INACTIVE, DISCONTINUED
@@ -42,8 +43,10 @@ function IngredientStatusBadge({ status }: { status: IngredientStatus }) {
 
 export function IngredientsPage() {
   usePageTitle('Nguyên liệu — Catalog')
+  const navigate = useNavigate()
   const principal = usePrincipal()
   const canViewIngredients = canReadIngredients(principal)
+  const canWrite = canWriteIngredients(principal) && principal?.scopeRoots?.system === true
   // Backend CatalogAuthorizer.requireSystemPermission gates all ingredient endpoints.
   // Non-system users with catalog.ingredient.read permission will still get a 403 from
   // the backend. Skip the fetch and show a targeted scope warning instead.
@@ -132,8 +135,24 @@ export function IngredientsPage() {
   }
 
   return (
-    <DashboardLayout title="Nguyên liệu" description="Danh mục nguyên liệu dùng cho recipe và inventory planning.">
-      <ReadonlyBanner message="Catalog đang được publish ở chế độ browse/inspect only trong giai đoạn này." />
+    <DashboardLayout
+      title="Nguyên liệu"
+      description="Danh mục nguyên liệu dùng cho recipe và inventory planning."
+      actions={
+        canWrite ? (
+          <Button asChild size="sm">
+            <Link to="/catalog/ingredients/new">+ Create ingredient</Link>
+          </Button>
+        ) : null
+      }
+    >
+      <ReadonlyBanner
+        message={
+          canWrite
+            ? 'Ingredient writes đã được publish cho principal có catalog.ingredient.write + system scope.'
+            : 'Ingredient writes chỉ publish cho principal có catalog.ingredient.write + system scope. Tài khoản hiện tại đang ở chế độ browse.'
+        }
+      />
 
       {!hasSystemScope && (
         <div className="inline-banner inline-banner-warning" role="status">
@@ -190,6 +209,7 @@ export function IngredientsPage() {
         loadingDescription="Đang tải danh sách nguyên liệu..."
         loadingTitle="Đang tải nguyên liệu"
         onRetry={() => void refetch()}
+        onRowClick={canWrite ? (ingredient) => navigate(`/catalog/ingredients/${ingredient.id}/edit`) : undefined}
         rowKey={(ingredient) => ingredient.id}
         rows={filteredRows}
       />

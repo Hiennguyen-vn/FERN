@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/internal/scopes")
+@Tag(name = "Org Scope")
 public class OrgScopeController {
     private final ScopeExpansionService scopeExpansionService;
     private final OrgAuthorizer orgAuthorizer;
@@ -23,6 +26,7 @@ public class OrgScopeController {
         this.orgAuthorizer = orgAuthorizer;
     }
 
+    @Operation(summary = "Create or execute Org Scope")
     @PostMapping("/expand")
     public ExpandedScopeResponse expand(
             @AuthenticationPrincipal FernPrincipal principal,

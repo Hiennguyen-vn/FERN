@@ -13,6 +13,18 @@ export interface HrEmployee {
   userAccountId: number | null
 }
 
+export interface CreateEmployeePayload {
+  employeeCode?: string | null
+  fullName: string
+  dob?: string | null
+  gender?: string | null
+  email?: string | null
+  phone?: string | null
+  status?: string | null
+  hiredAt?: string | null
+  userAccountId?: number | null
+}
+
 export interface HrContract {
   id: number
   employeeId: number
@@ -26,6 +38,18 @@ export interface HrContract {
   endDate: string | null
 }
 
+export interface CreateContractPayload {
+  employeeId: number
+  employmentType: string
+  salaryType: string
+  baseSalary: number
+  regionId?: number | null
+  taxCode?: string | null
+  contractStatus?: string | null
+  startDate: string
+  endDate?: string | null
+}
+
 export interface HrAssignment {
   id: number
   employeeId: number
@@ -36,6 +60,17 @@ export interface HrAssignment {
   endDate: string | null
   primaryAssignment: boolean
   status: string
+}
+
+export interface CreateAssignmentPayload {
+  employeeId: number
+  regionId: number
+  outletId: number
+  positionTitle: string
+  startDate: string
+  endDate?: string | null
+  primaryAssignment?: boolean | null
+  status?: string | null
 }
 
 export interface HrAttendanceEvent {

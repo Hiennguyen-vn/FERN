@@ -21,9 +21,12 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/reports/exports")
+@Tag(name = "Report Export")
 public class ReportExportController {
     private final ReportService reportService;
 
@@ -31,6 +34,7 @@ public class ReportExportController {
         this.reportService = reportService;
     }
 
+    @Operation(summary = "Create or execute Report Export")
     @PostMapping
     public ExportJobResponse createExport(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -41,6 +45,7 @@ public class ReportExportController {
         return reportService.createExport(principal, request, idempotencyKey, correlationId);
     }
 
+    @Operation(summary = "Get Report Export")
     @GetMapping("/{jobId}")
     public ExportJobResponse getExport(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -49,6 +54,7 @@ public class ReportExportController {
         return reportService.getExport(principal, jobId);
     }
 
+    @Operation(summary = "Get Report Export")
     @GetMapping
     public PageResponse<ExportJobResponse> listExports(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -62,6 +68,7 @@ public class ReportExportController {
         return reportService.listExports(principal, page, size, dataset, status, regionId, outletId);
     }
 
+    @Operation(summary = "Get Report Export")
     @GetMapping("/{jobId}/preview")
     public ExportPreviewResponse previewExport(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -70,6 +77,7 @@ public class ReportExportController {
         return reportService.previewExport(principal, jobId);
     }
 
+    @Operation(summary = "Get Report Export")
     @GetMapping("/{jobId}/download")
     public ResponseEntity<Resource> downloadExport(
             @AuthenticationPrincipal FernPrincipal principal,

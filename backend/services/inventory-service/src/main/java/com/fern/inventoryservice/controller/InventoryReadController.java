@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping
+@Tag(name = "Inventory")
 public class InventoryReadController {
     private final InventoryService inventoryService;
 
@@ -21,6 +24,7 @@ public class InventoryReadController {
         this.inventoryService = inventoryService;
     }
 
+    @Operation(summary = "Get Inventory")
     @GetMapping("/stock-balances")
     public PageResponse<StockBalanceResponse> listStockBalances(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -32,6 +36,7 @@ public class InventoryReadController {
         return inventoryService.listStockBalances(principal, outletId, ingredientId, page, size);
     }
 
+    @Operation(summary = "Get Inventory")
     @GetMapping("/inventory-transactions")
     public PageResponse<InventoryTransactionResponse> listInventoryTransactions(
             @AuthenticationPrincipal FernPrincipal principal,

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import {
   Badge,
@@ -51,7 +52,7 @@ export function ShiftSchedulingPage() {
       : undefined,
   )
 
-  const assignmentsQuery = useShiftAssignments(selectedSchedule?.id ?? null)
+  const assignmentsQuery = useShiftAssignments(canRead ? (selectedSchedule?.id ?? null) : null)
 
   const [newSchedule, setNewSchedule] = useState({
     shiftName: '',
@@ -72,10 +73,10 @@ export function ShiftSchedulingPage() {
   const { getError: getScheduleFieldError } = useFieldErrors(createScheduleMutation.error)
   const { getError: getAssignFieldError } = useFieldErrors(createAssignmentMutation.error)
 
-  if (!canRead) {
+  if (!canRead && !canWrite) {
     return (
       <DashboardLayout description="Manage shift schedules for your outlet." title="Shift Scheduling">
-        <PermissionDeniedInline message="You need hr.shift.read permission to view shift schedules." />
+        <PermissionDeniedInline message="Bạn cần hr.shift.read hoặc hr.shift.write để mở shift scheduling." />
       </DashboardLayout>
     )
   }
@@ -84,28 +85,39 @@ export function ShiftSchedulingPage() {
     <DashboardLayout
       description="Manage shift schedules and assign employees to shifts."
       title="Shift Scheduling"
+      actions={
+        canWrite ? (
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/hr/assignments/new">Create employee assignment</Link>
+          </Button>
+        ) : null
+      }
     >
       <div className="page-stack">
+        {!canRead ? (
+          <ReadonlyBanner message="Tài khoản hiện tại có quyền write nhưng không có hr.shift.read. Trang này vẫn publish các thao tác tạo shift schedule và employee assignment, nhưng không tải danh sách hiện có." />
+        ) : null}
         {(!selectedOutletId || !selectedRegionId) && (
           <ReadonlyBanner message="Chọn region và outlet từ thanh điều hướng để quản lý shift schedules." />
         )}
-        {/* Filters */}
-        <Card title="Date Range Filter">
-          <div className="field-grid">
-            <Input
-              label="From Date"
-              onChange={(e) => setDateRange((prev) => ({ ...prev, fromDate: e.target.value }))}
-              type="date"
-              value={dateRange.fromDate}
-            />
-            <Input
-              label="To Date"
-              onChange={(e) => setDateRange((prev) => ({ ...prev, toDate: e.target.value }))}
-              type="date"
-              value={dateRange.toDate}
-            />
-          </div>
-        </Card>
+        {canRead ? (
+          <Card title="Date Range Filter">
+            <div className="field-grid">
+              <Input
+                label="From Date"
+                onChange={(e) => setDateRange((prev) => ({ ...prev, fromDate: e.target.value }))}
+                type="date"
+                value={dateRange.fromDate}
+              />
+              <Input
+                label="To Date"
+                onChange={(e) => setDateRange((prev) => ({ ...prev, toDate: e.target.value }))}
+                type="date"
+                value={dateRange.toDate}
+              />
+            </div>
+          </Card>
+        ) : null}
 
         {/* Create Shift Schedule Form */}
         {canWrite && !showCreateForm && (
@@ -197,44 +209,46 @@ export function ShiftSchedulingPage() {
         )}
 
         {/* Shift Schedule Table */}
-        <DataTable<ShiftSchedule>
-          columns={[
-            { key: 'id', header: 'ID', render: (row) => <>{row.id}</> },
-            { key: 'shiftName', header: 'Shift Name', render: (row) => <>{row.shiftName}</> },
-            { key: 'shiftDate', header: 'Date', render: (row) => <>{row.shiftDate}</> },
-            { key: 'startTime', header: 'Start', render: (row) => <>{row.startTime}</> },
-            { key: 'endTime', header: 'End', render: (row) => <>{row.endTime}</> },
-            {
-              key: 'status',
-              header: 'Status',
-              render: (row) => <Badge tone={statusTone(row.status)}>{row.status}</Badge>,
-            },
-            {
-              key: 'actions',
-              header: 'Actions',
-              render: (row) => (
-                <Button
-                  onClick={() => {
-                    setSelectedSchedule(row)
-                    setShowAssignForm(false)
-                  }}
-                  size="sm"
-                  variant="secondary"
-                >
-                  View Assignments
-                </Button>
-              ),
-            },
-          ]}
-          error={schedulesQuery.error ? (schedulesQuery.error instanceof Error ? schedulesQuery.error.message : 'Failed to load shifts') : null}
-          loading={schedulesQuery.isLoading}
-          onRetry={() => void schedulesQuery.refetch()}
-          rowKey={(row) => row.id}
-          rows={schedulesQuery.data ?? []}
-        />
+        {canRead ? (
+          <DataTable<ShiftSchedule>
+            columns={[
+              { key: 'id', header: 'ID', render: (row) => <>{row.id}</> },
+              { key: 'shiftName', header: 'Shift Name', render: (row) => <>{row.shiftName}</> },
+              { key: 'shiftDate', header: 'Date', render: (row) => <>{row.shiftDate}</> },
+              { key: 'startTime', header: 'Start', render: (row) => <>{row.startTime}</> },
+              { key: 'endTime', header: 'End', render: (row) => <>{row.endTime}</> },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (row) => <Badge tone={statusTone(row.status)}>{row.status}</Badge>,
+              },
+              {
+                key: 'actions',
+                header: 'Actions',
+                render: (row) => (
+                  <Button
+                    onClick={() => {
+                      setSelectedSchedule(row)
+                      setShowAssignForm(false)
+                    }}
+                    size="sm"
+                    variant="secondary"
+                  >
+                    View Assignments
+                  </Button>
+                ),
+              },
+            ]}
+            error={schedulesQuery.error ? (schedulesQuery.error instanceof Error ? schedulesQuery.error.message : 'Failed to load shifts') : null}
+            loading={schedulesQuery.isLoading}
+            onRetry={() => void schedulesQuery.refetch()}
+            rowKey={(row) => row.id}
+            rows={schedulesQuery.data ?? []}
+          />
+        ) : null}
 
         {/* Selected Shift Assignment Detail */}
-        {selectedSchedule && (
+        {canRead && selectedSchedule && (
           <Card title={`Assignments for "${selectedSchedule.shiftName}" — ${selectedSchedule.shiftDate}`}>
             <DataTable<ShiftAssignment>
               columns={[

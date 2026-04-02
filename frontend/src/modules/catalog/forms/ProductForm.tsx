@@ -68,6 +68,7 @@ export function ProductForm({ initial, categories, onSubmit, onCancel, submittin
             value={form.status}
             onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as ProductStatus }))}
           >
+            <option value="DRAFT">Draft</option>
             <option value="ACTIVE">Đang bán</option>
             <option value="INACTIVE">Ngừng bán</option>
             <option value="DISCONTINUED">Ngừng kinh doanh</option>

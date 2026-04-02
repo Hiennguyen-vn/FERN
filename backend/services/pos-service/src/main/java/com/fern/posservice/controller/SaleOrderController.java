@@ -21,9 +21,12 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/sale-orders")
+@Tag(name = "Sale Order")
 public class SaleOrderController {
     private final PosOrderService posOrderService;
 
@@ -31,6 +34,7 @@ public class SaleOrderController {
         this.posOrderService = posOrderService;
     }
 
+    @Operation(summary = "Create or execute Sale Order")
     @PostMapping
     public SaleOrderResponse createOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -39,6 +43,7 @@ public class SaleOrderController {
         return posOrderService.createOrder(principal, request);
     }
 
+    @Operation(summary = "Get Sale Order")
     @GetMapping
     public List<SaleOrderResponse> listOrders(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -49,6 +54,7 @@ public class SaleOrderController {
                 ListQueryDefaults.clampLimit(limit));
     }
 
+    @Operation(summary = "Get Sale Order")
     @GetMapping("/{id}")
     public SaleOrderResponse getOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -57,6 +63,7 @@ public class SaleOrderController {
         return posOrderService.getOrder(principal, id);
     }
 
+    @Operation(summary = "Get Sale Order")
     @GetMapping("/{id}/snapshot")
     public Map<String, Object> getSaleOrderSnapshot(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -65,6 +72,7 @@ public class SaleOrderController {
         return posOrderService.getSaleOrderSnapshot(principal, id);
     }
 
+    @Operation(summary = "Patch Sale Order")
     @PatchMapping("/{id}")
     public SaleOrderResponse updateOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -74,6 +82,7 @@ public class SaleOrderController {
         return posOrderService.updateOrder(principal, id, request);
     }
 
+    @Operation(summary = "Create or execute Sale Order")
     @PostMapping("/{id}/payments")
     public SaleOrderResponse addPayment(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -85,6 +94,7 @@ public class SaleOrderController {
         return posOrderService.addPayment(principal, id, idempotencyKey, correlationId, request);
     }
 
+    @Operation(summary = "Create or execute Sale Order")
     @PostMapping("/{id}/complete")
     public SaleOrderResponse completeOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -94,6 +104,7 @@ public class SaleOrderController {
         return posOrderService.completeOrder(principal, id, correlationId);
     }
 
+    @Operation(summary = "Create or execute Sale Order")
     @PostMapping("/{id}/cancel")
     public SaleOrderResponse cancelOrder(
             @AuthenticationPrincipal FernPrincipal principal,

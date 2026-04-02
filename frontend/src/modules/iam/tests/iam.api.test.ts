@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { httpClient } from '@core/api/httpClient'
+import { gatewayClient } from '@core/api/gatewayClient'
 import { iamApi } from '../api/iam.api'
 
 describe('iam.api', () => {
@@ -8,7 +8,7 @@ describe('iam.api', () => {
   })
 
   it('uses published IAM read endpoints', async () => {
-    const getSpy = vi.spyOn(httpClient, 'get').mockResolvedValue({ data: {} } as any)
+    const getSpy = vi.spyOn(gatewayClient, 'get').mockResolvedValue({ data: {} } as any)
 
     await iamApi.getUser(1)
     await iamApi.getRoles()
@@ -24,9 +24,9 @@ describe('iam.api', () => {
   })
 
   it('calls correct paths for IAM admin write operations', async () => {
-    const postSpy = vi.spyOn(httpClient, 'post').mockResolvedValue({ data: {} } as any)
-    const patchSpy = vi.spyOn(httpClient, 'patch').mockResolvedValue({ data: {} } as any)
-    const putSpy = vi.spyOn(httpClient, 'put').mockResolvedValue({ data: {} } as any)
+    const postSpy = vi.spyOn(gatewayClient, 'post').mockResolvedValue({ data: {} } as any)
+    const patchSpy = vi.spyOn(gatewayClient, 'patch').mockResolvedValue({ data: {} } as any)
+    const putSpy = vi.spyOn(gatewayClient, 'put').mockResolvedValue({ data: {} } as any)
 
     await iamApi.createUser({ username: 'alice' } as any)
     await iamApi.updateUser(7, { fullName: 'Alice' } as any)

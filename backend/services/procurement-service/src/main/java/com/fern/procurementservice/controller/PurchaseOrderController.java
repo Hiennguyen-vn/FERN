@@ -17,9 +17,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/purchase-orders")
+@Tag(name = "Purchase Order")
 public class PurchaseOrderController {
     private final PurchaseFlowService purchaseFlowService;
 
@@ -27,6 +30,7 @@ public class PurchaseOrderController {
         this.purchaseFlowService = purchaseFlowService;
     }
 
+    @Operation(summary = "Get Purchase Order")
     @GetMapping
     public List<PurchaseOrderResponse> listPurchaseOrders(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -38,6 +42,7 @@ public class PurchaseOrderController {
         return purchaseFlowService.listPurchaseOrders(principal, outletId, supplierId, status, ListQueryDefaults.clampLimit(limit));
     }
 
+    @Operation(summary = "Create or execute Purchase Order")
     @PostMapping
     public PurchaseOrderResponse createPurchaseOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -46,6 +51,7 @@ public class PurchaseOrderController {
         return purchaseFlowService.createPurchaseOrder(principal, request);
     }
 
+    @Operation(summary = "Get Purchase Order")
     @GetMapping("/{id}")
     public PurchaseOrderResponse getPurchaseOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -54,6 +60,7 @@ public class PurchaseOrderController {
         return purchaseFlowService.getPurchaseOrder(principal, id);
     }
 
+    @Operation(summary = "Patch Purchase Order")
     @PatchMapping("/{id}")
     public PurchaseOrderResponse updatePurchaseOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -63,6 +70,7 @@ public class PurchaseOrderController {
         return purchaseFlowService.updatePurchaseOrder(principal, id, request);
     }
 
+    @Operation(summary = "Create or execute Purchase Order")
     @PostMapping("/{id}/submit")
     public PurchaseOrderResponse submitPurchaseOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -71,6 +79,7 @@ public class PurchaseOrderController {
         return purchaseFlowService.submitPurchaseOrder(principal, id);
     }
 
+    @Operation(summary = "Create or execute Purchase Order")
     @PostMapping("/{id}/approve")
     public PurchaseOrderResponse approvePurchaseOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -79,6 +88,7 @@ public class PurchaseOrderController {
         return purchaseFlowService.approvePurchaseOrder(principal, id);
     }
 
+    @Operation(summary = "Create or execute Purchase Order")
     @PostMapping("/{id}/issue")
     public PurchaseOrderResponse issuePurchaseOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -87,6 +97,7 @@ public class PurchaseOrderController {
         return purchaseFlowService.issuePurchaseOrder(principal, id);
     }
 
+    @Operation(summary = "Create or execute Purchase Order")
     @PostMapping("/{id}/cancel")
     public PurchaseOrderResponse cancelPurchaseOrder(
             @AuthenticationPrincipal FernPrincipal principal,

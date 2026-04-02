@@ -1,14 +1,21 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Badge, Card, DataTable, EmptyState, ErrorState, Input, Pagination, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
+import { Badge, Button, Card, DataTable, EmptyState, ErrorState, Input, Pagination, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useStockBalances } from '../hooks/useStockBalances'
 import type { StockBalance } from '../model/inventory.types'
-import { canReadStockBalances } from '../services/inventoryPermission.service'
+import {
+  canCreateStockAdjustments,
+  canCreateStockCountSessions,
+  canCreateWasteRecords,
+  canReadStockBalances,
+} from '../services/inventoryPermission.service'
 import { toOptionalNumber } from '@shared/validators/parseInput'
+import { useIngredients } from '@modules/catalog/hooks/useIngredients'
 
 
 export function StockOverviewPage() {
@@ -21,6 +28,19 @@ export function StockOverviewPage() {
   const size = 20
 
   const hasPermission = canReadStockBalances(principal)
+  const canCreateAdjustment = canCreateStockAdjustments(principal)
+  const canCreateWaste = canCreateWasteRecords(principal)
+  const canCreateStockCount = canCreateStockCountSessions(principal)
+
+  // Fetch all ingredients to resolve IDs → names in the table
+  const ingredientsQuery = useIngredients()
+  const ingredientNameMap = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const ing of ingredientsQuery.data ?? []) {
+      map.set(ing.id, ing.name)
+    }
+    return map
+  }, [ingredientsQuery.data])
 
   const query = useStockBalances(
     selectedOutletId
@@ -34,7 +54,11 @@ export function StockOverviewPage() {
   )
 
   const columns: Array<DataTableColumn<StockBalance>> = [
-    { key: 'ingredientId', header: 'Ingredient', render: (row) => `#${row.ingredientId}` },
+    {
+      key: 'ingredientId',
+      header: 'Ingredient',
+      render: (row) => ingredientNameMap.get(row.ingredientId) ?? `#${row.ingredientId}`,
+    },
     { key: 'qtyOnHand', header: 'On hand', render: (row) => row.qtyOnHand },
     { key: 'qtyReserved', header: 'Reserved', render: (row) => row.qtyReserved },
     {
@@ -60,6 +84,25 @@ export function StockOverviewPage() {
     <DashboardLayout
       description="Read live stock balances for the currently selected outlet."
       title="Stock Overview"
+      actions={
+        <div className="form-actions align-start">
+          {canCreateAdjustment ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to="/inventory/stock-adjustments/new">Stock adjustment</Link>
+            </Button>
+          ) : null}
+          {canCreateWaste ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to="/inventory/waste-records/new">Waste record</Link>
+            </Button>
+          ) : null}
+          {canCreateStockCount ? (
+            <Button asChild size="sm">
+              <Link to="/inventory/stock-count-sessions/new">Stock count</Link>
+            </Button>
+          ) : null}
+        </div>
+      }
     >
       {!selectedOutletId ? (
         <>

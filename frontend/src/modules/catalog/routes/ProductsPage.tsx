@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Card, DataTable, Input, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
+import { Button, Card, DataTable, Input, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
@@ -10,7 +10,7 @@ import { ProductStatusBadge, STATUS_LABELS } from '../components/ProductStatusBa
 import { useProductCategories, useProducts } from '../hooks/useProducts'
 import type { Product, ProductStatus } from '../model/catalog.types'
 import { getCatalogErrorMessage } from '../services/catalogError.service'
-import { canReadProducts } from '../services/catalogPermission.service'
+import { canReadProducts, canWriteProducts } from '../services/catalogPermission.service'
 import { matchesSearch } from '../services/catalogReadModel.service'
 
 // Backend ProductStatus: DRAFT, ACTIVE, INACTIVE, DISCONTINUED
@@ -27,6 +27,7 @@ export function ProductsPage() {
   const navigate = useNavigate()
   const principal = usePrincipal()
   const canViewProducts = canReadProducts(principal)
+  const canWrite = canWriteProducts(principal) && principal?.scopeRoots?.system === true
   const { data: products = [], error, isLoading, refetch } = useProducts({ enabled: canViewProducts })
   const {
     data: categories = [],
@@ -112,8 +113,24 @@ export function ProductsPage() {
   }
 
   return (
-    <DashboardLayout title="Sản phẩm" description="Browse và inspect danh mục sản phẩm đang được publish.">
-      <ReadonlyBanner message="Catalog đang được publish ở chế độ browse/inspect only trong giai đoạn này." />
+    <DashboardLayout
+      title="Sản phẩm"
+      description="Browse và inspect danh mục sản phẩm đang được publish."
+      actions={
+        canWrite ? (
+          <Button asChild size="sm">
+            <Link to="/catalog/products/new">+ Create product</Link>
+          </Button>
+        ) : null
+      }
+    >
+      <ReadonlyBanner
+        message={
+          canWrite
+            ? 'Catalog product writes đã được publish cho principal có catalog.product.write + system scope. Detail page hỗ trợ tiếp tục sang edit.'
+            : 'Catalog product writes chỉ publish cho principal có catalog.product.write + system scope. Tài khoản hiện tại đang ở chế độ browse/inspect.'
+        }
+      />
 
       <Card title="Bộ lọc sản phẩm">
         <div className="field-grid">

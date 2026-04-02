@@ -16,9 +16,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/regions")
+@Tag(name = "Region")
 public class RegionController {
     private final RegionService regionService;
 
@@ -26,6 +29,7 @@ public class RegionController {
         this.regionService = regionService;
     }
 
+    @Operation(summary = "Create or execute Region")
     @PostMapping
     public RegionResponse create(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -34,6 +38,7 @@ public class RegionController {
         return regionService.create(principal, request);
     }
 
+    @Operation(summary = "Get Region")
     @GetMapping
     public PageResponse<RegionResponse> list(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -44,11 +49,13 @@ public class RegionController {
         return regionService.list(principal, search, page, size);
     }
 
+    @Operation(summary = "Get Region")
     @GetMapping("/{id}")
     public RegionResponse get(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         return regionService.get(principal, id);
     }
 
+    @Operation(summary = "Patch Region")
     @PatchMapping("/{id}")
     public RegionResponse update(
             @AuthenticationPrincipal FernPrincipal principal,

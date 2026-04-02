@@ -59,7 +59,12 @@ public class OrgOutboxPublisher {
                 maxAttempts
         )) {
             try {
-                kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()).join();
+                String correlationId = JdbcOutboxPublisherSupport.extractCorrelationId(event.payload());
+                org.apache.kafka.clients.producer.ProducerRecord<String, String> record = new org.apache.kafka.clients.producer.ProducerRecord<>(event.eventType(), event.partitionKey(), event.payload());
+                if (correlationId != null) {
+                    record.headers().add("X-Correlation-Id", correlationId.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                }
+                kafkaTemplate.send(record).join();
                 JdbcOutboxPublisherSupport.markPublished(jdbcTemplate, "org.outbox_event", event.id(), clock.instant());
             } catch (RuntimeException exception) {
                 String failureReason = ExceptionSummaries.safeSummary(exception);

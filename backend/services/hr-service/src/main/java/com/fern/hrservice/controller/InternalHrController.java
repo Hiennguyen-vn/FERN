@@ -13,9 +13,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/internal/hr")
+@Tag(name = "HR — Internal")
 public class InternalHrController {
     private final HrAuthorizer hrAuthorizer;
     private final HrService hrService;
@@ -25,6 +28,7 @@ public class InternalHrController {
         this.hrService = hrService;
     }
 
+    @Operation(summary = "Get HR — Internal")
     @GetMapping("/effective-contracts")
     public List<EffectiveContractResponse> effectiveContracts(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -36,6 +40,7 @@ public class InternalHrController {
         return hrService.findEffectiveContracts(regionId, startDate, endDate);
     }
 
+    @Operation(summary = "Get HR — Internal")
     @GetMapping("/approved-attendance")
     public List<ApprovedAttendanceResponse> approvedAttendance(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -47,6 +52,7 @@ public class InternalHrController {
         return hrService.findApprovedAttendance(regionId, startDate, endDate);
     }
 
+    @Operation(summary = "Get HR — Internal")
     @GetMapping("/approved-attendance/by-employee")
     public List<ApprovedAttendanceResponse> approvedAttendanceByEmployee(
             @AuthenticationPrincipal FernPrincipal principal,

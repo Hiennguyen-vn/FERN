@@ -20,9 +20,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping
+@Tag(name = "Inventory")
 public class InventoryCommandController {
     private final StockAdjustmentService stockAdjustmentService;
     private final WasteRecordService wasteRecordService;
@@ -38,6 +41,7 @@ public class InventoryCommandController {
         this.stockCountService = stockCountService;
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/stock-adjustments")
     public StockAdjustmentResponse createStockAdjustment(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -46,6 +50,7 @@ public class InventoryCommandController {
         return stockAdjustmentService.createStockAdjustment(principal, request);
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/stock-adjustments/{id}/post")
     public StockAdjustmentResponse postStockAdjustment(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -55,6 +60,7 @@ public class InventoryCommandController {
         return stockAdjustmentService.postStockAdjustment(principal, id, idempotencyKey);
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/stock-adjustments/{id}/cancel")
     public StockAdjustmentResponse cancelStockAdjustment(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -63,6 +69,7 @@ public class InventoryCommandController {
         return stockAdjustmentService.cancelStockAdjustment(principal, id);
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/waste-records")
     public WasteRecordResponse createWasteRecord(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -71,6 +78,7 @@ public class InventoryCommandController {
         return wasteRecordService.createWasteRecord(principal, request);
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/waste-records/{id}/post")
     public WasteRecordResponse postWasteRecord(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -80,6 +88,7 @@ public class InventoryCommandController {
         return wasteRecordService.postWasteRecord(principal, id, idempotencyKey);
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/waste-records/{id}/cancel")
     public WasteRecordResponse cancelWasteRecord(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -88,6 +97,7 @@ public class InventoryCommandController {
         return wasteRecordService.cancelWasteRecord(principal, id);
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/stock-count-sessions")
     public StockCountSessionResponse createStockCountSession(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -96,6 +106,7 @@ public class InventoryCommandController {
         return stockCountService.createStockCountSession(principal, request);
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/stock-count-sessions/{id}/start")
     public StockCountSessionResponse startStockCountSession(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -104,6 +115,7 @@ public class InventoryCommandController {
         return stockCountService.startStockCountSession(principal, id);
     }
 
+    @Operation(summary = "Update Inventory")
     @PutMapping("/stock-count-sessions/{id}/lines")
     public StockCountSessionResponse updateStockCountLines(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -113,6 +125,7 @@ public class InventoryCommandController {
         return stockCountService.updateStockCountLines(principal, id, request);
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/stock-count-sessions/{id}/post")
     public StockCountSessionResponse postStockCountSession(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -122,6 +135,7 @@ public class InventoryCommandController {
         return stockCountService.postStockCountSession(principal, id, idempotencyKey);
     }
 
+    @Operation(summary = "Create or execute Inventory")
     @PostMapping("/stock-count-sessions/{id}/cancel")
     public StockCountSessionResponse cancelStockCountSession(
             @AuthenticationPrincipal FernPrincipal principal,

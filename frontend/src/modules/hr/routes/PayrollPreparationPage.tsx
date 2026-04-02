@@ -23,6 +23,7 @@ import {
   useCreatePayrollRun,
   usePayrollPeriods,
   usePayrollRuns,
+  useSubmitPayrollRun,
 } from '../hooks/useHr'
 import type { PayrollPeriod, PayrollRun } from '../model/hr.types'
 import { getHrErrorMessage } from '../services/hrError.service'
@@ -63,6 +64,7 @@ export function PayrollPreparationPage() {
   })
   const [periodError, setPeriodError] = useState<string | null>(null)
   const [runError, setRunError] = useState<string | null>(null)
+  const [failedRunId, setFailedRunId] = useState<number | null>(null)
 
   const activeRegionId = toOptionalNumber(selectedRegion)
   const canQuery = Boolean(activeRegionId) || Boolean(principal?.scopeRoots.system)
@@ -70,6 +72,8 @@ export function PayrollPreparationPage() {
   const runsQuery = usePayrollRuns(activeRegionId, { enabled: canRead && canQuery })
   const createPayrollPeriod = useCreatePayrollPeriod()
   const createPayrollRun = useCreatePayrollRun()
+  const submitPayrollRun = useSubmitPayrollRun()
+  const isSubmittingRun = createPayrollRun.isPending || submitPayrollRun.isPending
 
   const regionOptions = useMemo<SelectOption[]>(
     () => regionIds.map((regionId) => ({ label: `Region #${regionId}`, value: String(regionId) })),
@@ -184,6 +188,7 @@ export function PayrollPreparationPage() {
 
   async function handleCreateRun() {
     setRunError(null)
+    setFailedRunId(null)
     // parsePositiveInt rejects 0, negatives, and non-integers (backend: payrollPeriodId @NotNull Long)
     const payrollPeriodId = parsePositiveInt(runForm.payrollPeriodId)
     if (!payrollPeriodId) {
@@ -191,15 +196,35 @@ export function PayrollPreparationPage() {
       return
     }
 
+    let run: { id: number }
     try {
-      const run = await createPayrollRun.mutateAsync({
+      run = await createPayrollRun.mutateAsync({
         note: runForm.note.trim() || undefined,
         payrollPeriodId,
         runDate: runForm.runDate || undefined,
       })
-      navigate(`/hr/payroll-draft-review/${run.id}`)
     } catch (error) {
       setRunError(getHrErrorMessage(error, 'Không thể prepare payroll draft run.'))
+      return
+    }
+
+    const runId = Number(run.id)
+    if (!Number.isFinite(runId) || runId <= 0) {
+      setRunError('Payroll draft đã được tạo nhưng response không trả về runId hợp lệ để submit sang Finance.')
+      return
+    }
+
+    try {
+      await submitPayrollRun.mutateAsync({ runId })
+      navigate(`/hr/payroll-draft-review/${runId}`)
+    } catch (error) {
+      const detail = getHrErrorMessage(error, '').trim()
+      setFailedRunId(runId)
+      setRunError(
+        detail
+          ? `Đã tạo payroll draft #${runId} nhưng chưa submit sang Finance. ${detail}`
+          : `Đã tạo payroll draft #${runId} nhưng chưa submit sang Finance.`,
+      )
     }
   }
 
@@ -221,7 +246,7 @@ export function PayrollPreparationPage() {
       ) : !canPrepare ? (
         <ReadonlyBanner message="Bạn đang ở chế độ read-only. Cần finance.payroll.prepare để tạo payroll period hoặc prepare payroll run." />
       ) : (
-        <ReadonlyBanner message="Payroll preparation hiện publish ở workflow-first mode: tạo period, prepare draft, rồi review draft run ở màn kế tiếp." />
+        <ReadonlyBanner message="Payroll preparation hiện publish ở workflow-first mode: tạo period, prepare + submit payroll run, rồi review run ở màn kế tiếp." />
       )}
 
       <FormSection description="Region scope quyết định period và runs nào được hiển thị hoặc prepare." title="Preparation context">
@@ -331,13 +356,14 @@ export function PayrollPreparationPage() {
             />
             <FormActions
               primaryAction={
-                <Button loading={createPayrollRun.isPending} onClick={() => void handleCreateRun()} size="sm">
-                  Prepare draft run
+                <Button loading={isSubmittingRun} onClick={() => void handleCreateRun()} size="sm">
+                  Prepare and submit payroll run
                 </Button>
               }
               secondaryAction={
                 periodsQuery.data && periodsQuery.data.length > 0 ? (
                   <Button
+                    disabled={isSubmittingRun}
                     onClick={() =>
                       setRunForm((current) => ({
                         ...current,
@@ -353,6 +379,18 @@ export function PayrollPreparationPage() {
               }
             />
             {runError ? <p className="error-text">{runError}</p> : null}
+            {failedRunId ? (
+              <div className="form-actions">
+                <Button
+                  disabled={isSubmittingRun}
+                  onClick={() => navigate(`/hr/payroll-draft-review/${failedRunId}`)}
+                  size="sm"
+                  variant="secondary"
+                >
+                  Open created draft run
+                </Button>
+              </div>
+            ) : null}
           </>
         ) : (
           <PermissionDeniedInline message="Bạn cần finance.payroll.prepare để prepare payroll draft run." />

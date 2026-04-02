@@ -16,9 +16,12 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/supplier-payments")
+@Tag(name = "Supplier Payment")
 public class SupplierPaymentController {
     private final PayablesService payablesService;
 
@@ -26,6 +29,7 @@ public class SupplierPaymentController {
         this.payablesService = payablesService;
     }
 
+    @Operation(summary = "Get Supplier Payment")
     @GetMapping
     public java.util.List<SupplierPaymentResponse> listSupplierPayments(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -38,6 +42,7 @@ public class SupplierPaymentController {
         return payablesService.listSupplierPayments(principal, ListQueryDefaults.clampLimit(limit));
     }
 
+    @Operation(summary = "Create or execute Supplier Payment")
     @PostMapping
     public SupplierPaymentResponse createSupplierPayment(
             @AuthenticationPrincipal FernPrincipal principal,

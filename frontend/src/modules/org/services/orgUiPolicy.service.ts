@@ -1,5 +1,10 @@
 import type { FernPrincipal } from '@core/auth/auth.types'
-import { canReadOutlets, canReadRegions, canWriteOutlets } from './orgPermission.service'
+import {
+  canReadOutlets,
+  canReadRegions,
+  canWriteOutlets,
+  canWriteRegions,
+} from './orgPermission.service'
 
 export const orgUiPolicy = {
   canOpenRegionsPage(principal: FernPrincipal | null) {
@@ -8,6 +13,14 @@ export const orgUiPolicy = {
 
   canOpenRegionDetail(principal: FernPrincipal | null) {
     return canReadRegions(principal)
+  },
+
+  canOpenRegionCreate(principal: FernPrincipal | null) {
+    return canWriteRegions(principal)
+  },
+
+  canOpenRegionEdit(principal: FernPrincipal | null) {
+    return canWriteRegions(principal)
   },
 
   canOpenOutletsPage(principal: FernPrincipal | null) {
@@ -19,6 +32,10 @@ export const orgUiPolicy = {
   },
 
   canOpenOutletCreate(principal: FernPrincipal | null) {
+    return canWriteOutlets(principal)
+  },
+
+  canOpenOutletEdit(principal: FernPrincipal | null) {
     return canWriteOutlets(principal)
   },
 }

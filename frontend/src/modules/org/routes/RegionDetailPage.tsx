@@ -27,6 +27,7 @@ export function RegionDetailPage() {
   const regionId = Number(regionIdParam)
   const principal = usePrincipal()
   const canOpen = orgUiPolicy.canOpenRegionDetail(principal)
+  const canEdit = orgUiPolicy.canOpenRegionEdit(principal)
 
   const regionQuery = useRegion(regionId, {
     enabled: canOpen && Number.isFinite(regionId) && regionId > 0,
@@ -123,12 +124,25 @@ export function RegionDetailPage() {
       title="Region Detail"
       description="Structured detail view cho timezone, currency và hierarchy context của region."
       actions={
-        <Button asChild size="sm" variant="secondary">
-          <Link to="/org/regions">Back to regions</Link>
-        </Button>
+        <div className="form-actions align-start">
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/org/regions">Back to regions</Link>
+          </Button>
+          {canEdit ? (
+            <Button asChild size="sm">
+              <Link to={`/org/regions/${regionId}/edit`}>Edit region</Link>
+            </Button>
+          ) : null}
+        </div>
       }
     >
-      <ReadonlyBanner message="Region detail đang ở chế độ read-only. Chưa publish create/edit workflow trong bước này." />
+      <ReadonlyBanner
+        message={
+          canEdit
+            ? 'Region edit workflow đã được publish cho principal có org.region.write.'
+            : 'Region detail hiện là read-first với tài khoản hiện tại. Region edit cần org.region.write.'
+        }
+      />
 
       <EntityHeader
         eyebrow="Org / Region"

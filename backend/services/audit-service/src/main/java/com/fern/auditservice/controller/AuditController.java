@@ -23,10 +23,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Validated
 @RestController
 @RequestMapping("/audit")
+@Tag(name = "Audit")
 public class AuditController {
     private final AuditAuthorizer auditAuthorizer;
     private final AuditQueryService auditQueryService;
@@ -36,6 +39,7 @@ public class AuditController {
         this.auditQueryService = auditQueryService;
     }
 
+    @Operation(summary = "Get Audit")
     @GetMapping("/events")
     public AuditListResponse<AuditEventSummaryResponse> listAuditEvents(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -71,12 +75,14 @@ public class AuditController {
         )));
     }
 
+    @Operation(summary = "Get Audit")
     @GetMapping("/events/{id}")
     public AuditEventDetailResponse getAuditEvent(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         auditAuthorizer.requireRead(principal);
         return auditQueryService.getAuditEvent(principal, id, auditAuthorizer.canReadDetails(principal));
     }
 
+    @Operation(summary = "Get Audit")
     @GetMapping("/security-events")
     public AuditListResponse<SecurityEventSummaryResponse> listSecurityEvents(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -104,12 +110,14 @@ public class AuditController {
         )));
     }
 
+    @Operation(summary = "Get Audit")
     @GetMapping("/security-events/{id}")
     public SecurityEventDetailResponse getSecurityEvent(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         auditAuthorizer.requireRead(principal);
         return auditQueryService.getSecurityEvent(principal, id, auditAuthorizer.canReadDetails(principal));
     }
 
+    @Operation(summary = "Get Audit")
     @GetMapping("/request-traces")
     public AuditListResponse<RequestTraceSummaryResponse> listRequestTraces(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -143,6 +151,7 @@ public class AuditController {
         )));
     }
 
+    @Operation(summary = "Get Audit")
     @GetMapping("/request-traces/{id}")
     public RequestTraceDetailResponse getRequestTrace(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
         auditAuthorizer.requireRead(principal);

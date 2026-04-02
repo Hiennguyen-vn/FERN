@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/internal/inventory")
+@Tag(name = "Inventory — Internal")
 public class InternalInventoryController {
     private final StockReservationService stockReservationService;
 
@@ -21,6 +24,7 @@ public class InternalInventoryController {
         this.stockReservationService = stockReservationService;
     }
 
+    @Operation(summary = "Create or execute Inventory — Internal")
     @PostMapping("/sale-reservations")
     public SaleReservationResponse reserveSale(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -29,6 +33,7 @@ public class InternalInventoryController {
         return stockReservationService.reserveSale(principal, request);
     }
 
+    @Operation(summary = "Create or execute Inventory — Internal")
     @PostMapping("/sale-reservations/{reservationId}/cancel")
     public void releaseSaleReservation(
             @AuthenticationPrincipal FernPrincipal principal,

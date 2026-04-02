@@ -6,16 +6,23 @@ import { permissionConstants } from '@core/permissions/permission.constants'
 import { renderWithProviders } from '@shared/test-utils/renderWithProviders'
 import { resetTestStores, setAuthenticatedSession } from '@shared/test-utils/scopeTestHelpers'
 import {
+  AssignmentCreatePage,
   AttendanceSummaryPage,
   ContractDetailPage,
+  ContractCreatePage,
   ContractsPage,
+  EmployeeCreatePage,
   EmployeeDetailPage,
   EmployeesPage,
   PayrollDraftReviewPage,
   PayrollPreparationPage,
+  ShiftSchedulingPage,
 } from '../routes/hrRoutes.bundle'
 
 const mocks = vi.hoisted(() => ({
+  useCreateEmployee: vi.fn(),
+  useCreateContract: vi.fn(),
+  useCreateEmployeeAssignment: vi.fn(),
   useHrAttendanceApprovals: vi.fn(),
   useHrAttendanceEvents: vi.fn(),
   useHrAssignments: vi.fn(),
@@ -28,6 +35,7 @@ const mocks = vi.hoisted(() => ({
   usePayrollRuns: vi.fn(),
   useCreatePayrollPeriod: vi.fn(),
   useCreatePayrollRun: vi.fn(),
+  useSubmitPayrollRun: vi.fn(),
 }))
 
 vi.mock('../hooks/useHr', () => ({
@@ -41,21 +49,29 @@ vi.mock('../hooks/useHr', () => ({
   usePayrollPeriods: mocks.usePayrollPeriods,
   usePayrollRun: mocks.usePayrollRun,
   usePayrollRuns: mocks.usePayrollRuns,
+  useCreateEmployee: mocks.useCreateEmployee,
+  useCreateContract: mocks.useCreateContract,
+  useCreateEmployeeAssignment: mocks.useCreateEmployeeAssignment,
   useCreatePayrollPeriod: mocks.useCreatePayrollPeriod,
   useCreatePayrollRun: mocks.useCreatePayrollRun,
+  useSubmitPayrollRun: mocks.useSubmitPayrollRun,
 }))
 
 function HrRoutesHarness() {
   return (
     <Routes>
-      <Route path="/hr" element={<LazyRouteBoundary moduleName="HR" label="Loading HR workspace" />}>
+        <Route path="/hr" element={<LazyRouteBoundary moduleName="HR" label="Loading HR workspace" />}>
         <Route path="employees" element={<EmployeesPage />} />
+        <Route path="employees/new" element={<EmployeeCreatePage />} />
         <Route path="employees/:employeeId" element={<EmployeeDetailPage />} />
         <Route path="contracts" element={<ContractsPage />} />
+        <Route path="contracts/new" element={<ContractCreatePage />} />
         <Route path="contracts/:contractId" element={<ContractDetailPage />} />
+        <Route path="assignments/new" element={<AssignmentCreatePage />} />
         <Route path="attendance-summary" element={<AttendanceSummaryPage />} />
         <Route path="payroll-preparation" element={<PayrollPreparationPage />} />
         <Route path="payroll-draft-review/:runId" element={<PayrollDraftReviewPage />} />
+        <Route path="shift-scheduling" element={<ShiftSchedulingPage />} />
       </Route>
     </Routes>
   )
@@ -68,9 +84,12 @@ describe('HR route group', () => {
       principal: {
         permissions: [
           permissionConstants.hr.employeeRead,
+          permissionConstants.hr.employeeWrite,
           permissionConstants.hr.contractRead,
           permissionConstants.hr.contractDetailRead,
+          permissionConstants.hr.contractWrite,
           permissionConstants.hr.shiftRead,
+          permissionConstants.hr.shiftWrite,
           permissionConstants.hr.attendanceReview,
           permissionConstants.finance.payrollRead,
           permissionConstants.finance.payrollPrepare,
@@ -226,16 +245,24 @@ describe('HR route group', () => {
     })
     mocks.useCreatePayrollPeriod.mockReturnValue({ mutateAsync: vi.fn(), isPending: false })
     mocks.useCreatePayrollRun.mockReturnValue({ mutateAsync: vi.fn(), isPending: false })
+    mocks.useSubmitPayrollRun.mockReturnValue({ mutateAsync: vi.fn(), isPending: false, error: null })
+    mocks.useCreateEmployee.mockReturnValue({ mutateAsync: vi.fn(), isPending: false, error: null })
+    mocks.useCreateContract.mockReturnValue({ mutateAsync: vi.fn(), isPending: false, error: null })
+    mocks.useCreateEmployeeAssignment.mockReturnValue({ mutateAsync: vi.fn(), isPending: false, error: null })
   })
 
   it.each([
     ['/hr/employees', 'Nhân viên'],
+    ['/hr/employees/new', 'Create Employee'],
     ['/hr/employees/1', 'Chi tiết nhân viên'],
     ['/hr/contracts?employeeId=1', 'Hợp đồng'],
+    ['/hr/contracts/new', 'Create Contract'],
     ['/hr/contracts/10?employeeId=1', 'Chi tiết hợp đồng'],
+    ['/hr/assignments/new', 'Create Assignment'],
     ['/hr/attendance-summary', 'Attendance Summary'],
     ['/hr/payroll-preparation', 'Payroll Preparation'],
     ['/hr/payroll-draft-review/88', 'Payroll Draft Review'],
+    ['/hr/shift-scheduling', 'Shift Scheduling'],
   ])('resolves %s', async (route, heading) => {
     renderWithProviders(<HrRoutesHarness />, { route })
 

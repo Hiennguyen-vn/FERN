@@ -4,6 +4,7 @@ import { permissionConstants } from '@core/permissions/permission.constants'
 
 const financeNavigationPermissions = [
   permissionConstants.procurement.supplierRead,
+  permissionConstants.procurement.supplierWrite,
   permissionConstants.procurement.invoiceRead,
   permissionConstants.procurement.invoiceReview,
   permissionConstants.procurement.invoiceApprove,
@@ -11,8 +12,11 @@ const financeNavigationPermissions = [
   permissionConstants.procurement.paymentRead,
   permissionConstants.procurement.paymentRecord,
   permissionConstants.finance.payrollRead,
+  permissionConstants.finance.payrollPrepare,
   permissionConstants.finance.payrollApprove,
   permissionConstants.finance.payrollPay,
+  permissionConstants.finance.configRead,
+  permissionConstants.finance.configWrite,
 ]
 
 const paymentRequestPermissions = [
@@ -50,6 +54,14 @@ export function canPreparePayroll(principal: FernPrincipal | null) {
 
 export function canPayPayroll(principal: FernPrincipal | null) {
   return hasPermission(principal, permissionConstants.finance.payrollPay)
+}
+
+export function canReadFinanceConfig(principal: FernPrincipal | null) {
+  return hasPermission(principal, permissionConstants.finance.configRead)
+}
+
+export function canWriteFinanceConfig(principal: FernPrincipal | null) {
+  return hasPermission(principal, permissionConstants.finance.configWrite)
 }
 
 export function canSeeFinanceNavigation(principal: FernPrincipal | null) {
