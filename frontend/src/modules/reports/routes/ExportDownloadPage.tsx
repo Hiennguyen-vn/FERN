@@ -40,21 +40,21 @@ export function ExportDownloadPage() {
 
   return (
     <DashboardLayout description="The browser should start downloading the export artifact." title={`Download Export ${jobId ?? ''}`}>
-      {downloadUrl === null ? (
+      {jobId === null ? (
         <EmptyState
           description="Thiếu export job id nên frontend chưa thể khởi động download."
           title="Download target missing"
         />
       ) : null}
-      {downloadUrl && isLoading ? (
+      {jobId !== null && isLoading ? (
         <Card title="Preparing download">
           <p className="muted-text">Checking export job status and access before starting the browser download...</p>
         </Card>
       ) : null}
-      {downloadUrl && error && isReportsPermissionDenied(error) ? (
+      {jobId !== null && error && isReportsPermissionDenied(error) ? (
         <PermissionDeniedInline message={getReportsPermissionDeniedMessage('export download này')} />
       ) : null}
-      {downloadUrl && error && !isReportsPermissionDenied(error) ? (
+      {jobId !== null && error && !isReportsPermissionDenied(error) ? (
         <ErrorState
           actionLabel="Retry"
           message={error instanceof Error ? error.message : 'Unable to prepare export download'}
@@ -62,19 +62,19 @@ export function ExportDownloadPage() {
           title="Không thể chuẩn bị export download"
         />
       ) : null}
-      {downloadUrl && !isLoading && !error && !job ? (
+      {jobId !== null && !isLoading && !error && !job ? (
         <EmptyState
           description="Export job này không tồn tại, hoặc không còn truy cập được từ frontend hiện tại."
           title="Export job not found"
         />
       ) : null}
-      {downloadUrl && job && !canDownloadExport(principal, job) ? (
+      {jobId !== null && job && !canDownloadExport(principal, job) ? (
         <EmptyState
           description="Export artifact chỉ có thể tải khi job đã COMPLETED và principal có quyền đọc dataset tương ứng."
           title="Download not ready"
         />
       ) : null}
-      {downloadUrl && job && canDownloadExport(principal, job) ? (
+      {jobId !== null && job && canDownloadExport(principal, job) && downloadUrl ? (
         <Card title={hasStartedDownload ? 'Download started' : 'Download ready'}>
           <p className="muted-text">
             {hasStartedDownload

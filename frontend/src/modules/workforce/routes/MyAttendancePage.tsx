@@ -23,15 +23,8 @@ import { useAttendanceEvents } from '../hooks/useAttendanceEvents'
 import { useRecordAttendanceEvent } from '../hooks/useRecordAttendanceEvent'
 import type { AttendanceEventListItem } from '../model/workforce.types'
 import { canRecordAttendance } from '../services/workforcePermission.service'
+import { toOptionalNumber } from '@shared/validators/parseInput'
 
-function toOptionalNumber(value: string): number | undefined {
-  if (!value) {
-    return undefined
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
 
 export function MyAttendancePage() {
   usePageTitle('My Attendance')

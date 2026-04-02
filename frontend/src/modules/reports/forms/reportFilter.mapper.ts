@@ -1,14 +1,6 @@
 import type { CreateExportPayload } from '../model/reportExport.types'
 import type { ExportJobFormValues } from './exportJob.schema'
-
-function toOptionalNumber(value?: string): number | undefined {
-  if (!value) {
-    return undefined
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
+import { toOptionalNumber } from '@shared/validators/parseInput'
 
 export function mapExportFormToPayload(values: ExportJobFormValues): CreateExportPayload {
   return {

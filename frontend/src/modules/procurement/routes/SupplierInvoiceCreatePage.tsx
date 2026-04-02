@@ -19,6 +19,8 @@ import { useCreateSupplierInvoice } from '../hooks/useSupplierInvoice'
 import type { InvoiceLineType } from '../model/procurement.types'
 import { canReviewInvoice } from '../services/procurementPermission.service'
 import { createDefaultInvoiceLine } from '../services/procurementWorkflow.service'
+import { validateSupplierInvoiceHeader, validateSupplierInvoiceLines } from '../services/procurementValidation.service'
+import { toOptionalNumber } from '@shared/validators/parseInput'
 
 const lineTypeOptions: SelectOption[] = [
   { label: 'Stock (PO-matched)', value: 'STOCK' },
@@ -26,12 +28,6 @@ const lineTypeOptions: SelectOption[] = [
   { label: 'Non-PO receipt', value: 'NON_PO_RECEIPT' },
   { label: 'Non-stock', value: 'NON_STOCK' },
 ]
-
-function toOptionalNumber(value: string): number | undefined {
-  if (!value) return undefined
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
 
 export function SupplierInvoiceCreatePage() {
   usePageTitle('Create Supplier Invoice')
@@ -42,6 +38,7 @@ export function SupplierInvoiceCreatePage() {
   const { selectedOutletId, selectedRegionId } = useScopeContext()
   const canCreate = canReviewInvoice(principal)
   const createMutation = useCreateSupplierInvoice()
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     supplierId: searchParams.get('supplierId') ?? '',
@@ -74,6 +71,12 @@ export function SupplierInvoiceCreatePage() {
   }
 
   async function handleSubmit() {
+    const headerError = validateSupplierInvoiceHeader(form)
+    if (headerError) { setValidationError(headerError); return }
+    const lineError = validateSupplierInvoiceLines(lines)
+    if (lineError) { setValidationError(lineError); return }
+    setValidationError(null)
+
     await createMutation.mutateAsync({
       supplierId: Number(form.supplierId),
       regionId: Number(form.regionId),
@@ -242,6 +245,9 @@ export function SupplierInvoiceCreatePage() {
           ))}
         </div>
 
+        {validationError && (
+          <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{validationError}</p>
+        )}
         <FormActions
           primaryAction={
             <Button

@@ -207,12 +207,16 @@ export function PosSessionDetailPage() {
           <FormActions
             primaryAction={
               <Button
-                disabled={Number(countedCashAmount) < 0}
+                disabled={
+                  !Number.isFinite(Number(countedCashAmount)) ||
+                  Number(countedCashAmount) < 0
+                }
                 loading={reconcileMutation.isPending}
                 onClick={() =>
                   void reconcileMutation.mutateAsync({
                     sessionId: session.id,
                     payload: {
+                      // Backend: @NotNull @DecimalMin("0.00") — NaN must be blocked
                       countedCashAmount: Number(countedCashAmount),
                       note: note || undefined,
                     },

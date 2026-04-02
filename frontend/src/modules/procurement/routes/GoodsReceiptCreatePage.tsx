@@ -8,15 +8,8 @@ import { useCreateGoodsReceipt } from '../hooks/useGoodsReceipt'
 import { usePurchaseOrder } from '../hooks/usePurchaseOrder'
 import { createDefaultGoodsReceiptLine } from '../services/procurementWorkflow.service'
 import { canCreateGoodsReceipt } from '../services/procurementPermission.service'
-
-function toOptionalNumber(value: string): number | undefined {
-  if (!value) {
-    return undefined
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
+import { validateGoodsReceiptHeader, validateGoodsReceiptLines } from '../services/procurementValidation.service'
+import { toOptionalNumber } from '@shared/validators/parseInput'
 
 export function GoodsReceiptCreatePage() {
   usePageTitle('Goods Receipt Create')
@@ -35,6 +28,7 @@ export function GoodsReceiptCreatePage() {
     note: '',
   })
   const [lines, setLines] = useState([createDefaultGoodsReceiptLine()])
+  const [validationError, setValidationError] = useState<string | null>(null)
   const purchaseOrderQuery = usePurchaseOrder(canCreate ? (toOptionalNumber(form.purchaseOrderId) ?? null) : null)
   const createMutation = useCreateGoodsReceipt()
 
@@ -208,12 +202,21 @@ export function GoodsReceiptCreatePage() {
             </Card>
           ))}
         </div>
+        {validationError && (
+          <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{validationError}</p>
+        )}
         <FormActions
           primaryAction={
             <Button
               disabled={!form.purchaseOrderId}
               loading={createMutation.isPending}
               onClick={async () => {
+                const headerError = validateGoodsReceiptHeader(form)
+                if (headerError) { setValidationError(headerError); return }
+                const lineError = validateGoodsReceiptLines(lines)
+                if (lineError) { setValidationError(lineError); return }
+                setValidationError(null)
+
                 const goodsReceipt = await createMutation.mutateAsync({
                   purchaseOrderId: Number(form.purchaseOrderId),
                   receiptTime: new Date(form.receiptTime).toISOString(),

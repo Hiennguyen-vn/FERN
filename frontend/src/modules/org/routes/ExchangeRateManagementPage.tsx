@@ -10,6 +10,9 @@ import {
   Input,
   PermissionDeniedInline,
 } from '@design-system/index'
+
+// Backend: UpsertExchangeRateRequest.rate @DecimalMin("0.00000001")
+const MIN_EXCHANGE_RATE = 0.00000001
 import { DataTable } from '@design-system/tables/DataTable'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { usePrincipal } from '@core/auth/auth.selectors'
@@ -27,6 +30,7 @@ export function ExchangeRateManagementPage() {
   const [filters, setFilters] = useState({ fromCurrency: '', toCurrency: '' })
   const [showForm, setShowForm] = useState(false)
   const [confirmDeleteKey, setConfirmDeleteKey] = useState<string | null>(null)
+  const [rateError, setRateError] = useState<string | null>(null)
   const [form, setForm] = useState({
     fromCurrencyCode: '',
     toCurrencyCode: '',
@@ -103,7 +107,10 @@ export function ExchangeRateManagementPage() {
               />
               <Input
                 label="Rate"
-                onChange={(e) => setForm((prev) => ({ ...prev, rate: e.target.value }))}
+                onChange={(e) => {
+                  setForm((prev) => ({ ...prev, rate: e.target.value }))
+                  setRateError(null)
+                }}
                 placeholder="25350.00"
                 type="number"
                 value={form.rate}
@@ -121,16 +128,26 @@ export function ExchangeRateManagementPage() {
                 value={form.effectiveTo}
               />
             </div>
+            {rateError && (
+              <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{rateError}</p>
+            )}
             <FormActions
               primaryAction={
                 <Button
                   disabled={!form.fromCurrencyCode || !form.toCurrencyCode || !form.rate || !form.effectiveFrom}
                   loading={upsertMutation.isPending}
                   onClick={async () => {
+                    const parsedRate = Number(form.rate)
+                    // Backend: @NotNull @DecimalMin("0.00000001")
+                    if (!Number.isFinite(parsedRate) || parsedRate < MIN_EXCHANGE_RATE) {
+                      setRateError(`Rate must be a number ≥ ${MIN_EXCHANGE_RATE}.`)
+                      return
+                    }
+                    setRateError(null)
                     await upsertMutation.mutateAsync({
                       fromCurrencyCode: form.fromCurrencyCode,
                       toCurrencyCode: form.toCurrencyCode,
-                      rate: Number(form.rate),
+                      rate: parsedRate,
                       effectiveFrom: form.effectiveFrom,
                       effectiveTo: form.effectiveTo || null,
                     })

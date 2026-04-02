@@ -10,15 +10,8 @@ import { useSuppliers } from '../hooks/useSuppliers'
 import type { Supplier } from '../model/procurement.types'
 import { createDefaultPurchaseOrderLine } from '../services/procurementWorkflow.service'
 import { canCreatePurchaseOrder } from '../services/procurementPermission.service'
-
-function toOptionalNumber(value: string): number | undefined {
-  if (!value) {
-    return undefined
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
+import { validatePurchaseOrderLines } from '../services/procurementValidation.service'
+import { toOptionalNumber } from '@shared/validators/parseInput'
 
 export function PurchaseOrderCreatePage() {
   usePageTitle('Purchase Order Create')
@@ -37,6 +30,7 @@ export function PurchaseOrderCreatePage() {
     note: '',
   })
   const [lines, setLines] = useState([createDefaultPurchaseOrderLine()])
+  const [lineValidationError, setLineValidationError] = useState<string | null>(null)
 
   const supplierOptions = useMemo(
     () =>
@@ -204,6 +198,9 @@ export function PurchaseOrderCreatePage() {
             </Card>
           ))}
         </div>
+        {lineValidationError && (
+          <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{lineValidationError}</p>
+        )}
         <FormActions
           primaryAction={
             <Button
@@ -213,6 +210,13 @@ export function PurchaseOrderCreatePage() {
                 if (!selectedRegionId || !selectedOutletId) {
                   return
                 }
+
+                const lineError = validatePurchaseOrderLines(lines)
+                if (lineError) {
+                  setLineValidationError(lineError)
+                  return
+                }
+                setLineValidationError(null)
 
                 const purchaseOrder = await createMutation.mutateAsync({
                   regionId: selectedRegionId,

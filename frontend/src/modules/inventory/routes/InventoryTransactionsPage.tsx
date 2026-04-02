@@ -10,15 +10,8 @@ import type { InventoryTransaction } from '../model/inventory.types'
 import { buildInventoryTransactionSummary } from '../services/inventoryWorkflow.service'
 import { canReadInventoryLedger } from '../services/inventoryPermission.service'
 import { formatDate, formatDateTime } from '@shared/formatters'
+import { toOptionalNumber } from '@shared/validators/parseInput'
 
-function toOptionalNumber(value: string): number | undefined {
-  if (!value) {
-    return undefined
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
 
 export function InventoryTransactionsPage() {
   usePageTitle('Inventory Transactions')

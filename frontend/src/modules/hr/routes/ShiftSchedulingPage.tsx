@@ -162,11 +162,16 @@ export function ShiftSchedulingPage() {
                       setScheduleFormError('End time must be after start time.')
                       return
                     }
+                    // Backend: regionId @NotNull, outletId @NotNull — must guard before using !
+                    if (!selectedRegionId || !selectedOutletId) {
+                      setScheduleFormError('Chọn region và outlet từ thanh điều hướng trước khi tạo shift.')
+                      return
+                    }
                     setScheduleFormError(null)
                     try {
                       await createScheduleMutation.mutateAsync({
-                        regionId: selectedRegionId!,
-                        outletId: selectedOutletId!,
+                        regionId: selectedRegionId,
+                        outletId: selectedOutletId,
                         shiftDate: newSchedule.shiftDate,
                         shiftName: newSchedule.shiftName.trim(),
                         startTime: newSchedule.startTime,

@@ -26,15 +26,7 @@ import {
   isAttendanceException,
 } from '../services/hrReadModel.service'
 import { canReadAttendanceSummary } from '../services/hrPermission.service'
-
-function toOptionalNumber(value: string) {
-  if (!value.trim()) {
-    return undefined
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
-}
+import { toOptionalNumber } from '@shared/validators/parseInput'
 
 const PAGE_SIZE = 50
 

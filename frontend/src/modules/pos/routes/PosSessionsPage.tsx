@@ -96,12 +96,12 @@ export function PosSessionsPage() {
     },
   ]
 
-  if (!selectedOutletId || !effectiveRegionId) {
+  if (!selectedOutletId) {
     return (
       <section className="page-stack">
-        <ReadonlyBanner message="Chọn outlet và region trước khi quản lý POS sessions." />
+        <ReadonlyBanner message="Chọn outlet trước khi quản lý POS sessions." />
         <EmptyState
-          description="Session Control cần outlet và region hiện tại để lọc session và gửi workflow actions đúng scope."
+          description="Session Control cần outlet hiện tại để lọc session và gửi workflow actions đúng scope."
           title="POS session context missing"
         />
       </section>
@@ -167,10 +167,16 @@ export function PosSessionsPage() {
         <FormActions
           primaryAction={
             <Button
-              disabled={!canOpenSessionPermission || !currencyCode}
+              disabled={
+                !canOpenSessionPermission ||
+                !currencyCode ||
+                !effectiveRegionId ||
+                !businessDate.trim()
+              }
               loading={openSessionMutation.isPending || regionQuery.isLoading}
               onClick={async () => {
-                if (!currencyCode) return
+                // Backend: regionId @NotNull, outletId @NotNull, businessDate @NotNull, currencyCode @NotNull
+                if (!currencyCode || !effectiveRegionId || !businessDate.trim()) return
                 const result = await openSessionMutation.mutateAsync({
                   regionId: effectiveRegionId,
                   outletId: selectedOutletId,

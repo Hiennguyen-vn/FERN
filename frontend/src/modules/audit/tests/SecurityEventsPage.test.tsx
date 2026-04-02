@@ -37,6 +37,16 @@ describe('SecurityEventsPage', () => {
   })
 
   it('shows empty state when no security events match the current filter', () => {
+    // SecurityEventsPage uses maskedEmptyState(!hasSystemScope, ...) — a system-scope principal
+    // is required to reach the normal "No security events" empty state. Non-system users always
+    // see "System scope required" because the backend silently returns [] for them.
+    resetTestStores()
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.audit.read],
+        scopeRoots: { system: true, regions: [1], outlets: [101] },
+      },
+    })
     mocks.useSecurityEvents.mockReturnValue({
       data: [],
       error: null,

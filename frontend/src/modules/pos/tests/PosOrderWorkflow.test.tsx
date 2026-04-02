@@ -29,6 +29,36 @@ const posApi = vi.hoisted(() => ({
 
 vi.mock('../api/pos.api', () => posApi)
 
+// PosHomePage calls `useRegion(selectedRegionId)` for currency — without a mock, tests hit the real
+// gateway via axios. A 401 triggers httpClient refresh → `window.location.href = '/session-expired'`
+// (jsdom "Not implemented: navigation"), which races navigation to the order detail page and flakes
+// the suite when run in parallel with other tests.
+// Keep the same stable exports as `PosSessionWorkflow.test.tsx` — both files mock the same
+// module; using `vi.fn` here would be cleared by `vi.restoreAllMocks()` in `setup.ts` and
+// flake the other POS suite in the same worker.
+vi.mock('@modules/org/hooks/useOrg', () => ({
+  useRegion: () => ({
+    data: {
+      id: 1,
+      code: 'TEST-R',
+      name: 'Test Region',
+      parentRegionId: null,
+      currencyCode: 'VND',
+      taxCode: null,
+      timezoneName: 'Asia/Ho_Chi_Minh',
+    },
+    isPending: false,
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+  useOutlet: () => ({ data: null, isLoading: false, error: null }),
+  useOutlets: () => ({ data: [], isLoading: false, error: null }),
+  useRegions: () => ({ data: [], isLoading: false, error: null }),
+  useOutletList: () => ({ data: { items: [], hasMore: false }, isLoading: false }),
+  useRegionList: () => ({ data: { items: [], hasMore: false }, isLoading: false }),
+}))
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
@@ -281,7 +311,12 @@ describe('POS order workflows', () => {
     await waitFor(() => {
       expect(posApi.createSaleOrder).toHaveBeenCalledTimes(1)
     })
-    expect(await screen.findByRole('heading', { name: 'SO-900' }, { timeout: 4000 })).toBeInTheDocument()
+    // Detail page refetches by id after navigate; assert the API contract before the heading so
+    // failures distinguish “navigation/query never ran” from slow paint.
+    await waitFor(() => {
+      expect(posApi.getSaleOrder).toHaveBeenCalledWith(900)
+    })
+    expect(await screen.findByRole('heading', { name: 'SO-900' }, { timeout: 10_000 })).toBeInTheDocument()
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Add payment' })).toBeInTheDocument()
     })

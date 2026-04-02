@@ -8,15 +8,8 @@ import { usePrincipal } from '@core/auth/auth.selectors'
 import { useStockBalances } from '../hooks/useStockBalances'
 import type { StockBalance } from '../model/inventory.types'
 import { canReadStockBalances } from '../services/inventoryPermission.service'
+import { toOptionalNumber } from '@shared/validators/parseInput'
 
-function toOptionalNumber(value: string): number | undefined {
-  if (!value) {
-    return undefined
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
 
 export function StockOverviewPage() {
   usePageTitle('Stock Overview')

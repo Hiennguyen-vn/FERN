@@ -7,6 +7,28 @@ import { clearTestStorage, resetTestStores, setAuthenticatedSession } from '@sha
 import { PosSessionDetailPage } from '../routes/PosSessionDetailPage'
 import { PosSessionsPage } from '../routes/PosSessionsPage'
 import type { PosSession } from '../model/pos.types'
+import { getTodayBusinessDate } from '../services/posDate.service'
+
+// Mock useRegion so the currency code is immediately available. Without this, the
+// regionQuery stays in loading state (no server in tests), making the "Open session"
+// button render with loading={true} which removes its accessible name.
+//
+// Do NOT wrap these in `vi.fn()`: global `afterEach` runs `vi.restoreAllMocks()`, which
+// clears `vi.fn` implementations and flakes other POS tests in the same worker that share
+// this module mock (e.g. PosOrderWorkflow).
+vi.mock('@modules/org/hooks/useOrg', () => ({
+  useRegion: () => ({
+    data: { id: 1, currencyCode: 'VND', name: 'Test Region' },
+    isLoading: false,
+    isPending: false,
+    error: null,
+  }),
+  useOutlet: () => ({ data: null, isLoading: false, error: null }),
+  useOutlets: () => ({ data: [], isLoading: false, error: null }),
+  useRegions: () => ({ data: [], isLoading: false, error: null }),
+  useOutletList: () => ({ data: { items: [], hasMore: false }, isLoading: false }),
+  useRegionList: () => ({ data: { items: [], hasMore: false }, isLoading: false }),
+}))
 
 const posApi = vi.hoisted(() => ({
   addSalePayment: vi.fn(),
@@ -171,6 +193,9 @@ describe('POS session workflows', () => {
       },
     })
 
+    // Use the same date function the component uses so the businessDate filter matches.
+    // This test is specifically about region context derivation, not date filtering.
+    const todayDate = getTodayBusinessDate()
     sessions = [
       createSession({
         id: 701,
@@ -178,7 +203,7 @@ describe('POS session workflows', () => {
         regionId: 14,
         outletId: 101,
         status: 'OPEN',
-        businessDate: '2026-04-01',
+        businessDate: todayDate,
       }),
     ]
 
@@ -189,6 +214,8 @@ describe('POS session workflows', () => {
       { route: '/pos/sessions' },
     )
 
+    // The session list shows POS-701 and the Region ID input reflects
+    // the regionId derived from the session (not from the user's scopeRoots).
     expect(await screen.findByText('POS-701')).toBeInTheDocument()
     expect(screen.getByDisplayValue('14')).toBeInTheDocument()
     expect(screen.queryByText('POS session context missing')).not.toBeInTheDocument()

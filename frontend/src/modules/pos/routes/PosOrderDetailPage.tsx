@@ -386,15 +386,29 @@ export function PosOrderDetailPage() {
         <FormActions
           primaryAction={
             <Button
-              disabled={!canSubmitNewPayment || Number(paymentAmount) <= 0}
+              disabled={
+                !canSubmitNewPayment ||
+                !Number.isFinite(Number(paymentAmount)) ||
+                Number(paymentAmount) < 0.01 ||
+                isNaN(new Date(paymentTime).getTime())
+              }
               loading={addPaymentMutation.isPending}
               onClick={async () => {
+                // Backend: amount @DecimalMin("0.01"), paymentTime must be valid ISO instant
+                const parsedAmount = Number(paymentAmount)
+                const parsedTime = new Date(paymentTime)
+                if (!Number.isFinite(parsedAmount) || parsedAmount < 0.01) {
+                  return
+                }
+                if (isNaN(parsedTime.getTime())) {
+                  return
+                }
                 const result = await addPaymentMutation.mutateAsync({
                   orderId: order.id,
                   payload: {
                     paymentMethod: paymentMethod as any,
-                    amount: Number(paymentAmount),
-                    paymentTime: new Date(paymentTime).toISOString(),
+                    amount: parsedAmount,
+                    paymentTime: parsedTime.toISOString(),
                     transactionRef: transactionRef || undefined,
                     note: paymentNote || undefined,
                     status: paymentStatus,

@@ -13,6 +13,7 @@ import {
 } from '@design-system/index'
 import type { SelectOption } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { parsePositiveInt } from '@shared/validators/parseInput'
 import { useCreateOutlet } from '../hooks/useOrg'
 import type { OrgOutletStatus } from '../model/org.types'
 import { orgUiPolicy } from '../services/orgUiPolicy.service'
@@ -51,8 +52,8 @@ const INITIAL_FORM: FormState = {
 
 function buildClientErrors(form: FormState): Partial<Record<keyof FormState, string>> {
   const errors: Partial<Record<keyof FormState, string>> = {}
-  const regionIdNum = Number(form.regionId)
-  if (!form.regionId.trim() || !Number.isFinite(regionIdNum) || regionIdNum <= 0) {
+  // Backend: regionId @NotNull Long — must be a positive integer
+  if (!parsePositiveInt(form.regionId)) {
     errors.regionId = 'Region ID là số nguyên dương.'
   }
   if (!form.code.trim()) {
@@ -203,8 +204,6 @@ export function OutletCreatePage() {
           />
         </div>
       </FormSection>
-
-      {createMutation.error && !createMutation.isError ? null : null}
 
       {createMutation.error ? (
         <p className="error-text">

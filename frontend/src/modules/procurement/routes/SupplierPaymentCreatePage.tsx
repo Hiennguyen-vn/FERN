@@ -18,6 +18,7 @@ import { useCreateSupplierPayment } from '../hooks/useSupplierPayment'
 import type { PaymentMethod } from '../model/procurement.types'
 import { canRecordPayment } from '../services/procurementPermission.service'
 import { createDefaultPaymentAllocation } from '../services/procurementWorkflow.service'
+import { validateSupplierPaymentHeader, validatePaymentAllocations } from '../services/procurementValidation.service'
 
 const paymentMethodOptions: SelectOption[] = [
   { label: 'Cash', value: 'CASH' },
@@ -48,6 +49,7 @@ export function SupplierPaymentCreatePage() {
     note: '',
   })
   const [allocations, setAllocations] = useState([createDefaultPaymentAllocation()])
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   if (!canCreate) {
     return (
@@ -72,6 +74,12 @@ export function SupplierPaymentCreatePage() {
   const allocationMismatch = paymentAmount > 0 && Math.abs(totalAllocated - paymentAmount) > 0.001
 
   async function handleSubmit() {
+    const headerError = validateSupplierPaymentHeader(form)
+    if (headerError) { setValidationError(headerError); return }
+    const allocError = validatePaymentAllocations(allocations)
+    if (allocError) { setValidationError(allocError); return }
+    setValidationError(null)
+
     await createMutation.mutateAsync({
       supplierId: Number(form.supplierId),
       currencyCode: form.currencyCode,
@@ -198,6 +206,9 @@ export function SupplierPaymentCreatePage() {
           ))}
         </div>
 
+        {validationError && (
+          <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{validationError}</p>
+        )}
         <FormActions
           primaryAction={
             <Button

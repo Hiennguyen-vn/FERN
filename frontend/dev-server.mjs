@@ -13,6 +13,7 @@ const gatewayProxyPrefixes = [
   '/employee-assignments',
   '/employee-contracts',
   '/employees',
+  '/exchange-rates',
   '/finance-config',
   '/goods-receipts',
   '/ingredient-categories',

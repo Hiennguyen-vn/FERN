@@ -36,15 +36,7 @@ import {
   canReadPayroll,
 } from '../services/hrPermission.service'
 import { payrollPrepUiPolicy } from '../services/payrollPrepUiPolicy.service'
-
-function toOptionalNumber(value: string) {
-  if (!value.trim()) {
-    return undefined
-  }
-
-  const parsed = Number(value)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
-}
+import { toOptionalNumber, parsePositiveInt } from '@shared/validators/parseInput'
 
 export function PayrollPreparationPage() {
   usePageTitle('HR Payroll Preparation')
@@ -192,7 +184,8 @@ export function PayrollPreparationPage() {
 
   async function handleCreateRun() {
     setRunError(null)
-    const payrollPeriodId = toOptionalNumber(runForm.payrollPeriodId)
+    // parsePositiveInt rejects 0, negatives, and non-integers (backend: payrollPeriodId @NotNull Long)
+    const payrollPeriodId = parsePositiveInt(runForm.payrollPeriodId)
     if (!payrollPeriodId) {
       setRunError('Chọn payroll period trước khi prepare draft run.')
       return
