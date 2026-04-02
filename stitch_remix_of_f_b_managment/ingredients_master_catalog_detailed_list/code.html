@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ingredients Master List | Precision Atelier</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-surface": "#2d3133",
+              "inverse-primary": "#bbc3ff",
+              "inverse-on-surface": "#eff1f3",
+              "on-primary": "#ffffff",
+              "surface-tint": "#4555b7",
+              "surface": "#f7f9fb",
+              "on-primary-fixed": "#000e5e",
+              "on-primary-container": "#cacfff",
+              "on-surface-variant": "#454652",
+              "outline": "#757684",
+              "secondary-fixed": "#d5e3fc",
+              "tertiary-fixed": "#6ffbbe",
+              "on-tertiary": "#ffffff",
+              "on-surface": "#191c1e",
+              "on-secondary-fixed-variant": "#3a485b",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-container": "#5debaf",
+              "background": "#f7f9fb",
+              "tertiary": "#004e33",
+              "surface-container-highest": "#e0e3e5",
+              "surface-container": "#eceef0",
+              "surface-container-lowest": "#ffffff",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-tertiary-fixed": "#002113",
+              "tertiary-fixed-dim": "#4edea3",
+              "on-tertiary-fixed-variant": "#005236",
+              "surface-container-high": "#e6e8ea",
+              "on-secondary-container": "#57657a",
+              "on-error": "#ffffff",
+              "error-container": "#ffdad6",
+              "error": "#ba1a1a",
+              "on-error-container": "#93000a",
+              "secondary": "#515f74",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "primary-container": "#4151b3",
+              "outline-variant": "#c5c5d4",
+              "on-secondary": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "on-secondary-fixed": "#0d1c2e",
+              "tertiary-container": "#006846",
+              "surface-dim": "#d8dadc",
+              "primary-fixed": "#dee0ff",
+              "on-background": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "secondary-fixed-dim": "#b9c7df",
+              "primary": "#27389a",
+              "secondary-container": "#d5e3fc"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- Sidebar Navigation -->
+<aside class="hidden md:flex flex-col h-screen w-64 left-0 top-0 fixed bg-[#f2f4f6] dark:bg-slate-950 p-4 space-y-2 z-50">
+<div class="px-2 py-4 mb-6">
+<h1 class="text-lg font-black text-[#27389a] dark:text-[#4151b3] font-headline">Precision Atelier</h1>
+<p class="text-xs font-label text-on-surface-variant uppercase tracking-widest opacity-70">Enterprise Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-3 py-2 text-[#454652] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center px-3 py-2 bg-[#ffffff] text-[#3F51B5] rounded-lg shadow-sm font-bold group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="restaurant_menu">restaurant_menu</span>
+<span>Ingredients</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#454652] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="shopping_cart">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#454652] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="inventory_2">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#454652] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<button class="signature-gradient text-on-primary py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg mb-8 transform active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+            New Ingredient
+        </button>
+<div class="mt-auto space-y-1 pt-4 border-t border-outline-variant/20">
+<a class="flex items-center px-3 py-2 text-[#454652] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="contact_support">contact_support</span>
+<span>Support</span>
+</a>
+<a class="flex items-center px-3 py-2 text-[#454652] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="logout">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 min-h-screen">
+<!-- Top App Bar -->
+<header class="flex justify-between items-center w-full px-8 py-4 bg-[#f7f9fb] sticky top-0 z-40">
+<div class="flex items-center gap-6">
+<h2 class="text-xl font-headline font-extrabold tracking-tight text-on-surface">Ingredients Master</h2>
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm" data-icon="search">search</span>
+<input class="bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 text-sm w-80 focus:ring-2 focus:ring-primary/20" placeholder="Quick search ingredients..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-surface-container-high transition-colors relative">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant/30">
+<div class="text-right">
+<p class="text-xs font-bold leading-none">Marcus Chen</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Product Manager</p>
+</div>
+<img alt="Product Manager Profile" class="w-10 h-10 rounded-full object-cover border-2 border-surface-container-highest" data-alt="close-up headshot of a professional asian man in his 30s with short hair and modern glasses looking directly at camera" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfUOz3lha1MM2A-8ltowNVic7hQSW5EsROXNmxAdGduLLIvO0E-XzMHYUwRVVHjd9zEFpibhuUwovC_LL5pAkdY5CVbwuEDhgPjbYSW0QGMmKPoWLs3re4_X_vjjRctqHyZcsfClBq1ntKmWqxEIA7ob5JrUNcaGQPVxnVGqLyZ0OOCl2iJk4kZVC18riwHeZSQr3eL8k8uAdakMkoFwWKh-CjPvCUEQFGnnA_ot-7_EPJuhUEWpLPcI5tvKk9_qk1MioMGdWtdyem"/>
+</div>
+</div>
+</header>
+<div class="p-8 space-y-8">
+<!-- Summary Stats (Bento Grid Style) -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-b-4 border-primary">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary p-2 bg-primary/10 rounded-lg" data-icon="inventory">inventory</span>
+<span class="text-xs font-bold text-outline uppercase tracking-wider">Total</span>
+</div>
+<p class="text-3xl font-headline font-extrabold">2,481</p>
+<p class="text-xs text-on-surface-variant mt-1">Master catalog items</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-b-4 border-tertiary">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-tertiary p-2 bg-tertiary/10 rounded-lg" data-icon="check_circle">check_circle</span>
+<span class="text-xs font-bold text-outline uppercase tracking-wider">Active</span>
+</div>
+<p class="text-3xl font-headline font-extrabold">1,904</p>
+<div class="flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[10px] text-tertiary" data-icon="trending_up">trending_up</span>
+<p class="text-xs text-tertiary font-bold">+12 this month</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-b-4 border-primary-container">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary-container p-2 bg-primary-container/10 rounded-lg" data-icon="auto_awesome_motion">auto_awesome_motion</span>
+<span class="text-xs font-bold text-outline uppercase tracking-wider">In Recipes</span>
+</div>
+<p class="text-3xl font-headline font-extrabold">1,520</p>
+<p class="text-xs text-on-surface-variant mt-1">61% Utilization rate</p>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-b-4 border-error">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-error p-2 bg-error/10 rounded-lg" data-icon="cancel">cancel</span>
+<span class="text-xs font-bold text-outline uppercase tracking-wider">Discontinued</span>
+</div>
+<p class="text-3xl font-headline font-extrabold">577</p>
+<p class="text-xs text-on-surface-variant mt-1">Archived ingredients</p>
+</div>
+</section>
+<!-- Table Controls -->
+<section class="bg-surface-container-low p-4 rounded-xl flex flex-wrap items-center gap-4">
+<div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg border border-outline-variant/20 flex-1 min-w-[200px]">
+<span class="text-xs font-bold text-on-surface-variant uppercase">Filter:</span>
+<select class="text-sm border-none bg-transparent focus:ring-0 cursor-pointer font-medium p-0 pr-8">
+<option>All Statuses</option>
+<option>Active Only</option>
+<option>Inactive</option>
+<option>Discontinued</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg border border-outline-variant/20 flex-1 min-w-[200px]">
+<span class="text-xs font-bold text-on-surface-variant uppercase">Category:</span>
+<select class="text-sm border-none bg-transparent focus:ring-0 cursor-pointer font-medium p-0 pr-8">
+<option>All Categories</option>
+<option>Fresh Produce</option>
+<option>Dry Goods</option>
+<option>Dairy &amp; Eggs</option>
+<option>Proteins</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-2 rounded-lg border border-outline-variant/20 flex-1 min-w-[200px]">
+<span class="text-xs font-bold text-on-surface-variant uppercase">Usage:</span>
+<select class="text-sm border-none bg-transparent focus:ring-0 cursor-pointer font-medium p-0 pr-8">
+<option>Any Usage</option>
+<option>Used in active recipes</option>
+<option>Not used (Waste Risk)</option>
+</select>
+</div>
+<button class="bg-surface-container-highest px-4 py-2 rounded-lg flex items-center gap-2 text-on-surface-variant font-bold text-sm hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="filter_list">filter_list</span>
+                    Advanced
+                </button>
+<button class="bg-surface-container-highest px-4 py-2 rounded-lg flex items-center gap-2 text-on-surface-variant font-bold text-sm hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="download">download</span>
+                    Export
+                </button>
+</section>
+<!-- Main Data Table -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-outline-variant/10">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant/20">
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Code</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Ingredient Name</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Category</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Base UOM</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Status</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Usage Impact</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-all cursor-pointer group">
+<td class="px-6 py-4">
+<span class="bg-surface-container-high px-2 py-1 rounded text-xs font-mono font-bold text-on-surface-variant">PRD-0412</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Fresh Roma Tomato" class="w-full h-full object-cover" data-alt="vibrant red roma tomatoes on a rustic wooden table with soft focus garden background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8pOAq7R5f3SlgQo-wf5Xfzfn6ViNYUTzw8MUlb_DRDofARO9IJZxWROm9Ikd10gt-HkI7uELUK1gR9cI1R-wOnj62eqJqVJAF8s3OqnW-j7t9J28tMqJo0M_wpzy_TI9C1QdixE9fjImpg_iMxOOBjKs0sYShJwrJnGx5O9UjJA63o42yCBGfm-bZchBFN5mc6_J5ApzMsacrYE4ZW2HeZ0bWsSPgjSrxvGa1OM1bt3z2lrt5HRsMvVjPx_5Xy-JWAZAdwWu2CiMa"/>
+</div>
+<span class="font-bold text-sm">Roma Tomato, Vine Ripe</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-on-surface-variant">Fresh Produce</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium">KG</span>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant px-3 py-1 rounded-full text-[10px] font-black uppercase">Active</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-primary border-2 border-surface-container-lowest flex items-center justify-center text-[8px] text-white font-bold">14</div>
+</div>
+<span class="text-xs font-medium text-on-surface-variant">Active Recipes</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-all cursor-pointer group">
+<td class="px-6 py-4">
+<span class="bg-surface-container-high px-2 py-1 rounded text-xs font-mono font-bold text-on-surface-variant">DRY-8819</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Organic Flour" class="w-full h-full object-cover" data-alt="close-up of sifted organic white flour with a vintage wooden scoop in a professional kitchen" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCftbUIuf3dLJk0K2RS4gi3-ncnLYfqBXdJx_LLRtYGC74eIF6ma7Xb573VJN0PeqUS_u31mH_MxjVpaOmVUX5nZfpqLSZPQyBjFByEEpq_5u9GwK3Sevhvpsaq7FgGdFqGa2asPYlWsOR93e_cRgSoq0L3XvwH7nw7NojGHVWGZrQKWTNB0IKGrBvqmAH4N5j4YTc75LbKxz7BgckJwtS67q7AJ4zRLUOkrR06yfNemRBYrbP-3MKXfXAqOJytb-Ow7Z2hisbP-IqB"/>
+</div>
+<span class="font-bold text-sm">Organic AP Flour, T55</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-on-surface-variant">Dry Goods</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium">25KG Bag</span>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant px-3 py-1 rounded-full text-[10px] font-black uppercase">Active</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-primary border-2 border-surface-container-lowest flex items-center justify-center text-[8px] text-white font-bold">42</div>
+</div>
+<span class="text-xs font-medium text-on-surface-variant">Active Recipes</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-all cursor-pointer group">
+<td class="px-6 py-4">
+<span class="bg-surface-container-high px-2 py-1 rounded text-xs font-mono font-bold text-on-surface-variant">PRT-0102</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Wagyu Beef Ribeye" class="w-full h-full object-cover" data-alt="extreme close-up of highly marbled wagyu beef ribeye steak with intense red color and white fat patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuDSZcKaerA4k45zJfkKroNQ6hhW-hkTsvZE8L4R9D3Kna6rblQWefECyEz2oye7oe3VjHYnl3tMcLiwP4aS5ZQOLTkkPxeymWPdtNoR65bHYmlXAbja7t3ouBz3NbtP8-rxNIxi1dffQNws66AQHcLHf354VR5V1k8P7ZaeAboX36oMK2vXeOGL-mmxGZ4jf5fgxZGniwKdN79WralZeqFJ8bJO0xyjB3KGnc1zbi_aCIqwhuJt3bcI_9Rs1jwOBXmLRfFdjTggvg"/>
+</div>
+<span class="font-bold text-sm">Wagyu Ribeye, Grade A5</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-on-surface-variant">Proteins</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium">LBS</span>
+</td>
+<td class="px-6 py-4">
+<span class="bg-surface-container-high text-outline px-3 py-1 rounded-full text-[10px] font-black uppercase">Inactive</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-outline border-2 border-surface-container-lowest flex items-center justify-center text-[8px] text-white font-bold">0</div>
+</div>
+<span class="text-xs font-medium text-outline">Seasonal Standby</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-all cursor-pointer group">
+<td class="px-6 py-4">
+<span class="bg-surface-container-high px-2 py-1 rounded text-xs font-mono font-bold text-on-surface-variant">DAI-9922</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Almond Milk" class="w-full h-full object-cover" data-alt="minimalist bottle of almond milk on a clean white surface with raw almonds scattered around" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-ldMjtEfsDbL0Wv60v-KX9giT6vaueNmg30eYj_ZOkHaU1Cuotstx0WeozgRTjdW18mBVUPU_IJ9xqhMPp5K9TqD7Ni5CtWU9nb9nfrZmWK3J-MNedVv-YbCQL4C3ml7hg16vT9kWx5W2wnEgS73GZVccOhMGLG5dNEAh0WBRXZqKx7B7KFUtofhjWYZmHgPRpetN8zEc0Ja06lHxn3Yge0a-My4LL9f3LkJoTdZLMArT26X89qMUe8HD-pZgg79vt3ziy4rC2sVA"/>
+</div>
+<span class="font-bold text-sm">Almond Milk, Barista Grade</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-on-surface-variant">Dairy &amp; Eggs</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium">LTR</span>
+</td>
+<td class="px-6 py-4">
+<span class="bg-error-container text-on-error-container px-3 py-1 rounded-full text-[10px] font-black uppercase">Discontinued</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-xs" data-icon="warning">warning</span>
+<span class="text-xs font-medium text-error">Vendor Conflict</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low transition-all cursor-pointer group">
+<td class="px-6 py-4">
+<span class="bg-surface-container-high px-2 py-1 rounded text-xs font-mono font-bold text-on-surface-variant">PRD-0991</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Fresh Carrots" class="w-full h-full object-cover" data-alt="bundle of fresh carrots with green leafy tops on a black stone background with water droplets" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwXHMnHyOWnE73JNjosnFcUWKQD1KJv0-R7S1CmHFGCdwFo3AB-CZ1IaAzBSb7Ljz13Wt6o4X_2wJnkHiHokPe6Wx-UGzlySMGcT52uR2HguZPGydl7w-t0-qLjFs2f7uLAF6x9bl7BxfWdBFBl4hHzSpUhM1N1yGhlDbL-9KvW7N2eJmn5Px-Z9A1478vlYXkxa7Qcrjwb2WZ6PYP-vLCmG6NOA6eDCK3RUFOtw9RIn_zbdw_u2iEAEbw20Sppr8aWWL4TUJb2bhV"/>
+</div>
+<span class="font-bold text-sm">Heirloom Carrots, Rainbow</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm text-on-surface-variant">Fresh Produce</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-medium">KG</span>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant px-3 py-1 rounded-full text-[10px] font-black uppercase">Active</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-primary border-2 border-surface-container-lowest flex items-center justify-center text-[8px] text-white font-bold">8</div>
+</div>
+<span class="text-xs font-medium text-on-surface-variant">Active Recipes</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-4 flex items-center justify-between border-t border-outline-variant/20 bg-surface-container-low">
+<p class="text-xs text-on-surface-variant font-medium">Showing <span class="font-bold">1-10</span> of <span class="font-bold">2,481</span> ingredients</p>
+<div class="flex gap-2">
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="navigate_before">navigate_before</span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-primary text-on-primary font-bold text-xs">1</button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-highest font-medium text-xs">2</button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-highest font-medium text-xs">3</button>
+<button class="w-8 h-8 rounded flex items-center justify-center hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="navigate_next">navigate_next</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Floating Filter Trigger (Mobile Only) -->
+<button class="md:hidden fixed bottom-6 right-6 signature-gradient w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-on-primary z-50">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+</button>
+</body></html>

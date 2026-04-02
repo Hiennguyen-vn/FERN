@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Architect ERP | Unified Operational Command Grid</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-highest": "#e0e3e5",
+                        "surface": "#f7f9fb",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "on-tertiary-fixed": "#002113",
+                        "outline-variant": "#c5c5d4",
+                        "inverse-primary": "#bbc3ff",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#d8dadc",
+                        "secondary-container": "#d5e3fc",
+                        "on-primary-fixed": "#000e5e",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e6e8ea",
+                        "secondary-fixed": "#d5e3fc",
+                        "primary": "#27389a",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-tint": "#4555b7",
+                        "primary-container": "#4151b3",
+                        "surface-bright": "#f7f9fb",
+                        "tertiary-container": "#006846",
+                        "on-secondary-container": "#57657a",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#eceef0",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "background": "#f7f9fb",
+                        "inverse-surface": "#2d3133",
+                        "on-tertiary-container": "#5debaf",
+                        "on-primary-container": "#cacfff",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "primary-fixed": "#dee0ff",
+                        "tertiary": "#004e33",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "on-background": "#191c1e",
+                        "on-surface-variant": "#454652",
+                        "surface-variant": "#e0e3e5",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "outline": "#757684",
+                        "on-surface": "#191c1e",
+                        "secondary": "#515f74"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary-container">
+<nav class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-sm dark:shadow-none flex justify-between items-center px-6 h-16 border-b border-surface-container">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold bg-gradient-to-br from-indigo-700 to-indigo-500 bg-clip-text text-transparent font-headline tracking-tight">Architect ERP</span>
+<div class="hidden md:flex items-center gap-2">
+<button class="text-indigo-700 dark:text-indigo-400 border-b-2 border-indigo-600 h-16 flex items-center font-manrope tracking-tight font-semibold px-4">Action Hub</button>
+<button class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors h-16 px-4">Messages</button>
+<button class="text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors h-16 px-4">Performance</button>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-xl">
+<span class="material-symbols-outlined text-primary text-sm">location_on</span>
+<span class="text-xs font-label font-semibold text-primary">South London Outlet</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"><span class="material-symbols-outlined">apps</span></button>
+<div class="h-8 w-8 rounded-full overflow-hidden ml-2 ring-2 ring-primary/10">
+<img alt="User profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5vLRcBCfgqeN7PcTz7W_2a0XzeEvuL29fJZbDl4DHaJtMuBdPObYB9sVE3OgGhMlmlxmJ4pJYtHZjpJ6F69IP2rzX5e91XQO3YX9HNh27b6gAKXodCvvZP1YIJjzM7L_rbL8mvNfmqp1CtgNehhDunPTie82yHdo9b_9bkegNqYHV0Yf-CbYvdEGxezAXraprsp83tz3R5qTATGpxuRXp2tsTWhBEEu8y9XxaGEGz6ByE1Ju9chn_XEpCjBrnK0HWYs9Flwv2038z"/>
+</div>
+</div>
+</div>
+</nav>
+<main class="pt-20 min-h-screen pb-24 md:pb-8">
+<div class="px-6 lg:px-8 max-w-screen-2xl mx-auto">
+<header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+<div>
+<h1 class="text-3xl font-headline font-extrabold text-on-surface tracking-tight">Staff Action Hub</h1>
+<p class="text-on-surface-variant font-body mt-1">Operational control for <span class="font-semibold text-primary">South London Outlet</span></p>
+</div>
+<div class="flex items-center gap-3 bg-tertiary-container/10 px-4 py-2 rounded-xl border border-tertiary-container/20">
+<span class="w-2.5 h-2.5 rounded-full bg-tertiary animate-pulse"></span>
+<span class="text-tertiary font-label font-bold text-sm tracking-wide uppercase">Checked-In</span>
+</div>
+</header>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<section class="md:col-span-2 xl:col-span-2 bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container-high overflow-hidden group">
+<div class="relative p-6 h-full flex flex-col">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h2 class="text-xl font-headline font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined">storefront</span> Point of Sale
+                                </h2>
+<p class="text-on-surface-variant text-xs mt-1">Active Register: FOH-01</p>
+</div>
+<div class="bg-surface-container-low px-3 py-1 rounded-full text-on-surface-variant text-[10px] font-bold border border-outline-variant/30 uppercase tracking-wider">
+                                Queue: 4 Pending
+                            </div>
+</div>
+<div class="grid grid-cols-2 gap-4 flex-1">
+<button class="signature-gradient rounded-xl flex flex-col items-center justify-center gap-3 text-white hover:opacity-95 active:scale-[0.98] transition-all shadow-md py-8">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+<span class="text-lg font-headline font-bold tracking-tight">New Order</span>
+</button>
+<button class="bg-surface-container-high rounded-xl flex flex-col items-center justify-center gap-3 text-on-surface hover:bg-surface-container-highest active:scale-[0.98] transition-all py-8">
+<span class="material-symbols-outlined text-4xl">point_of_sale</span>
+<span class="text-lg font-headline font-bold tracking-tight">Open Drawer</span>
+</button>
+</div>
+<div class="flex gap-3 mt-6">
+<button class="flex-1 bg-surface-container-low py-3 rounded-lg font-label font-bold text-xs text-on-surface-variant hover:bg-surface-container transition-colors uppercase tracking-widest">Order History</button>
+<button class="flex-1 bg-surface-container-low py-3 rounded-lg font-label font-bold text-xs text-on-surface-variant hover:bg-surface-container transition-colors uppercase tracking-widest">Daily Report</button>
+</div>
+</div>
+</section>
+<section class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container-high p-6 flex flex-col justify-between">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline font-bold text-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">badge</span> My Attendance
+                        </h3>
+<span class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold">Live Status</span>
+</div>
+<div class="text-center mb-6">
+<div class="text-4xl font-headline font-extrabold text-on-surface tracking-tighter">09:14:42</div>
+<div class="text-xs font-body text-slate-500 mt-1 uppercase tracking-wider font-semibold">Shift Start: 08:30 AM</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-xl border border-surface-container">
+<span class="text-xs font-medium text-on-surface-variant">Current Session</span>
+<span class="text-sm font-bold text-primary">0h 44m</span>
+</div>
+<button class="w-full py-4 rounded-xl bg-error-container text-on-error-container font-headline font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm">
+<span class="material-symbols-outlined">logout</span>
+                            Clock Out
+                        </button>
+</div>
+</section>
+<section class="flex flex-col gap-6">
+<div class="flex-1 bg-surface-container-lowest p-6 rounded-2xl border border-surface-container-high shadow-sm flex flex-col justify-between group hover:border-primary/20 transition-colors">
+<div class="flex justify-between items-start">
+<p class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold">Total Sales Today</p>
+<div class="w-10 h-10 rounded-full bg-primary-container/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">trending_up</span>
+</div>
+</div>
+<div class="mt-4">
+<p class="text-3xl font-headline font-bold text-primary tracking-tight">£1,482.50</p>
+<p class="text-[10px] text-tertiary font-bold mt-1">+12% vs yesterday</p>
+</div>
+</div>
+<div class="flex-1 bg-surface-container-lowest p-6 rounded-2xl border border-surface-container-high shadow-sm flex flex-col justify-between group hover:border-tertiary/20 transition-colors">
+<div class="flex justify-between items-start">
+<p class="text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold">Shift Duration</p>
+<div class="w-10 h-10 rounded-full bg-tertiary-container/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+</div>
+<div class="mt-4">
+<p class="text-3xl font-headline font-bold text-tertiary tracking-tight">08:00 hrs</p>
+<p class="text-[10px] text-on-surface-variant font-bold mt-1">Full shift target</p>
+</div>
+</div>
+</section>
+<section class="md:col-span-2 lg:col-span-3 xl:col-span-4">
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container-high overflow-hidden">
+<div class="px-8 py-5 border-b border-surface-container flex justify-between items-center bg-white">
+<h3 class="font-headline font-bold text-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">history</span> Personal Transaction History
+                            </h3>
+<button class="text-xs font-bold text-primary hover:underline uppercase tracking-widest">View Full Log</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-8 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold">Transaction ID</th>
+<th class="px-8 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold">Time</th>
+<th class="px-8 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold">Items</th>
+<th class="px-8 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold text-center">Method</th>
+<th class="px-8 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold text-right">Total</th>
+<th class="px-8 py-3 text-[10px] font-label uppercase tracking-widest text-on-surface-variant font-bold text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<tr class="hover:bg-surface-container-low/30 transition-colors group">
+<td class="px-8 py-4 font-mono text-sm font-medium">#TXN-84291</td>
+<td class="px-8 py-4 text-sm text-on-surface-variant">09:12 AM</td>
+<td class="px-8 py-4 text-sm text-on-surface-variant">Cappuccino (2), Pain au Choc</td>
+<td class="px-8 py-4 text-center">
+<span class="text-[9px] px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-bold uppercase tracking-wider">Contactless</span>
+</td>
+<td class="px-8 py-4 font-bold text-on-surface text-right">£14.20</td>
+<td class="px-8 py-4 text-right">
+<button class="p-1.5 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors"><span class="material-symbols-outlined text-xl">receipt_long</span></button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/30 transition-colors group">
+<td class="px-8 py-4 font-mono text-sm font-medium">#TXN-84290</td>
+<td class="px-8 py-4 text-sm text-on-surface-variant">09:05 AM</td>
+<td class="px-8 py-4 text-sm text-on-surface-variant">Espresso Single, Avocado Sourdough</td>
+<td class="px-8 py-4 text-center">
+<span class="text-[9px] px-2.5 py-1 rounded-full bg-primary-fixed text-on-primary-fixed font-bold uppercase tracking-wider">Mobile Pay</span>
+</td>
+<td class="px-8 py-4 font-bold text-on-surface text-right">£11.50</td>
+<td class="px-8 py-4 text-right">
+<button class="p-1.5 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors"><span class="material-symbols-outlined text-xl">receipt_long</span></button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/30 transition-colors group">
+<td class="px-8 py-4 font-mono text-sm font-medium">#TXN-84288</td>
+<td class="px-8 py-4 text-sm text-on-surface-variant">08:58 AM</td>
+<td class="px-8 py-4 text-sm text-on-surface-variant">Flat White, Blueberry Muffin</td>
+<td class="px-8 py-4 text-center">
+<span class="text-[9px] px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-bold uppercase tracking-wider">Contactless</span>
+</td>
+<td class="px-8 py-4 font-bold text-on-surface text-right">£9.80</td>
+<td class="px-8 py-4 text-right">
+<button class="p-1.5 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors"><span class="material-symbols-outlined text-xl">receipt_long</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<nav class="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-surface-container h-16 px-6 flex items-center justify-around z-50">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="text-[10px] font-bold">Hub</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span class="text-[10px] font-bold">POS</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold">Profile</span>
+</button>
+</nav>
+
+</body></html>

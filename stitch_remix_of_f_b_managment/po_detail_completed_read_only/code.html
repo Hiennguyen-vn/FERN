@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#002113",
+              "on-error-container": "#93000a",
+              "surface-variant": "#e0e3e5",
+              "on-primary-container": "#cacfff",
+              "tertiary-fixed": "#6ffbbe",
+              "surface-container-high": "#e6e8ea",
+              "surface": "#f7f9fb",
+              "outline": "#757684",
+              "on-tertiary-container": "#5debaf",
+              "on-secondary-fixed": "#0d1c2e",
+              "outline-variant": "#c5c5d4",
+              "secondary-container": "#d5e3fc",
+              "on-secondary-container": "#57657a",
+              "surface-bright": "#f7f9fb",
+              "error": "#ba1a1a",
+              "background": "#f7f9fb",
+              "primary-fixed": "#dee0ff",
+              "primary-fixed-dim": "#bbc3ff",
+              "tertiary": "#004e33",
+              "error-container": "#ffdad6",
+              "on-secondary": "#ffffff",
+              "on-primary": "#ffffff",
+              "secondary-fixed": "#d5e3fc",
+              "on-background": "#191c1e",
+              "surface-container-lowest": "#ffffff",
+              "secondary": "#515f74",
+              "on-surface": "#191c1e",
+              "on-error": "#ffffff",
+              "surface-dim": "#d8dadc",
+              "primary": "#27389a",
+              "on-primary-fixed": "#000e5e",
+              "secondary-fixed-dim": "#b9c7df",
+              "tertiary-container": "#006846",
+              "inverse-on-surface": "#eff1f3",
+              "surface-tint": "#4555b7",
+              "surface-container-highest": "#e0e3e5",
+              "on-tertiary-fixed-variant": "#005236",
+              "surface-container-low": "#f2f4f6",
+              "surface-container": "#eceef0",
+              "on-secondary-fixed-variant": "#3a485b",
+              "inverse-surface": "#2d3133",
+              "inverse-primary": "#bbc3ff",
+              "primary-container": "#4151b3",
+              "on-surface-variant": "#454652",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "tertiary-fixed-dim": "#4edea3",
+              "on-tertiary": "#ffffff"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body { font-family: 'Inter', sans-serif; }
+      h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="hidden md:flex flex-col h-full py-8 px-4 space-y-6 bg-slate-50 dark:bg-slate-950 docked vertical left-0 h-screen w-64">
+<div class="flex items-center space-x-3 px-2">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm">architecture</span>
+</div>
+<div>
+<h2 class="text-lg font-black text-indigo-900 dark:text-indigo-200">Procurement</h2>
+<p class="text-[10px] font-semibold Inter uppercase tracking-wider text-slate-500">Back-Office Admin</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<div class="flex items-center px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:translate-x-1 transition-transform duration-200 cursor-pointer">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="text-xs font-semibold uppercase tracking-wider">Dashboard</span>
+</div>
+<div class="flex items-center px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:translate-x-1 transition-transform duration-200 cursor-pointer">
+<span class="material-symbols-outlined mr-3">inventory_2</span>
+<span class="text-xs font-semibold uppercase tracking-wider">Inventory</span>
+</div>
+<div class="flex items-center px-3 py-2 bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 font-bold rounded-lg shadow-sm hover:translate-x-1 transition-transform duration-200 cursor-pointer">
+<span class="material-symbols-outlined mr-3">shopping_cart</span>
+<span class="text-xs font-semibold uppercase tracking-wider">Procurement</span>
+</div>
+<div class="flex items-center px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:translate-x-1 transition-transform duration-200 cursor-pointer">
+<span class="material-symbols-outlined mr-3">local_shipping</span>
+<span class="text-xs font-semibold uppercase tracking-wider">Suppliers</span>
+</div>
+<div class="flex items-center px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:translate-x-1 transition-transform duration-200 cursor-pointer">
+<span class="material-symbols-outlined mr-3">analytics</span>
+<span class="text-xs font-semibold uppercase tracking-wider">Reports</span>
+</div>
+<div class="flex items-center px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:translate-x-1 transition-transform duration-200 cursor-pointer">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="text-xs font-semibold uppercase tracking-wider">Settings</span>
+</div>
+</nav>
+<div class="pt-6 border-t border-slate-200 dark:border-slate-800 space-y-1">
+<div class="flex items-center px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer">
+<span class="material-symbols-outlined mr-3">help</span>
+<span class="text-xs font-semibold uppercase tracking-wider">Help Center</span>
+</div>
+<div class="flex items-center px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer">
+<span class="material-symbols-outlined mr-3">logout</span>
+<span class="text-xs font-semibold uppercase tracking-wider">Logout</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col min-w-0 bg-surface">
+<!-- TopNavBar (Shared Component) -->
+<header class="flex justify-between items-center w-full px-6 py-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl docked full-width top-0 z-50">
+<div class="flex items-center space-x-4">
+<h1 class="text-xl font-bold tracking-tighter text-indigo-900 dark:text-indigo-400">The Architectural ERP</h1>
+<div class="h-6 w-px bg-slate-200 mx-2"></div>
+<div class="flex items-center bg-slate-50 dark:bg-slate-950 px-3 py-1.5 rounded-full border border-outline-variant/20">
+<span class="material-symbols-outlined text-on-surface-variant text-sm mr-2">search</span>
+<input class="bg-transparent border-none text-xs focus:ring-0 w-48 text-on-surface" placeholder="Search orders..." type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-slate-100 p-2 rounded-full transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-slate-100 p-2 rounded-full transition-colors">help</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-slate-100 p-2 rounded-full transition-colors">settings</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-primary/20">
+<img alt="User profile avatar" class="w-full h-full object-cover" data-alt="professional corporate headshot of a man with short dark hair and a friendly expression in a modern office" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1NTFnBLH48cPoZkDR_mU2LrfvO1F0fWWgxFF3PVDqZ6SPo_4qZsxCHMYzsY04kkL-aWI4V23x4j1AntmNgiW-N9FcHuVaEjjOXV_Gu914n9IsEVEdatRMzIrRPkvrB_MZ3IC66MPWIVfG3Cs2gb7R0AmQtU-6-w_obcEfA_5RT8Y7YbfiqBMiX9xRpGqwq8KfMLLBLzb0XUiN7OrFbPSr958w8KJ1aj9U5nvpa4XAAdsK3DPs5FFUM5DJsFuk7HhchAYFfr8PPRQp"/>
+</div>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-8 bg-surface-container-low">
+<div class="max-w-6xl mx-auto space-y-6">
+<!-- Terminal State Banner -->
+<div class="bg-surface-dim/30 border border-outline-variant/30 rounded-xl px-6 py-4 flex items-center justify-between backdrop-blur-sm">
+<div class="flex items-center space-x-3 text-on-surface-variant">
+<span class="material-symbols-outlined text-outline">lock</span>
+<span class="text-sm font-semibold tracking-wide Manrope uppercase">READ-ONLY RECORD: This PO is completed and locked</span>
+</div>
+<div class="flex items-center space-x-4">
+<button class="flex items-center space-x-2 text-primary text-sm font-bold hover:underline">
+<span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+<span>Export PDF</span>
+</button>
+<button class="flex items-center space-x-2 text-primary text-sm font-bold hover:underline">
+<span class="material-symbols-outlined text-sm">print</span>
+<span>Print</span>
+</button>
+</div>
+</div>
+<!-- Header Content -->
+<div class="flex justify-between items-start">
+<div class="space-y-1">
+<div class="flex items-center space-x-3">
+<h2 class="text-3xl font-extrabold tracking-tight Manrope text-indigo-900">PO #ORD-8742</h2>
+<span class="px-3 py-1 bg-tertiary-container text-tertiary-fixed font-bold text-xs rounded-full uppercase tracking-widest">COMPLETED</span>
+</div>
+<p class="text-sm text-on-surface-variant font-medium Inter">Created by Marcus Thorne on Oct 24, 2023 • Supplier: Artisan Provisions Co.</p>
+</div>
+</div>
+<!-- Timeline Bento -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<div class="md:col-span-12 bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+<div class="relative flex justify-between items-center max-w-4xl mx-auto">
+<!-- Track -->
+<div class="absolute top-1/2 left-0 w-full h-0.5 bg-surface-variant -translate-y-1/2"></div>
+<div class="absolute top-1/2 left-0 w-full h-0.5 bg-primary -translate-y-1/2"></div>
+<!-- Nodes -->
+<div class="relative z-10 flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white ring-4 ring-surface-container-lowest">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="mt-2 text-[10px] font-bold uppercase tracking-tighter text-primary">Draft</span>
+</div>
+<div class="relative z-10 flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white ring-4 ring-surface-container-lowest">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="mt-2 text-[10px] font-bold uppercase tracking-tighter text-primary">Submitted</span>
+</div>
+<div class="relative z-10 flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white ring-4 ring-surface-container-lowest">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="mt-2 text-[10px] font-bold uppercase tracking-tighter text-primary">Approved</span>
+</div>
+<div class="relative z-10 flex flex-col items-center">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white ring-4 ring-surface-container-lowest">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="mt-2 text-[10px] font-bold uppercase tracking-tighter text-primary">Ordered</span>
+</div>
+<div class="relative z-10 flex flex-col items-center">
+<div class="w-10 h-10 rounded-full bg-tertiary flex items-center justify-center text-white ring-8 ring-surface-container-lowest">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+</div>
+<span class="mt-2 text-[10px] font-black uppercase tracking-tighter text-tertiary">Completed</span>
+</div>
+</div>
+</div>
+<!-- PO Details Table-like Layout -->
+<div class="md:col-span-8 space-y-6">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="p-6 border-b border-surface-container-low flex justify-between items-center">
+<h3 class="text-sm font-bold Manrope uppercase tracking-widest text-on-surface">Order Items</h3>
+<span class="text-xs text-on-surface-variant font-medium">4 items total</span>
+</div>
+<div class="p-6 space-y-4">
+<div class="grid grid-cols-12 gap-4 text-[10px] font-bold uppercase tracking-widest text-outline py-2 border-b border-surface-container-low">
+<div class="col-span-6">Item Description</div>
+<div class="col-span-2 text-center">Qty</div>
+<div class="col-span-2 text-right">Unit Price</div>
+<div class="col-span-2 text-right">Total</div>
+</div>
+<div class="grid grid-cols-12 gap-4 text-sm items-center py-1">
+<div class="col-span-6 flex items-center space-x-3">
+<div class="w-10 h-10 bg-surface-container-low rounded-lg flex items-center justify-center text-outline">
+<span class="material-symbols-outlined">restaurant</span>
+</div>
+<div>
+<p class="font-bold text-indigo-900">Artisan Sourdough Loaves</p>
+<p class="text-xs text-on-surface-variant">Batch-442 • Bakery Supply</p>
+</div>
+</div>
+<div class="col-span-2 text-center font-medium">50 Units</div>
+<div class="col-span-2 text-right font-medium">$4.50</div>
+<div class="col-span-2 text-right font-bold">$225.00</div>
+</div>
+<div class="grid grid-cols-12 gap-4 text-sm items-center py-1">
+<div class="col-span-6 flex items-center space-x-3">
+<div class="w-10 h-10 bg-surface-container-low rounded-lg flex items-center justify-center text-outline">
+<span class="material-symbols-outlined">egg</span>
+</div>
+<div>
+<p class="font-bold text-indigo-900">Farm Fresh Large Eggs</p>
+<p class="text-xs text-on-surface-variant">Crate of 144 • Cold Storage</p>
+</div>
+</div>
+<div class="col-span-2 text-center font-medium">12 Crates</div>
+<div class="col-span-2 text-right font-medium">$32.00</div>
+<div class="col-span-2 text-right font-bold">$384.00</div>
+</div>
+<div class="grid grid-cols-12 gap-4 text-sm items-center py-1">
+<div class="col-span-6 flex items-center space-x-3">
+<div class="w-10 h-10 bg-surface-container-low rounded-lg flex items-center justify-center text-outline">
+<span class="material-symbols-outlined">liquor</span>
+</div>
+<div>
+<p class="font-bold text-indigo-900">E.V. Olive Oil</p>
+<p class="text-xs text-on-surface-variant">5L Tin • Import Select</p>
+</div>
+</div>
+<div class="col-span-2 text-center font-medium">5 Tins</div>
+<div class="col-span-2 text-right font-medium">$85.00</div>
+<div class="col-span-2 text-right font-bold">$425.00</div>
+</div>
+</div>
+<div class="bg-surface-container-high/50 p-6 flex justify-end">
+<div class="w-64 space-y-2">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Subtotal</span>
+<span class="font-medium">$1,034.00</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Tax (8%)</span>
+<span class="font-medium">$82.72</span>
+</div>
+<div class="flex justify-between text-lg font-bold border-t border-outline-variant/30 pt-2 text-indigo-950">
+<span>Total</span>
+<span>$1,116.72</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Related Records (Bento Section) -->
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-l-4 border-tertiary">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-tertiary">inventory</span>
+<span class="px-2 py-0.5 bg-tertiary-container text-[10px] text-tertiary-fixed font-black rounded uppercase">RECEIVED</span>
+</div>
+<h4 class="text-xs font-black Manrope uppercase tracking-widest text-outline mb-1">Goods Receipt</h4>
+<p class="text-lg font-bold text-indigo-900">#GR-102</p>
+<p class="text-xs text-on-surface-variant mt-2">Processed on Oct 28, 2023</p>
+<a class="mt-4 block text-xs font-bold text-primary hover:underline" href="#">View Receipt →</a>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-l-4 border-primary">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary">receipt_long</span>
+<span class="px-2 py-0.5 bg-secondary-container text-[10px] text-on-secondary-container font-black rounded uppercase">PAID</span>
+</div>
+<h4 class="text-xs font-black Manrope uppercase tracking-widest text-outline mb-1">Invoice</h4>
+<p class="text-lg font-bold text-indigo-900">#INV-551</p>
+<p class="text-xs text-on-surface-variant mt-2">Closed on Nov 02, 2023</p>
+<a class="mt-4 block text-xs font-bold text-primary hover:underline" href="#">View Invoice →</a>
+</div>
+</div>
+</div>
+<!-- Side Panel: Audit Trail & Details -->
+<div class="md:col-span-4 space-y-6">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden p-6">
+<h3 class="text-xs font-black Manrope uppercase tracking-widest text-outline mb-6">Order Summary</h3>
+<div class="space-y-4">
+<div>
+<label class="text-[10px] font-bold text-outline uppercase tracking-tighter">Vendor</label>
+<p class="text-sm font-bold text-indigo-900">Artisan Provisions Co.</p>
+<p class="text-xs text-on-surface-variant italic">ID: SUP-99812</p>
+</div>
+<div>
+<label class="text-[10px] font-bold text-outline uppercase tracking-tighter">Shipping Address</label>
+<p class="text-sm font-medium text-on-surface">Main Kitchen Warehouse<br/>402 Culinary Way, East District<br/>New York, NY 10012</p>
+</div>
+<div>
+<label class="text-[10px] font-bold text-outline uppercase tracking-tighter">Payment Terms</label>
+<p class="text-sm font-medium text-on-surface">Net 30 Days</p>
+</div>
+</div>
+</div>
+<!-- Audit Trail -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-6">
+<h3 class="text-xs font-black Manrope uppercase tracking-widest text-outline mb-6">Audit Trail</h3>
+<div class="space-y-6 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-px before:bg-surface-variant">
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-tertiary border-4 border-surface-container-lowest"></div>
+<p class="text-xs font-bold text-indigo-900">Order Completed</p>
+<p class="text-[10px] text-on-surface-variant">Nov 02, 2023 • 04:30 PM</p>
+<p class="text-[11px] mt-1 italic text-on-surface-variant">"Invoice #INV-551 verified and paid."</p>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-primary border-4 border-surface-container-lowest"></div>
+<p class="text-xs font-bold text-indigo-900">Goods Received</p>
+<p class="text-[10px] text-on-surface-variant">Oct 28, 2023 • 09:15 AM</p>
+<p class="text-[11px] mt-1 text-on-surface-variant">Processed by Warehouse Team B.</p>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-primary border-4 border-surface-container-lowest"></div>
+<p class="text-xs font-bold text-indigo-900">Order Dispatched</p>
+<p class="text-[10px] text-on-surface-variant">Oct 26, 2023 • 11:20 AM</p>
+<p class="text-[11px] mt-1 text-on-surface-variant">Vendor confirmed shipment.</p>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-5 h-5 rounded-full bg-primary border-4 border-surface-container-lowest"></div>
+<p class="text-xs font-bold text-indigo-900">Approved</p>
+<p class="text-[10px] text-on-surface-variant">Oct 25, 2023 • 02:00 PM</p>
+<p class="text-[11px] mt-1 text-on-surface-variant">Approved by Sarah Jenkins (Finance).</p>
+</div>
+</div>
+</div>
+<!-- Sticky Info Widget -->
+<div class="bg-indigo-950 p-6 rounded-xl text-white">
+<div class="flex items-center space-x-3 mb-4">
+<span class="material-symbols-outlined text-indigo-300">verified_user</span>
+<h4 class="text-sm font-bold tracking-tight">Security Hash</h4>
+</div>
+<p class="text-[10px] font-mono opacity-60 break-all">f7d2a1c9-8e4b-4f0e-a3d1-9c8b7a6d5e4f-COMPLETED</p>
+<div class="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+<span class="text-[10px] opacity-70">Compliance Status</span>
+<span class="text-[10px] font-bold text-emerald-400">PASSED</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

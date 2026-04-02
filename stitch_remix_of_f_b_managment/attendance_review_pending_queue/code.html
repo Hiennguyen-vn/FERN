@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Attendance Review | Precision Atelier ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary": "#004e33",
+              "on-primary-fixed": "#000e5e",
+              "primary-container": "#4151b3",
+              "outline": "#757684",
+              "on-error": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "on-tertiary-fixed": "#002113",
+              "inverse-on-surface": "#eff1f3",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-secondary-fixed": "#0d1c2e",
+              "error-container": "#ffdad6",
+              "on-secondary-container": "#57657a",
+              "on-primary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "primary-fixed": "#dee0ff",
+              "surface-container-high": "#e6e8ea",
+              "surface-dim": "#d8dadc",
+              "secondary-container": "#d5e3fc",
+              "on-tertiary-fixed-variant": "#005236",
+              "surface-variant": "#e0e3e5",
+              "on-background": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "inverse-primary": "#bbc3ff",
+              "tertiary-container": "#006846",
+              "background": "#f7f9fb",
+              "surface-tint": "#4555b7",
+              "on-secondary": "#ffffff",
+              "on-surface": "#191c1e",
+              "surface-container-highest": "#e0e3e5",
+              "on-surface-variant": "#454652",
+              "primary": "#27389a",
+              "error": "#ba1a1a",
+              "on-tertiary-container": "#5debaf",
+              "tertiary-fixed": "#6ffbbe",
+              "on-error-container": "#93000a",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "secondary": "#515f74",
+              "surface-container": "#eceef0",
+              "outline-variant": "#c5c5d4",
+              "secondary-fixed-dim": "#b9c7df",
+              "on-secondary-fixed-variant": "#3a485b",
+              "on-tertiary": "#ffffff",
+              "on-primary-container": "#cacfff",
+              "surface": "#f7f9fb",
+              "tertiary-fixed-dim": "#4edea3",
+              "secondary-fixed": "#d5e3fc",
+              "inverse-surface": "#2d3133"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+            color: #191c1e;
+        }
+        h1, h2, h3 {
+            font-family: 'Manrope', sans-serif;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar -->
+<header class="bg-[#f7f9fb] dark:bg-slate-900 text-[#3F51B5] dark:text-[#5c6bc0] font-['Manrope'] font-semibold text-sm w-full border-b border-transparent flex justify-between items-center w-full px-6 h-16 z-50">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tight text-[#191c1e] dark:text-white">Precision Atelier ERP</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-[#454652] dark:text-slate-400 hover:bg-[#f2f4f6] dark:hover:bg-slate-800 transition-colors" href="#">Dashboard</a>
+<a class="text-[#454652] dark:text-slate-400 hover:bg-[#f2f4f6] dark:hover:bg-slate-800 transition-colors" href="#">Analytics</a>
+<a class="text-[#454652] dark:text-slate-400 hover:bg-[#f2f4f6] dark:hover:bg-slate-800 transition-colors" href="#">Schedule</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="pl-10 pr-4 py-1.5 rounded-lg border-none bg-surface-container-low text-sm focus:ring-2 focus:ring-primary w-64" placeholder="Search operations..." type="text"/>
+</div>
+<button class="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-primary text-white text-xs font-bold signature-gradient active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+                Clock In
+            </button>
+<div class="flex items-center gap-3 ml-2">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-container-low p-1.5 rounded-full">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:bg-surface-container-low p-1.5 rounded-full">help</span>
+<img alt="Manager Profile" class="w-8 h-8 rounded-full border border-surface-variant" data-alt="Professional portrait of a male manager in a clean corporate attire with a soft office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDa6NcdnGsx0QvCz5cFpVv_d9SpQIKvmLOfXZuCfQvxzZTgJ79kmtUUGI1ag6xun4y7H5YskcsMh-ceO6snWzST-p4YVdHNoUs-HPReATEGwvs79oqK6a-heDyUO9wxnVj75OxUeYGwSQT_ez7ap30zQNQc6PQnNMevIqy3d8waTLbDITQmIVmH4jJt0vBx4lj9zyPJvSAM6JS6E_UhU-z-Ks_3nkpSHQxsiNVTHWmGoPWk95NaPzhjg9RSf4uGhX71Hacx7mC4Ha46"/>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar -->
+<aside class="bg-[#f2f4f6] dark:bg-slate-950 text-[#3F51B5] dark:text-[#5c6bc0] font-['Inter'] text-sm tracking-tight h-screen w-64 fixed left-0 top-0 flex flex-col h-full py-4 pt-20 border-r border-transparent">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-lowest flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined">restaurant</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Downtown Bistro</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Outlet #402</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1 pr-2">
+<a class="flex items-center gap-3 px-6 py-3 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800 transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                    Overview
+                </a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800 transition-all" href="#">
+<span class="material-symbols-outlined">groups</span>
+                    Staffing
+                </a>
+<!-- Active Tab: Attendance -->
+<a class="flex items-center gap-3 px-6 py-3 bg-[#ffffff] dark:bg-slate-800 text-[#3F51B5] font-bold rounded-l-lg ml-2 transform transition-transform duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">fact_check</span>
+                    Attendance
+                </a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800 transition-all" href="#">
+<span class="material-symbols-outlined">payments</span>
+                    Payroll
+                </a>
+<a class="flex items-center gap-3 px-6 py-3 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800 transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+                    Settings
+                </a>
+</nav>
+<div class="mt-auto px-6 pt-4 border-t border-surface-variant/30">
+<a class="flex items-center gap-3 py-3 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">contact_support</span>
+                    Support
+                </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 flex-1 flex flex-col overflow-hidden">
+<!-- Header & Summary Cards -->
+<div class="px-8 pt-6 pb-4">
+<div class="flex justify-between items-end mb-6">
+<div>
+<h2 class="text-2xl font-extrabold text-on-surface tracking-tight">Attendance Review</h2>
+<p class="text-sm text-on-surface-variant font-medium">Verify and reconcile daily staffing exceptions.</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container-high text-on-surface text-xs font-bold px-4 py-2 rounded-lg hover:bg-surface-variant transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                            Export CSV
+                        </button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Summary Card 1 -->
+<div class="bg-surface-container-lowest rounded-xl p-5 border border-transparent flex justify-between items-start">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Pending Exceptions</p>
+<h3 class="text-3xl font-extrabold text-error">12</h3>
+<p class="text-xs text-on-surface-variant mt-2">Requires immediate attention</p>
+</div>
+<div class="bg-error-container text-error p-2 rounded-lg">
+<span class="material-symbols-outlined">warning</span>
+</div>
+</div>
+<!-- Summary Card 2 -->
+<div class="bg-surface-container-lowest rounded-xl p-5 border border-transparent flex justify-between items-start">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Approved Today</p>
+<h3 class="text-3xl font-extrabold text-tertiary">45</h3>
+<p class="text-xs text-on-surface-variant mt-2">Reconciled this morning</p>
+</div>
+<div class="bg-tertiary-fixed text-tertiary p-2 rounded-lg">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+</div>
+<!-- Summary Card 3 -->
+<div class="bg-surface-container-lowest rounded-xl p-5 border border-transparent flex justify-between items-start">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Rejected</p>
+<h3 class="text-3xl font-extrabold text-on-surface">3</h3>
+<p class="text-xs text-on-surface-variant mt-2">Requires shift adjustment</p>
+</div>
+<div class="bg-surface-container-low text-on-surface-variant p-2 rounded-lg">
+<span class="material-symbols-outlined">cancel</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Filter Bar -->
+<div class="px-8 pb-4">
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-wrap items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+<span class="material-symbols-outlined text-outline text-[20px]">calendar_today</span>
+<span class="text-xs font-semibold text-on-surface">Today, Oct 24</span>
+<span class="material-symbols-outlined text-outline text-[16px]">expand_more</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-lowest rounded-lg border border-outline-variant/30">
+<span class="material-symbols-outlined text-outline text-[20px]">person_search</span>
+<span class="text-xs font-semibold text-on-surface">Employee: All</span>
+<span class="material-symbols-outlined text-outline text-[16px]">expand_more</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg border border-primary/20">
+<span class="material-symbols-outlined text-primary text-[20px]">pending</span>
+<span class="text-xs font-bold text-primary">Status: Pending</span>
+<span class="material-symbols-outlined text-primary text-[16px]">close</span>
+</div>
+<div class="ml-auto flex items-center gap-2">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Queue: 12 Records</span>
+</div>
+</div>
+</div>
+<!-- Main Layout with Table and Detail Panel -->
+<div class="flex-1 flex overflow-hidden px-8 pb-8 gap-6">
+<!-- Table Container -->
+<div class="flex-[3] bg-surface-container-lowest rounded-2xl overflow-hidden flex flex-col shadow-sm">
+<div class="overflow-y-auto">
+<table class="w-full text-left border-separate border-spacing-0">
+<thead class="sticky top-0 bg-surface-container-lowest z-10">
+<tr>
+<th class="px-6 py-4 text-[10px] font-extrabold text-on-surface-variant uppercase tracking-widest bg-surface-container-low">Employee</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-on-surface-variant uppercase tracking-widest bg-surface-container-low">Shift</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-on-surface-variant uppercase tracking-widest bg-surface-container-low">Clock In/Out</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-on-surface-variant uppercase tracking-widest bg-surface-container-low">System Status</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-on-surface-variant uppercase tracking-widest bg-surface-container-low">Exception Reason</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<!-- Row 1 - Active/Selected -->
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer bg-primary/5 border-l-4 border-primary">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Employee" class="w-8 h-8 rounded-lg object-cover" data-alt="Portrait of a female kitchen staff member in a professional white chef jacket against a light grey background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJFVbCc3aGioUge4qfckBWhWS6NmeyI0_vob_IC5QRJYFlycWOAD3ezxav5_lE-mVG3MsNvskE4dZztFHcCOU4Yob6fWt9NS8jcuGwjjOhzTQjzy0xNRd_RH2F4NT2y3zex50KU-IYT7mKpQsX1ojfvls1CPXAkcV2ZKfCg8lI_CUfe7arg6ZE_fghefimUpqRlh87jp_WbetAscpyY6cKYoCgMWv9zCCe9WTgFaUlecPY9YduEtmDAUIPsTm6EtTE9rHgb2wYPuLI"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Elena Rodriguez</p>
+<p class="text-[10px] text-on-surface-variant">#EMP-2041</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="inline-flex items-center px-2 py-1 bg-surface-container-low rounded text-[11px] font-bold text-on-secondary-container">
+                                            AM Kitchen
+                                        </div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm font-mono font-medium text-on-surface">08:45 / 17:15</p>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-error-container text-error">Late In</span>
+</td>
+<td class="px-6 py-4">
+<p class="text-xs text-on-surface-variant italic">"Commute delay reported"</p>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Employee" class="w-8 h-8 rounded-lg object-cover" data-alt="Portrait of a male waiter in a crisp black shirt with a blurred restaurant dining room background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAg7RH56sqB5L2VzeXfQR7EOKAOBrvMf5PLXQutkrdLB3EeePYP5cnWOI8sC2cH-U2TuJuOiPttx7ACeHlZil9V8r65Lzmq99OWQeH88a_ExsmF0_vhrFdSdcSrBNJT2LXS1QAvrNP736WwpjYpOaEalbzwK4q5fIr_hW7rR_IpvaxKNo9YC-U_7gCTkRXX_Fr-aCMU7mCjSO81wenxXLMCi0KmYuEd4VYFACbFth18igjD-igc_nyKzh43vTjYSfovbS5_3KojRTeG"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Marcus Thompson</p>
+<p class="text-[10px] text-on-surface-variant">#EMP-1988</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="inline-flex items-center px-2 py-1 bg-surface-container-low rounded text-[11px] font-bold text-on-secondary-container">
+                                            PM Server
+                                        </div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm font-mono font-medium text-on-surface">15:55 / 23:30</p>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-container text-secondary">Early Out</span>
+</td>
+<td class="px-6 py-4">
+<p class="text-xs text-on-surface-variant italic">Personal emergency</p>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Employee" class="w-8 h-8 rounded-lg object-cover" data-alt="Headshot of a friendly barista with a cap and apron in a bright, modern cafe setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_heyZPgxy0CJ-YlJ24cWqz0yAA3AeuXSqRi7tBwgGmUY_mRIWID3moRaBj2IrDIXRvXLR2ZFula5Knj22T8O2kV2rGUAJTAaTyb6njNwZWRGWS-64_148Z8qYsStHfVay6UznY5t0l_-FoqqqxMWGOS3QU8XybN8Mk4UcSi7HMRvg6ivZqfUJ5kENxEyy35EQVCbm0BSjKpyKx4V3sL9VwGAwIn00WoJJEbR-nJX8jTd4Q-eFfhef8jLiMi64A07oPTBAXpuQcobW"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Liam Chen</p>
+<p class="text-[10px] text-on-surface-variant">#EMP-2105</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="inline-flex items-center px-2 py-1 bg-surface-container-low rounded text-[11px] font-bold text-on-secondary-container">
+                                            AM Barista
+                                        </div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm font-mono font-medium text-on-surface">06:05 / 14:00</p>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-error-container text-error">Unscheduled</span>
+</td>
+<td class="px-6 py-4">
+<p class="text-xs text-on-surface-variant italic">Shift swap with Sarah</p>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Employee" class="w-8 h-8 rounded-lg object-cover" data-alt="Portrait of a young man smiling, wearing a simple polo shirt with clean lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4nBP2301029wryjCGQz1IfP9vpY14W3sEKAjXQ6jNYpeVlUXkMDPwhHTtpNCbvxKag2o5-Ubj7sHlypTgUXBlEmu12dOsQ2C6uiESccn6iAVqzrjSSXas_LrcS4vpb8lisF9344trS1S1vyNntxkw3ReFzyUfJ3jNwCgrjBC12d4Xg57F34aHbp_gAT0CMDzA_jVl9Z43FuRu2_vzOHtKLoi9nhFzlLWepR2bJRZY_bEIa6Rpp1ZeNdSENoi2ado3bwgeJ4Kx18FA"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Jordan Banks</p>
+<p class="text-[10px] text-on-surface-variant">#EMP-2210</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="inline-flex items-center px-2 py-1 bg-surface-container-low rounded text-[11px] font-bold text-on-secondary-container">
+                                            All Day Host
+                                        </div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm font-mono font-medium text-on-surface">11:00 / 19:45</p>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-secondary-container text-secondary">Missed Break</span>
+</td>
+<td class="px-6 py-4">
+<p class="text-xs text-on-surface-variant italic">Lunch rush - no cover</p>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-xs font-bold text-primary">SH</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Sofia Hernandez</p>
+<p class="text-[10px] text-on-surface-variant">#EMP-2301</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="inline-flex items-center px-2 py-1 bg-surface-container-low rounded text-[11px] font-bold text-on-secondary-container">
+                                            PM Kitchen
+                                        </div>
+</td>
+<td class="px-6 py-4">
+<p class="text-sm font-mono font-medium text-on-surface">17:00 / --:--</p>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-error-container text-error">Missing Out</span>
+</td>
+<td class="px-6 py-4">
+<p class="text-xs text-on-surface-variant italic">Left without clocking</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right Detail Panel -->
+<div class="flex-1 bg-surface-container-low rounded-2xl p-6 flex flex-col gap-6 shadow-sm border border-outline-variant/10">
+<div>
+<div class="flex items-center gap-4 mb-4">
+<img alt="Employee Large" class="w-16 h-16 rounded-xl object-cover shadow-sm" data-alt="Portrait of a female kitchen staff member in a professional white chef jacket against a light grey background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhGCpjnTdase0VvYXBQszaOYXZMiYoQPuS0ve-tWaX-8-F6DaNaXcPshJIlLz8WGn_2H_yF3ikPmjYxMdo240HI2ywYI1_atfsn50u6cC7vS1c3ndsMC6kEWqHuUqx3oeWvFRYaYxeFXVZb3i7h4N6JSJXt0e0KJgC1fERsmPjuNwq-rk0-3knZRrkq66EXEe1o3ZM0z8VeFm1zGjt0MniTmracgaQVDGU4fB6SCMZunw4RcqwCLpyPceQ2q4I4DR1YVScRP4cC_uE"/>
+<div>
+<h3 class="text-lg font-extrabold text-on-surface">Elena Rodriguez</h3>
+<p class="text-sm font-semibold text-primary">AM Kitchen Lead</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest rounded-lg p-3">
+<p class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Shift Assignment</p>
+<p class="text-xs font-bold text-on-surface">08:30 - 17:00</p>
+</div>
+<div class="bg-surface-container-lowest rounded-lg p-3">
+<p class="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Raw Events</p>
+<p class="text-xs font-bold text-on-surface">08:45 - 17:15</p>
+</div>
+</div>
+</div>
+<div class="flex-1 space-y-4">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">Shift Variance Analysis</p>
+<div class="relative pl-6 space-y-6 before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-[2px] before:bg-surface-variant">
+<div class="relative">
+<div class="absolute left-[-26px] top-1 w-3 h-3 rounded-full bg-error ring-4 ring-error/20"></div>
+<p class="text-xs font-bold text-on-surface">Clock In Exception (+15m)</p>
+<p class="text-[11px] text-on-surface-variant">Employee arrived at 08:42, clocked at 08:45</p>
+</div>
+<div class="relative">
+<div class="absolute left-[-26px] top-1 w-3 h-3 rounded-full bg-tertiary"></div>
+<p class="text-xs font-bold text-on-surface">Clock Out (+15m)</p>
+<p class="text-[11px] text-on-surface-variant">Stayed late to finish prep list for dinner</p>
+</div>
+</div>
+</div>
+<div class="mt-6">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 block">Manager Notes</label>
+<textarea class="w-full bg-surface-container-lowest border-none rounded-xl p-4 text-xs h-24 focus:ring-2 focus:ring-primary placeholder:text-outline/50" placeholder="Type explanation for reconciliation..."></textarea>
+</div>
+</div>
+<div class="flex flex-col gap-2 pt-4">
+<button class="w-full signature-gradient text-white font-bold py-3 rounded-xl active:scale-95 transition-all text-sm shadow-md shadow-primary/20">
+                            Approve Exception
+                        </button>
+<button class="w-full bg-surface-container-lowest text-error font-bold py-3 rounded-xl active:scale-95 transition-all text-sm border border-error/20 hover:bg-error/5">
+                            Reject &amp; Request Review
+                        </button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

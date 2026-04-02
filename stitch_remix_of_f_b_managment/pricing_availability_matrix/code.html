@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-container-highest": "#e0e3e5",
+            "primary-fixed-dim": "#bbc3ff",
+            "surface-variant": "#e0e3e5",
+            "tertiary": "#004e33",
+            "secondary": "#515f74",
+            "on-tertiary-container": "#5debaf",
+            "surface-container-lowest": "#ffffff",
+            "inverse-on-surface": "#eff1f3",
+            "outline": "#757684",
+            "on-primary-fixed": "#000e5e",
+            "on-tertiary-fixed-variant": "#005236",
+            "tertiary-container": "#006846",
+            "on-secondary": "#ffffff",
+            "secondary-fixed": "#d5e3fc",
+            "primary": "#27389a",
+            "on-primary-container": "#cacfff",
+            "on-error": "#ffffff",
+            "on-primary": "#ffffff",
+            "surface-container-high": "#e6e8ea",
+            "surface-container": "#eceef0",
+            "surface-dim": "#d8dadc",
+            "on-surface-variant": "#454652",
+            "inverse-primary": "#bbc3ff",
+            "on-tertiary-fixed": "#002113",
+            "error-container": "#ffdad6",
+            "on-tertiary": "#ffffff",
+            "on-secondary-fixed-variant": "#3a485b",
+            "surface-bright": "#f7f9fb",
+            "on-secondary-container": "#57657a",
+            "surface-tint": "#4555b7",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-surface": "#191c1e",
+            "secondary-fixed-dim": "#b9c7df",
+            "outline-variant": "#c5c5d4",
+            "primary-fixed": "#dee0ff",
+            "on-secondary-fixed": "#0d1c2e",
+            "error": "#ba1a1a",
+            "on-primary-fixed-variant": "#2c3c9e",
+            "surface": "#f7f9fb",
+            "inverse-surface": "#2d3133",
+            "on-error-container": "#93000a",
+            "secondary-container": "#d5e3fc",
+            "primary-container": "#4151b3",
+            "on-background": "#191c1e",
+            "tertiary-fixed": "#6ffbbe",
+            "surface-container-low": "#f2f4f6",
+            "background": "#f7f9fb"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .signature-gradient {
+      background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+    }
+    body { font-family: 'Inter', sans-serif; }
+    h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+  </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-[#f2f4f6] flex flex-col font-['Inter'] text-sm font-medium z-50">
+<div class="px-6 py-8 flex items-center gap-3">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<h1 class="text-lg font-extrabold text-[#27389a] leading-none">HQ Operations</h1>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Global Catalog</p>
+</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<div class="px-3 py-2 text-[11px] font-bold text-outline uppercase tracking-widest">Core Management</div>
+<a class="flex items-center gap-3 px-3 py-3 text-[#454652] hover:bg-slate-200/50 transition-all" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Catalog</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-[#454652] hover:bg-slate-200/50 transition-all" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span>Recipes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 bg-white text-[#27389a] rounded-r-lg shadow-sm font-bold transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span>Pricing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-3 text-[#454652] hover:bg-slate-200/50 transition-all" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<span>Outlets</span>
+</a>
+</nav>
+<div class="mt-auto p-4 space-y-4">
+<button class="w-full signature-gradient text-white py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">add</span>
+        Create Product
+      </button>
+<div class="pt-4 border-t border-outline-variant/30 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-slate-200/50 transition-all" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-slate-200/50 transition-all" href="#">
+<span class="material-symbols-outlined text-lg">contact_support</span>
+<span>Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="sticky top-0 w-full flex justify-between items-center px-8 py-4 bg-[#f7f9fb] z-40">
+<div class="flex items-center gap-6">
+<h2 class="text-xl font-bold text-[#191c1e] font-['Manrope'] tracking-tight">Architectural ERP</h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+<input class="bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 text-sm w-80 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search resources..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-[#f2f4f6] rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-[#f2f4f6] rounded-full transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-[1px] bg-outline-variant/30 mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right">
+<p class="text-xs font-bold text-on-surface">Admin User</p>
+<p class="text-[10px] text-outline">Operation Lead</p>
+</div>
+<img alt="User Profile" class="w-9 h-9 rounded-full border-2 border-white shadow-sm" data-alt="professional headshot of a corporate manager in business attire with a neutral gray background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyXQjCrqKJ-RkMSOqICkjnE7YuZw6uA7MPqoGAuOBz3K84e9qEQEbcS4lgarJb0gGojdWLSkZggAosFKdF_mr3utDqCq2sMpsuZSUKJsTXmaCeDnMfY_fPPC6PEaWtlMISRDyMQDs2Et6X__1i1cz9PazfDr4cLRvRdY5FytWitxD9T_LMpeE4j4qN0xrGps0CiOBef4uXgQlrc75eoZF24xyvTzVCg5NCgaqKAKasVx3qFr9Y7wBLiFMSzELv_aFOK_pnSiIOlI7S"/>
+</div>
+</div>
+</header>
+<!-- Content Workspace -->
+<div class="flex flex-1 p-8 gap-8">
+<!-- Left Panel: Product Selector -->
+<section class="w-1/4 flex flex-col gap-6">
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="font-headline font-bold text-lg text-primary">Products</h3>
+<span class="material-symbols-outlined text-outline">filter_list</span>
+</div>
+<div class="space-y-2">
+<!-- Active Product -->
+<div class="p-3 bg-primary-container/10 border-l-4 border-primary rounded-r-lg">
+<div class="flex gap-3">
+<img alt="Signature Wagyu Burger" class="w-10 h-10 rounded-lg object-cover" data-alt="close-up of a gourmet wagyu beef burger with melting cheese and fresh lettuce on a toasted brioche bun" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoErnj-HB3pvHTX0Vp3me-nAd3EQ7qYx6jnPOvevWwzneNn5DUrQMx1jvIHGmNl-w0-fYP7YrB5ERMGze_MZQptHg3GVH8RY2gCyGbdM8mBqkc6H1CIAaKgljK04Ro8Mpf1g7kE8yyiKw_62Ly4G6FwbEN6oSmhXS3pDKApcaNKUv64C-VcuPJtpbCy6Hs9dl_3WSC85fstzTPqMBTR80D4hpcy7pCkbaK7_nx_osexYCw52ADeuloBm5w9aENU4gKXDi44EmcjGvb"/>
+<div>
+<p class="text-sm font-bold text-primary">Signature Wagyu Burger</p>
+<p class="text-[10px] text-outline font-medium">SKU: WAG-001</p>
+</div>
+</div>
+</div>
+<!-- Other Products -->
+<div class="p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="flex gap-3">
+<img alt="Truffle Fries" class="w-10 h-10 rounded-lg object-cover" data-alt="crispy golden fries seasoned with truffle oil and parsley served in a ceramic bowl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkB1CHaRhuWwMfJwHnDKoj12ZGeVa73bsDiJd-pltadYSw2y7zqJ3rku6OV_Y6Rpc_N4Tr-TcfAaSn7Hn-7Lf646C7QV3lBiqwU-xxz84M7n6AQH5hBYT8MmNQXoeufoPuGnPliYI71zpWMK-zqbowz9D6z_437Uupy_bKQa77QPGzXpalR3k8wTgPXeFExHUFH3kNgqo9g_3QqLI5izImXbddcJ-8qCF8YzGEN9EPOz9JWkCKrNUCCz4cmRbkZoK7R2e8A6tBn4-s"/>
+<div>
+<p class="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors">Truffle Parmesan Fries</p>
+<p class="text-[10px] text-outline">SKU: SID-042</p>
+</div>
+</div>
+</div>
+<div class="p-3 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<div class="flex gap-3">
+<img alt="Cola" class="w-10 h-10 rounded-lg object-cover" data-alt="tall glass of sparkling soda with ice cubes and a lemon slice against a bright summer background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnJrrVKPo4cYVoGxHbJhQZ9YxsrQ2F5J_BfKKPynAK_Pu1qmTmQrzv3fDdNB8iUQAqPNuVU5nejiseFWyhzhG3nNYvuHbF3DsoRWe8GjRRm-xDJ36CLzq4bEs_reeoDeElnE4OSrzso61QWuFDHv4zmHIfnOIhiioBqslDDwUM18trgttFy6dNISCCFBjw2EMQ3HyoSQaQuurGs-qYvfZp2FhDgATqVIzsiBLtCa96a1AbxtHSs-d_W00O6vvIUKw98N2DhKPD9fkz"/>
+<div>
+<p class="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors">House Craft Cola</p>
+<p class="text-[10px] text-outline">SKU: DRK-109</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-tertiary-container text-white p-6 rounded-xl space-y-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-bold uppercase tracking-widest opacity-80">Summary</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] opacity-70 uppercase">Global Base</p>
+<p class="text-2xl font-extrabold">$24.00</p>
+</div>
+<div>
+<p class="text-[10px] opacity-70 uppercase">Overrides</p>
+<p class="text-2xl font-extrabold">12</p>
+</div>
+</div>
+<p class="text-[11px] leading-relaxed opacity-80">Pricing is currently synchronized across 84% of your estate.</p>
+</div>
+</section>
+<!-- Right Panel: Matrix & Timeline -->
+<section class="flex-1 flex flex-col gap-8">
+<!-- Header Actions -->
+<div class="flex justify-between items-end">
+<div>
+<nav class="flex gap-2 text-[10px] font-bold text-outline uppercase mb-2">
+<span>Catalog</span>
+<span>/</span>
+<span class="text-primary">Pricing &amp; Availability</span>
+</nav>
+<h2 class="text-3xl font-extrabold text-on-surface flex items-center gap-3">
+              Signature Wagyu Burger
+              <span class="bg-tertiary-container/20 text-tertiary text-xs px-2 py-0.5 rounded uppercase tracking-tighter">Active Product</span>
+</h2>
+</div>
+<div class="flex gap-3">
+<button class="bg-surface-container-high text-on-surface-variant font-bold px-6 py-3 rounded-lg text-sm hover:bg-surface-container-highest transition-colors">
+              Export Matrix
+            </button>
+<button class="signature-gradient text-white font-bold px-8 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">event_repeat</span>
+              Schedule Price Change
+            </button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Pricing Timeline Table -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-xl shadow-sm flex flex-col">
+<div class="p-6 border-b border-surface-container">
+<h3 class="font-headline font-bold text-lg">Pricing Timeline</h3>
+<p class="text-xs text-outline">Manage scheduled pricing tiers and effective date ranges.</p>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+<th class="px-6 py-4">Status</th>
+<th class="px-6 py-4">Scope</th>
+<th class="px-6 py-4">Price</th>
+<th class="px-6 py-4">Tax Class</th>
+<th class="px-6 py-4">Effective From/To</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<!-- Active Row -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-tertiary font-bold">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span> Active
+                      </span>
+</td>
+<td class="px-6 py-4 font-semibold">Global Default</td>
+<td class="px-6 py-4 font-bold text-on-surface">$24.00</td>
+<td class="px-6 py-4 text-outline">VAT 15%</td>
+<td class="px-6 py-4 text-xs font-mono">2023-01-01 <span class="mx-1 text-outline">→</span> INDEF</td>
+</tr>
+<!-- Scheduled Row -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-primary font-bold">
+<span class="w-2 h-2 rounded-full bg-primary"></span> Scheduled
+                      </span>
+</td>
+<td class="px-6 py-4 font-semibold">Airport Outlets</td>
+<td class="px-6 py-4 font-bold text-on-surface">$28.50</td>
+<td class="px-6 py-4 text-outline">VAT 15%</td>
+<td class="px-6 py-4 text-xs font-mono">2024-06-01 <span class="mx-1 text-outline">→</span> 2024-12-31</td>
+</tr>
+<!-- Conflict Row -->
+<tr class="bg-error-container/10 border-l-2 border-error">
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-error font-bold">
+<span class="material-symbols-outlined text-sm">warning</span> Conflict
+                      </span>
+</td>
+<td class="px-6 py-4 font-semibold">Downtown Hub</td>
+<td class="px-6 py-4 font-bold text-on-surface">$26.00</td>
+<td class="px-6 py-4 text-outline">VAT 15%</td>
+<td class="px-6 py-4 text-xs font-mono text-error font-bold underline decoration-dotted">2024-05-15 <span class="mx-1">→</span> 2024-08-01</td>
+</tr>
+<!-- Expired Row -->
+<tr class="opacity-50 grayscale bg-surface-dim/20">
+<td class="px-6 py-4">
+<span class="flex items-center gap-1.5 text-on-surface-variant font-bold">
+<span class="material-symbols-outlined text-sm">history</span> Expired
+                      </span>
+</td>
+<td class="px-6 py-4 font-semibold">Launch Promo</td>
+<td class="px-6 py-4 font-bold text-on-surface">$19.99</td>
+<td class="px-6 py-4 text-outline">VAT 15%</td>
+<td class="px-6 py-4 text-xs font-mono">2022-10-01 <span class="mx-1">→</span> 2022-12-31</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-error-container/30 mt-auto flex items-start gap-3 rounded-b-xl border-t border-error/10">
+<span class="material-symbols-outlined text-error">info</span>
+<div>
+<p class="text-xs font-bold text-error uppercase tracking-tight">Timeline Collision Detected</p>
+<p class="text-[11px] text-on-error-container">The "Downtown Hub" override overlaps with the upcoming "Summer Special" global adjustment. Resolve this to ensure correct POS synchronization.</p>
+</div>
+</div>
+</div>
+<!-- Outlet Availability Matrix -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm flex flex-col h-full">
+<div class="p-6 border-b border-surface-container flex justify-between items-center">
+<div>
+<h3 class="font-headline font-bold text-lg">Outlet Matrix</h3>
+<p class="text-xs text-outline">Availability Control</p>
+</div>
+<div class="flex gap-1">
+<span class="bg-surface-container-high p-1.5 rounded cursor-pointer"><span class="material-symbols-outlined text-sm">search</span></span>
+<span class="bg-surface-container-high p-1.5 rounded cursor-pointer"><span class="material-symbols-outlined text-sm">sort</span></span>
+</div>
+</div>
+<div class="p-4 space-y-3 overflow-y-auto max-h-[500px]">
+<!-- Outlet Item -->
+<div class="flex items-center justify-between p-3 bg-surface rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">store</span>
+</div>
+<div>
+<p class="text-xs font-bold">Central Plaza</p>
+<p class="text-[10px] text-tertiary font-bold">$24.00 (Default)</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-bold text-tertiary uppercase">Available</span>
+<div class="w-10 h-5 bg-tertiary rounded-full relative flex items-center px-1">
+<div class="w-3.5 h-3.5 bg-white rounded-full absolute right-1"></div>
+</div>
+</div>
+</div>
+<!-- Outlet Item -->
+<div class="flex items-center justify-between p-3 bg-surface rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">store</span>
+</div>
+<div>
+<p class="text-xs font-bold">Terminal 5 Intl</p>
+<p class="text-[10px] text-primary font-bold">$28.50 (Override)</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-bold text-tertiary uppercase">Available</span>
+<div class="w-10 h-5 bg-tertiary rounded-full relative flex items-center px-1">
+<div class="w-3.5 h-3.5 bg-white rounded-full absolute right-1"></div>
+</div>
+</div>
+</div>
+<!-- Outlet Item (Blocked) -->
+<div class="flex items-center justify-between p-3 bg-surface-container-high/50 rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-dim flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-sm">block</span>
+</div>
+<div>
+<p class="text-xs font-bold text-outline">Express Station B</p>
+<p class="text-[10px] text-outline font-bold">Out of Stock</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-bold text-outline uppercase">Blocked</span>
+<div class="w-10 h-5 bg-outline-variant/50 rounded-full relative flex items-center px-1">
+<div class="w-3.5 h-3.5 bg-white rounded-full absolute left-1"></div>
+</div>
+</div>
+</div>
+<!-- Outlet Item -->
+<div class="flex items-center justify-between p-3 bg-surface rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">store</span>
+</div>
+<div>
+<p class="text-xs font-bold">The Waterfront</p>
+<p class="text-[10px] text-tertiary font-bold">$24.00 (Default)</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-bold text-tertiary uppercase">Available</span>
+<div class="w-10 h-5 bg-tertiary rounded-full relative flex items-center px-1">
+<div class="w-3.5 h-3.5 bg-white rounded-full absolute right-1"></div>
+</div>
+</div>
+</div>
+<!-- Outlet Item -->
+<div class="flex items-center justify-between p-3 bg-surface rounded-lg">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">store</span>
+</div>
+<div>
+<p class="text-xs font-bold">Suburban Hub</p>
+<p class="text-[10px] text-tertiary font-bold">$24.00 (Default)</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-bold text-tertiary uppercase">Available</span>
+<div class="w-10 h-5 bg-tertiary rounded-full relative flex items-center px-1">
+<div class="w-3.5 h-3.5 bg-white rounded-full absolute right-1"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-auto p-4 border-t border-surface-container text-center">
+<button class="text-xs font-bold text-primary uppercase tracking-widest hover:underline">View All 158 Outlets</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Sticky Footer Navigation for Mobile (Suppressed by Desktop SideNav) -->
+<div class="md:hidden fixed bottom-0 left-0 w-full bg-surface-container-lowest flex justify-around py-3 px-6 shadow-2xl z-50">
+<div class="flex flex-col items-center gap-1 text-primary font-semibold">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="text-[10px]">Pricing</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-outline">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-[10px]">Catalog</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-outline">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="text-[10px]">Recipes</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-outline">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px]">Profile</span>
+</div>
+</div>
+</main>
+</body></html>

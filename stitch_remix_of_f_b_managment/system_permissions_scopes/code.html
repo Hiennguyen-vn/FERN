@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Atelier | Permission &amp; Scope Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#d5e3fc",
+                        "surface-tint": "#4555b7",
+                        "on-primary-container": "#cacfff",
+                        "tertiary-container": "#006846",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "primary-fixed": "#dee0ff",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-high": "#e6e8ea",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c5c5d4",
+                        "outline": "#757684",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#eceef0",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "inverse-surface": "#2d3133",
+                        "on-tertiary-fixed": "#002113",
+                        "on-background": "#191c1e",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "surface": "#f7f9fb",
+                        "secondary": "#515f74",
+                        "primary": "#27389a",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#004e33",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "surface-variant": "#e0e3e5",
+                        "inverse-primary": "#bbc3ff",
+                        "tertiary-fixed": "#6ffbbe",
+                        "surface-dim": "#d8dadc",
+                        "primary-container": "#4151b3",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f2f4f6",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-container": "#57657a",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "on-tertiary-container": "#5debaf",
+                        "background": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "on-error": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "on-surface-variant": "#454652",
+                        "on-primary-fixed": "#000e5e"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex">
+<!-- SideNavBar Component -->
+<aside class="flex flex-col h-full py-6 px-4 bg-slate-50 dark:bg-slate-900 h-screen w-64 border-r-0 font-['Manrope'] text-sm tracking-tight fixed left-0 top-0 z-50">
+<div class="mb-8 px-2">
+<div class="text-lg font-bold text-indigo-900 dark:text-indigo-400">Precision Atelier</div>
+<div class="text-xs text-slate-500 mt-1">Global Admin | London Region</div>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Dashboard -->
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<!-- Inventory -->
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>Inventory</span>
+</a>
+<!-- Procurement -->
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<!-- POS Feed -->
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="point_of_sale">point_of_sale</span>
+<span>POS Feed</span>
+</a>
+<!-- Staffing -->
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors duration-200 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="badge">badge</span>
+<span>Staffing</span>
+</a>
+<!-- Settings (ACTIVE) -->
+<a class="flex items-center gap-3 px-3 py-2 text-indigo-700 dark:text-indigo-300 font-semibold bg-white dark:bg-slate-950 rounded-lg shadow-sm scale-[0.98] transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-slate-200 dark:border-slate-800">
+<button class="w-full flex items-center justify-between px-3 py-2 bg-slate-100 dark:bg-slate-800/50 rounded-lg hover:bg-slate-200 transition-colors">
+<div class="flex items-center gap-2">
+<img alt="User profile avatar" class="w-8 h-8 rounded-full object-cover" data-alt="Professional headshot of a corporate manager in a suit with a neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDP8bDGaIeQD3OTQs0szR7siipmxllrbIwbbzbvR3zybBooXPbbjZfXa6NwNLuIlOULL_YJNl2_1B5kWuL4hyXcbaV-C3YORREhoko_2WNy11NMGIogwEcc_fAWxRbF2pyou9iWhIkPtjmpyk2ww9AKGIRUcb-KA68CS8n_sJlgLaBw_5XmWmJRBg3NWhlm3i0PVm0XkLGBASTE_6H4b0bXqRVlJCMUHJtj5SMYPE375OZQ2x3kzkSTY4306nfeha6jpSe8-Rv6hs9W"/>
+<div class="text-left">
+<p class="text-xs font-bold truncate w-24">Alex Sterling</p>
+<p class="text-[10px] text-slate-500">Global Admin</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-xs">unfold_more</span>
+</button>
+<button class="w-full mt-2 text-center text-xs font-semibold py-2 text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-50 transition-colors">
+                Switch Outlet
+            </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-64 min-h-screen">
+<!-- TopNavBar Component -->
+<header class="flex justify-between items-center w-full px-8 h-16 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl docked full-width top-0 sticky z-40 border-b border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none font-['Inter'] text-sm font-medium">
+<div class="flex items-center gap-8">
+<div class="text-xl font-black tracking-tighter text-indigo-950 dark:text-white">The Architectural ERP</div>
+<div class="flex items-center bg-surface-container-low rounded-full px-4 py-1.5 gap-2 border border-outline-variant/10">
+<span class="material-symbols-outlined text-outline text-lg">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-64 p-0" placeholder="Global search..." type="text"/>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-600 dark:text-slate-400 hover:text-indigo-500 transition-all" href="#">Analytics</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-indigo-500 transition-all" href="#">Logistics</a>
+<a class="text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 h-16 flex items-center" href="#">Audit</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-outline hover:text-primary transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-outline hover:text-primary transition-all">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="h-6 w-px bg-outline-variant/30 mx-2"></div>
+<button class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-all">Print</button>
+<button class="px-5 py-2 signature-gradient text-white font-semibold rounded-lg shadow-lg shadow-primary/20 transition-all hover:opacity-90">Export</button>
+</div>
+</header>
+<!-- Page Header Section -->
+<section class="px-8 pt-8 pb-4">
+<div class="flex justify-between items-end">
+<div>
+<nav class="flex items-center gap-2 text-xs text-on-surface-variant uppercase tracking-widest font-semibold mb-2">
+<span>Settings</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span>Access Control</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-primary">Permissions Matrix</span>
+</nav>
+<h1 class="text-3xl font-extrabold tracking-tight text-on-surface">Permission &amp; Scope Management</h1>
+<p class="text-on-surface-variant mt-1 text-sm">Define granular access control across the global regional hierarchy.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 py-2.5 bg-surface-container-high rounded-xl text-on-surface font-semibold text-sm hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-lg">history</span>
+                        Audit Log
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2.5 signature-gradient rounded-xl text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all">
+<span class="material-symbols-outlined text-lg">add</span>
+                        Create New Role
+                    </button>
+</div>
+</div>
+</section>
+<!-- Bento Grid Layout for Management -->
+<div class="px-8 grid grid-cols-12 gap-6 pb-12">
+<!-- Region Hierarchy Tree (Span 4) -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/5">
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-6 flex justify-between items-center">
+                        Region Hierarchy
+                        <span class="material-symbols-outlined text-lg cursor-pointer hover:text-primary">account_tree</span>
+</h3>
+<div class="space-y-2">
+<!-- Global Level -->
+<div class="group">
+<div class="flex items-center gap-3 p-3 bg-primary/5 border-l-4 border-primary rounded-r-lg cursor-pointer">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">public</span>
+<span class="font-bold text-sm text-primary">Global Headquarters</span>
+<span class="ml-auto material-symbols-outlined text-outline text-sm">expand_more</span>
+</div>
+<!-- Sub Level 1: Country -->
+<div class="ml-6 mt-2 space-y-2 border-l-2 border-surface-container-high pl-4">
+<div class="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-outline text-lg">flag</span>
+<span class="text-sm font-medium">United Kingdom</span>
+<span class="ml-auto material-symbols-outlined text-outline text-sm opacity-0 group-hover:opacity-100 transition-opacity">drag_indicator</span>
+</div>
+<!-- Sub Level 2: Region -->
+<div class="ml-6 space-y-2 border-l-2 border-surface-container-high pl-4">
+<div class="flex items-center gap-3 p-2 bg-surface-container-high rounded-lg cursor-pointer group">
+<span class="material-symbols-outlined text-primary text-lg">location_city</span>
+<span class="text-sm font-bold text-on-surface">London Region</span>
+<div class="ml-auto flex items-center gap-2">
+<span class="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded">Active</span>
+<span class="material-symbols-outlined text-outline text-sm">expand_more</span>
+</div>
+</div>
+<!-- Sub Level 3: Outlet -->
+<div class="ml-6 space-y-1 border-l-2 border-surface-container-high pl-4">
+<div class="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer text-on-surface-variant">
+<span class="material-symbols-outlined text-lg">storefront</span>
+<span class="text-sm">Soho Atelier</span>
+</div>
+<div class="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer text-on-surface-variant">
+<span class="material-symbols-outlined text-lg">storefront</span>
+<span class="text-sm">Mayfair Flagship</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 p-2 hover:bg-surface-container-low rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-outline text-lg">flag</span>
+<span class="text-sm font-medium">France</span>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-2.5 border-2 border-dashed border-outline-variant text-outline hover:text-primary hover:border-primary transition-all rounded-xl flex items-center justify-center gap-2 text-sm font-semibold">
+<span class="material-symbols-outlined text-lg">add_circle</span>
+                        Add Regional Node
+                    </button>
+</div>
+<!-- User Roles Overview Card -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/5">
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">Active User Roles</h3>
+<div class="space-y-3">
+<div class="p-3 bg-surface rounded-xl flex items-center justify-between border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-indigo-600" style="font-variation-settings: 'FILL' 1;">account_balance</span>
+</div>
+<div>
+<p class="text-sm font-bold">Finance Lead</p>
+<p class="text-[10px] text-on-surface-variant">8 Users Assigned</p>
+</div>
+</div>
+<span class="px-2 py-1 bg-tertiary-container/10 text-tertiary-fixed-dim text-[10px] font-bold rounded">System Role</span>
+</div>
+<div class="p-3 bg-surface-dim/40 rounded-xl flex items-center justify-between border border-transparent hover:border-primary/20 transition-all cursor-pointer opacity-80">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-600">groups</span>
+</div>
+<div>
+<p class="text-sm font-bold">Regional Staff</p>
+<p class="text-[10px] text-on-surface-variant">142 Users Assigned</p>
+</div>
+</div>
+<span class="px-2 py-1 bg-outline-variant/30 text-outline text-[10px] font-bold rounded">Disabled</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Permissions Matrix (Span 8) -->
+<div class="col-span-12 lg:col-span-8">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/5 overflow-hidden">
+<!-- Matrix Header -->
+<div class="p-6 border-b border-surface-container">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h2 class="text-xl font-bold">Finance Lead Permissions</h2>
+<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full">Primary Role</span>
+</div>
+<p class="text-sm text-on-surface-variant">Configure action-level access and data visibility constraints.</p>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-low p-1.5 rounded-xl border border-outline-variant/10">
+<button class="px-4 py-1.5 bg-white text-primary text-xs font-bold rounded-lg shadow-sm">Matrix View</button>
+<button class="px-4 py-1.5 text-on-surface-variant text-xs font-semibold rounded-lg hover:text-on-surface">JSON Schema</button>
+</div>
+</div>
+</div>
+<!-- Matrix Content -->
+<div class="overflow-x-auto no-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant/10">
+<th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Module / Action</th>
+<th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-on-surface-variant">View</th>
+<th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Create</th>
+<th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Edit</th>
+<th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Delete</th>
+<th class="px-4 py-4 text-center text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Export</th>
+<th class="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Data Scope</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<!-- Inventory Module -->
+<tr class="hover:bg-surface transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-indigo-400">inventory</span>
+<div>
+<p class="text-sm font-semibold">Inventory Management</p>
+<p class="text-[10px] text-on-surface-variant">Stock levels, wastage &amp; transfers</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-4 text-center">
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</td>
+<td class="px-4 py-4 text-center">
+<button class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/30 flex items-center justify-center hover:bg-primary/5 transition-all">
+<span class="material-symbols-outlined text-outline text-sm">circle</span>
+</button>
+</td>
+<td class="px-4 py-4 text-center">
+<button class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/30 flex items-center justify-center hover:bg-primary/5 transition-all">
+<span class="material-symbols-outlined text-outline text-sm">circle</span>
+</button>
+</td>
+<td class="px-4 py-4 text-center">
+<span class="material-symbols-outlined text-error/30 text-sm">block</span>
+</td>
+<td class="px-4 py-4 text-center">
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2">
+<span class="text-[11px] font-bold text-on-surface-variant">Regional Only</span>
+<span class="material-symbols-outlined text-outline text-sm">edit</span>
+</div>
+</td>
+</tr>
+<!-- Procurement Module -->
+<tr class="hover:bg-surface transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-indigo-400">payments</span>
+<div>
+<p class="text-sm font-semibold">Procurement &amp; Billing</p>
+<p class="text-[10px] text-on-surface-variant">Invoices, vendors &amp; payments</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-4 text-center">
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</td>
+<td class="px-4 py-4 text-center">
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</td>
+<td class="px-4 py-4 text-center">
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</td>
+<td class="px-4 py-4 text-center">
+<button class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/30 flex items-center justify-center hover:bg-primary/5 transition-all">
+<span class="material-symbols-outlined text-outline text-sm">circle</span>
+</button>
+</td>
+<td class="px-4 py-4 text-center">
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2">
+<span class="text-[11px] font-bold text-primary">System-wide</span>
+<span class="material-symbols-outlined text-outline text-sm">edit</span>
+</div>
+</td>
+</tr>
+<!-- System Logs (Readonly) -->
+<tr class="bg-surface-dim transition-colors opacity-75">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">lock</span>
+<div>
+<p class="text-sm font-semibold text-on-surface/60">Core Configuration</p>
+<p class="text-[10px] text-on-surface-variant">Protected system parameters</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-4 text-center">
+<span class="material-symbols-outlined text-outline text-sm">visibility</span>
+</td>
+<td class="px-4 py-4 text-center">
+<span class="material-symbols-outlined text-outline text-sm">close</span>
+</td>
+<td class="px-4 py-4 text-center">
+<span class="material-symbols-outlined text-outline text-sm">close</span>
+</td>
+<td class="px-4 py-4 text-center">
+<span class="material-symbols-outlined text-outline text-sm">close</span>
+</td>
+<td class="px-4 py-4 text-center">
+<span class="material-symbols-outlined text-outline text-sm">close</span>
+</td>
+<td class="px-6 py-4 text-right">
+<span class="text-[11px] font-bold text-outline italic">Read-only System State</span>
+</td>
+</tr>
+<!-- Staff Records -->
+<tr class="hover:bg-surface transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-indigo-400">badge</span>
+<div>
+<p class="text-sm font-semibold">Staff Personal Records</p>
+<p class="text-[10px] text-on-surface-variant">Sensitive PII &amp; Payroll data</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-4 text-center">
+<div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</td>
+<td class="px-4 py-4 text-center">
+<button class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/30 flex items-center justify-center hover:bg-primary/5 transition-all">
+<span class="material-symbols-outlined text-outline text-sm">circle</span>
+</button>
+</td>
+<td class="px-4 py-4 text-center">
+<button class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant/30 flex items-center justify-center hover:bg-primary/5 transition-all">
+<span class="material-symbols-outlined text-outline text-sm">circle</span>
+</button>
+</td>
+<td class="px-4 py-4 text-center">
+<span class="material-symbols-outlined text-error/30 text-sm">block</span>
+</td>
+<td class="px-4 py-4 text-center">
+<span class="material-symbols-outlined text-outline/30 text-sm">close</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2">
+<span class="text-[11px] font-bold text-on-surface-variant">Outlet-only</span>
+<span class="material-symbols-outlined text-outline text-sm">edit</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Matrix Footer / Sticky Action -->
+<div class="p-6 bg-surface-bright flex justify-between items-center border-t border-surface-container">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="text-xs text-on-surface-variant">Granted</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-surface-container-high border border-outline-variant"></div>
+<span class="text-xs text-on-surface-variant">Denied</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-error-container"></div>
+<span class="text-xs text-on-surface-variant">Inherited Block</span>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="px-6 py-2.5 rounded-xl border border-outline-variant font-bold text-sm hover:bg-surface-container transition-colors">Discard Changes</button>
+<button class="px-8 py-2.5 signature-gradient rounded-xl text-white font-bold text-sm shadow-xl shadow-primary/20 hover:opacity-90 transition-all">Save Matrix Permissions</button>
+</div>
+</div>
+</div>
+<!-- Contextual Analysis Card -->
+<div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-indigo-900 rounded-2xl p-6 text-white relative overflow-hidden group">
+<div class="relative z-10">
+<h4 class="text-lg font-bold mb-2">Security Insight</h4>
+<p class="text-sm text-indigo-200/80 leading-relaxed mb-4">
+                                This role has <span class="text-white font-bold">System-wide</span> scope for Procurement. This exceeds standard regional guardrails. Consider restricting to <span class="text-white underline">Regional Only</span>.
+                            </p>
+<button class="px-4 py-2 bg-white/10 hover:bg-white/20 transition-all rounded-lg text-xs font-bold backdrop-blur-md">Apply Recommendation</button>
+</div>
+<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-9xl text-white/5 rotate-12 group-hover:rotate-0 transition-transform duration-700">security</span>
+</div>
+<div class="bg-surface-container-high rounded-2xl p-6 relative overflow-hidden">
+<h4 class="text-lg font-bold text-on-surface mb-2">Scope Visualization</h4>
+<div class="flex items-end gap-2 h-24 mb-4">
+<div class="flex-1 bg-primary/20 rounded-t-lg h-[40%] flex items-center justify-center">
+<span class="text-[10px] font-black text-primary/60 uppercase">Outlet</span>
+</div>
+<div class="flex-1 bg-primary/40 rounded-t-lg h-[70%] flex items-center justify-center">
+<span class="text-[10px] font-black text-primary/80 uppercase">Region</span>
+</div>
+<div class="flex-1 signature-gradient rounded-t-lg h-[100%] flex items-center justify-center">
+<span class="text-[10px] font-black text-white uppercase">Global</span>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant font-medium">Finance Lead typically operates at <span class="text-on-surface font-bold">Global Level</span> for compliance audits.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Quick Info (Optional) -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="w-14 h-14 rounded-full signature-gradient text-white shadow-2xl flex items-center justify-center hover:scale-110 transition-transform active:scale-95">
+<span class="material-symbols-outlined text-3xl">bolt</span>
+</button>
+</div>
+</body></html>

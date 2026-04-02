@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary": "#ffffff",
+              "primary-container": "#4151b3",
+              "tertiary-fixed": "#6ffbbe",
+              "surface-dim": "#d8dadc",
+              "inverse-primary": "#bbc3ff",
+              "surface": "#f7f9fb",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-background": "#191c1e",
+              "tertiary": "#004e33",
+              "surface-variant": "#e0e3e5",
+              "surface-container-lowest": "#ffffff",
+              "secondary": "#515f74",
+              "primary": "#27389a",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "on-tertiary-fixed": "#002113",
+              "inverse-surface": "#2d3133",
+              "on-surface-variant": "#454652",
+              "on-surface": "#191c1e",
+              "on-primary-fixed": "#000e5e",
+              "surface-bright": "#f7f9fb",
+              "on-error": "#ffffff",
+              "on-tertiary-container": "#5debaf",
+              "background": "#f7f9fb",
+              "on-tertiary-fixed-variant": "#005236",
+              "error": "#ba1a1a",
+              "surface-container-low": "#f2f4f6",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary-container": "#57657a",
+              "on-primary": "#ffffff",
+              "primary-fixed": "#dee0ff",
+              "on-secondary-fixed": "#0d1c2e",
+              "secondary-fixed": "#d5e3fc",
+              "tertiary-container": "#006846",
+              "surface-tint": "#4555b7",
+              "on-primary-container": "#cacfff",
+              "secondary-container": "#d5e3fc",
+              "error-container": "#ffdad6",
+              "on-secondary-fixed-variant": "#3a485b",
+              "on-error-container": "#93000a",
+              "surface-container": "#eceef0",
+              "outline-variant": "#c5c5d4",
+              "outline": "#757684",
+              "on-tertiary": "#ffffff",
+              "surface-container-highest": "#e0e3e5",
+              "surface-container-high": "#e6e8ea",
+              "secondary-fixed-dim": "#b9c7df",
+              "tertiary-fixed-dim": "#4edea3"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .read-only-mask {
+            backdrop-filter: blur(4px);
+            background: rgba(247, 249, 251, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary-fixed">
+<aside class="fixed left-0 top-0 h-full w-64 bg-[#f2f4f6] flex flex-col h-screen py-6 gap-2">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary rounded shadow-sm flex items-center justify-center text-white">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-sm tracking-tight text-on-surface">Master Data</h2>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-wider">Product Management</p>
+</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter body-sm font-medium hover:bg-white/50 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-[#ffffff] text-[#27389a] rounded-r-full shadow-sm font-inter body-sm font-medium translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter body-sm font-medium hover:bg-white/50 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter body-sm font-medium hover:bg-white/50 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="science">science</span>
+<span>Ingredients</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter body-sm font-medium hover:bg-white/50 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+<span>Production</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter body-sm font-medium hover:bg-white/50 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span>Analytics</span>
+</a>
+</nav>
+<div class="px-6 py-4 border-t border-surface-variant/30">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-dim">
+<img class="w-full h-full object-cover" data-alt="portrait of a professional chef in white uniform looking confident and experienced" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2GRA04reXURqXA2oh0QVfT9ZEHaXLesLWpuMAgNIc86GpME5AKvzj9B20uEtx1EAnMp7kOqJZfT1mhqKsJiuIS6qXmmEH-aTWRip0PUPKLgB9TvPp1l33pjfZShr_FWg_5ksyJ-1ljuQr4h9IvtUfoYhvElaMKlBQwWKP-LgrnkzAMuRFGXUbKpy1O7nEA5VvHVd2nUcBUcx79pMXSIn6yBOsnlP8s9CCpztoYrATxYKtbROg9urKGGUXWbXQsKgPcqNbL8chLJ13"/>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface">Kitchen Master</p>
+<p class="text-[10px] text-on-surface-variant">Admin Level</p>
+</div>
+</div>
+<a class="flex items-center gap-3 px-4 py-2 text-[#454652] text-xs font-medium hover:text-[#191c1e] transition-colors" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="contact_support">contact_support</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#454652] text-xs font-medium hover:text-[#191c1e] transition-colors" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="logout">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</aside>
+<main class="ml-64 min-h-screen">
+<header class="sticky top-0 z-50 bg-[#f7f9fb] flex justify-between items-center w-full px-8 py-3">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-[#27389a]">Architectural ERP</span>
+<div class="relative">
+<span class="absolute inset-y-0 left-3 flex items-center text-outline">
+<span class="material-symbols-outlined text-lg" data-icon="search">search</span>
+</span>
+<input class="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-primary/20" placeholder="Search resources..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-[#f2f4f6] transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-[#f2f4f6] transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-[#f2f4f6] transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<div class="p-8 max-w-6xl mx-auto">
+<div class="mb-6 flex items-center justify-between">
+<div>
+<nav class="flex items-center gap-2 text-xs text-on-surface-variant mb-2">
+<span>Inventory</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span>Ingredients</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface font-semibold">Wild Madagascar Vanilla</span>
+</nav>
+<div class="flex items-center gap-4">
+<h1 class="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Wild Madagascar Vanilla</h1>
+<span class="px-3 py-1 bg-error-container text-on-error-container text-[10px] font-bold rounded-full tracking-wider uppercase">Discontinued</span>
+</div>
+</div>
+<div class="flex gap-3 opacity-50 cursor-not-allowed">
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-high text-outline rounded-md font-medium text-sm" disabled="">
+<span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+                        Edit
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-high text-outline rounded-md font-medium text-sm" disabled="">
+<span class="material-symbols-outlined text-lg" data-icon="history">history</span>
+                        Audit Log
+                    </button>
+</div>
+</div>
+<div class="bg-error-container/20 border-l-4 border-error mb-8 p-4 flex items-center gap-4">
+<span class="material-symbols-outlined text-error" data-icon="lock_clock">lock_clock</span>
+<div>
+<p class="text-sm font-bold text-on-error-container">Archived Record</p>
+<p class="text-xs text-on-error-container/80">This record is archived and cannot be modified. It was discontinued on Oct 24, 2023 due to supply chain termination.</p>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-8">
+<div class="col-span-8 space-y-8">
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-[0px_12px_32px_rgba(25,28,30,0.04)] relative overflow-hidden">
+<div class="absolute inset-0 read-only-mask pointer-events-none"></div>
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-on-surface uppercase text-xs tracking-widest">Core Specification</h3>
+<span class="material-symbols-outlined text-outline" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<div class="grid grid-cols-2 gap-x-12 gap-y-6">
+<div class="space-y-1">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">SKU Code</label>
+<p class="text-on-surface font-medium border-b border-surface-variant/30 py-1">ING-VNL-MG-004</p>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Scientific Name</label>
+<p class="text-on-surface font-medium border-b border-surface-variant/30 py-1 italic">Vanilla planifolia</p>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Primary Category</label>
+<p class="text-on-surface font-medium border-b border-surface-variant/30 py-1">Extracts &amp; Spices</p>
+</div>
+<div class="space-y-1">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Storage Condition</label>
+<p class="text-on-surface font-medium border-b border-surface-variant/30 py-1">Cool, Dry (18-22°C)</p>
+</div>
+</div>
+<div class="mt-8 space-y-1">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Description</label>
+<p class="text-sm text-on-surface leading-relaxed py-2">Premium grade bourbon vanilla sourced from the Sava region. Characteristics include high vanillin content with distinct woody and floral undertones. Used exclusively for limited edition pastry line (Discontinued).</p>
+</div>
+</section>
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-[0px_12px_32px_rgba(25,28,30,0.04)] relative overflow-hidden">
+<div class="absolute inset-0 read-only-mask pointer-events-none"></div>
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-on-surface uppercase text-xs tracking-widest">Costing &amp; Procurement</h3>
+<span class="material-symbols-outlined text-outline" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<div class="grid grid-cols-3 gap-8">
+<div class="bg-surface-container-low p-4 rounded-lg">
+<label class="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">Last Purchase Price</label>
+<p class="text-xl font-bold text-on-surface mt-1">$412.50<span class="text-xs font-normal text-on-surface-variant ml-1">/kg</span></p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg">
+<label class="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">Avg Lead Time</label>
+<p class="text-xl font-bold text-on-surface mt-1">45 Days</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg">
+<label class="text-[9px] font-bold text-on-surface-variant uppercase tracking-tighter">Yield Ratio</label>
+<p class="text-xl font-bold text-on-surface mt-1">98.2%</p>
+</div>
+</div>
+</section>
+</div>
+<div class="col-span-4 space-y-6">
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0px_12px_32px_rgba(25,28,30,0.04)]">
+<h3 class="font-headline font-bold text-on-surface text-sm mb-4">Lifecycle Status</h3>
+<div class="relative pl-6 space-y-6 before:absolute before:left-[7px] before:top-1 before:bottom-1 before:w-[2px] before:bg-surface-variant">
+<div class="relative flex flex-col">
+<div class="absolute -left-[23px] top-1 w-3 h-3 bg-primary rounded-full ring-4 ring-white"></div>
+<span class="text-xs font-bold text-on-surface">Active Procurement</span>
+<span class="text-[10px] text-on-surface-variant">Jan 2021 — Oct 2023</span>
+</div>
+<div class="relative flex flex-col">
+<div class="absolute -left-[23px] top-1 w-3 h-3 bg-error rounded-full ring-4 ring-white"></div>
+<span class="text-xs font-bold text-error">Discontinued</span>
+<span class="text-[10px] text-on-surface-variant">Oct 24, 2023 — Present</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0px_12px_32px_rgba(25,28,30,0.04)]">
+<img class="w-full h-48 object-cover filter grayscale opacity-80" data-alt="close-up of whole vanilla beans in a rustic glass jar with shallow depth of field and soft natural window light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBl0qXP3MXFcoIREdayKMZ1JsZAj56AzD4NReZjzcNzYJWPjd-SWmW4ZyOI4fySxpU4UeSX6InHVnM3ebD6lR3D_LoH3oG-q8ST4_ewG5o7Sb8MYs-n_oAzP8oiOq1vIJnxeMf2qYSX2mpn3BgFUF2c8KPp-5TvSU5DBonJ8xSQHDPQ1X-mHc8c5JR-cHEgF5gMEf6vSR9uwK7gwKKwilHXA2uydOkJuWsEf_Zhb7LfMSlOueNOTO8NyXh7pzZryLgS56Ao9xxyzd2b"/>
+<div class="p-6">
+<h4 class="text-xs font-bold text-on-surface uppercase mb-2">Vendor Information</h4>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-surface-container-high rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="domain">domain</span>
+</div>
+<div>
+<p class="text-sm font-medium text-on-surface">Sava Botanical Exports</p>
+<p class="text-[10px] text-on-surface-variant">Antalaha, Madagascar</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-dim/40 rounded-xl p-6 border-2 border-dashed border-outline-variant flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-outline mb-2 text-3xl" data-icon="block">block</span>
+<p class="text-xs font-bold text-on-surface-variant">Action Panel Restricted</p>
+<p class="text-[10px] text-on-surface-variant mt-1">Archived ingredients cannot be used in active recipes or production orders.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="ml-64 bg-surface-bright border-t border-outline-variant/15 px-8 py-4 flex justify-between items-center text-[10px] font-medium text-on-surface-variant uppercase tracking-widest">
+<div>
+            Record ID: <span class="text-on-surface">UUID-9821-VNL</span>
+</div>
+<div>
+            Architectural ERP — Industrial Precision v2.4
+        </div>
+<div class="flex gap-4">
+<a class="hover:text-primary" href="#">Compliance</a>
+<a class="hover:text-primary" href="#">Documentation</a>
+</div>
+</footer>
+</body></html>

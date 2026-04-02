@@ -10,6 +10,7 @@ import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.security.FernTokenAcceptanceRules;
+import com.fern.apigateway.ui.UiContextAttributeKeys;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
@@ -34,6 +35,7 @@ import reactor.core.scheduler.Schedulers;
 public class GatewaySecurityFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATHS = List.of("/auth/login", "/auth/refresh", "/actuator/health");
     private static final String INTERNAL_PATH_PREFIX = "/internal/";
+    private static final String UI_PATH_PREFIX = "/ui/";
     private static final Logger LOGGER = LoggerFactory.getLogger(GatewaySecurityFilter.class);
     private static final RedisScript<Long> RATE_LIMIT_SCRIPT = RedisScript.of("""
             local current = redis.call('INCR', KEYS[1])
@@ -162,7 +164,8 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                                     ).then(writeError(exchange, HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded"));
                                 }
                                 String forwardedAuthorization = authorization;
-                                if (claims.principalType() == FernPrincipalType.USER) {
+                                boolean localUiRequest = path.equals("/ui") || path.startsWith(UI_PATH_PREFIX);
+                                if (claims.principalType() == FernPrincipalType.USER && !localUiRequest) {
                                     String targetService = routeTargetServiceResolver.resolve(exchange);
                                     if (targetService == null || targetService.isBlank()) {
                                         authFailureCounter.increment();
@@ -188,8 +191,23 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                                                     headers.set("X-Fern-Username", principal.username());
                                                     headers.set("X-Fern-Roles", String.join(",", principal.roles()));
                                                     headers.set("X-Fern-Permissions", String.join(",", principal.permissions()));
+                                                    headers.set("X-Fern-Scope-System", String.valueOf(principal.accessibleScope().system()));
+                                                    headers.set("X-Fern-Scope-Regions", principal.accessibleScope().regions().stream()
+                                                            .map(String::valueOf)
+                                                            .reduce((left, right) -> left + "," + right)
+                                                            .orElse(""));
+                                                    headers.set("X-Fern-Scope-Outlets", principal.accessibleScope().outlets().stream()
+                                                            .map(String::valueOf)
+                                                            .reduce((left, right) -> left + "," + right)
+                                                            .orElse(""));
                                                 }))
                                         .build();
+                                mutated.getAttributes().put(UiContextAttributeKeys.USERNAME, principal.username());
+                                mutated.getAttributes().put(UiContextAttributeKeys.ROLES, List.copyOf(principal.roles()));
+                                mutated.getAttributes().put(UiContextAttributeKeys.PERMISSIONS, List.copyOf(principal.permissions()));
+                                mutated.getAttributes().put(UiContextAttributeKeys.SCOPE_SYSTEM, principal.accessibleScope().system());
+                                mutated.getAttributes().put(UiContextAttributeKeys.SCOPE_REGIONS, List.copyOf(principal.accessibleScope().regions()));
+                                mutated.getAttributes().put(UiContextAttributeKeys.SCOPE_OUTLETS, List.copyOf(principal.accessibleScope().outlets()));
                                 return chain.filter(mutated);
                             });
                 });

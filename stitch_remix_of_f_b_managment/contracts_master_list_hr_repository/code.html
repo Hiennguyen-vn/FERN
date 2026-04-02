@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Contract Lifecycle | Architect ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed": "#000e5e",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-tertiary-container": "#5debaf",
+              "on-background": "#191c1e",
+              "surface-container-high": "#e6e8ea",
+              "error": "#ba1a1a",
+              "error-container": "#ffdad6",
+              "inverse-surface": "#2d3133",
+              "surface-dim": "#d8dadc",
+              "on-tertiary-fixed-variant": "#005236",
+              "secondary": "#515f74",
+              "on-error": "#ffffff",
+              "on-primary-container": "#cacfff",
+              "surface-container-highest": "#e0e3e5",
+              "on-tertiary-fixed": "#002113",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary-fixed": "#0d1c2e",
+              "on-error-container": "#93000a",
+              "on-surface": "#191c1e",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "tertiary": "#004e33",
+              "on-secondary": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "secondary-container": "#d5e3fc",
+              "secondary-fixed-dim": "#b9c7df",
+              "primary-container": "#4151b3",
+              "tertiary-container": "#006846",
+              "surface-tint": "#4555b7",
+              "on-surface-variant": "#454652",
+              "outline": "#757684",
+              "on-secondary-container": "#57657a",
+              "primary": "#27389a",
+              "outline-variant": "#c5c5d4",
+              "surface-container-low": "#f2f4f6",
+              "on-primary": "#ffffff",
+              "background": "#f7f9fb",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-variant": "#e0e3e5",
+              "surface-container": "#eceef0",
+              "on-tertiary": "#ffffff",
+              "surface": "#f7f9fb",
+              "tertiary-fixed": "#6ffbbe",
+              "primary-fixed": "#dee0ff",
+              "on-secondary-fixed-variant": "#3a485b",
+              "inverse-primary": "#bbc3ff",
+              "secondary-fixed": "#d5e3fc"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        .masked-data {
+            filter: blur(4px);
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- SideNavBar (The Anchor) -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#f2f4f6] dark:bg-slate-900 flex flex-col p-4 gap-2 tonal-layering">
+<div class="mb-8 px-2 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg signature-gradient flex items-center justify-center text-white shadow-sm">
+<span class="material-symbols-outlined" data-icon="architecture">architecture</span>
+</div>
+<div>
+<h1 class="text-lg font-black text-[#27389a] dark:text-indigo-300 leading-none">Precision HR</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold opacity-60">Enterprise Management</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="badge">badge</span>
+<span class="font-inter text-sm font-medium">Employee Master</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800 text-[#3F51B5] dark:text-indigo-300 rounded-lg shadow-sm font-semibold translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+<span class="font-inter text-sm font-medium">Contract Lifecycle</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+<span class="font-inter text-sm font-medium">Shift Management</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span class="font-inter text-sm font-medium">Attendance Queue</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-inter text-sm font-medium">Payroll Prep</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+<span class="font-inter text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 border-t border-outline-variant/20 space-y-1">
+<button class="w-full mb-4 py-2.5 rounded-lg signature-gradient text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+                New Staff Entry
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-[#e2e4e6] rounded-lg text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="support_agent">support_agent</span>
+                Help Center
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-[#e2e4e6] rounded-lg text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="shutter_speed">shutter_speed</span>
+                Privacy
+            </a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 flex justify-between items-center w-full px-8 h-16 bg-[#f2f4f6] dark:bg-slate-800 no-border font-manrope tracking-tight font-semibold">
+<div class="flex items-center gap-6">
+<h2 class="text-xl font-bold tracking-tighter text-[#191c1e] dark:text-slate-100">Architect ERP</h2>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]" data-icon="search">search</span>
+<input class="bg-surface-container-lowest border-none rounded-full pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search contracts or employees..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">
+<div class="flex items-center gap-1.5 px-3 py-1 bg-surface-container-highest rounded-full">
+<span class="material-symbols-outlined text-[14px]" data-icon="location_on">location_on</span>
+                        Region: South East
+                    </div>
+<div class="flex items-center gap-1.5 px-3 py-1 bg-surface-container-highest rounded-full">
+<span class="material-symbols-outlined text-[14px]" data-icon="store">store</span>
+                        Outlet: Downtown Bistro
+                    </div>
+</div>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-highest transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-highest transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-fixed-dim overflow-hidden ml-2 border border-outline-variant/30">
+<img alt="HR Manager Profile" class="w-full h-full object-cover" data-alt="professional portrait of a middle-aged male HR manager with a kind smile wearing a sharp charcoal suit" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5bPA0J4c0z2-Sg84UHc3HUcvcmAU1Srrgbgyf4u1JDY63nHNSsc-ySGU9TNazBwz-0aMqEat1xNZuwxu9M9zkrAcXjzDcd246tHfYP0UMGENlxilxNyVb0vza-xRdMYE4PinS0je783I22DF9Stt7CJpeOcb_x8iodkY40SgX3fu1UP6zV83DagTeubUrGeam-nHSaD41ilvG-uxjMdVwI2GIkPj--uZFKct74FevqN-uoqNjSEApPtg2ob7dJNWxW51FE7frhtI"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<section class="p-8 space-y-8">
+<!-- Page Title & Primary Actions -->
+<div class="flex justify-between items-end">
+<div>
+<nav class="flex items-center gap-2 text-xs font-bold text-outline uppercase tracking-widest mb-2">
+<span>Human Resources</span>
+<span class="material-symbols-outlined text-[12px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-primary">Contracts</span>
+</nav>
+<h1 class="text-3xl font-extrabold tracking-tight text-on-surface">Contract Lifecycle</h1>
+</div>
+<div class="flex gap-3">
+<button class="px-5 py-2.5 bg-surface-container-lowest text-on-surface border border-outline-variant/30 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="file_download">file_download</span>
+                        Export Report
+                    </button>
+<button class="px-5 py-2.5 signature-gradient text-on-primary rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[20px]" data-icon="add_circle">add_circle</span>
+                        Generate Draft
+                    </button>
+</div>
+</div>
+<!-- Bento Summary Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<!-- Active -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border-none flex flex-col justify-between h-32 hover:bg-surface-bright transition-all shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-outline uppercase tracking-wider">Active Contracts</span>
+<div class="p-2 rounded-lg bg-tertiary/10 text-tertiary">
+<span class="material-symbols-outlined text-[20px]" data-icon="verified">verified</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-extrabold text-on-surface">142</span>
+<span class="text-xs font-bold text-tertiary flex items-center">+4%</span>
+</div>
+</div>
+<!-- Draft -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border-none flex flex-col justify-between h-32 hover:bg-surface-bright transition-all shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-outline uppercase tracking-wider">Pending Drafts</span>
+<div class="p-2 rounded-lg bg-secondary/10 text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit_document">edit_document</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-extrabold text-on-surface">08</span>
+<span class="text-xs font-bold text-outline">-2</span>
+</div>
+</div>
+<!-- Expiring -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border-none flex flex-col justify-between h-32 hover:bg-surface-bright transition-all shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-outline uppercase tracking-wider">Expiring (30d)</span>
+<div class="p-2 rounded-lg bg-error-container text-on-error-container">
+<span class="material-symbols-outlined text-[20px]" data-icon="notification_important">notification_important</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-extrabold text-on-surface">12</span>
+<span class="text-xs font-bold text-error">Action Required</span>
+</div>
+</div>
+<!-- Terminated -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border-none flex flex-col justify-between h-32 hover:bg-surface-bright transition-all shadow-sm">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-outline uppercase tracking-wider">Terminated YTD</span>
+<div class="p-2 rounded-lg bg-surface-container-highest text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]" data-icon="cancel">cancel</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-extrabold text-on-surface">24</span>
+<span class="text-xs font-bold text-outline">Normal attrition</span>
+</div>
+</div>
+</div>
+<!-- Filters Bar (Tonal Shift, No Border) -->
+<div class="bg-surface-container-low p-4 rounded-xl flex flex-wrap items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-1">Filter By:</span>
+</div>
+<div class="flex flex-1 gap-4">
+<div class="flex flex-col gap-1">
+<label class="text-[10px] font-bold text-outline uppercase px-1">Effective Date Range</label>
+<button class="bg-surface-container-lowest px-3 py-2 rounded-lg text-sm flex items-center justify-between min-w-[200px]">
+<span>Oct 01 - Dec 31, 2023</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="calendar_month">calendar_month</span>
+</button>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] font-bold text-outline uppercase px-1">Outlet</label>
+<select class="bg-surface-container-lowest border-none px-3 py-2 rounded-lg text-sm min-w-[180px] focus:ring-2 focus:ring-primary/20">
+<option>All Outlets</option>
+<option>Downtown Bistro</option>
+<option>The Sky Lounge</option>
+<option>Garden Terrance</option>
+</select>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] font-bold text-outline uppercase px-1">Contract Type</label>
+<select class="bg-surface-container-lowest border-none px-3 py-2 rounded-lg text-sm min-w-[150px] focus:ring-2 focus:ring-primary/20">
+<option>All Types</option>
+<option>Permanent</option>
+<option>Seasonal</option>
+<option>Part-time</option>
+</select>
+</div>
+</div>
+<button class="mt-4 px-4 py-2 text-primary text-sm font-bold hover:bg-primary/5 rounded-lg transition-all flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]" data-icon="filter_list_off">filter_list_off</span>
+                    Reset Filters
+                </button>
+</div>
+<!-- Lifecycle Table Section -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="p-6 border-b border-surface-container-high flex justify-between items-center">
+<h3 class="text-lg font-bold text-on-surface">Contract Records</h3>
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-[20px]" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="px-6 py-4 text-[11px] font-extrabold text-outline uppercase tracking-[0.1em]">Contract Code</th>
+<th class="px-6 py-4 text-[11px] font-extrabold text-outline uppercase tracking-[0.1em]">Employee</th>
+<th class="px-6 py-4 text-[11px] font-extrabold text-outline uppercase tracking-[0.1em]">Type</th>
+<th class="px-6 py-4 text-[11px] font-extrabold text-outline uppercase tracking-[0.1em]">Effective Period</th>
+<th class="px-6 py-4 text-[11px] font-extrabold text-outline uppercase tracking-[0.1em]">Base Salary</th>
+<th class="px-6 py-4 text-[11px] font-extrabold text-outline uppercase tracking-[0.1em]">Status</th>
+<th class="px-6 py-4 text-[11px] font-extrabold text-outline uppercase tracking-[0.1em]">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="px-6 py-4 text-sm font-bold text-primary font-mono tracking-tight">CTR-2023-0492</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden">
+<img alt="Sarah Chen" class="w-full h-full object-cover" data-alt="close up headshot of a professional asian woman with glasses and confident expression in a bright office" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwBdmpRwuNKNhU4q_yo982SpMj5IeZRvYvpK6l4XECA8sTIDw7i2k8ofBzZ-aJ_VXXFvqkM-yt5yMqijwJnyC698nRYko8Pyj3NbZBaP7E3xaDPQmMu5HhoMAGJT-DSgABJy1F41j6S8NqNG8FHrO7IIf87UttVkwV5CVZ587IhVlgzT8HxG1nOoLBt_A0A0a_RhySaxBN8LOIdPyAzxJ37DzdqvRkkGlMVYSDb_oFA4Zs_ehAJ3S_ni2pQna-bVDji4F_jgzvx5o"/>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Sarah Chen</span>
+<span class="text-[10px] text-outline font-medium">Head Chef - Downtown Bistro</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-medium text-on-surface-variant px-2.5 py-1 bg-surface-container-high rounded-full">Permanent</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col text-xs">
+<span class="text-on-surface font-semibold">Jan 12, 2023</span>
+<span class="text-outline">Indefinite duration</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-semibold text-on-surface masked-data">$ 85,000.00</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-tertiary-container/20 text-tertiary text-[11px] font-extrabold uppercase rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                                        Active
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="visibility">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="px-6 py-4 text-sm font-bold text-primary font-mono tracking-tight">CTR-2023-0511</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden">
+<img alt="Marcus Vane" class="w-full h-full object-cover" data-alt="headshot of a smiling man with a beard and professional haircut in a casual blue shirt" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqq-8id7CBraM9rEAiUTakFy87FzmWp3IhUKj1alRaTZT_pQwQbaW-9vOi9a4RmrvYxHbdf5_WPjMLMwfk7CconMoZBQhjMJkFSMrjDe52rlXfQSE0F1jPifGNZYpbJ2VBltG4OPR3qRjFBAhglVzIryXxAIlLQ0KDu3oj0OK_Q3cFk9NJ9GE_fmqGXU2tWn9FLbJvpB-9l6x-NhqHcFEsqYQW5wjgOssNqzZ1EmQsfIJ2d4t8-TalzNLDjdbpof3DJwSqZrt1UaM"/>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Marcus Vane</span>
+<span class="text-[10px] text-outline font-medium">Waitstaff - The Sky Lounge</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-medium text-on-surface-variant px-2.5 py-1 bg-surface-container-high rounded-full">Seasonal</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col text-xs">
+<span class="text-on-surface font-semibold">Dec 01, 2023</span>
+<span class="text-error font-bold">Ends Feb 28, 2024</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-semibold text-on-surface masked-data">$ 32.50 / hr</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary-container text-on-secondary-container text-[11px] font-extrabold uppercase rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                        Draft
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-bright transition-colors bg-error-container/10">
+<td class="px-6 py-4 text-sm font-bold text-primary font-mono tracking-tight">CTR-2022-0103</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden">
+<img alt="Elena Rodriguez" class="w-full h-full object-cover" data-alt="portrait of a young woman with dark hair and a professional black blazer looking slightly off camera" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD82Ira_dxy8zttL95ocU17e7-YMH5YYpEYdtOLokVnOG8qTgOvtAT_DPjtMbIunqMNjmRbvaYhVR90fmCh6qz6VscjDWUrTEJUiUYABk4enHmMazy4xhWCttwdGxMNStHqTd5ps62iCb56HZBesZna2p3mpmxGx-VJDAWh-jd5aa-mVnTDqkceylcN2tGKpf9xfXEiMxsE2vNALErTpWIm_NVOz9GPHAEj95O45sugc1bYZsLmo0ifqhK0UQ7WTs28Vnr6Hw3COpI"/>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Elena Rodriguez</span>
+<span class="text-[10px] text-outline font-medium">Marketing - Corporate HQ</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-medium text-on-surface-variant px-2.5 py-1 bg-surface-container-high rounded-full">Permanent</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col text-xs">
+<span class="text-on-surface font-semibold">Mar 15, 2022</span>
+<span class="text-error font-bold">Expired Dec 31, 2023</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-semibold text-on-surface masked-data">$ 72,000.00</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-error-container text-on-error-container text-[11px] font-extrabold uppercase rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                                        Expired
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<button class="text-error hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[20px]" data-icon="history">history</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="px-6 py-4 text-sm font-bold text-primary font-mono tracking-tight">CTR-2023-0115</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden">
+<img alt="Liam Foster" class="w-full h-full object-cover" data-alt="headshot of a stylish young man with curly hair wearing a white linen shirt in a garden setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO3RJotlHBaxYuniPEf8wsKrXuoI35oSOlxyk3z0Ul_sY7snES-1XSDKPf4LkqgHPfGrwi4sGCISzowAMs10WBY7RU9TasZkxat0i7ed-QrghQaGbMNkerv_N_afOeoCHp_2jV9v5LiZ77kcxLa3pLx2CatLvo-niOy2h7EnsMh-h3EIA8fA6ZwsY7HlftLOFi0K3W89XPsWYPNhfjRmkj38I7cx3QZd9WnRH7jj4r2MCMZ5td1Z39VShtlHuMOdhvnGp8eXzb6_0"/>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-semibold text-on-surface">Liam Foster</span>
+<span class="text-[10px] text-outline font-medium">Logistics - Regional Hub</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-medium text-on-surface-variant px-2.5 py-1 bg-surface-container-high rounded-full">Part-time</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col text-xs">
+<span class="text-on-surface font-semibold">Jun 01, 2023</span>
+<span class="text-outline">Terminated Nov 30, 2023</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-sm font-semibold text-on-surface masked-data">$ 42.00 / hr</span>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-high text-outline text-[11px] font-extrabold uppercase rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                                        Terminated
+                                    </span>
+</td>
+<td class="px-6 py-4">
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder_open">folder_open</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="p-6 bg-surface-container-low flex justify-between items-center text-xs font-bold text-outline">
+<div class="flex items-center gap-4">
+<span>Showing 1-10 of 186 results</span>
+<div class="flex items-center gap-1">
+<span class="px-2 py-1 bg-surface-container-lowest text-on-surface rounded">10</span>
+<span>per page</span>
+</div>
+</div>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="first_page">first_page</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="chevron_left">chevron_left</span>
+</button>
+<span class="px-4 text-on-surface">Page 1 of 19</span>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="last_page">last_page</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Contextual Insights Section (Asymmetric) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 glass-card p-8 rounded-2xl border border-white/40 shadow-xl overflow-hidden relative">
+<div class="relative z-10">
+<h4 class="text-xl font-extrabold text-on-surface mb-2">Automated Renewal Insight</h4>
+<p class="text-sm text-on-surface-variant max-w-lg mb-6">Our predictive engine suggests reviewing the following 12 seasonal contracts for Downtown Bistro. Early renewal incentives can reduce attrition by up to 15% this quarter.</p>
+<button class="px-6 py-3 signature-gradient text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20">
+                            Launch Renewal Wizard
+                        </button>
+</div>
+<div class="absolute top-0 right-0 w-1/3 h-full opacity-10 flex items-center justify-center translate-x-1/4">
+<span class="material-symbols-outlined text-[240px]" data-icon="insights">insights</span>
+</div>
+</div>
+<div class="bg-primary text-on-primary p-8 rounded-2xl flex flex-col justify-between shadow-xl">
+<div>
+<span class="text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Policy Update</span>
+<h4 class="text-lg font-bold mt-2 leading-snug">New Compliance Standards for Seasonal Hire (Q1 2024)</h4>
+</div>
+<div class="mt-8 flex items-center justify-between">
+<a class="text-sm font-bold underline underline-offset-4 decoration-2" href="#">Download PDF Guide</a>
+<span class="material-symbols-outlined text-[24px]" data-icon="launch">launch</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Sticky Form Footer (Hidden until selection or draft) -->
+<footer class="mt-auto py-6 px-8 bg-surface-bright border-t border-outline-variant/15 flex justify-between items-center sticky bottom-0 z-40">
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></div>
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">System Status: All Compliance checks passed</span>
+</div>
+<div class="flex items-center gap-6 text-[10px] font-bold text-outline uppercase tracking-wider">
+<span>Last Sync: 2 mins ago</span>
+<span>DB Latency: 14ms</span>
+<span>User: admin_master_01</span>
+</div>
+</footer>
+</main>
+</body></html>

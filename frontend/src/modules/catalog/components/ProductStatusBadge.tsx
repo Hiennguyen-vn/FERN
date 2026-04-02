@@ -9,10 +9,10 @@ const STATUS_COLORS: Record<ProductStatus, string> = {
 }
 
 export const STATUS_LABELS: Record<ProductStatus, string> = {
-  DRAFT: 'Nháp',
-  ACTIVE: 'Đang bán',
-  INACTIVE: 'Ngừng bán',
-  DISCONTINUED: 'Ngừng kinh doanh',
+  DRAFT: 'Draft',
+  ACTIVE: 'Active',
+  INACTIVE: 'Inactive',
+  DISCONTINUED: 'Discontinued',
 }
 
 export function ProductStatusBadge({ status }: { status: ProductStatus }) {

@@ -109,7 +109,7 @@ describe('PayrollPreparationPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create payroll period' }))
 
-    expect(await screen.findByText('Name, start date và end date là bắt buộc.')).toBeInTheDocument()
+    expect((await screen.findAllByText('Name, start date, and end date are required.')).length).toBeGreaterThan(0)
   })
 
   it('prepares a draft run, submits it, and navigates to review', async () => {
@@ -159,7 +159,13 @@ describe('PayrollPreparationPage', () => {
     await user.selectOptions(screen.getByLabelText('Payroll period'), '11')
     await user.click(screen.getByRole('button', { name: 'Prepare and submit payroll run' }))
 
-    expect(await screen.findByText('Payroll draft đã được tạo nhưng response không trả về runId hợp lệ để submit sang Finance.')).toBeInTheDocument()
+    expect(
+      (
+        await screen.findAllByText(
+          'A payroll draft was created but the response did not include a valid run ID for finance submission.',
+        )
+      ).length,
+    ).toBeGreaterThan(0)
     expect(submitMutateAsync).not.toHaveBeenCalled()
   })
 
@@ -175,7 +181,13 @@ describe('PayrollPreparationPage', () => {
     await user.selectOptions(screen.getByLabelText('Payroll period'), '11')
     await user.click(screen.getByRole('button', { name: 'Prepare and submit payroll run' }))
 
-    expect(await screen.findByText('Đã tạo payroll draft #77 nhưng chưa submit sang Finance. Gateway timeout')).toBeInTheDocument()
+    expect(
+      (
+        await screen.findAllByText(
+          'Payroll draft #77 was created but could not be submitted to Finance. Gateway timeout',
+        )
+      ).length,
+    ).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: 'Open created draft run' })).toBeInTheDocument()
   })
 })

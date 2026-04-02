@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Badge, Button, Card, DataTable, EmptyState, ErrorState, Input, Pagination, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
+import { Badge, Button, Card, DataTable, EmptyState, ErrorState, Input, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
@@ -52,6 +53,10 @@ export function StockOverviewPage() {
         }
       : null,
   )
+  const balances = query.data?.items ?? []
+  const lowStockCount = balances.filter((row) => Number(row.qtyAvailable) > 0 && Number(row.qtyAvailable) <= 5).length
+  const outOfStockCount = balances.filter((row) => Number(row.qtyAvailable) <= 0).length
+  const recentlyCounted = balances.filter((row) => row.lastCountDate).length
 
   const columns: Array<DataTableColumn<StockBalance>> = [
     {
@@ -74,8 +79,8 @@ export function StockOverviewPage() {
 
   if (!hasPermission) {
     return (
-      <DashboardLayout description="Read live stock balances for the currently selected outlet." title="Stock Overview">
-        <PermissionDeniedInline message="Bạn cần quyền inventory.balance.read để xem tồn kho." />
+      <DashboardLayout description="Read live stock balances for the currently selected outlet." eyebrow="Inventory / Outlet Control" title="Stock Overview">
+        <PermissionDeniedInline message="You need `inventory.balance.read` to open the stock overview." />
       </DashboardLayout>
     )
   }
@@ -83,22 +88,32 @@ export function StockOverviewPage() {
   return (
     <DashboardLayout
       description="Read live stock balances for the currently selected outlet."
+      eyebrow="Inventory / Outlet Control"
       title="Stock Overview"
       actions={
         <div className="form-actions align-start">
           {canCreateAdjustment ? (
             <Button asChild size="sm" variant="secondary">
-              <Link to="/inventory/stock-adjustments/new">Stock adjustment</Link>
+              <Link to="/inventory/stock-adjustments/new">
+                <AppIcon name="edit_note" size="sm" />
+                Quick adjustment
+              </Link>
             </Button>
           ) : null}
           {canCreateWaste ? (
             <Button asChild size="sm" variant="secondary">
-              <Link to="/inventory/waste-records/new">Waste record</Link>
+              <Link to="/inventory/waste-records/new">
+                <AppIcon name="delete_sweep" size="sm" />
+                Waste record
+              </Link>
             </Button>
           ) : null}
           {canCreateStockCount ? (
             <Button asChild size="sm">
-              <Link to="/inventory/stock-count-sessions/new">Stock count</Link>
+              <Link to="/inventory/stock-count-sessions/new">
+                <AppIcon name="inventory" size="sm" />
+                Stock count
+              </Link>
             </Button>
           ) : null}
         </div>
@@ -106,28 +121,28 @@ export function StockOverviewPage() {
     >
       {!selectedOutletId ? (
         <>
-          <ReadonlyBanner message="Chọn outlet để xem tồn kho. Dùng bộ chọn outlet bên dưới hoặc ở góc trên cùng bên phải." />
+          <ReadonlyBanner message="Select an outlet to inspect live inventory balances. Use the outlet switcher below or in the shell." />
           <EmptyState
-            description="Stock Overview chỉ hiển thị dữ liệu khi outlet context đã được chọn rõ ràng trong app shell."
-            title="Chưa chọn outlet"
+            description="Stock Overview renders only after a single outlet context has been chosen in the app shell."
+            title="No outlet selected"
           >
             {outletIds.length > 0 ? (
               <div style={{ marginTop: '1rem', maxWidth: '320px' }}>
                 <Select
-                  label="Chọn outlet"
+                  label="Choose outlet"
                   onChange={(event) => {
                     if (event.target.value) {
                       setSelectedOutletId(Number(event.target.value))
                     }
                   }}
                   options={outletIds.map((id) => ({ label: `Outlet #${id}`, value: String(id) }))}
-                  placeholder="-- Chọn outlet --"
+                  placeholder="-- Choose outlet --"
                   value={selectedOutletId ? String(selectedOutletId) : ''}
                 />
               </div>
             ) : (
               <p className="muted-text" style={{ marginTop: '0.5rem' }}>
-                Tài khoản này chưa được gán outlet. Liên hệ System Admin để được cấp phạm vi outlet.
+                This account has not been assigned an outlet scope. Contact a system administrator to continue.
               </p>
             )}
           </EmptyState>
@@ -138,53 +153,117 @@ export function StockOverviewPage() {
           actionLabel="Retry"
           message={query.error instanceof Error ? query.error.message : 'Failed to load stock balances'}
           onAction={() => void query.refetch()}
-          title="Không thể tải stock balances"
+          title="Unable to load stock balances"
         />
       ) : null}
       {selectedOutletId ? (
         <>
-      <Card title="Filters">
-        <div className="field-grid">
-          <Input
-            label="Outlet ID"
-            readOnly
-            value={selectedOutletId ?? ''}
-          />
-          <Input
-            label="Ingredient ID"
-            onChange={(event) => {
-              setIngredientId(event.target.value)
-              setPage(0)
-            }}
-            placeholder="Optional ingredient id"
-            value={ingredientId}
-          />
-        </div>
-      </Card>
-      {!query.error ? (
-        <>
-          <DataTable
-            columns={columns}
-            emptyDescription={
-              ingredientId
-                ? 'Không có stock balance nào khớp ingredient đang lọc tại outlet hiện tại.'
-                : 'Outlet hiện tại chưa có stock balance nào để hiển thị.'
-            }
-            emptyTitle="No stock balances"
-            loading={query.isLoading}
-            loadingDescription="Loading live stock balances for the selected outlet..."
-            loadingTitle="Loading stock balances"
-            rows={query.data?.items ?? []}
-          />
-          <Pagination
-            canNext={Boolean(query.data?.hasMore)}
-            canPrevious={page > 0}
-            currentPage={page}
-            onNext={() => setPage((value) => value + 1)}
-            onPrevious={() => setPage((value) => Math.max(0, value - 1))}
-          />
-        </>
-      ) : null}
+          {!query.error ? (
+            <>
+              <section className="workspace-stats-grid" aria-label="Stock summary">
+                <article className="workspace-stat-card">
+                  <div className="workspace-stat-topline">
+                    <span className="workspace-stat-icon">
+                      <AppIcon name="inventory_2" size="sm" />
+                    </span>
+                    <span className="workspace-stat-badge success">Visible</span>
+                  </div>
+                  <div>
+                    <p className="workspace-stat-label">Ingredients on current page</p>
+                    <strong className="workspace-stat-value">{balances.length}</strong>
+                  </div>
+                </article>
+                <article className="workspace-stat-card warning">
+                  <div className="workspace-stat-topline">
+                    <span className="workspace-stat-icon">
+                      <AppIcon name="warning" size="sm" />
+                    </span>
+                    <span className="workspace-stat-badge warning">Watch</span>
+                  </div>
+                  <div>
+                    <p className="workspace-stat-label">Low stock lines</p>
+                    <strong className="workspace-stat-value">{lowStockCount}</strong>
+                  </div>
+                </article>
+                <article className="workspace-stat-card danger">
+                  <div className="workspace-stat-topline">
+                    <span className="workspace-stat-icon">
+                      <AppIcon name="error" size="sm" />
+                    </span>
+                    <span className="workspace-stat-badge danger">Critical</span>
+                  </div>
+                  <div>
+                    <p className="workspace-stat-label">Out of stock lines</p>
+                    <strong className="workspace-stat-value">{outOfStockCount}</strong>
+                  </div>
+                </article>
+                <article className="workspace-stat-card">
+                  <div className="workspace-stat-topline">
+                    <span className="workspace-stat-icon">
+                      <AppIcon name="history" size="sm" />
+                    </span>
+                    <span className="workspace-stat-badge success">Today</span>
+                  </div>
+                  <div>
+                    <p className="workspace-stat-label">Recently counted</p>
+                    <strong className="workspace-stat-value">{recentlyCounted}</strong>
+                  </div>
+                </article>
+              </section>
+
+              <section className="workspace-filter-bar" aria-label="Stock filters">
+                <label className="workspace-inline-search" htmlFor="stock-ingredient-filter">
+                  <AppIcon name="search" size="sm" />
+                  <input
+                    className="workspace-inline-input"
+                    id="stock-ingredient-filter"
+                    onChange={(event) => {
+                      setIngredientId(event.target.value)
+                      setPage(0)
+                    }}
+                    placeholder="Search by ingredient ID..."
+                    value={ingredientId}
+                  />
+                </label>
+                <div className="workspace-inline-actions">
+                  <div className="workspace-inline-pill">
+                    <AppIcon name="storefront" size="sm" />
+                    Outlet #{selectedOutletId}
+                  </div>
+                  <div className="workspace-inline-pill">
+                    <AppIcon name="view_list" size="sm" />
+                    Page {page + 1}
+                  </div>
+                </div>
+              </section>
+
+              <Card title="Outlet context">
+                <div className="field-grid">
+                  <Input label="Outlet ID" readOnly value={selectedOutletId ?? ''} />
+                  <Input label="Ingredient filter" readOnly value={ingredientId || 'None'} />
+                </div>
+              </Card>
+
+              <DataTable
+                canNext={Boolean(query.data?.hasMore)}
+                canPrevious={page > 0}
+                columns={columns}
+                currentPage={page}
+                emptyDescription={
+                  ingredientId
+                    ? 'No stock balances match the filtered ingredient at the current outlet.'
+                    : 'The current outlet has no stock balances to display.'
+                }
+                emptyTitle="No stock balances"
+                loading={query.isLoading}
+                loadingDescription="Loading live stock balances for the selected outlet..."
+                loadingTitle="Loading stock balances"
+                onNext={() => setPage((value) => value + 1)}
+                onPrevious={() => setPage((value) => Math.max(0, value - 1))}
+                rows={balances}
+              />
+            </>
+          ) : null}
         </>
       ) : null}
     </DashboardLayout>

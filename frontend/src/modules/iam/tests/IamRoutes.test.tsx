@@ -129,7 +129,7 @@ describe('IAM route group', () => {
   })
 
   it.each([
-    ['/iam/users', 'IAM Users'],
+    ['/iam/users', 'User Management'],
     ['/iam/users/1', 'IAM User Detail'],
     ['/iam/assignments', 'IAM Assignments'],
     ['/iam/effective-access/1', 'Effective Access'],

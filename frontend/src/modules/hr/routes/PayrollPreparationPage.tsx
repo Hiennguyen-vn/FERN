@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import {
   Button,
+  Card,
   DataTable,
   EmptyState,
   FormActions,
-  FormSection,
   Input,
   PermissionDeniedInline,
   ReadonlyBanner,
@@ -18,6 +19,7 @@ import {
 } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
+import { toOptionalNumber, parsePositiveInt } from '@shared/validators/parseInput'
 import {
   useCreatePayrollPeriod,
   useCreatePayrollRun,
@@ -37,10 +39,14 @@ import {
   canReadPayroll,
 } from '../services/hrPermission.service'
 import { payrollPrepUiPolicy } from '../services/payrollPrepUiPolicy.service'
-import { toOptionalNumber, parsePositiveInt } from '@shared/validators/parseInput'
+
+function buildRunRows(runs: PayrollRun[]) {
+  return [...runs].sort((left, right) => right.runDate.localeCompare(left.runDate))
+}
 
 export function PayrollPreparationPage() {
-  usePageTitle('HR Payroll Preparation')
+  usePageTitle('Payroll Preparation')
+
   const navigate = useNavigate()
   const principal = usePrincipal()
   const { regionIds, selectedRegionId } = useScopeContext()
@@ -74,6 +80,8 @@ export function PayrollPreparationPage() {
   const createPayrollRun = useCreatePayrollRun()
   const submitPayrollRun = useSubmitPayrollRun()
   const isSubmittingRun = createPayrollRun.isPending || submitPayrollRun.isPending
+  const payrollPeriods = periodsQuery.data ?? []
+  const payrollRuns = buildRunRows(runsQuery.data ?? [])
 
   const regionOptions = useMemo<SelectOption[]>(
     () => regionIds.map((regionId) => ({ label: `Region #${regionId}`, value: String(regionId) })),
@@ -82,12 +90,52 @@ export function PayrollPreparationPage() {
 
   const periodOptions = useMemo<SelectOption[]>(
     () =>
-      (periodsQuery.data ?? []).map((period) => ({
+      payrollPeriods.map((period) => ({
         label: `${period.referenceCode} · ${period.name}`,
         value: String(period.id),
       })),
-    [periodsQuery.data],
+    [payrollPeriods],
   )
+
+  const latestRun = payrollRuns[0] ?? null
+  const estimatedPayout = latestRun?.totalAmount ?? payrollRuns.reduce((sum, run) => sum + (run.totalAmount ?? 0), 0)
+  const openPeriods = payrollPeriods.filter((period) => ['OPEN', 'DRAFT', 'ACTIVE'].includes(period.status.toUpperCase())).length
+  const awaitingFinance = payrollRuns.filter((run) => ['DRAFT', 'SUBMITTED'].includes(run.status.toUpperCase())).length
+  const missingInputs = [!activeRegionId && !principal?.scopeRoots.system, payrollPeriods.length === 0, !canPrepare].filter(Boolean).length
+
+  const readinessItems = [
+    {
+      description: activeRegionId ? `Region #${activeRegionId} is active for this workspace.` : 'Select a region or use system scope.',
+      icon: 'location_on',
+      ready: Boolean(activeRegionId) || Boolean(principal?.scopeRoots.system),
+      title: 'Region context',
+    },
+    {
+      description: payrollPeriods.length > 0 ? `${payrollPeriods.length} payroll periods are available.` : 'Create a payroll period before preparing a draft run.',
+      icon: 'calendar_today',
+      ready: payrollPeriods.length > 0,
+      title: 'Payroll periods',
+    },
+    {
+      description: canPrepare ? 'Prepare and submit controls are enabled.' : 'This principal can review but not generate payroll drafts.',
+      icon: 'rule',
+      ready: canPrepare,
+      title: 'Preparation access',
+    },
+    {
+      description: canRead ? 'Payroll periods and run history are visible.' : 'Read-side payroll data is not visible in this scope.',
+      icon: 'table_view',
+      ready: canRead,
+      title: 'Read-side visibility',
+    },
+  ]
+
+  const exceptionItems = [
+    !activeRegionId && !principal?.scopeRoots.system ? 'Region context is missing.' : null,
+    payrollPeriods.length === 0 ? 'No payroll periods are available for the current region.' : null,
+    periodError,
+    runError,
+  ].filter(Boolean) as string[]
 
   const periodColumns = useMemo<Array<DataTableColumn<PayrollPeriod>>>(
     () => [
@@ -95,20 +143,20 @@ export function PayrollPreparationPage() {
         key: 'reference',
         header: 'Period',
         render: (period) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="cell-stack">
             <strong>{period.referenceCode}</strong>
-            <span className="muted-text">{period.name}</span>
+            <span className="cell-subtitle">{period.name}</span>
           </div>
         ),
       },
       {
         key: 'dates',
-        header: 'Date range',
+        header: 'Date Range',
         render: (period) => formatDateRange(period.startDate, period.endDate),
       },
       {
         key: 'payDate',
-        header: 'Pay date',
+        header: 'Pay Date',
         render: (period) => formatDateLabel(period.payDate),
       },
       {
@@ -126,15 +174,15 @@ export function PayrollPreparationPage() {
         key: 'run',
         header: 'Run',
         render: (run) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="cell-stack">
             <strong>{run.runCode}</strong>
-            <span className="muted-text">Period #{run.payrollPeriodId}</span>
+            <span className="cell-subtitle">Period #{run.payrollPeriodId}</span>
           </div>
         ),
       },
       {
         key: 'runDate',
-        header: 'Run date',
+        header: 'Run Date',
         render: (run) => formatDateLabel(run.runDate),
       },
       {
@@ -154,19 +202,19 @@ export function PayrollPreparationPage() {
   async function handleCreatePeriod() {
     setPeriodError(null)
     if (!activeRegionId) {
-      setPeriodError('Chọn region hợp lệ trước khi tạo payroll period.')
+      setPeriodError('Select a valid region before creating a payroll period.')
       return
     }
     if (!periodForm.name.trim() || !periodForm.startDate || !periodForm.endDate) {
-      setPeriodError('Name, start date và end date là bắt buộc.')
+      setPeriodError('Name, start date, and end date are required.')
       return
     }
     if (new Date(periodForm.endDate).getTime() < new Date(periodForm.startDate).getTime()) {
-      setPeriodError('endDate phải cùng ngày hoặc sau startDate.')
+      setPeriodError('End date must be on or after the start date.')
       return
     }
     if (periodForm.payDate && new Date(periodForm.payDate).getTime() < new Date(periodForm.endDate).getTime()) {
-      setPeriodError('payDate phải cùng ngày hoặc sau endDate.')
+      setPeriodError('Pay date must be on or after the period end date.')
       return
     }
 
@@ -182,17 +230,16 @@ export function PayrollPreparationPage() {
       setRunForm((current) => ({ ...current, payrollPeriodId: String(period.id) }))
       setPeriodForm({ endDate: '', name: '', note: '', payDate: '', startDate: '' })
     } catch (error) {
-      setPeriodError(getHrErrorMessage(error, 'Không thể tạo payroll period.'))
+      setPeriodError(getHrErrorMessage(error, 'Unable to create the payroll period.'))
     }
   }
 
   async function handleCreateRun() {
     setRunError(null)
     setFailedRunId(null)
-    // parsePositiveInt rejects 0, negatives, and non-integers (backend: payrollPeriodId @NotNull Long)
     const payrollPeriodId = parsePositiveInt(runForm.payrollPeriodId)
     if (!payrollPeriodId) {
-      setRunError('Chọn payroll period trước khi prepare draft run.')
+      setRunError('Select a payroll period before preparing a draft run.')
       return
     }
 
@@ -204,13 +251,13 @@ export function PayrollPreparationPage() {
         runDate: runForm.runDate || undefined,
       })
     } catch (error) {
-      setRunError(getHrErrorMessage(error, 'Không thể prepare payroll draft run.'))
+      setRunError(getHrErrorMessage(error, 'Unable to prepare the payroll draft run.'))
       return
     }
 
     const runId = Number(run.id)
     if (!Number.isFinite(runId) || runId <= 0) {
-      setRunError('Payroll draft đã được tạo nhưng response không trả về runId hợp lệ để submit sang Finance.')
+      setRunError('A payroll draft was created but the response did not include a valid run ID for finance submission.')
       return
     }
 
@@ -222,224 +269,379 @@ export function PayrollPreparationPage() {
       setFailedRunId(runId)
       setRunError(
         detail
-          ? `Đã tạo payroll draft #${runId} nhưng chưa submit sang Finance. ${detail}`
-          : `Đã tạo payroll draft #${runId} nhưng chưa submit sang Finance.`,
+          ? `Payroll draft #${runId} was created but could not be submitted to Finance. ${detail}`
+          : `Payroll draft #${runId} was created but could not be submitted to Finance.`,
       )
     }
   }
 
   if (!canOpen) {
     return (
-      <DashboardLayout title="Payroll Preparation" description="Prepare payroll periods và draft payroll runs theo region">
-        <PermissionDeniedInline message="Bạn cần finance.payroll.read hoặc finance.payroll.prepare để mở payroll workspace." />
+      <DashboardLayout
+        description="Review readiness, create periods, and prepare payroll draft runs."
+        eyebrow="Finance"
+        title="Payroll Preparation"
+      >
+        <PermissionDeniedInline message="You need finance.payroll.read or finance.payroll.prepare to open payroll preparation." />
       </DashboardLayout>
     )
   }
 
   return (
     <DashboardLayout
+      actions={
+        <div className="form-actions align-start">
+          <span className="workspace-inline-pill">
+            <AppIcon name="location_on" size="sm" />
+            {activeRegionId ? `Region #${activeRegionId}` : 'Region required'}
+          </span>
+          <span className="workspace-inline-pill">
+            <AppIcon name="calendar_today" size="sm" />
+            {payrollPeriods[0] ? payrollPeriods[0].referenceCode : 'No period selected'}
+          </span>
+        </div>
+      }
+      description="Review readiness, create periods, and prepare payroll draft runs."
+      eyebrow="Finance"
       title="Payroll Preparation"
-      description="Section-form workflow để chuẩn bị payroll period và draft payroll run cho phase finance tiếp theo."
     >
       {!activeRegionId && !principal?.scopeRoots.system ? (
-        <ReadonlyBanner message="Chọn region trong app shell trước khi dùng payroll preparation. Finance payroll APIs yêu cầu region context rõ ràng." />
+        <ReadonlyBanner
+          label="Region required"
+          message="Select a region in the app shell before preparing payroll data."
+          title="Payroll preparation is waiting for context"
+          tone="warning"
+        />
       ) : !canPrepare ? (
-        <ReadonlyBanner message="Bạn đang ở chế độ read-only. Cần finance.payroll.prepare để tạo payroll period hoặc prepare payroll run." />
+        <ReadonlyBanner
+          label="Read-only access"
+          message="This principal can inspect payroll data but cannot create payroll periods or draft runs."
+          title="Payroll preparation is in read-only mode"
+          tone="warning"
+        />
       ) : (
-        <ReadonlyBanner message="Payroll preparation hiện publish ở workflow-first mode: tạo period, prepare + submit payroll run, rồi review run ở màn kế tiếp." />
+        <ReadonlyBanner
+          label="Workflow first"
+          message="Prepare a period, generate the draft run, then hand off the resulting draft to Finance review."
+          title="Payroll preparation workspace"
+        />
       )}
 
-      <FormSection description="Region scope quyết định period và runs nào được hiển thị hoặc prepare." title="Preparation context">
-        <div className="field-grid">
-          {regionOptions.length > 0 ? (
-            <Select
-              label="Region"
-              onChange={(event) => setSelectedRegion(event.target.value)}
-              options={regionOptions}
-              placeholder={principal?.scopeRoots.system ? 'All regions (system scope)' : 'Select region'}
-              value={selectedRegion}
-            />
-          ) : (
-            <Input
-              label="Region ID"
-              onChange={(event) => setSelectedRegion(event.target.value)}
-              placeholder={principal?.scopeRoots.system ? 'Optional region filter' : 'Region required'}
-              type="number"
-              value={selectedRegion}
-            />
-          )}
-        </div>
-      </FormSection>
-
-      <FormSection description="Chuẩn bị payroll period làm cơ sở cho các draft payroll runs." title="Create payroll period">
-        {canPrepare ? (
-          <>
-            <div className="field-grid">
-              <Input
-                label="Period name"
-                onChange={(event) => setPeriodForm((current) => ({ ...current, name: event.target.value }))}
-                placeholder="VD: Payroll March 2026"
-                value={periodForm.name}
-              />
-              <Input
-                label="Start date"
-                onChange={(event) => setPeriodForm((current) => ({ ...current, startDate: event.target.value }))}
-                type="date"
-                value={periodForm.startDate}
-              />
-              <Input
-                label="End date"
-                onChange={(event) => setPeriodForm((current) => ({ ...current, endDate: event.target.value }))}
-                type="date"
-                value={periodForm.endDate}
-              />
-              <Input
-                label="Pay date"
-                onChange={(event) => setPeriodForm((current) => ({ ...current, payDate: event.target.value }))}
-                type="date"
-                value={periodForm.payDate}
-              />
+      <section className="payroll-summary-grid">
+        <article className="payroll-summary-card primary">
+          <div className="payroll-summary-card-header">
+            <div>
+              <p className="workspace-stat-label" style={{ color: 'rgba(202, 207, 255, 0.92)' }}>
+                Estimated total payout
+              </p>
+              <strong className="workspace-stat-value">{formatCurrencyAmount(estimatedPayout)}</strong>
             </div>
-            <Textarea
-              label="Note"
-              onChange={(event) => setPeriodForm((current) => ({ ...current, note: event.target.value }))}
-              placeholder="Optional period note"
-              value={periodForm.note}
-            />
-            <FormActions
-              primaryAction={
-                <Button loading={createPayrollPeriod.isPending} onClick={() => void handleCreatePeriod()} size="sm">
-                  Create payroll period
-                </Button>
-              }
-            />
-            {periodError ? <p className="error-text">{periodError}</p> : null}
-          </>
-        ) : (
-          <PermissionDeniedInline message="Bạn cần finance.payroll.prepare để tạo payroll period." />
-        )}
-      </FormSection>
+            <span className="workspace-stat-icon" style={{ background: 'rgba(255, 255, 255, 0.12)', color: '#fff' }}>
+              <AppIcon filled name="account_balance_wallet" />
+            </span>
+          </div>
+          <div className="detail-kpi-grid" style={{ borderTopColor: 'rgba(255, 255, 255, 0.16)' }}>
+            <div className="detail-kpi">
+              <span className="detail-kpi-label" style={{ color: 'rgba(202, 207, 255, 0.88)' }}>
+                Latest draft
+              </span>
+              <span className="detail-kpi-value" style={{ color: '#fff', fontSize: '1.2rem' }}>
+                {latestRun?.runCode ?? 'None'}
+              </span>
+            </div>
+            <div className="detail-kpi">
+              <span className="detail-kpi-label" style={{ color: 'rgba(202, 207, 255, 0.88)' }}>
+                Awaiting finance
+              </span>
+              <span className="detail-kpi-value" style={{ color: '#fff', fontSize: '1.2rem' }}>
+                {awaitingFinance}
+              </span>
+            </div>
+          </div>
+        </article>
+        <article className="payroll-summary-card danger">
+          <div className="payroll-summary-card-header">
+            <div>
+              <p className="workspace-stat-label" style={{ color: 'rgba(102, 13, 13, 0.72)' }}>
+                Missing inputs
+              </p>
+              <strong className="workspace-stat-value">{missingInputs}</strong>
+            </div>
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="warning" />
+            </span>
+          </div>
+          <p className="muted-text">
+            {missingInputs > 0 ? 'Action is required before the next payroll draft can be safely prepared.' : 'Core preparation inputs are available.'}
+          </p>
+        </article>
+        <article className="payroll-summary-card success">
+          <div className="payroll-summary-card-header">
+            <div>
+              <p className="workspace-stat-label" style={{ color: 'rgba(111, 251, 190, 0.78)' }}>
+                Open periods
+              </p>
+              <strong className="workspace-stat-value">{openPeriods}</strong>
+            </div>
+            <span className="workspace-stat-icon" style={{ background: 'rgba(255, 255, 255, 0.12)', color: '#fff' }}>
+              <AppIcon filled name="task_alt" />
+            </span>
+          </div>
+          <p className="muted-text" style={{ color: 'rgba(255, 255, 255, 0.86)' }}>
+            {awaitingFinance} draft runs are waiting for the finance review chain.
+          </p>
+        </article>
+      </section>
 
-      <FormSection description="Prepare payroll draft run từ một payroll period đã có." title="Prepare payroll draft">
-        {canPrepare ? (
-          <>
+      <section className="payroll-workspace-grid">
+        <div className="surface-grid-main">
+          <Card title="Preparation Context">
             <div className="field-grid">
-              {periodOptions.length > 0 ? (
+              {regionOptions.length > 0 ? (
                 <Select
-                  label="Payroll period"
-                  onChange={(event) => setRunForm((current) => ({ ...current, payrollPeriodId: event.target.value }))}
-                  options={periodOptions}
-                  placeholder="Select payroll period"
-                  value={runForm.payrollPeriodId}
+                  label="Region"
+                  onChange={(event) => setSelectedRegion(event.target.value)}
+                  options={regionOptions}
+                  placeholder={principal?.scopeRoots.system ? 'All regions (system scope)' : 'Select region'}
+                  value={selectedRegion}
                 />
               ) : (
                 <Input
-                  label="Payroll period ID"
-                  onChange={(event) => setRunForm((current) => ({ ...current, payrollPeriodId: event.target.value }))}
-                  placeholder="Nhập payroll period ID"
+                  label="Region ID"
+                  onChange={(event) => setSelectedRegion(event.target.value)}
+                  placeholder={principal?.scopeRoots.system ? 'Optional region filter' : 'Region required'}
                   type="number"
-                  value={runForm.payrollPeriodId}
+                  value={selectedRegion}
                 />
               )}
-              <Input
-                label="Run date"
-                onChange={(event) => setRunForm((current) => ({ ...current, runDate: event.target.value }))}
-                type="date"
-                value={runForm.runDate}
-              />
             </div>
-            <Textarea
-              label="Preparation note"
-              onChange={(event) => setRunForm((current) => ({ ...current, note: event.target.value }))}
-              placeholder="Optional draft preparation note"
-              value={runForm.note}
-            />
-            <FormActions
-              primaryAction={
-                <Button loading={isSubmittingRun} onClick={() => void handleCreateRun()} size="sm">
-                  Prepare and submit payroll run
-                </Button>
-              }
-              secondaryAction={
-                periodsQuery.data && periodsQuery.data.length > 0 ? (
-                  <Button
-                    disabled={isSubmittingRun}
-                    onClick={() =>
-                      setRunForm((current) => ({
-                        ...current,
-                        payrollPeriodId: current.payrollPeriodId || String(periodsQuery.data![0].id),
-                      }))
-                    }
-                    size="sm"
-                    variant="ghost"
-                  >
-                    Use latest period
-                  </Button>
-                ) : null
-              }
-            />
-            {runError ? <p className="error-text">{runError}</p> : null}
-            {failedRunId ? (
-              <div className="form-actions">
-                <Button
-                  disabled={isSubmittingRun}
-                  onClick={() => navigate(`/hr/payroll-draft-review/${failedRunId}`)}
-                  size="sm"
-                  variant="secondary"
-                >
-                  Open created draft run
-                </Button>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <PermissionDeniedInline message="Bạn cần finance.payroll.prepare để prepare payroll draft run." />
-        )}
-      </FormSection>
+            <p className="muted-text">
+              Region scope determines which payroll periods and run history are visible and which draft actions are allowed.
+            </p>
+          </Card>
 
-      <FormSection description="Các payroll periods khả dụng trong phạm vi đang xem." title="Payroll periods">
-        {canRead ? (
-          <DataTable
-            columns={periodColumns}
-            emptyDescription="Chưa có payroll period nào trong phạm vi đang xem."
-            emptyTitle="No payroll periods"
-            error={periodsQuery.error ? getHrErrorMessage(periodsQuery.error, 'Không thể tải payroll periods.') : null}
-            errorTitle="Không thể tải payroll periods"
-            loading={periodsQuery.isLoading}
-            loadingDescription="Đang tải payroll periods..."
-            loadingTitle="Loading payroll periods"
-            onRetry={() => void periodsQuery.refetch()}
-            rowKey={(period) => period.id}
-            rows={periodsQuery.data ?? []}
-          />
-        ) : (
-          <PermissionDeniedInline message="Bạn cần finance.payroll.read để xem payroll periods." />
-        )}
-      </FormSection>
+          <Card title="Readiness Checklist">
+            <div className="checklist-grid">
+              {readinessItems.map((item) => (
+                <article className="checklist-item" key={item.title}>
+                  <div className="checklist-item-head">
+                    <AppIcon filled name={item.icon} size="sm" />
+                    <strong>{item.title}</strong>
+                  </div>
+                  <span className="health-line">
+                    <span className={`health-dot ${item.ready ? 'success' : 'warning'}`} />
+                    {item.ready ? 'Ready' : 'Attention required'}
+                  </span>
+                  <span className="cell-subtitle">{item.description}</span>
+                </article>
+              ))}
+            </div>
+          </Card>
 
-      <FormSection description="Recent payroll runs để mở review ngay sau khi prepare." title="Payroll runs">
-        {canRead ? (
-          <DataTable
-            columns={runColumns}
-            emptyDescription="Chưa có payroll run nào trong phạm vi đang xem."
-            emptyTitle="No payroll runs"
-            error={runsQuery.error ? getHrErrorMessage(runsQuery.error, 'Không thể tải payroll runs.') : null}
-            errorTitle="Không thể tải payroll runs"
-            loading={runsQuery.isLoading}
-            loadingDescription="Đang tải payroll runs..."
-            loadingTitle="Loading payroll runs"
-            onRetry={() => void runsQuery.refetch()}
-            onRowClick={(run) => navigate(`/hr/payroll-draft-review/${run.id}`)}
-            rowKey={(run) => run.id}
-            rows={runsQuery.data ?? []}
-          />
-        ) : (
-          <EmptyState
-            description="Bạn có quyền prepare nhưng không có finance.payroll.read, nên danh sách periods/runs không hiển thị ở đây."
-            title="Read-side payroll data unavailable"
-          />
-        )}
-      </FormSection>
+          <Card title="Create Payroll Period">
+            {canPrepare ? (
+              <>
+                <div className="field-grid">
+                  <Input
+                    label="Period name"
+                    onChange={(event) => setPeriodForm((current) => ({ ...current, name: event.target.value }))}
+                    placeholder="Payroll March 2026"
+                    value={periodForm.name}
+                  />
+                  <Input
+                    label="Start date"
+                    onChange={(event) => setPeriodForm((current) => ({ ...current, startDate: event.target.value }))}
+                    type="date"
+                    value={periodForm.startDate}
+                  />
+                  <Input
+                    label="End date"
+                    onChange={(event) => setPeriodForm((current) => ({ ...current, endDate: event.target.value }))}
+                    type="date"
+                    value={periodForm.endDate}
+                  />
+                  <Input
+                    label="Pay date"
+                    onChange={(event) => setPeriodForm((current) => ({ ...current, payDate: event.target.value }))}
+                    type="date"
+                    value={periodForm.payDate}
+                  />
+                </div>
+                <Textarea
+                  label="Note"
+                  onChange={(event) => setPeriodForm((current) => ({ ...current, note: event.target.value }))}
+                  placeholder="Optional period note"
+                  value={periodForm.note}
+                />
+                <FormActions
+                  primaryAction={
+                    <Button loading={createPayrollPeriod.isPending} onClick={() => void handleCreatePeriod()} size="sm">
+                      Create payroll period
+                    </Button>
+                  }
+                />
+                {periodError ? <p className="error-text">{periodError}</p> : null}
+              </>
+            ) : (
+              <PermissionDeniedInline message="You need finance.payroll.prepare to create payroll periods." />
+            )}
+          </Card>
+
+          <Card title="Payroll Periods">
+            {canRead ? (
+              <DataTable
+                columns={periodColumns}
+                emptyDescription="No payroll periods are available in the current region scope."
+                emptyTitle="No payroll periods"
+                error={periodsQuery.error ? getHrErrorMessage(periodsQuery.error, 'Unable to load payroll periods.') : null}
+                errorTitle="Unable to load payroll periods"
+                loading={periodsQuery.isLoading}
+                loadingDescription="Loading payroll periods..."
+                loadingTitle="Loading payroll periods"
+                onRetry={() => void periodsQuery.refetch()}
+                rowKey={(period) => period.id}
+                rows={payrollPeriods}
+              />
+            ) : (
+              <PermissionDeniedInline message="You need finance.payroll.read to view payroll periods." />
+            )}
+          </Card>
+
+          <Card title="Draft Payroll Preview">
+            {canRead ? (
+              <DataTable
+                columns={runColumns}
+                emptyDescription="No payroll runs are available in the current region scope."
+                emptyTitle="No payroll runs"
+                error={runsQuery.error ? getHrErrorMessage(runsQuery.error, 'Unable to load payroll runs.') : null}
+                errorTitle="Unable to load payroll runs"
+                loading={runsQuery.isLoading}
+                loadingDescription="Loading payroll runs..."
+                loadingTitle="Loading payroll runs"
+                onRetry={() => void runsQuery.refetch()}
+                onRowClick={(run) => navigate(`/hr/payroll-draft-review/${run.id}`)}
+                rowKey={(run) => run.id}
+                rows={payrollRuns}
+              />
+            ) : (
+              <EmptyState
+                description="This principal can prepare payroll but does not have finance.payroll.read for run history."
+                title="Payroll run history unavailable"
+              />
+            )}
+          </Card>
+        </div>
+
+        <aside className="payroll-side-column">
+          <Card className="sticky-side-card" title="Prepare Payroll Draft">
+            {canPrepare ? (
+              <>
+                <div className="field-grid">
+                  {periodOptions.length > 0 ? (
+                    <Select
+                      label="Payroll period"
+                      onChange={(event) => setRunForm((current) => ({ ...current, payrollPeriodId: event.target.value }))}
+                      options={periodOptions}
+                      placeholder="Select payroll period"
+                      value={runForm.payrollPeriodId}
+                    />
+                  ) : (
+                    <Input
+                      label="Payroll period ID"
+                      onChange={(event) => setRunForm((current) => ({ ...current, payrollPeriodId: event.target.value }))}
+                      placeholder="Enter payroll period ID"
+                      type="number"
+                      value={runForm.payrollPeriodId}
+                    />
+                  )}
+                  <Input
+                    label="Run date"
+                    onChange={(event) => setRunForm((current) => ({ ...current, runDate: event.target.value }))}
+                    type="date"
+                    value={runForm.runDate}
+                  />
+                </div>
+                <Textarea
+                  label="Preparation note"
+                  onChange={(event) => setRunForm((current) => ({ ...current, note: event.target.value }))}
+                  placeholder="Optional draft preparation note"
+                  value={runForm.note}
+                />
+                <FormActions
+                  primaryAction={
+                    <Button loading={isSubmittingRun} onClick={() => void handleCreateRun()} size="sm">
+                      Prepare and submit payroll run
+                    </Button>
+                  }
+                  secondaryAction={
+                    payrollPeriods.length > 0 ? (
+                      <Button
+                        disabled={isSubmittingRun}
+                        onClick={() =>
+                          setRunForm((current) => ({
+                            ...current,
+                            payrollPeriodId: current.payrollPeriodId || String(payrollPeriods[0].id),
+                          }))
+                        }
+                        size="sm"
+                        variant="ghost"
+                      >
+                        Use latest period
+                      </Button>
+                    ) : null
+                  }
+                />
+                {runError ? <p className="error-text">{runError}</p> : null}
+                {failedRunId ? (
+                  <div className="form-actions align-start">
+                    <Button
+                      disabled={isSubmittingRun}
+                      onClick={() => navigate(`/hr/payroll-draft-review/${failedRunId}`)}
+                      size="sm"
+                      variant="secondary"
+                    >
+                      Open created draft run
+                    </Button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <PermissionDeniedInline message="You need finance.payroll.prepare to prepare payroll draft runs." />
+            )}
+          </Card>
+
+          <Card title="Critical Exceptions">
+            {exceptionItems.length > 0 ? (
+              <ul className="payroll-side-list">
+                {exceptionItems.map((item) => (
+                  <li key={item}>
+                    <strong>{item}</strong>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted-text">No blocking issues are currently preventing payroll preparation.</p>
+            )}
+          </Card>
+
+          <Card title="Preparation Activity">
+            <div className="activity-feed">
+              {payrollRuns.slice(0, 3).map((run) => (
+                <article className="activity-item" key={run.id}>
+                  <div className="activity-item-head">
+                    <strong className="activity-item-title">{run.runCode}</strong>
+                    <StatusBadge status={run.status} />
+                  </div>
+                  <span className="cell-subtitle">
+                    Run date: {formatDateLabel(run.runDate)} · Total: {formatCurrencyAmount(run.totalAmount)}
+                  </span>
+                </article>
+              ))}
+              {payrollRuns.length === 0 ? <p className="muted-text">No payroll preparation activity is available yet.</p> : null}
+            </div>
+          </Card>
+        </aside>
+      </section>
     </DashboardLayout>
   )
 }

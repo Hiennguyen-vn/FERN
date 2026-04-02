@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Architect ERP | Attendance Summary</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed": "#000e5e",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-tertiary-container": "#5debaf",
+              "on-background": "#191c1e",
+              "surface-container-high": "#e6e8ea",
+              "error": "#ba1a1a",
+              "error-container": "#ffdad6",
+              "inverse-surface": "#2d3133",
+              "surface-dim": "#d8dadc",
+              "on-tertiary-fixed-variant": "#005236",
+              "secondary": "#515f74",
+              "on-error": "#ffffff",
+              "on-primary-container": "#cacfff",
+              "surface-container-highest": "#e0e3e5",
+              "on-tertiary-fixed": "#002113",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary-fixed": "#0d1c2e",
+              "on-error-container": "#93000a",
+              "on-surface": "#191c1e",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "tertiary": "#004e33",
+              "on-secondary": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "secondary-container": "#d5e3fc",
+              "secondary-fixed-dim": "#b9c7df",
+              "primary-container": "#4151b3",
+              "tertiary-container": "#006846",
+              "surface-tint": "#4555b7",
+              "on-surface-variant": "#454652",
+              "outline": "#757684",
+              "on-secondary-container": "#57657a",
+              "primary": "#27389a",
+              "outline-variant": "#c5c5d4",
+              "surface-container-low": "#f2f4f6",
+              "on-primary": "#ffffff",
+              "background": "#f7f9fb",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-variant": "#e0e3e5",
+              "surface-container": "#eceef0",
+              "on-tertiary": "#ffffff",
+              "surface": "#f7f9fb",
+              "tertiary-fixed": "#6ffbbe",
+              "primary-fixed": "#dee0ff",
+              "on-secondary-fixed-variant": "#3a485b",
+              "inverse-primary": "#bbc3ff",
+              "secondary-fixed": "#d5e3fc"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .signature-gradient {
+        background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+      }
+    </style>
+</head>
+<body class="bg-background font-body text-on-surface">
+<!-- TopNavBar -->
+<header class="bg-[#f7f9fb] dark:bg-slate-900 sticky top-0 z-50 flex justify-between items-center w-full px-6 h-16 no-border bg-[#f2f4f6] dark:bg-slate-800 flat no shadows">
+<div class="flex items-center gap-8">
+<h1 class="text-xl font-bold tracking-tighter text-[#191c1e] dark:text-slate-100 font-manrope">Architect ERP</h1>
+<nav class="hidden md:flex gap-6">
+<a class="text-[#454652] dark:text-slate-400 font-manrope tracking-tight font-semibold transition-colors hover:bg-[#f2f4f6] dark:hover:bg-slate-800 px-3 py-1 rounded" href="#">Dashboard</a>
+<a class="text-[#3F51B5] dark:text-indigo-300 font-bold border-b-2 border-[#3F51B5] font-manrope tracking-tight font-semibold px-3 py-1" href="#">Operations</a>
+<a class="text-[#454652] dark:text-slate-400 font-manrope tracking-tight font-semibold transition-colors hover:bg-[#f2f4f6] dark:hover:bg-slate-800 px-3 py-1 rounded" href="#">Analytics</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex flex-col text-right">
+<span class="text-xs font-bold text-primary uppercase tracking-widest">Outlet: Downtown Bistro</span>
+<span class="text-[10px] text-on-surface-variant">Region: South East</span>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors"><span class="material-symbols-outlined">settings</span></button>
+<button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors"><span class="material-symbols-outlined">help</span></button>
+</div>
+<img alt="HR Manager Profile" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="professional portrait of a middle-aged corporate manager in a modern office with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdXCo0AGMzO8z8cAfbJ6hjjCJpr7rmntMNtSDImTh4WYYE4xfrAoCn1Dfqy57mq0lx-5Qzs4Oyf6tahhYODXIRGu-WC1lqM4-qOoaFU4JMRnul47eC5QU0X7SO2SPJTY04sjlQLWxurjHFtCNKiZivFWDmySjZME-VAzchFygCwuXT5FkTANgfKg0xzZowVWybXqXJeuPBnQanmwjP65FRCvA5JxEMj9pp7c82w5NU_YDRipCscX6vDneVFq6_SeG_7ZiLkNkOPUA"/>
+</div>
+</header>
+<!-- Sidebar & Layout Wrapper -->
+<div class="flex">
+<!-- SideNavBar -->
+<aside class="bg-[#f2f4f6] dark:bg-slate-900 h-screen w-64 fixed left-0 top-0 z-40 flex flex-col p-4 gap-2 no-border tonal-layering flat no shadows">
+<div class="mb-8 pt-16">
+<div class="flex items-center gap-3 px-2">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<h2 class="text-lg font-black text-[#27389a] dark:text-indigo-300 leading-none">Precision HR</h2>
+<span class="text-[10px] font-medium text-on-surface-variant uppercase tracking-tighter">Enterprise Management</span>
+</div>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter text-sm font-medium rounded-lg hover:bg-[#e2e4e6] transition-all" href="#">
+<span class="material-symbols-outlined text-lg">badge</span> Employee Master
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter text-sm font-medium rounded-lg hover:bg-[#e2e4e6] transition-all" href="#">
+<span class="material-symbols-outlined text-lg">history_edu</span> Contract Lifecycle
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter text-sm font-medium rounded-lg hover:bg-[#e2e4e6] transition-all" href="#">
+<span class="material-symbols-outlined text-lg">schedule</span> Shift Management
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 text-[#3F51B5] dark:text-indigo-300 rounded-lg shadow-sm font-semibold translate-x-1 font-inter text-sm transition-transform" href="#">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">fact_check</span> Attendance Queue
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter text-sm font-medium rounded-lg hover:bg-[#e2e4e6] transition-all" href="#">
+<span class="material-symbols-outlined text-lg">payments</span> Payroll Prep
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-inter text-sm font-medium rounded-lg hover:bg-[#e2e4e6] transition-all" href="#">
+<span class="material-symbols-outlined text-lg">tune</span> Settings
+                </a>
+</nav>
+<div class="mt-auto pt-4 flex flex-col gap-1">
+<button class="signature-gradient text-white py-3 rounded-xl font-bold text-sm mb-4 flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add</span> New Staff Entry
+                </button>
+<a class="flex items-center gap-3 px-4 py-2 text-[#454652] font-inter text-xs font-medium rounded-lg hover:bg-[#e2e4e6]" href="#">
+<span class="material-symbols-outlined text-base">support_agent</span> Help Center
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-[#454652] font-inter text-xs font-medium rounded-lg hover:bg-[#e2e4e6]" href="#">
+<span class="material-symbols-outlined text-base">shutter_speed</span> Privacy
+                </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 flex-1 p-8 bg-surface">
+<!-- Header & Global Filters -->
+<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-10">
+<div class="space-y-1">
+<h2 class="text-3xl font-extrabold font-headline tracking-tight text-on-surface">Attendance Strategic Summary</h2>
+<p class="text-on-surface-variant font-medium">Monitoring 14 Regions and 128 Active Outlets</p>
+</div>
+<div class="flex flex-wrap items-center gap-3 bg-surface-container-low p-2 rounded-xl border border-outline-variant/10">
+<div class="flex flex-col px-3">
+<span class="text-[10px] font-bold text-outline uppercase tracking-widest">Region Tree</span>
+<select class="bg-transparent border-none p-0 text-sm font-semibold focus:ring-0">
+<option>All Subtrees (National)</option>
+<option>South East Hub</option>
+<option>West Coast Metro</option>
+</select>
+</div>
+<div class="w-px h-8 bg-outline-variant/30"></div>
+<div class="flex flex-col px-3">
+<span class="text-[10px] font-bold text-outline uppercase tracking-widest">Outlet Group</span>
+<select class="bg-transparent border-none p-0 text-sm font-semibold focus:ring-0">
+<option>Downtown Bistro Cluster</option>
+<option>Airport Express Pods</option>
+</select>
+</div>
+<div class="w-px h-8 bg-outline-variant/30"></div>
+<div class="flex flex-col px-3">
+<span class="text-[10px] font-bold text-outline uppercase tracking-widest">Period</span>
+<div class="flex items-center gap-2">
+<span class="text-sm font-semibold">Oct 01 - Oct 14</span>
+<span class="material-symbols-outlined text-base">calendar_today</span>
+</div>
+</div>
+<button class="ml-2 bg-on-surface text-surface py-2 px-4 rounded-lg font-bold text-sm">Update View</button>
+</div>
+</div>
+<!-- Summary Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<!-- Attendance Rate Card -->
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl" style="font-variation-settings: 'FILL' 1;">person_check</span>
+</div>
+<div class="relative z-10">
+<p class="text-sm font-bold text-on-surface-variant flex items-center gap-2">
+                            Attendance Rate <span class="text-tertiary flex items-center text-xs font-bold bg-tertiary-container/20 px-2 py-0.5 rounded-full"><span class="material-symbols-outlined text-xs">trending_up</span> 2.4%</span>
+</p>
+<h3 class="text-4xl font-black mt-2 text-on-surface">94.2%</h3>
+<p class="text-xs text-outline mt-4 font-medium uppercase tracking-wide">Target: 96.0% Minimum</p>
+</div>
+</div>
+<!-- Unresolved Exceptions Card -->
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden group border-l-4 border-error">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="relative z-10">
+<p class="text-sm font-bold text-on-surface-variant">Unresolved Exceptions</p>
+<h3 class="text-4xl font-black mt-2 text-on-surface">42</h3>
+<p class="text-xs text-error font-bold mt-4 uppercase tracking-wide flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">priority_high</span> Action Required in 3 regions
+                        </p>
+</div>
+</div>
+<!-- Overtime Hours Card -->
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl text-primary" style="font-variation-settings: 'FILL' 1;">history</span>
+</div>
+<div class="relative z-10">
+<p class="text-sm font-bold text-on-surface-variant">Overtime Hours</p>
+<h3 class="text-4xl font-black mt-2 text-on-surface">814 <span class="text-xl text-outline font-medium">hrs</span></h3>
+<div class="mt-4 flex items-center gap-2">
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 72%;"></div>
+</div>
+<span class="text-xs font-bold text-on-surface-variant">72% Budget</span>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+<!-- Performance Table Section -->
+<div class="xl:col-span-2 space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="font-headline font-bold text-lg text-on-surface">Regional Performance Matrix</h4>
+<button class="text-primary text-sm font-bold flex items-center gap-1 hover:underline">
+                            Export Detailed Report <span class="material-symbols-outlined text-sm">download</span>
+</button>
+</div>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden">
+<table class="w-full border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant/30">
+<tr>
+<th class="text-left px-6 py-4 text-[10px] font-black text-outline uppercase tracking-widest">Region / Outlet Name</th>
+<th class="text-center px-6 py-4 text-[10px] font-black text-outline uppercase tracking-widest">Attendance</th>
+<th class="text-center px-6 py-4 text-[10px] font-black text-outline uppercase tracking-widest">Exceptions</th>
+<th class="text-center px-6 py-4 text-[10px] font-black text-outline uppercase tracking-widest">OT Burden</th>
+<th class="text-right px-6 py-4 text-[10px] font-black text-outline uppercase tracking-widest">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<div>
+<div class="text-sm font-bold text-on-surface">South East Hub</div>
+<div class="text-[10px] text-outline font-medium">12 Outlets • 450 Staff</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-center text-sm font-semibold text-on-surface">97.8%</td>
+<td class="px-6 py-4 text-center text-sm font-medium text-on-surface-variant">04</td>
+<td class="px-6 py-4 text-center text-sm font-medium text-on-surface-variant">112h</td>
+<td class="px-6 py-4 text-right">
+<span class="bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Optimal</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<div>
+<div class="text-sm font-bold text-on-surface">West Coast Metro</div>
+<div class="text-[10px] text-outline font-medium">28 Outlets • 1,200 Staff</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-center text-sm font-semibold text-on-surface">89.2%</td>
+<td class="px-6 py-4 text-center text-sm font-bold text-error">26</td>
+<td class="px-6 py-4 text-center text-sm font-medium text-on-surface-variant">420h</td>
+<td class="px-6 py-4 text-right">
+<span class="bg-error-container text-on-error-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Critical</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<div>
+<div class="text-sm font-bold text-on-surface">Central Highlands</div>
+<div class="text-[10px] text-outline font-medium">08 Outlets • 210 Staff</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-center text-sm font-semibold text-on-surface">93.5%</td>
+<td class="px-6 py-4 text-center text-sm font-medium text-on-surface-variant">12</td>
+<td class="px-6 py-4 text-center text-sm font-medium text-on-surface-variant">282h</td>
+<td class="px-6 py-4 text-right">
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Stable</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<div>
+<div class="text-sm font-bold text-on-surface">Downtown Bistro (B102)</div>
+<div class="text-[10px] text-outline font-medium">Single Site • 45 Staff</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-center text-sm font-semibold text-on-surface">96.4%</td>
+<td class="px-6 py-4 text-center text-sm font-medium text-on-surface-variant">0</td>
+<td class="px-6 py-4 text-center text-sm font-medium text-on-surface-variant">0h</td>
+<td class="px-6 py-4 text-right">
+<span class="bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">Optimal</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Attention Needed Feed -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="font-headline font-bold text-lg text-on-surface">Attention Needed</h4>
+<span class="bg-on-surface text-surface text-[10px] font-bold px-2 py-0.5 rounded">8 NEW</span>
+</div>
+<div class="space-y-3">
+<!-- High Severity Item -->
+<div class="bg-surface-container-low p-4 rounded-xl border-l-4 border-error relative">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold text-error uppercase tracking-widest">High Severity</span>
+<span class="text-[10px] text-outline">12m ago</span>
+</div>
+<h5 class="text-sm font-bold text-on-surface leading-tight">Mass Missing Punch-In</h5>
+<p class="text-xs text-on-surface-variant mt-1">West Coast Metro - Airport Pod A reported 12 missing punches in the morning shift.</p>
+<div class="mt-4 flex gap-2">
+<button class="flex-1 text-[10px] font-bold py-2 bg-on-surface text-surface rounded-lg">Alert Manager</button>
+<button class="p-2 border border-outline-variant rounded-lg"><span class="material-symbols-outlined text-sm">more_horiz</span></button>
+</div>
+</div>
+<!-- Medium Severity Item -->
+<div class="bg-surface-container-low p-4 rounded-xl border-l-4 border-primary/40 relative">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold text-primary uppercase tracking-widest">Policy Exception</span>
+<span class="text-[10px] text-outline">1h ago</span>
+</div>
+<h5 class="text-sm font-bold text-on-surface leading-tight">Overtime Ceiling Breached</h5>
+<p class="text-xs text-on-surface-variant mt-1">Downtown Bistro - Kitchen team exceeded weekly OT threshold by 14%.</p>
+<div class="mt-4 flex gap-2">
+<button class="flex-1 text-[10px] font-bold py-2 border border-outline-variant text-on-surface rounded-lg">View Logs</button>
+</div>
+</div>
+<!-- Low Severity Item -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 relative">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold text-secondary uppercase tracking-widest">Operational Note</span>
+<span class="text-[10px] text-outline">4h ago</span>
+</div>
+<h5 class="text-sm font-bold text-on-surface leading-tight">Schedule Adjustment Request</h5>
+<p class="text-xs text-on-surface-variant mt-1">Regional Manager Smith requested bulk shift changes for Central Highlands next week.</p>
+</div>
+</div>
+<div class="bg-primary/5 p-6 rounded-2xl border border-primary/10 mt-6">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-full glass-card flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">insights</span>
+</div>
+<div>
+<h6 class="text-sm font-bold text-on-surface">Strategic Insight</h6>
+<p class="text-[10px] font-medium text-outline">AI-Driven Operations Analysis</p>
+</div>
+</div>
+<p class="text-xs italic text-on-secondary-container leading-relaxed">
+                            "Attendance patterns in **West Coast Metro** correlate with local transit delays. Consider shifting morning start times by +15 minutes to reduce tardiness metrics."
+                        </p>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Sticky FAB -->
+<div class="fixed bottom-8 right-8 z-50">
+<button class="signature-gradient w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl shadow-primary/40 group relative">
+<span class="material-symbols-outlined text-3xl">chat_bubble</span>
+<span class="absolute right-full mr-4 bg-on-surface text-surface text-[10px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest">Quick Support</span>
+</button>
+</div>
+</body></html>

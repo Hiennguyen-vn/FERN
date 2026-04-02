@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Shift Templates | Architect ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed": "#000e5e",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-tertiary-container": "#5debaf",
+              "on-background": "#191c1e",
+              "surface-container-high": "#e6e8ea",
+              "error": "#ba1a1a",
+              "error-container": "#ffdad6",
+              "inverse-surface": "#2d3133",
+              "surface-dim": "#d8dadc",
+              "on-tertiary-fixed-variant": "#005236",
+              "secondary": "#515f74",
+              "on-error": "#ffffff",
+              "on-primary-container": "#cacfff",
+              "surface-container-highest": "#e0e3e5",
+              "on-tertiary-fixed": "#002113",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary-fixed": "#0d1c2e",
+              "on-error-container": "#93000a",
+              "on-surface": "#191c1e",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "tertiary": "#004e33",
+              "on-secondary": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "secondary-container": "#d5e3fc",
+              "secondary-fixed-dim": "#b9c7df",
+              "primary-container": "#4151b3",
+              "tertiary-container": "#006846",
+              "surface-tint": "#4555b7",
+              "on-surface-variant": "#454652",
+              "outline": "#757684",
+              "on-secondary-container": "#57657a",
+              "primary": "#27389a",
+              "outline-variant": "#c5c5d4",
+              "surface-container-low": "#f2f4f6",
+              "on-primary": "#ffffff",
+              "background": "#f7f9fb",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-variant": "#e0e3e5",
+              "surface-container": "#eceef0",
+              "on-tertiary": "#ffffff",
+              "surface": "#f7f9fb",
+              "tertiary-fixed": "#6ffbbe",
+              "primary-fixed": "#dee0ff",
+              "on-secondary-fixed-variant": "#3a485b",
+              "inverse-primary": "#bbc3ff",
+              "secondary-fixed": "#d5e3fc"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-manrope { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar (Authority: JSON) -->
+<aside class="hidden md:flex flex-col h-screen w-64 fixed left-0 top-0 z-40 bg-[#f2f4f6] dark:bg-slate-900 font-inter text-sm font-medium p-4 gap-2">
+<div class="mb-8 px-2">
+<h1 class="text-lg font-black text-[#27389a] dark:text-indigo-300 leading-tight">Precision HR</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-70">Enterprise Management</p>
+</div>
+<nav class="flex-1 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-lg">badge</span>
+                Employee Master
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-lg">history_edu</span>
+                Contract Lifecycle
+            </a>
+<!-- Active Tab: Shift Management -->
+<a class="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800 text-[#3F51B5] dark:text-indigo-300 rounded-lg shadow-sm font-semibold translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">schedule</span>
+                Shift Management
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-lg">fact_check</span>
+                Attendance Queue
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-lg">payments</span>
+                Payroll Prep
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-lg">tune</span>
+                Settings
+            </a>
+</nav>
+<div class="mt-auto flex flex-col gap-1 border-t border-outline-variant pt-4 opacity-80">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">support_agent</span>
+                Help Center
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-lg">shutter_speed</span>
+                Privacy
+            </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="md:ml-64 min-h-screen flex flex-col">
+<!-- TopAppBar (Authority: JSON) -->
+<header class="bg-[#f7f9fb] dark:bg-slate-900 sticky top-0 z-50 flex justify-between items-center w-full px-6 h-16 no-border bg-[#f2f4f6] dark:bg-slate-800">
+<div class="flex items-center gap-4">
+<span class="text-xl font-bold tracking-tighter text-[#191c1e] dark:text-slate-100 font-manrope">Architect ERP</span>
+<div class="h-6 w-[1px] bg-outline-variant mx-2"></div>
+<div class="flex gap-6 font-manrope tracking-tight font-semibold text-sm">
+<span class="text-[#3F51B5] dark:text-indigo-300 border-b-2 border-[#3F51B5]">Templates</span>
+<span class="text-[#454652] dark:text-slate-400 cursor-pointer hover:bg-[#f2f4f6] p-1 rounded">Roster View</span>
+<span class="text-[#454652] dark:text-slate-400 cursor-pointer hover:bg-[#f2f4f6] p-1 rounded">Analytic Insights</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex flex-col items-end mr-2">
+<span class="text-[10px] font-bold text-primary uppercase tracking-tighter">Region: South East</span>
+<span class="text-[11px] font-medium text-on-surface-variant">Outlet: Downtown Bistro</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors"><span class="material-symbols-outlined text-on-surface-variant">notifications</span></button>
+<button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors"><span class="material-symbols-outlined text-on-surface-variant">settings</span></button>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container text-xs font-bold overflow-hidden">
+<img alt="HR Manager Profile" class="w-full h-full object-cover" data-alt="professional portrait of an HR manager with a friendly expression in a modern office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCafNQWS9WdLsIOl1TI4PILl4mlcee6qf2hJOh-UkEP5TyNMxz9iX5HBNStcUGThPc5M0u2T5vdFlhn6Q3z6AY5IkaeQGIVB5_57HMkAs7fF7B-xKKV6rVsZUerDCYr68sfsFeDfGaMwQmiqsSWSRSizJhHsivmSNWxpPNwqGoTo3YcyPM9Eb50CRhyPdpiRLUQ8TZH7g7jUEcXj6dXv7setbRGjN0VfBlhmetDDMcknlATMQpsbK_KiviQEl6MdSGmsRjzecPML14"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Canvas Content -->
+<section class="p-8 flex-1">
+<div class="max-w-7xl mx-auto">
+<!-- Page Header & Action -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="text-3xl font-extrabold font-manrope tracking-tight text-on-surface">Shift Templates</h2>
+<p class="text-on-surface-variant font-body mt-1">Design and standardize workforce patterns across regional outlets.</p>
+</div>
+<button class="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-xl font-semibold shadow-md hover:scale-[1.02] active:scale-95 transition-all">
+<span class="material-symbols-outlined">add_circle</span>
+                        New Staff Entry
+                    </button>
+</div>
+<!-- Stats Overview (Asymmetric Layout) -->
+<div class="grid grid-cols-12 gap-6 mb-10">
+<div class="col-span-12 lg:col-span-7 bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/10 flex flex-col justify-between overflow-hidden relative group">
+<div class="relative z-10">
+<h3 class="text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">Template Utilization</h3>
+<div class="flex items-baseline gap-2">
+<span class="text-5xl font-black font-manrope text-primary">24</span>
+<span class="text-lg font-medium text-tertiary">Active Patterns</span>
+</div>
+<p class="text-sm text-on-surface-variant mt-2 max-w-xs leading-relaxed">Most active: <span class="font-bold">Weekend Dinner Rush (South East)</span> used by 12 outlets this week.</p>
+</div>
+<div class="absolute -right-12 -bottom-12 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500"></div>
+<div class="mt-8 flex gap-4 relative z-10">
+<div class="px-3 py-1 bg-tertiary-container/20 text-tertiary font-bold text-xs rounded-full">8 Global</div>
+<div class="px-3 py-1 bg-secondary-container text-on-secondary-container font-bold text-xs rounded-full">16 Localized</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-5 bg-surface-container-lowest p-6 rounded-2xl shadow-sm border border-outline-variant/10">
+<h3 class="text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-4">Quick Scope Filter</h3>
+<div class="flex flex-col gap-3">
+<button class="flex items-center justify-between p-4 bg-surface-container-low rounded-xl border-l-4 border-primary text-left group">
+<div>
+<p class="text-xs font-bold text-primary">CURRENT SCOPE</p>
+<p class="text-sm font-bold text-on-surface">Downtown Bistro</p>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+<button class="flex items-center justify-between p-4 hover:bg-surface-container-high rounded-xl text-left transition-colors group">
+<div>
+<p class="text-xs font-bold text-on-surface-variant">REGION VIEW</p>
+<p class="text-sm font-bold text-on-surface">South East Total</p>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Template Table (Tonal Architecture) -->
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/10 overflow-hidden">
+<div class="px-6 py-4 bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-4 bg-white/50 px-4 py-2 rounded-full border border-outline-variant/20">
+<span class="material-symbols-outlined text-outline text-lg">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm font-medium w-64 placeholder:text-outline-variant" placeholder="Search templates..." type="text"/>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+                                Filter
+                            </button>
+<button class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors">
+<span class="material-symbols-outlined text-lg">file_download</span>
+                                Export
+                            </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-6 py-4 text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Template Name</th>
+<th class="px-6 py-4 text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Duration</th>
+<th class="px-6 py-4 text-[11px] font-bold text-on-surface-variant uppercase tracking-widest text-center">Break</th>
+<th class="px-6 py-4 text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Scope</th>
+<th class="px-6 py-4 text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Last Updated</th>
+<th class="px-6 py-4 text-[11px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface">Morning Kitchen Prep</span>
+<span class="text-[11px] text-on-surface-variant">ID: TMP-0422</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="px-3 py-1 bg-secondary-container/30 text-on-secondary-container text-xs font-bold rounded-lg flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">wb_sunny</span>
+                                                06:00 - 14:30
+                                            </div>
+</div>
+</td>
+<td class="px-6 py-5 text-center">
+<span class="text-sm font-medium text-on-surface-variant">45m</span>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-sm font-medium text-on-surface">Global (All Outlets)</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs font-medium text-on-surface-variant">2 days ago</span>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-white rounded-lg text-primary transition-colors"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-2 hover:bg-white rounded-lg text-error transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface">Dinner Rush Service</span>
+<span class="text-[11px] text-on-surface-variant">ID: TMP-0489</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="px-3 py-1 bg-primary-container/20 text-primary text-xs font-bold rounded-lg flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">dark_mode</span>
+                                                17:00 - 23:00
+                                            </div>
+</div>
+</td>
+<td class="px-6 py-5 text-center">
+<span class="text-sm font-medium text-on-surface-variant">30m</span>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-sm font-medium text-on-surface">Downtown Bistro Only</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs font-medium text-on-surface-variant">12 May 2024</span>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-white rounded-lg text-primary transition-colors"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-2 hover:bg-white rounded-lg text-error transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface">Inventory Audit Night</span>
+<span class="text-[11px] text-on-surface-variant">ID: TMP-0511</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="px-3 py-1 bg-tertiary-container/10 text-tertiary text-xs font-bold rounded-lg flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                                                22:00 - 04:00
+                                            </div>
+</div>
+</td>
+<td class="px-6 py-5 text-center">
+<span class="text-sm font-medium text-on-surface-variant">60m</span>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-outline"></span>
+<span class="text-sm font-medium text-on-surface">South East Region</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs font-medium text-on-surface-variant">Last month</span>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-white rounded-lg text-primary transition-colors"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-2 hover:bg-white rounded-lg text-error transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-on-surface">Weekend Brunch Shift</span>
+<span class="text-[11px] text-on-surface-variant">ID: TMP-0622</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="px-3 py-1 bg-secondary-container/30 text-on-secondary-container text-xs font-bold rounded-lg flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">restaurant</span>
+                                                09:00 - 16:00
+                                            </div>
+</div>
+</td>
+<td class="px-6 py-5 text-center">
+<span class="text-sm font-medium text-on-surface-variant">30m</span>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-sm font-medium text-on-surface">Global (All Outlets)</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs font-medium text-on-surface-variant">Just now</span>
+</td>
+<td class="px-6 py-5 text-right">
+<div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 hover:bg-white rounded-lg text-primary transition-colors"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-2 hover:bg-white rounded-lg text-error transition-colors"><span class="material-symbols-outlined text-lg">delete</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 border-t border-surface-container-low flex justify-between items-center text-xs font-bold text-on-surface-variant uppercase tracking-widest">
+<span>Showing 4 of 24 templates</span>
+<div class="flex gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<button class="w-8 h-8 flex items-center justify-center rounded bg-primary text-on-primary shadow-sm">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+</div>
+</div>
+<!-- Guidance Footer -->
+<div class="mt-12 flex gap-8 p-6 bg-surface-container-low rounded-2xl">
+<div class="flex-1">
+<h4 class="text-sm font-bold text-on-surface flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary">info</span>
+                            Understanding Scope
+                        </h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                            Global templates are established by HQ and cannot be modified at the outlet level. Localized templates are created by Outlet Managers and only apply to their specific roster. Region-scoped templates are visible to all outlets within a specific geographical cluster.
+                        </p>
+</div>
+<div class="w-[1px] bg-outline-variant opacity-20"></div>
+<div class="flex-1">
+<h4 class="text-sm font-bold text-on-surface flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary">auto_awesome</span>
+                            Efficiency Tip
+                        </h4>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                            You can duplicate an existing template and modify its "Start Time" to quickly create staggered shifts for back-to-back prep and service rotations.
+                        </p>
+</div>
+</div>
+</div>
+</section>
+<!-- POS-style Floating Action (FAB suppression applies, but since this is HR Management, we use a standard footer action for major flow) -->
+<footer class="mt-auto p-6 bg-surface-bright border-t border-outline-variant/10 text-center">
+<p class="text-[10px] font-medium text-on-surface-variant uppercase tracking-[0.2em]">© 2024 Precision ERP - The Architectural Human Resources Suite</p>
+</footer>
+</main>
+</body></html>

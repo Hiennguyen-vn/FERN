@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Product - Architect ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                "surface-container-high": "#e6e8ea",
+                "inverse-surface": "#2d3133",
+                "surface-dim": "#d8dadc",
+                "surface-container-highest": "#e0e3e5",
+                "on-secondary-fixed": "#0d1c2e",
+                "on-background": "#191c1e",
+                "tertiary-container": "#006846",
+                "on-tertiary-fixed-variant": "#005236",
+                "on-secondary": "#ffffff",
+                "surface-container-lowest": "#ffffff",
+                "tertiary": "#004e33",
+                "inverse-on-surface": "#eff1f3",
+                "primary-container": "#4151b3",
+                "on-primary-fixed": "#000e5e",
+                "outline-variant": "#c5c5d4",
+                "tertiary-fixed-dim": "#4edea3",
+                "surface-variant": "#e0e3e5",
+                "surface-bright": "#f7f9fb",
+                "on-secondary-container": "#57657a",
+                "error": "#ba1a1a",
+                "primary-fixed-dim": "#bbc3ff",
+                "on-error": "#ffffff",
+                "tertiary-fixed": "#6ffbbe",
+                "secondary": "#515f74",
+                "surface": "#f7f9fb",
+                "secondary-fixed-dim": "#b9c7df",
+                "background": "#f7f9fb",
+                "secondary-container": "#d5e3fc",
+                "error-container": "#ffdad6",
+                "primary-fixed": "#dee0ff",
+                "on-surface": "#191c1e",
+                "surface-container-low": "#f2f4f6",
+                "secondary-fixed": "#d5e3fc",
+                "primary": "#27389a",
+                "inverse-primary": "#bbc3ff",
+                "on-tertiary-container": "#5debaf",
+                "on-surface-variant": "#454652",
+                "on-primary-fixed-variant": "#2c3c9e",
+                "surface-container": "#eceef0",
+                "on-tertiary": "#ffffff",
+                "on-secondary-fixed-variant": "#3a485b",
+                "on-error-container": "#93000a",
+                "outline": "#757684",
+                "surface-tint": "#4555b7",
+                "on-tertiary-fixed": "#002113",
+                "on-primary": "#ffffff",
+                "on-primary-container": "#cacfff"
+              },
+              fontFamily: {
+                "headline": ["Manrope"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+              },
+              borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+            },
+          },
+        }
+      </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+      </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-slate-100 flex flex-col border-r border-slate-200 z-50">
+<div class="p-6 flex flex-col gap-1">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white mb-2">
+<span class="material-symbols-outlined">architecture</span>
+</div>
+<h2 class="font-manrope text-lg font-extrabold text-slate-900">The Precision Atelier</h2>
+<p class="font-inter text-xs font-semibold uppercase tracking-wider text-slate-500">Master Catalog</p>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-200 transition-all duration-200 rounded-md font-inter text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-200 transition-all duration-200 rounded-md font-inter text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">inventory_2</span> Inventory
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 bg-white text-indigo-700 shadow-sm transition-all duration-200 rounded-md font-inter text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">menu_book</span> Catalog
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-200 transition-all duration-200 rounded-md font-inter text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">shopping_cart</span> Procurement
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-200 transition-all duration-200 rounded-md font-inter text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">analytics</span> Reports
+            </a>
+</nav>
+<div class="px-3 pb-24 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-200 transition-all duration-200 rounded-md font-inter text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">history_edu</span> Audit Logs
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 hover:bg-slate-200 transition-all duration-200 rounded-md font-inter text-xs font-semibold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined">contact_support</span> Support
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-40 flex justify-between items-center px-8 h-16 bg-slate-50 border-b border-slate-200/50">
+<div class="flex items-center gap-4">
+<nav class="flex items-center gap-6 font-manrope text-sm font-medium tracking-tight">
+<a class="text-slate-500 hover:text-indigo-700 transition-colors" href="#">Catalog</a>
+<span class="text-slate-300">/</span>
+<a class="text-indigo-700 font-bold border-b-2 border-indigo-700" href="#">Create Product</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="bg-slate-200/50 border-none rounded-full pl-10 pr-4 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 w-64" placeholder="Search Master Catalog..." type="text"/>
+</div>
+<button class="p-2 text-slate-500 hover:bg-slate-200 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-200 rounded-full transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden bg-slate-300 border border-slate-200">
+<img alt="User Profile" data-alt="professional portrait of a product manager in a modern office setting, clean lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSxbB44SEuSvSwhJ_aUfa72HczzjJsXa5IYsW8DTPdbdPg_5SRWjaMhPTzrGO5FBh_j7vXhE97UmczQtY7s6IBnAJpvsKghVmyHRWcFvt8U8d5KZRa7pKF7hepau-4BMjlDTMwjuLXkLBIPssJB5TQDlsvTMcNO9oX_Z-LWOcEjbBlT5I9Hxumnl86WeyDkBSEOjLHUGlUo8nlWpCYRLSh2M0OHf2FhUgEL2tzCR1no5825SVuuErLKGkqfrKqreIhv2FRqY0XzMWm"/>
+</div>
+</div>
+</header>
+<!-- Form Content -->
+<div class="max-w-5xl mx-auto py-10 px-8">
+<!-- Page Header -->
+<div class="flex justify-between items-end mb-10">
+<div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-700 mb-2 tracking-widest uppercase">
+                        Product Status: Draft
+                    </span>
+<h1 class="text-4xl font-extrabold tracking-tight text-on-surface">New Product Entry</h1>
+<p class="text-on-surface-variant mt-2 font-body">Initialize a new item in the Architectural ERP global ledger.</p>
+</div>
+<div class="hidden md:block">
+<div class="h-24 w-24 rounded-xl bg-surface-container-low border border-outline-variant flex flex-col items-center justify-center text-outline">
+<span class="material-symbols-outlined text-3xl">add_a_photo</span>
+<span class="text-[10px] font-bold mt-1 uppercase tracking-tighter">Add Media</span>
+</div>
+</div>
+</div>
+<!-- Bento Form Grid -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Section: Basic Product Identity -->
+<section class="col-span-12 lg:col-span-8 bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-transparent">
+<div class="flex items-center gap-3 mb-6">
+<div class="p-2 bg-primary-fixed rounded-lg text-primary">
+<span class="material-symbols-outlined">fingerprint</span>
+</div>
+<h3 class="text-xl font-bold">Basic Product Identity</h3>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="col-span-1">
+<label class="block text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1.5">Product Code</label>
+<input class="w-full bg-surface-container-low border-none rounded-md px-4 py-3 text-sm focus:ring-2 focus:ring-primary transition-all" placeholder="e.g. SK-90210" type="text"/>
+</div>
+<div class="col-span-1">
+<label class="block text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1.5">Internal Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-md px-4 py-3 text-sm focus:ring-2 focus:ring-primary transition-all" placeholder="System recognition name" type="text"/>
+</div>
+<div class="col-span-2">
+<label class="block text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1.5">Display Name (Public)</label>
+<input class="w-full bg-surface-container-low border-none rounded-md px-4 py-3 text-sm focus:ring-2 focus:ring-primary transition-all" placeholder="Customer facing title" type="text"/>
+</div>
+<div class="col-span-2">
+<label class="block text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1.5">Description</label>
+<textarea class="w-full bg-surface-container-low border-none rounded-md px-4 py-3 text-sm focus:ring-2 focus:ring-primary transition-all" placeholder="Detailed product specifications..." rows="4"></textarea>
+</div>
+</div>
+</section>
+<!-- Section: Classification -->
+<section class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-surface-container-low p-6 rounded-xl border border-transparent">
+<div class="flex items-center gap-3 mb-6">
+<div class="p-2 bg-secondary-container rounded-lg text-secondary">
+<span class="material-symbols-outlined">category</span>
+</div>
+<h3 class="text-lg font-bold">Classification</h3>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1.5">Category</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-md px-4 py-3 text-sm focus:ring-2 focus:ring-primary transition-all appearance-none">
+<option>Select Category</option>
+<option>Ingredients</option>
+<option>Packaging</option>
+<option>Finished Goods</option>
+<option>Services</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1.5">Sales Unit (UOM)</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-md px-4 py-3 text-sm focus:ring-2 focus:ring-primary transition-all appearance-none">
+<option>Select Unit</option>
+<option>Kilograms (kg)</option>
+<option>Liters (l)</option>
+<option>Packs (pcs)</option>
+<option>Boxes (ctn)</option>
+</select>
+</div>
+</div>
+</div>
+<div class="bg-primary/5 p-6 rounded-xl border-2 border-dashed border-primary/20 flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-primary mb-2">info</span>
+<p class="text-xs font-medium text-primary">Classifications determine the procurement logic and storage protocols.</p>
+</div>
+</section>
+<!-- Section: Commercial Settings -->
+<section class="col-span-12 bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-transparent">
+<div class="flex items-center gap-3 mb-8">
+<div class="p-2 bg-tertiary-fixed rounded-lg text-tertiary">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<h3 class="text-xl font-bold">Commercial Settings</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div class="space-y-6">
+<div>
+<label class="block text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-3">Tax Profile Reference</label>
+<div class="grid grid-cols-2 gap-3">
+<button class="flex flex-col items-start p-4 rounded-lg bg-surface-container-low border-2 border-primary ring-offset-2 ring-primary">
+<span class="text-xs font-bold text-primary">Standard VAT</span>
+<span class="text-[10px] text-on-surface-variant">15.00%</span>
+</button>
+<button class="flex flex-col items-start p-4 rounded-lg bg-surface-container-low hover:bg-surface-container-high transition-colors">
+<span class="text-xs font-bold">Exempt</span>
+<span class="text-[10px] text-on-surface-variant">0.00%</span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 bg-surface-container-low rounded-xl">
+<div class="space-y-1">
+<p class="text-sm font-bold text-on-surface">Default Sellable</p>
+<p class="text-xs text-on-surface-variant">Enable for POS and Digital Store visibility</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- Sticky Footer -->
+<footer class="fixed bottom-0 right-0 w-[calc(100%-16rem)] bg-white/80 backdrop-blur-xl border-t border-slate-200 z-50 flex justify-end items-center px-8 py-4 gap-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+<button class="text-slate-600 px-6 py-2 hover:bg-slate-100 rounded-md font-inter text-sm font-medium transition-all">
+            Cancel
+        </button>
+<button class="text-slate-600 px-6 py-2 hover:bg-slate-100 rounded-md font-inter text-sm font-medium transition-all">
+            Save Draft
+        </button>
+<button class="signature-gradient text-white px-8 py-2.5 rounded-md shadow-lg font-inter text-sm font-bold opacity-50 cursor-not-allowed">
+            Create Product
+        </button>
+<div class="h-8 w-px bg-slate-200 mx-2"></div>
+<div class="flex items-center gap-2 text-slate-400 text-xs italic">
+<span class="material-symbols-outlined text-sm">lock</span>
+            Required fields pending
+        </div>
+</footer>
+</body></html>

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#000e5e",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "on-tertiary-container": "#5debaf",
+                        "on-background": "#191c1e",
+                        "surface-container-high": "#e6e8ea",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "secondary": "#515f74",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#cacfff",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#002113",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#191c1e",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "tertiary": "#004e33",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#f7f9fb",
+                        "secondary-container": "#d5e3fc",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary-container": "#4151b3",
+                        "tertiary-container": "#006846",
+                        "surface-tint": "#4555b7",
+                        "on-surface-variant": "#454652",
+                        "outline": "#757684",
+                        "on-secondary-container": "#57657a",
+                        "primary": "#27389a",
+                        "outline-variant": "#c5c5d4",
+                        "surface-container-low": "#f2f4f6",
+                        "on-primary": "#ffffff",
+                        "background": "#f7f9fb",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-variant": "#e0e3e5",
+                        "surface-container": "#eceef0",
+                        "on-tertiary": "#ffffff",
+                        "surface": "#f7f9fb",
+                        "tertiary-fixed": "#6ffbbe",
+                        "primary-fixed": "#dee0ff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "inverse-primary": "#bbc3ff",
+                        "secondary-fixed": "#d5e3fc"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#f2f4f6] flex flex-col p-4 gap-2">
+<div class="mb-8 px-2">
+<h1 class="text-lg font-black text-[#27389a] tracking-tight">Precision HR</h1>
+<p class="text-xs font-medium text-on-surface-variant opacity-70">Enterprise Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-[#e2e4e6] rounded-lg transition-colors font-medium text-sm" href="#">
+<span class="material-symbols-outlined">badge</span> Employee Master
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-[#e2e4e6] rounded-lg transition-colors font-medium text-sm" href="#">
+<span class="material-symbols-outlined">history_edu</span> Contract Lifecycle
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-[#e2e4e6] rounded-lg transition-colors font-medium text-sm" href="#">
+<span class="material-symbols-outlined">schedule</span> Shift Management
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-[#e2e4e6] rounded-lg transition-colors font-medium text-sm" href="#">
+<span class="material-symbols-outlined">fact_check</span> Attendance Queue
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 bg-white text-[#3F51B5] rounded-lg shadow-sm font-semibold text-sm translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined">payments</span> Payroll Prep
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-[#e2e4e6] rounded-lg transition-colors font-medium text-sm" href="#">
+<span class="material-symbols-outlined">tune</span> Settings
+            </a>
+</nav>
+<div class="mt-auto border-t border-outline-variant/20 pt-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-[#e2e4e6] rounded-lg text-sm" href="#">
+<span class="material-symbols-outlined">support_agent</span> Help Center
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-[#e2e4e6] rounded-lg text-sm" href="#">
+<span class="material-symbols-outlined">shutter_speed</span> Privacy
+            </a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="sticky top-0 z-50 flex justify-between items-center w-full px-8 h-16 bg-[#f7f9fb] no-border">
+<div class="flex items-center gap-4">
+<span class="text-xl font-bold tracking-tighter text-[#191c1e]">Architect ERP</span>
+<div class="h-4 w-[1px] bg-outline-variant mx-2"></div>
+<div class="flex gap-4 items-center text-sm font-semibold text-[#454652]">
+<span class="text-[#3F51B5] border-b-2 border-[#3F51B5] pb-1">Payroll Draft Review</span>
+<span class="hover:text-[#191c1e] cursor-pointer">Disbursement</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="text-right hidden xl:block">
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Region: South East</p>
+<p class="text-xs font-semibold text-primary">Outlet: Downtown Bistro</p>
+</div>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-[#f2f4f6] rounded-full transition-colors"><span class="material-symbols-outlined text-on-surface-variant">notifications</span></button>
+<button class="p-2 hover:bg-[#f2f4f6] rounded-full transition-colors"><span class="material-symbols-outlined text-on-surface-variant">settings</span></button>
+</div>
+<img alt="HR Manager Profile" class="w-10 h-10 rounded-full border-2 border-surface-container-highest" data-alt="professional portrait of a middle-aged male manager in a light blue shirt with a confident smile in an office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDci4Rt0Prpfk2IcVD-mTzqYMOJvAeEdcZ0ENXq8lSQEhcIbunmba3IjfagA3xcvZbDINQxgZrmhQODEzNfh03UyGAjAuvZUeUmvuDeSns7LwCZiySEM3RtdxfWcs4pSbFno6j4qbWrfGBtqIipnwVF5mLmHYLqDDk7Iey2ZaMT-tlr3v7Ed91g7NQ_1DgYDabhv4Cm-_EVD1HOy62rQE0WfkhtEIEyDOSS4M-qTOA6NUSLoU_oSEveg2AFiqvyHdz2sfBPnAaMFs8"/>
+</div>
+</header>
+<div class="p-8 space-y-8 max-w-[1400px] mx-auto">
+<!-- Breadcrumbs & Status -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="text-3xl font-extrabold tracking-tight text-on-surface mb-2">Payroll Reconciliation</h2>
+<p class="text-on-surface-variant font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">calendar_month</span>
+                        October 2023 Cycle • Final Review Stage
+                    </p>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-tertiary-container text-on-tertiary-fixed px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+                        Awaiting Reconciliation
+                    </div>
+</div>
+</div>
+<!-- Bento Grid Summary -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="md:col-span-2 glass-card p-6 rounded-xl border border-white shadow-sm flex flex-col justify-between">
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Gross Disbursement</p>
+<h3 class="text-5xl font-black text-primary tracking-tighter">$428,540.22</h3>
+</div>
+<div class="mt-8 flex items-center gap-2 text-tertiary font-bold text-sm">
+<span class="material-symbols-outlined">trending_up</span>
+                        +2.4% vs Last Period
+                    </div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between">
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Total Deductions</p>
+<h3 class="text-3xl font-bold text-on-surface tracking-tight">$84,120.50</h3>
+</div>
+<div class="mt-4 text-xs text-on-surface-variant font-medium">
+                        Tax, Insurance, Penalties
+                    </div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col justify-between">
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Net Payroll</p>
+<h3 class="text-3xl font-bold text-tertiary tracking-tight">$344,419.72</h3>
+</div>
+<div class="mt-4 text-xs text-on-surface-variant font-medium">
+                        342 Employees Processed
+                    </div>
+</div>
+</div>
+<!-- Comparison & Anomalies Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Comparison Table -->
+<div class="lg:col-span-2 space-y-6">
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden">
+<div class="px-6 py-4 flex justify-between items-center border-b border-surface-container-high">
+<h4 class="font-bold text-on-surface">Period Comparison Matrix</h4>
+<button class="text-primary text-sm font-bold flex items-center gap-1 hover:opacity-80">
+<span class="material-symbols-outlined text-sm">download</span> Export Report
+                            </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low text-[10px] uppercase font-black text-on-surface-variant tracking-widest">
+<tr>
+<th class="px-6 py-4">Metric</th>
+<th class="px-6 py-4">Sept 2023 (Prev)</th>
+<th class="px-6 py-4">Oct 2023 (Curr)</th>
+<th class="px-6 py-4">Variance</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-semibold">Base Salaries</td>
+<td class="px-6 py-4">$310,000</td>
+<td class="px-6 py-4 font-medium">$312,500</td>
+<td class="px-6 py-4 text-tertiary font-bold">+0.8%</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-semibold">Overtime Pay</td>
+<td class="px-6 py-4">$12,400</td>
+<td class="px-6 py-4 font-medium">$28,940</td>
+<td class="px-6 py-4 text-error font-bold">+133.4%</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-semibold">Bonuses</td>
+<td class="px-6 py-4">$45,000</td>
+<td class="px-6 py-4 font-medium">$38,000</td>
+<td class="px-6 py-4 text-on-surface-variant font-bold">-15.5%</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-semibold">Statutory Contrib.</td>
+<td class="px-6 py-4">$48,200</td>
+<td class="px-6 py-4 font-medium">$49,100</td>
+<td class="px-6 py-4 text-on-surface-variant font-bold">+1.8%</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Anomalies Feed -->
+<div class="space-y-4">
+<h4 class="font-bold text-on-surface px-1">Critical Anomalies <span class="ml-2 bg-error-container text-on-error-container text-[10px] px-2 py-0.5 rounded-full">3 REQUIRED</span></h4>
+<div class="space-y-3">
+<!-- Anomaly 1 -->
+<div class="bg-error-container/30 p-4 rounded-xl border-l-4 border-error">
+<div class="flex justify-between items-start mb-2">
+<span class="font-bold text-error text-xs uppercase">High Variance</span>
+<span class="material-symbols-outlined text-error text-lg" data-weight="fill">warning</span>
+</div>
+<p class="text-sm font-bold text-on-surface">Kitchen Staff Overtime Spike</p>
+<p class="text-xs text-on-surface-variant mt-1">Downtown Bistro reported 140+ OT hours above historical average. Needs manager sign-off.</p>
+</div>
+<!-- Anomaly 2 -->
+<div class="bg-secondary-container/30 p-4 rounded-xl border-l-4 border-secondary">
+<div class="flex justify-between items-start mb-2">
+<span class="font-bold text-secondary text-xs uppercase">Missing Info</span>
+<span class="material-symbols-outlined text-secondary text-lg">info</span>
+</div>
+<p class="text-sm font-bold text-on-surface">Tax ID Mismatch (2 Emp)</p>
+<p class="text-xs text-on-surface-variant mt-1">L. Chen &amp; J. Doe have invalid tax identifiers. Disbursement may be blocked.</p>
+</div>
+<!-- Anomaly 3 -->
+<div class="bg-tertiary-container/20 p-4 rounded-xl border-l-4 border-tertiary">
+<div class="flex justify-between items-start mb-2">
+<span class="font-bold text-tertiary text-xs uppercase">New Entry</span>
+<span class="material-symbols-outlined text-tertiary text-lg">person_add</span>
+</div>
+<p class="text-sm font-bold text-on-surface">First Payroll: R. Santos</p>
+<p class="text-xs text-on-surface-variant mt-1">New Head Chef added. System auto-calculated pro-rated base pay successfully.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Review Audit & Actions -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+<!-- Audit Trail -->
+<div class="lg:col-span-3 bg-surface-container-lowest rounded-xl p-6">
+<h4 class="font-bold text-on-surface mb-6">Review Audit Trail</h4>
+<div class="space-y-6 relative">
+<div class="absolute left-[11px] top-2 bottom-2 w-0.5 bg-surface-container-high"></div>
+<div class="flex gap-4 relative z-10">
+<div class="w-6 h-6 rounded-full signature-gradient flex items-center justify-center text-white ring-4 ring-white">
+<span class="material-symbols-outlined text-[14px]">done</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Draft Generated <span class="font-normal text-on-surface-variant ml-2">by System Automation</span></p>
+<p class="text-xs text-on-surface-variant">Oct 24, 2023 • 09:00 AM</p>
+</div>
+</div>
+<div class="flex gap-4 relative z-10">
+<div class="w-6 h-6 rounded-full signature-gradient flex items-center justify-center text-white ring-4 ring-white">
+<span class="material-symbols-outlined text-[14px]">done</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface">Attendance Verified <span class="font-normal text-on-surface-variant ml-2">by Sarah Jenkins (Operations)</span></p>
+<p class="text-xs text-on-surface-variant">Oct 24, 2023 • 02:45 PM</p>
+<div class="mt-2 bg-surface-container-low p-3 rounded-lg text-xs italic text-on-surface-variant">
+                                    "Confirmed all shift differentials for the Music Festival weekend are included."
+                                </div>
+</div>
+</div>
+<div class="flex gap-4 relative z-10">
+<div class="w-6 h-6 rounded-full bg-outline-variant flex items-center justify-center text-white ring-4 ring-white">
+<span class="material-symbols-outlined text-[14px]">pending</span>
+</div>
+<div>
+<p class="text-sm font-bold text-on-surface opacity-50">Finance Submission <span class="font-normal ml-2">Awaiting HR Manager</span></p>
+<p class="text-xs text-on-surface-variant">Pending action...</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Panel -->
+<div class="space-y-6">
+<div class="bg-surface-container-highest p-6 rounded-xl">
+<h4 class="font-bold text-on-surface mb-4 text-sm uppercase tracking-wide">Reviewer Notes</h4>
+<textarea class="w-full bg-surface-container-lowest border-none rounded-lg text-sm p-4 h-32 focus:ring-2 focus:ring-primary mb-4" placeholder="Add internal reconciliation notes..."></textarea>
+<div class="space-y-3">
+<button class="w-full signature-gradient text-white py-3 rounded-full font-bold flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined">send</span>
+                                Submit to Finance
+                            </button>
+<button class="w-full bg-surface-container-lowest text-error border border-error/20 py-3 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-error-container/20 transition-all">
+<span class="material-symbols-outlined">assignment_return</span>
+                                Reject back to Draft
+                            </button>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant">lock</span>
+<p class="text-[10px] text-on-surface-variant font-medium leading-tight">
+                            Submission will lock all payroll records for this period. No further edits can be made without Finance override.
+                        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Readonly Banner (Hidden by default, shown if status is 'submitted') -->
+<div class="hidden fixed top-16 left-64 right-0 bg-inverse-surface text-inverse-on-surface py-2 px-8 flex justify-between items-center z-30">
+<div class="flex items-center gap-3 text-sm font-medium">
+<span class="material-symbols-outlined text-tertiary-fixed">verified_user</span>
+                This payroll period is currently <span class="font-bold uppercase tracking-widest text-xs">Read Only</span>. It was submitted to Finance on Oct 25, 2023.
+            </div>
+<button class="text-xs font-bold bg-white/10 px-3 py-1 rounded hover:bg-white/20">View Submission Details</button>
+</div>
+</main>
+<!-- Confirmation Dialog Overlay -->
+<div class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-on-surface/40 backdrop-blur-sm">
+<div class="bg-surface-container-lowest w-full max-w-md rounded-xl p-8 shadow-2xl">
+<div class="w-16 h-16 bg-primary-fixed flex items-center justify-center rounded-full mb-6 mx-auto">
+<span class="material-symbols-outlined text-primary text-3xl">fact_check</span>
+</div>
+<h3 class="text-xl font-bold text-center text-on-surface mb-2">Confirm Payroll Submission</h3>
+<p class="text-sm text-center text-on-surface-variant mb-8">
+                You are about to submit the October 2023 Payroll ($344,419.72) to the Finance Department. This action is tracked and will lock all related employee records.
+            </p>
+<div class="grid grid-cols-2 gap-4">
+<button class="py-3 rounded-full font-bold text-on-surface-variant hover:bg-surface-container-low transition-colors">Cancel</button>
+<button class="py-3 signature-gradient text-white rounded-full font-bold shadow-lg shadow-primary/20">Confirm &amp; Submit</button>
+</div>
+</div>
+</div>
+</body></html>

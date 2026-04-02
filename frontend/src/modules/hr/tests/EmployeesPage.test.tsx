@@ -61,6 +61,6 @@ describe('EmployeesPage', () => {
 
     renderWithProviders(<EmployeesPage />)
 
-    expect(screen.getByText('Bạn cần quyền hr.employee.read để xem employee directory.')).toBeInTheDocument()
+    expect(screen.getByText('You need hr.employee.read to open the employee master workspace.')).toBeInTheDocument()
   })
 })

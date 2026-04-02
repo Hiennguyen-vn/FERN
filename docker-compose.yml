@@ -83,6 +83,10 @@ services:
     environment:
       <<: *common-env
       FERN_IAM_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=iam
+      # IAM expands non-system scopes by calling org-service via RestClient.
+      # In Docker, `localhost` would point to the IAM container itself, so we must
+      # use the compose service hostname.
+      FERN_CLIENTS_ORG_BASE_URL: http://org-service:8082
     depends_on:
       postgres:
         condition: service_healthy

@@ -273,6 +273,54 @@ class ApiGatewayIntegrationTest {
     }
 
     @Test
+    void shouldExposeUiActionHubForAuthenticatedUsers() {
+        String token = gatewayToken(
+                "bootstrap-admin",
+                Set.of("iam.user.read", "finance.payroll.read", "hr.attendance.review"),
+                1L,
+                1L,
+                UUID.randomUUID().toString()
+        );
+
+        webTestClient.get()
+                .uri("/ui/action-hub")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(JsonNode.class)
+                .value(body -> {
+                    assertThat(body.at("/persona").asText()).isEqualTo("system_admin");
+                    assertThat(body.at("/scopeSummary/title").asText()).isEqualTo("Scoped operating context");
+                    assertThat(body.at("/modules/0/href").asText()).isEqualTo("/home");
+                    assertThat(body.toString()).contains("Prepare payroll draft");
+                    assertThat(body.toString()).contains("Review payroll approvals");
+                });
+    }
+
+    @Test
+    void shouldExposeUiShellContextForAuthenticatedUsers() {
+        String token = gatewayToken(
+                "bootstrap-admin",
+                Set.of("iam.user.read"),
+                1L,
+                1L,
+                UUID.randomUUID().toString()
+        );
+
+        webTestClient.get()
+                .uri("/ui/shell-context")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(JsonNode.class)
+                .value(body -> {
+                    assertThat(body.at("/principalLabel").asText()).isEqualTo("bootstrap-admin");
+                    assertThat(body.at("/roleLabel").asText()).isEqualTo("Bootstrap Admin");
+                    assertThat(body.at("/availableRegions/0/label").asText()).isEqualTo("Region #1");
+                });
+    }
+
+    @Test
     void shouldForwardProtectedRequestWithValidToken() throws Exception {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");

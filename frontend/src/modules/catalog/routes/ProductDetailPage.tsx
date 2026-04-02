@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
@@ -9,7 +10,6 @@ import {
   Card,
   DataTable,
   EmptyState,
-  EntityHeader,
   ErrorState,
   PermissionDeniedInline,
   ReadonlyBanner,
@@ -72,7 +72,10 @@ export function ProductDetailPage() {
     enabled: canViewProduct && canViewRecipes && Boolean(productRecipe?.id),
   })
   const pricesQuery = useProductPrices({ enabled: canViewProduct && canViewPrices })
-  const availabilityQuery = useAvailability({ productId }, { enabled: canViewProduct && canViewPrices && Number.isFinite(productId) })
+  const availabilityQuery = useAvailability(
+    { productId },
+    { enabled: canViewProduct && canViewPrices && Number.isFinite(productId) },
+  )
 
   const product = productQuery.data
   const productPrices = useMemo(
@@ -84,11 +87,19 @@ export function ProductDetailPage() {
     [availabilityQuery.data, selectedOutletId],
   )
 
-  usePageTitle(product ? `${product.name} — Catalog` : 'Chi tiết sản phẩm — Catalog')
+  const currentPrice = useMemo(() => {
+    const current = productPrices.find((price) => getPriceEffectiveState(price) === 'CURRENT')
+    return current ?? productPrices[0] ?? null
+  }, [productPrices])
+
+  const availableOutlets = availabilityRows.filter((row) => row.available).length
+  const coverage = availabilityRows.length > 0 ? Math.round((availableOutlets / availabilityRows.length) * 100) : 0
+
+  usePageTitle(product ? `${product.name} Product Profile` : 'Product Profile')
 
   const recipeVersionColumns = useMemo<Array<DataTableColumn<RecipeVersion>>>(
     () => [
-      { key: 'version', header: 'Phiên bản', render: (version) => version.versionNo },
+      { key: 'version', header: 'Version', render: (version) => version.versionNo },
       {
         key: 'yield',
         header: 'Yield',
@@ -96,12 +107,12 @@ export function ProductDetailPage() {
       },
       {
         key: 'status',
-        header: 'Trạng thái',
+        header: 'Status',
         render: (version) => <RecipeVersionStatusBadge status={version.status} />,
       },
       {
         key: 'effective',
-        header: 'Hiệu lực',
+        header: 'Effective Window',
         render: (version) => formatDateRange(version.effectiveFrom, version.effectiveTo),
       },
     ],
@@ -117,17 +128,17 @@ export function ProductDetailPage() {
       },
       {
         key: 'type',
-        header: 'Loại giá',
+        header: 'Price Type',
         render: (price) => price.priceType,
       },
       {
         key: 'value',
-        header: 'Giá',
+        header: 'Price',
         render: (price) => formatCurrencyAmount(price.priceValue, price.currencyCode),
       },
       {
         key: 'effective',
-        header: 'Hiệu lực',
+        header: 'Effective Window',
         render: (price) => formatDateRange(price.effectiveFrom, price.effectiveTo),
       },
       {
@@ -148,9 +159,11 @@ export function ProductDetailPage() {
         key: 'outlet',
         header: 'Outlet',
         render: (availability) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
-            <span>Outlet #{availability.outletId}</span>
-            {selectedOutletId === availability.outletId ? <span className="badge badge-warning">Current outlet</span> : null}
+          <div className="cell-stack">
+            <strong>Outlet #{availability.outletId}</strong>
+            <span className="cell-subtitle">
+              {selectedOutletId === availability.outletId ? 'Current outlet context' : 'Catalog scope'}
+            </span>
           </div>
         ),
       },
@@ -170,8 +183,12 @@ export function ProductDetailPage() {
 
   if (!canViewProduct) {
     return (
-      <DashboardLayout title="Chi tiết sản phẩm" description="Inspect sản phẩm trong Catalog">
-        <PermissionDeniedInline message="Bạn cần quyền catalog.product.read để xem chi tiết sản phẩm." />
+      <DashboardLayout
+        description="Inspect catalog metadata, pricing, and outlet availability."
+        eyebrow="Catalog"
+        title="Product Profile"
+      >
+        <PermissionDeniedInline message="You need catalog.product.read to inspect product detail." />
       </DashboardLayout>
     )
   }
@@ -179,24 +196,29 @@ export function ProductDetailPage() {
   if (!Number.isFinite(productId) || productId <= 0) {
     return (
       <DashboardLayout
-        title="Chi tiết sản phẩm"
-        description="Inspect sản phẩm trong Catalog"
         actions={
           <Button asChild size="sm" variant="secondary">
-            <Link to="/catalog/products">Quay lại danh sách</Link>
+            <Link to="/catalog/products">Back to product master</Link>
           </Button>
         }
+        description="Inspect catalog metadata, pricing, and outlet availability."
+        eyebrow="Catalog"
+        title="Product Profile"
       >
-        <EmptyState description="URL không chứa mã sản phẩm hợp lệ." title="Thiếu productId hợp lệ" />
+        <EmptyState description="The current URL does not include a valid product ID." title="Missing product ID" />
       </DashboardLayout>
     )
   }
 
   if (productQuery.isLoading) {
     return (
-      <DashboardLayout title="Chi tiết sản phẩm" description="Inspect sản phẩm trong Catalog">
-        <Card title="Đang tải sản phẩm">
-          <p className="muted-text">Đang tải product overview, pricing và availability snapshot...</p>
+      <DashboardLayout
+        description="Inspect catalog metadata, pricing, and outlet availability."
+        eyebrow="Catalog"
+        title="Product Profile"
+      >
+        <Card title="Loading product profile">
+          <p className="muted-text">Loading product metadata, pricing, and outlet availability snapshots...</p>
         </Card>
       </DashboardLayout>
     )
@@ -205,19 +227,20 @@ export function ProductDetailPage() {
   if (productQuery.error) {
     return (
       <DashboardLayout
-        title="Chi tiết sản phẩm"
-        description="Inspect sản phẩm trong Catalog"
         actions={
           <Button asChild size="sm" variant="secondary">
-            <Link to="/catalog/products">Quay lại danh sách</Link>
+            <Link to="/catalog/products">Back to product master</Link>
           </Button>
         }
+        description="Inspect catalog metadata, pricing, and outlet availability."
+        eyebrow="Catalog"
+        title="Product Profile"
       >
         <ErrorState
-          actionLabel="Tải lại"
-          message={getCatalogErrorMessage(productQuery.error, 'Không thể tải chi tiết sản phẩm.')}
+          actionLabel="Retry"
+          message={getCatalogErrorMessage(productQuery.error, 'Unable to load this product profile.')}
           onAction={() => void productQuery.refetch()}
-          title="Không thể tải sản phẩm"
+          title="Unable to load product profile"
         />
       </DashboardLayout>
     )
@@ -226,27 +249,26 @@ export function ProductDetailPage() {
   if (!product) {
     return (
       <DashboardLayout
-        title="Chi tiết sản phẩm"
-        description="Inspect sản phẩm trong Catalog"
         actions={
           <Button asChild size="sm" variant="secondary">
-            <Link to="/catalog/products">Quay lại danh sách</Link>
+            <Link to="/catalog/products">Back to product master</Link>
           </Button>
         }
+        description="Inspect catalog metadata, pricing, and outlet availability."
+        eyebrow="Catalog"
+        title="Product Profile"
       >
-        <EmptyState description="Sản phẩm này không tồn tại hoặc đã bị xóa khỏi Catalog." title="Không tìm thấy sản phẩm" />
+        <EmptyState description="This product could not be found in the current catalog scope." title="Product not found" />
       </DashboardLayout>
     )
   }
 
   return (
     <DashboardLayout
-      title="Chi tiết sản phẩm"
-      description="Read-only inspection cho product, recipe, pricing và outlet availability."
       actions={
         <div className="form-actions align-start">
           <Button asChild size="sm" variant="secondary">
-            <Link to="/catalog/products">Quay lại danh sách</Link>
+            <Link to="/catalog/products">Back to product master</Link>
           </Button>
           {canWriteProduct ? (
             <Button asChild size="sm">
@@ -255,67 +277,116 @@ export function ProductDetailPage() {
           ) : null}
         </div>
       }
+      description="Inspect catalog metadata, pricing, and outlet availability."
+      eyebrow="Catalog"
+      title="Product Profile"
     >
-      <ReadonlyBanner
-        message={
-          canWriteProduct
-            ? 'Product edit đã được publish cho principal có catalog.product.write + system scope. Recipe/pricing/availability writes vẫn đi theo pass riêng.'
-            : 'Catalog detail hiện vẫn là read-first với tài khoản hiện tại. Product edit cần catalog.product.write + system scope.'
-        }
-      />
+      {product.status === 'DISCONTINUED' ? (
+        <ReadonlyBanner
+          icon="event_busy"
+          label="Archived entry"
+          message="This product is discontinued. All fields remain visible for audit and archive purposes."
+          title="Read-only: this product is discontinued"
+          tone="danger"
+        />
+      ) : !canWriteProduct ? (
+        <ReadonlyBanner
+          label="Browse only"
+          message="Product detail is available, but product editing requires catalog.product.write and system scope."
+          title="Catalog detail is currently read-first"
+          tone="warning"
+        />
+      ) : null}
 
-      <EntityHeader
-        actions={
-          <Button asChild size="sm" variant="secondary">
-            <Link to="/catalog/products">Danh sách sản phẩm</Link>
-          </Button>
-        }
-        eyebrow="Catalog / Product"
-        metadata={
-          <>
-            <span>Code: {product.code}</span>
-            <span>Category: {product.categoryCode ?? 'Chưa phân loại'}</span>
-            <span>Selected outlet: {selectedOutletId ? `#${selectedOutletId}` : 'Chưa chọn'}</span>
-          </>
-        }
-        status={<ProductStatusBadge status={product.status} />}
-        title={product.name}
-      />
+      <section className="detail-hero-grid">
+        <article className="surface-panel detail-hero-card">
+          <div className="detail-hero-body">
+            <div className="detail-media-frame">
+              {product.imageUrl ? (
+                <img alt={product.name} src={product.imageUrl} />
+              ) : (
+                <AppIcon name="restaurant_menu" size="lg" />
+              )}
+            </div>
+            <div className="detail-summary-copy">
+              <span className="meta-chip">Item #{product.code}</span>
+              <div className="entity-header-title">
+                <h2>{product.name}</h2>
+                <ProductStatusBadge status={product.status} />
+              </div>
+              <p className="muted-text">
+                {product.description ?? 'No narrative description has been added for this product.'}
+              </p>
+              <div className="detail-kpi-grid">
+                <div className="detail-kpi">
+                  <span className="detail-kpi-label">Current price</span>
+                  <span className="detail-kpi-value">
+                    {currentPrice ? formatCurrencyAmount(currentPrice.priceValue, currentPrice.currencyCode) : '—'}
+                  </span>
+                </div>
+                <div className="detail-kpi">
+                  <span className="detail-kpi-label">Price entries</span>
+                  <span className="detail-kpi-value">{productPrices.length}</span>
+                </div>
+                <div className="detail-kpi">
+                  <span className="detail-kpi-label">Availability</span>
+                  <span className="detail-kpi-value">{availabilityRows.length > 0 ? `${coverage}%` : '—'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
 
-      <SectionCard title="Product overview">
-        <div className="field-grid">
-          <div>
-            <p className="eyebrow">Mã sản phẩm</p>
-            <strong>{product.code}</strong>
-          </div>
-          <div>
-            <p className="eyebrow">Danh mục</p>
-            <strong>{product.categoryCode ?? 'Chưa phân loại'}</strong>
-          </div>
-          <div>
-            <p className="eyebrow">Trạng thái</p>
-            <ProductStatusBadge status={product.status} />
-          </div>
-          <div>
-            <p className="eyebrow">Hình ảnh</p>
-            <strong>{product.imageUrl ? 'Có image URL' : 'Chưa cấu hình'}</strong>
-          </div>
-        </div>
-        <div>
-          <p className="eyebrow">Mô tả</p>
-          <p className="muted-text">{product.description ?? 'Chưa có mô tả cho sản phẩm này.'}</p>
-        </div>
-      </SectionCard>
+        <aside className="detail-side-stack">
+          <Card className="detail-side-card" title="Metadata Architecture">
+            <div className="detail-side-list">
+              <div className="detail-side-row">
+                <span>Category</span>
+                <strong>{product.categoryCode ?? 'Uncategorized'}</strong>
+              </div>
+              <div className="detail-side-row">
+                <span>Selected outlet</span>
+                <strong>{selectedOutletId ? `Outlet #${selectedOutletId}` : 'All outlets'}</strong>
+              </div>
+              <div className="detail-side-row">
+                <span>Recipe linkage</span>
+                <strong>{productRecipe ? productRecipe.recipeCode : 'No linked recipe'}</strong>
+              </div>
+              <div className="detail-side-row">
+                <span>Pricing access</span>
+                <strong>{canViewPrices ? `${productPrices.length} entries` : 'Restricted'}</strong>
+              </div>
+            </div>
+          </Card>
 
-      <SectionCard description="Recipe snapshot chỉ hiển thị nếu current principal có catalog.recipe.read." title="Recipe snapshot">
+          <Card className="detail-side-card" title="Operational State">
+            <div className="detail-side-list">
+              <div className="detail-side-row">
+                <span>Lifecycle</span>
+                <strong>{product.status.replace(/_/g, ' ')}</strong>
+              </div>
+              <div className="detail-side-row">
+                <span>Availability rows</span>
+                <strong>{availabilityRows.length}</strong>
+              </div>
+              <div className="detail-side-row">
+                <span>Currently available</span>
+                <strong>{availableOutlets}</strong>
+              </div>
+            </div>
+          </Card>
+        </aside>
+      </section>
+
+      <SectionCard description="Recipe detail is shown only when the current principal can read catalog recipes." title="Recipe Snapshot">
         {!canViewRecipes ? (
-          <PermissionDeniedInline message="Bạn không có quyền catalog.recipe.read nên phần recipe snapshot bị ẩn." />
+          <PermissionDeniedInline message="You do not have catalog.recipe.read, so recipe detail is hidden on this product." />
         ) : recipesQuery.error || recipeVersionsQuery.error ? (
           <ErrorState
-            actionLabel="Tải lại"
+            actionLabel="Retry"
             message={getCatalogErrorMessage(
               recipesQuery.error ?? recipeVersionsQuery.error,
-              'Không thể tải dữ liệu công thức cho sản phẩm này.',
+              'Unable to load recipe detail for this product.',
             )}
             onAction={() => {
               void recipesQuery.refetch()
@@ -323,46 +394,49 @@ export function ProductDetailPage() {
                 void recipeVersionsQuery.refetch()
               }
             }}
-            title="Không thể tải recipe snapshot"
+            title="Unable to load recipe snapshot"
           />
         ) : recipesQuery.isLoading || recipeVersionsQuery.isLoading ? (
-          <Card title="Đang tải công thức">
-            <p className="muted-text">Đang tải recipe và recipe versions cho sản phẩm này...</p>
+          <Card title="Loading recipe detail">
+            <p className="muted-text">Loading recipe metadata and recipe versions...</p>
           </Card>
         ) : !productRecipe ? (
-          <EmptyState
-            description="Sản phẩm này chưa được gắn recipe read model trong Catalog."
-            title="Chưa có recipe"
-          />
+          <EmptyState description="No recipe read model has been linked to this product yet." title="No recipe linked" />
         ) : (
           <div className="page-stack">
-            <div className="meta-grid">
-              <span>Recipe code: {productRecipe.recipeCode}</span>
-              <span>Description: {productRecipe.description ?? 'Không có mô tả'}</span>
+            <div className="key-value-list">
+              <div className="key-value-row">
+                <span>Recipe code</span>
+                <strong>{productRecipe.recipeCode}</strong>
+              </div>
+              <div className="key-value-row">
+                <span>Description</span>
+                <strong>{productRecipe.description ?? 'No recipe description'}</strong>
+              </div>
             </div>
             <DataTable
               columns={recipeVersionColumns}
-              emptyDescription="Recipe đã có metadata nhưng chưa có version snapshot nào."
-              emptyTitle="Chưa có recipe version"
-              rows={recipeVersionsQuery.data ?? []}
+              emptyDescription="Recipe metadata exists but no version snapshot is currently available."
+              emptyTitle="No recipe versions"
               rowKey={(version) => version.id}
+              rows={recipeVersionsQuery.data ?? []}
             />
           </div>
         )}
       </SectionCard>
 
-      <SectionCard description="Pricing snapshot được join client-side từ product-prices theo productId." title="Pricing snapshot">
+      <SectionCard description="Pricing snapshot is assembled from the product price read model." title="Pricing Snapshot">
         {!canViewPrices ? (
-          <PermissionDeniedInline message="Bạn không có quyền catalog.price.read nên pricing snapshot bị ẩn." />
+          <PermissionDeniedInline message="You do not have catalog.price.read, so pricing detail is hidden on this product." />
         ) : (
           <DataTable
             columns={pricingColumns}
-            emptyDescription="Sản phẩm này chưa có cấu hình giá hiệu lực ở GLOBAL/REGION/OUTLET."
-            emptyTitle="Chưa có giá hiệu lực"
-            error={pricesQuery.error ? getCatalogErrorMessage(pricesQuery.error, 'Không thể tải pricing snapshot.') : null}
+            emptyDescription="This product does not have any effective price entries yet."
+            emptyTitle="No pricing entries"
+            error={pricesQuery.error ? getCatalogErrorMessage(pricesQuery.error, 'Unable to load pricing detail.') : null}
             loading={pricesQuery.isLoading}
-            loadingDescription="Đang tải toàn bộ price list và lọc theo productId..."
-            loadingTitle="Đang tải bảng giá"
+            loadingDescription="Loading product prices..."
+            loadingTitle="Loading pricing snapshot"
             onRetry={() => void pricesQuery.refetch()}
             rowKey={(price) => price.id}
             rows={productPrices}
@@ -370,22 +444,18 @@ export function ProductDetailPage() {
         )}
       </SectionCard>
 
-      <SectionCard description="Availability snapshot hiển thị outlet availability theo productId." title="Outlet availability">
+      <SectionCard description="Outlet availability rows for the current product." title="Outlet Availability">
         {!canViewPrices ? (
-          <PermissionDeniedInline message="Availability dùng cùng quyền catalog.price.read nên phần này đang bị ẩn." />
+          <PermissionDeniedInline message="Availability uses the same read contract as pricing, so this section is also restricted." />
         ) : (
           <DataTable
             columns={availabilityColumns}
-            emptyDescription="Chưa có availability row nào cho sản phẩm này."
-            emptyTitle="Chưa có dữ liệu availability"
-            error={
-              availabilityQuery.error
-                ? getCatalogErrorMessage(availabilityQuery.error, 'Không thể tải outlet availability.')
-                : null
-            }
+            emptyDescription="No outlet availability rows are available for this product."
+            emptyTitle="No availability rows"
+            error={availabilityQuery.error ? getCatalogErrorMessage(availabilityQuery.error, 'Unable to load outlet availability.') : null}
             loading={availabilityQuery.isLoading}
-            loadingDescription="Đang tải availability theo productId..."
-            loadingTitle="Đang tải availability"
+            loadingDescription="Loading outlet availability..."
+            loadingTitle="Loading availability"
             onRetry={() => void availabilityQuery.refetch()}
             rowKey={(availability) => `${availability.productId}-${availability.outletId}`}
             rows={availabilityRows}

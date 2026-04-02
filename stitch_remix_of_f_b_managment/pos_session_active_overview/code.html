@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>POS Session Management - South London Outlet</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-high": "#e6e8ea",
+              "on-secondary-container": "#57657a",
+              "on-error": "#ffffff",
+              "tertiary-fixed-dim": "#4edea3",
+              "on-tertiary-fixed-variant": "#005236",
+              "on-error-container": "#93000a",
+              "secondary": "#515f74",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "error-container": "#ffdad6",
+              "error": "#ba1a1a",
+              "on-secondary-fixed": "#0d1c2e",
+              "tertiary-container": "#006846",
+              "primary-container": "#4151b3",
+              "outline-variant": "#c5c5d4",
+              "on-secondary": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "on-background": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "secondary-fixed-dim": "#b9c7df",
+              "primary": "#27389a",
+              "secondary-container": "#d5e3fc",
+              "surface-dim": "#d8dadc",
+              "primary-fixed": "#dee0ff",
+              "surface-tint": "#4555b7",
+              "inverse-surface": "#2d3133",
+              "inverse-on-surface": "#eff1f3",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#cacfff",
+              "surface": "#f7f9fb",
+              "on-primary-fixed": "#000e5e",
+              "secondary-fixed": "#d5e3fc",
+              "tertiary-fixed": "#6ffbbe",
+              "on-tertiary": "#ffffff",
+              "on-surface": "#191c1e",
+              "on-secondary-fixed-variant": "#3a485b",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-container": "#5debaf",
+              "background": "#f7f9fb",
+              "on-surface-variant": "#454652",
+              "outline": "#757684",
+              "surface-container-lowest": "#ffffff",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-tertiary-fixed": "#002113",
+              "tertiary": "#004e33",
+              "surface-container-highest": "#e0e3e5",
+              "surface-container": "#eceef0"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        vertical-align: middle;
+      }
+      .signature-gradient {
+        background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+      }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-slate-100 dark:bg-slate-950 font-inter text-sm font-medium transition-all duration-200 ease-in-out flex flex-col h-full p-4 space-y-2 z-50">
+<div class="mb-8 px-2">
+<h1 class="font-manrope font-extrabold text-indigo-900 dark:text-white uppercase tracking-widest text-lg">The Precision Atelier</h1>
+<p class="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Enterprise Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<!-- Active State: POS -->
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-bold shadow-sm transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="point_of_sale" style="font-variation-settings: 'FILL' 1;">point_of_sale</span>
+<span>POS</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span>Workforce</span>
+</a>
+</nav>
+<div class="pt-4 mt-4 border-t border-slate-200 dark:border-slate-800 space-y-1">
+<button class="w-full text-left flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</button>
+<button class="w-full text-left flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span>Logs</span>
+</button>
+</div>
+<div class="mt-6">
+<button class="w-full py-3 signature-gradient text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none hover:scale-[0.98] transition-transform">
+                Open New Session
+            </button>
+</div>
+</aside>
+<!-- Main Content Shell -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="flex justify-between items-center px-6 py-3 w-full bg-slate-50 dark:bg-slate-900 border-b-0 sticky top-0 z-40">
+<div class="flex items-center space-x-8">
+<div class="text-lg font-bold text-indigo-900 dark:text-indigo-200 font-manrope tracking-tight">South London Outlet</div>
+<div class="relative group">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-sm" data-icon="search">search</span>
+<input class="bg-slate-100 dark:bg-slate-800 border-none rounded-full py-2 pl-10 pr-4 text-sm w-64 focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Search orders, SKU or staff..." type="text"/>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<div class="flex space-x-2 mr-4">
+<div class="flex items-center px-3 py-1 bg-tertiary-container/10 rounded-full">
+<span class="material-symbols-outlined text-tertiary-container text-[16px] mr-1" data-icon="terminal">terminal</span>
+<span class="text-[10px] font-bold text-tertiary-container uppercase tracking-widest">Online</span>
+</div>
+<div class="flex items-center px-3 py-1 bg-tertiary-container/10 rounded-full">
+<span class="material-symbols-outlined text-tertiary-container text-[16px] mr-1" data-icon="print">print</span>
+<span class="text-[10px] font-bold text-tertiary-container uppercase tracking-widest">Ready</span>
+</div>
+</div>
+<button class="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden ml-2 border-2 border-indigo-100">
+<img class="h-full w-full object-cover" data-alt="professional portrait of a manager wearing a clean shirt in a modern office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeBxUcPcLRmyS8MVZCPIJPs1-uMr_x90THd1xYKqo26m5TLGRqkgvLlifFx_oMMWMKTGDESuBpACFqZjKriBg7q-POMN3Ni17czkNZ1uCzBtV-wGUvF7ptU9P_MKvBErhSmlmuqnTUFtQOhplJXHCjLZbtlF3vLYL_1VM98c7Aa-VA_3dRU18zXaq6Esrmey0p8jIAmwuwr07W2G_zSarZFYIaGBuEWD7tssjZQiASdItx296ez-M5bxKXs3RarvsCpOsBSszElITi"/>
+</div>
+</div>
+</header>
+<!-- POS Canvas -->
+<div class="p-8 max-w-7xl mx-auto space-y-8">
+<!-- Page Header & Action -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="text-3xl font-extrabold font-headline tracking-tight text-on-surface">Session Management</h2>
+<p class="text-on-surface-variant mt-1">Real-time oversight of current service window</p>
+</div>
+<button class="px-6 py-3 signature-gradient text-white font-bold rounded-xl flex items-center space-x-2 shadow-xl shadow-primary/20">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span>Close Session</span>
+</button>
+</div>
+<!-- Bento Grid: Session Summary -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Main Summary Card -->
+<div class="col-span-8 bg-surface-container-lowest rounded-xl p-8 flex flex-col justify-between relative overflow-hidden">
+<div class="absolute top-0 right-0 p-8">
+<div class="px-4 py-1.5 bg-tertiary-container text-white rounded-full flex items-center space-x-2">
+<span class="w-2 h-2 bg-tertiary-fixed-dim rounded-full"></span>
+<span class="text-xs font-bold uppercase tracking-widest">Active Session</span>
+</div>
+</div>
+<div class="space-y-6">
+<div class="flex items-baseline space-x-3">
+<span class="text-5xl font-extrabold font-headline text-primary tracking-tighter">£1,248.00</span>
+<span class="text-tertiary font-bold flex items-center">
+<span class="material-symbols-outlined text-sm" data-icon="trending_up">trending_up</span>
+                                12.4% vs Yesterday
+                            </span>
+</div>
+<div class="grid grid-cols-3 gap-8 pt-8 border-t border-surface-container">
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Opened By</p>
+<p class="font-semibold text-on-surface">Alex Sterling</p>
+<p class="text-xs text-on-surface-variant">08:30 AM Today</p>
+</div>
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Business Date</p>
+<p class="font-semibold text-on-surface">Oct 24, 2024</p>
+<p class="text-xs text-on-surface-variant">Thu • Morning Shift</p>
+</div>
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Total Orders</p>
+<p class="font-semibold text-on-surface">42 Completed</p>
+<p class="text-xs text-on-surface-variant">0 Pending Actions</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Auxiliary Stats Card -->
+<div class="col-span-4 space-y-6">
+<div class="bg-primary-container text-on-primary-container p-6 rounded-xl relative overflow-hidden">
+<div class="relative z-10">
+<p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Average Transaction</p>
+<p class="text-2xl font-bold font-headline mt-1">£29.71</p>
+<div class="mt-4 flex -space-x-2">
+<div class="h-8 w-8 rounded-full border-2 border-primary-container bg-surface-container-high flex items-center justify-center text-[10px] font-bold">AS</div>
+<div class="h-8 w-8 rounded-full border-2 border-primary-container bg-surface-container-high flex items-center justify-center text-[10px] font-bold">JD</div>
+<div class="h-8 w-8 rounded-full border-2 border-primary-container bg-surface-container-high flex items-center justify-center text-[10px] font-bold">MK</div>
+</div>
+</div>
+<span class="absolute -right-4 -bottom-4 material-symbols-outlined text-white/10 text-9xl" data-icon="payments">payments</span>
+</div>
+<div class="bg-surface-container-high p-6 rounded-xl flex items-center justify-between">
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Top Server</p>
+<p class="font-bold text-on-surface mt-1">Alex Sterling</p>
+<p class="text-xs text-on-surface-variant">18 Orders • £540.00</p>
+</div>
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="rewarded_ads">rewarded_ads</span>
+</div>
+</div>
+</div>
+<!-- Tabs Section -->
+<div class="space-y-6">
+<div class="flex space-x-8 border-b border-surface-container-high">
+<button class="pb-4 text-sm font-bold text-primary border-b-2 border-primary transition-all">Overview</button>
+<button class="pb-4 text-sm font-medium text-on-surface-variant hover:text-on-surface transition-all">Orders</button>
+<button class="pb-4 text-sm font-medium text-on-surface-variant hover:text-on-surface transition-all">Payments</button>
+<button class="pb-4 text-sm font-medium text-on-surface-variant hover:text-on-surface transition-all">Reconciliation</button>
+</div>
+<!-- Tab Content: Overview -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Performance Chart Placeholder (Using Tonal Blocks) -->
+<div class="col-span-7 bg-surface-container-lowest rounded-xl p-8">
+<div class="flex justify-between items-center mb-8">
+<h3 class="font-headline font-bold text-on-surface">Hourly Performance</h3>
+<div class="flex space-x-2">
+<span class="flex items-center text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
+<span class="w-2 h-2 rounded-full bg-primary mr-1.5"></span> Sales
+                                </span>
+</div>
+</div>
+<div class="h-64 flex items-end justify-between space-x-2">
+<div class="w-full bg-surface-container-low rounded-t-lg h-[20%]"></div>
+<div class="w-full bg-surface-container-low rounded-t-lg h-[35%]"></div>
+<div class="w-full bg-surface-container-low rounded-t-lg h-[55%]"></div>
+<div class="w-full bg-primary rounded-t-lg h-[85%] relative group">
+<div class="absolute -top-10 left-1/2 -translate-x-1/2 glass-card border border-outline-variant px-2 py-1 rounded text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">£420.00</div>
+</div>
+<div class="w-full bg-primary rounded-t-lg h-[95%]"></div>
+<div class="w-full bg-primary rounded-t-lg h-[70%]"></div>
+<div class="w-full bg-surface-container-low rounded-t-lg h-[40%]"></div>
+<div class="w-full bg-surface-container-low rounded-t-lg h-[30%]"></div>
+<div class="w-full bg-surface-container-low rounded-t-lg h-[15%]"></div>
+</div>
+<div class="flex justify-between mt-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant opacity-50">
+<span>08:00</span>
+<span>10:00</span>
+<span>12:00</span>
+<span>14:00</span>
+<span>16:00</span>
+<span>18:00</span>
+<span>20:00</span>
+</div>
+</div>
+<!-- Recent Orders List -->
+<div class="col-span-5 bg-surface-container-lowest rounded-xl overflow-hidden flex flex-col">
+<div class="p-6 border-b border-surface-container">
+<h3 class="font-headline font-bold text-on-surface">Recent Orders</h3>
+</div>
+<div class="flex-1">
+<div class="flex items-center justify-between p-6 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="h-10 w-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">#42</div>
+<div>
+<p class="font-bold text-sm text-on-surface">Table 12 • Dine In</p>
+<p class="text-[10px] font-medium text-on-surface-variant uppercase tracking-widest">3 Items • 2 mins ago</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-bold text-on-surface">£54.20</p>
+<span class="text-[10px] font-bold text-tertiary uppercase tracking-widest">Paid</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="h-10 w-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">#41</div>
+<div>
+<p class="font-bold text-sm text-on-surface">Takeaway • Web App</p>
+<p class="text-[10px] font-medium text-on-surface-variant uppercase tracking-widest">1 Item • 8 mins ago</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-bold text-on-surface">£12.50</p>
+<span class="text-[10px] font-bold text-tertiary uppercase tracking-widest">Paid</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="h-10 w-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">#40</div>
+<div>
+<p class="font-bold text-sm text-on-surface">Table 4 • Dine In</p>
+<p class="text-[10px] font-medium text-on-surface-variant uppercase tracking-widest">5 Items • 15 mins ago</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-bold text-on-surface">£102.00</p>
+<span class="text-[10px] font-bold text-tertiary uppercase tracking-widest">Paid</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="h-10 w-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">#39</div>
+<div>
+<p class="font-bold text-sm text-on-surface">Bar • Walk-in</p>
+<p class="text-[10px] font-medium text-on-surface-variant uppercase tracking-widest">2 Items • 22 mins ago</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-bold text-on-surface">£18.00</p>
+<span class="text-[10px] font-bold text-tertiary uppercase tracking-widest">Paid</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-6 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="h-10 w-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">#38</div>
+<div>
+<p class="font-bold text-sm text-on-surface">Table 18 • Dine In</p>
+<p class="text-[10px] font-medium text-on-surface-variant uppercase tracking-widest">4 Items • 34 mins ago</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-bold text-on-surface">£86.40</p>
+<span class="text-[10px] font-bold text-tertiary uppercase tracking-widest">Paid</span>
+</div>
+</div>
+</div>
+<button class="w-full py-4 text-xs font-bold uppercase tracking-widest text-primary bg-surface-container-low hover:bg-surface-container-high transition-colors">
+                            View All 42 Orders
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

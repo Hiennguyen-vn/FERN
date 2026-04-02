@@ -7,6 +7,7 @@ import { resetTestStores, setAuthenticatedSession } from '@shared/test-utils/sco
 import { ProductsPage } from '../routes/ProductsPage'
 
 const mocks = vi.hoisted(() => ({
+  useIngredients: vi.fn(),
   useProducts: vi.fn(),
   useProductCategories: vi.fn(),
 }))
@@ -16,15 +17,20 @@ vi.mock('../hooks/useProducts', () => ({
   useProductCategories: mocks.useProductCategories,
 }))
 
+vi.mock('../hooks/useIngredients', () => ({
+  useIngredients: mocks.useIngredients,
+}))
+
 describe('ProductsPage', () => {
   beforeEach(() => {
     resetTestStores()
     setAuthenticatedSession({
       principal: {
-        permissions: [permissionConstants.catalog.productRead],
+        permissions: [permissionConstants.catalog.productRead, permissionConstants.catalog.ingredientRead],
       },
     })
     mocks.useProductCategories.mockReturnValue({ data: [], error: null })
+    mocks.useIngredients.mockReturnValue({ data: [], error: null, isLoading: false, refetch: vi.fn() })
   })
 
   it('renders products and supports filtered empty state', async () => {
@@ -48,12 +54,12 @@ describe('ProductsPage', () => {
 
     renderWithProviders(<ProductsPage />)
 
-    expect(screen.getByRole('heading', { name: 'Sản phẩm' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Product Master Catalog' })).toBeInTheDocument()
     expect(screen.getByText('Iced Coffee')).toBeInTheDocument()
 
-    await user.type(screen.getByLabelText('Tìm theo mã, tên hoặc mô tả'), 'tea')
+    await user.type(screen.getByPlaceholderText('Search by code or product name...'), 'tea')
 
-    expect(screen.getByText('Không có sản phẩm khớp bộ lọc')).toBeInTheDocument()
+    expect(screen.getByText('No products match the current filters')).toBeInTheDocument()
   })
 
   it('renders an error state when products fail to load', () => {
@@ -83,6 +89,6 @@ describe('ProductsPage', () => {
     renderWithProviders(<ProductsPage />)
 
     expect(screen.getByText('Permission denied')).toBeInTheDocument()
-    expect(screen.getByText('Bạn cần quyền catalog.product.read để xem danh sách sản phẩm.')).toBeInTheDocument()
+    expect(screen.getByText('You need catalog.product.read to open the product master catalog.')).toBeInTheDocument()
   })
 })

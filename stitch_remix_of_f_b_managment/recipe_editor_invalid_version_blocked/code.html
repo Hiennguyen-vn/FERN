@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Architect ERP | Recipe Validation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary": "#ffffff",
+              "outline": "#757684",
+              "surface-container-lowest": "#ffffff",
+              "error": "#ba1a1a",
+              "secondary-fixed-dim": "#b9c7df",
+              "on-error-container": "#93000a",
+              "surface-variant": "#e0e3e5",
+              "surface-container-highest": "#e0e3e5",
+              "on-surface": "#191c1e",
+              "on-secondary-fixed": "#0d1c2e",
+              "primary-fixed": "#dee0ff",
+              "inverse-primary": "#bbc3ff",
+              "error-container": "#ffdad6",
+              "primary-container": "#4151b3",
+              "inverse-surface": "#2d3133",
+              "tertiary-fixed": "#6ffbbe",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "on-primary-container": "#cacfff",
+              "surface-bright": "#f7f9fb",
+              "surface-container": "#eceef0",
+              "on-tertiary-container": "#5debaf",
+              "surface-dim": "#d8dadc",
+              "on-secondary-fixed-variant": "#3a485b",
+              "background": "#f7f9fb",
+              "surface-tint": "#4555b7",
+              "tertiary-fixed-dim": "#4edea3",
+              "on-primary-fixed": "#000e5e",
+              "secondary-container": "#d5e3fc",
+              "on-tertiary-fixed-variant": "#005236",
+              "on-tertiary-fixed": "#002113",
+              "on-error": "#ffffff",
+              "inverse-on-surface": "#eff1f3",
+              "tertiary-container": "#006846",
+              "outline-variant": "#c5c5d4",
+              "primary": "#27389a",
+              "on-surface-variant": "#454652",
+              "secondary-fixed": "#d5e3fc",
+              "tertiary": "#004e33",
+              "surface-container-high": "#e6e8ea",
+              "secondary": "#515f74",
+              "surface": "#f7f9fb",
+              "on-tertiary": "#ffffff",
+              "on-background": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-secondary-container": "#57657a"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f7f9fb;
+        color: #191c1e;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+      }
+      .primary-gradient {
+        background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+      }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="bg-slate-50 dark:bg-slate-950 font-inter text-sm font-medium h-full w-64 flex flex-col p-4 space-y-2 shrink-0 border-r-0">
+<div class="mb-8 px-2">
+<h1 class="text-lg font-black text-slate-800 dark:text-slate-200">Recipe Editor</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">V2.4.0 Active</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-400 shadow-sm rounded-md hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+                Recipe List
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="restore_from_trash">restore_from_trash</span>
+                Version History
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+                Ingredient Mapping
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="rebase_edit">rebase_edit</span>
+                Yield Models
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                Cost Analysis
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+                Compliance
+            </a>
+</nav>
+<div class="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+                Support
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50" href="#">
+<span class="material-symbols-outlined" data-icon="archive">archive</span>
+                Archive
+            </a>
+<button class="w-full mt-4 primary-gradient text-white py-2.5 rounded-xl font-bold shadow-lg shadow-primary/20 active:scale-95 duration-100">
+                Save Draft
+            </button>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 bg-surface overflow-y-auto">
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-white dark:bg-slate-900 flex justify-between items-center w-full px-6 py-3 shrink-0">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-slate-900 dark:text-white font-headline tracking-tight">Architect ERP</span>
+<nav class="hidden md:flex gap-6">
+<a class="font-manrope tracking-tight font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors" href="#">Dashboard</a>
+<a class="font-manrope tracking-tight font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors" href="#">Inventory</a>
+<a class="font-manrope tracking-tight font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors" href="#">Procurement</a>
+<a class="font-manrope tracking-tight font-semibold text-indigo-700 dark:text-indigo-400 border-b-2 border-indigo-700 dark:border-indigo-400 pb-1" href="#">Recipes</a>
+<a class="font-manrope tracking-tight font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center overflow-hidden border border-indigo-200">
+<img alt="Product Manager Profile" class="w-full h-full object-cover" data-alt="professional portrait of a product manager in a modern office setting with soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3dwevm4pomxtqNyjtc2hTBv03Hm8jMic4w_RFL3WAcTdWOuBoFatXcsE498Py46FWWvO6Vvi6WTs6_Y2Mh77ng-CKkKN9E8Vwt_evlBlUzmDpShrtJ3vNco0n-w4jwPw5Ii_TuyKXzZkashsI9F7dZVjthzYAR-99g0S6NMw45KNE_UmHJpUtcV32a28wIwszE5K5hu0NFMvHe45TgcyUsDxYg6D3Lo4_2GeMlvja19y4Lbgr5VuTZ5qNStAZJBh3uDqcfM8XK01L"/>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-8 space-y-6">
+<!-- Breadcrumbs & Status -->
+<div class="flex justify-between items-end">
+<div>
+<nav class="flex text-xs font-label text-on-surface-variant gap-2 mb-2">
+<span>Recipes</span>
+<span>/</span>
+<span class="font-semibold text-primary">Signature Wagyu Burger</span>
+</nav>
+<h2 class="text-3xl font-headline font-extrabold text-on-surface tracking-tight">Signature Wagyu Burger</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex flex-col items-end">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Current Status</span>
+<span class="px-3 py-1 bg-error-container text-on-error-container rounded-full text-xs font-bold flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="block">block</span>
+                            Validation Failed
+                        </span>
+</div>
+</div>
+</div>
+<!-- Validation Panel (Forensic Alert) -->
+<section class="bg-error-container/20 rounded-xl overflow-hidden border border-error/10">
+<div class="bg-error-container px-6 py-4 flex items-center gap-4">
+<span class="material-symbols-outlined text-error" data-icon="report">report</span>
+<h3 class="font-headline font-bold text-on-error-container">Invalid Recipe Version (Blocked from Activation)</h3>
+</div>
+<div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 bg-surface-container-lowest">
+<div class="space-y-4">
+<h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Critical Errors (2)</h4>
+<div class="space-y-3">
+<div class="flex items-start gap-3 p-3 bg-error/5 rounded-lg border-l-4 border-error">
+<span class="material-symbols-outlined text-error text-[18px] mt-0.5" data-icon="error">error</span>
+<div>
+<p class="text-sm font-semibold text-on-surface">Missing required ingredient: Brioche Bun</p>
+<p class="text-xs text-on-surface-variant">The recipe core requires a structural carrier defined in 'Main Components'.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-3 bg-error/5 rounded-lg border-l-4 border-error">
+<span class="material-symbols-outlined text-error text-[18px] mt-0.5" data-icon="error">error</span>
+<div>
+<p class="text-sm font-semibold text-on-surface">Zero quantity detected for: Wagyu Mince</p>
+<p class="text-xs text-on-surface-variant">Primary protein mass cannot be empty for cost and yield calculations.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-5 rounded-xl flex flex-col justify-between">
+<div>
+<h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Required Action</h4>
+<p class="text-sm text-on-surface leading-relaxed">Activation is restricted until all critical integrity checks pass. Please resolve the highlighted issues in the ingredient table below to proceed with the V2.4.0 rollout.</p>
+</div>
+<div class="flex gap-3 mt-6">
+<button class="flex-1 primary-gradient text-on-primary py-3 rounded-xl font-bold shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined" data-icon="build">build</span>
+                                Resolve Errors
+                            </button>
+<button class="px-6 py-3 bg-secondary-container text-on-secondary-container rounded-xl font-bold hover:bg-secondary-fixed transition-colors">
+                                Validate
+                            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Ingredient Table -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-surface-variant flex justify-between items-center">
+<h3 class="font-headline font-bold text-on-surface">Ingredient Composition</h3>
+<div class="flex gap-2">
+<button class="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+</button>
+<button class="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Status</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Ingredient Name</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Category</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Quantity</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Unit</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Cost (Est)</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-variant">
+<!-- Error Row 1 -->
+<tr class="bg-error/5 group">
+<td class="px-6 py-4">
+<span class="material-symbols-outlined text-error" data-icon="error" style="font-variation-settings: 'FILL' 1;">error</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-bold text-on-surface">Wagyu Mince (MS 7+)</span>
+<p class="text-[10px] text-error font-bold mt-1">ERROR: QUANTITY CANNOT BE ZERO</p>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Proteins</td>
+<td class="px-6 py-4 text-right">
+<input class="w-20 bg-error-container/30 border-error text-error font-bold text-right rounded-lg text-sm focus:ring-error focus:border-error" type="text" value="0.00"/>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant text-right">KG</td>
+<td class="px-6 py-4 text-sm font-medium text-on-surface text-right">$0.00</td>
+</tr>
+<!-- Normal Row -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<span class="material-symbols-outlined text-tertiary" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-semibold text-on-surface">Truffle Aioli</span>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Condiments</td>
+<td class="px-6 py-4 text-right text-sm font-medium">0.025</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant text-right">L</td>
+<td class="px-6 py-4 text-sm font-medium text-on-surface text-right">$1.45</td>
+</tr>
+<!-- Error Row 2 -->
+<tr class="bg-error/5 group">
+<td class="px-6 py-4">
+<span class="material-symbols-outlined text-error" data-icon="add_circle" style="font-variation-settings: 'FILL' 0;">add_circle</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-bold text-error italic">Missing Ingredient Slot</span>
+<p class="text-[10px] text-error font-bold mt-1 uppercase">MISSING: BRIOCHE BUN</p>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Bakery</td>
+<td class="px-6 py-4 text-right text-sm font-medium">--</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant text-right">PC</td>
+<td class="px-6 py-4 text-sm font-medium text-on-surface text-right">$0.00</td>
+</tr>
+<!-- Normal Row -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<span class="material-symbols-outlined text-tertiary" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-semibold text-on-surface">Vintage Aged Cheddar</span>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Dairy</td>
+<td class="px-6 py-4 text-right text-sm font-medium">0.04</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant text-right">KG</td>
+<td class="px-6 py-4 text-sm font-medium text-on-surface text-right">$0.82</td>
+</tr>
+<!-- Normal Row -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4">
+<span class="material-symbols-outlined text-tertiary" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</td>
+<td class="px-6 py-4">
+<span class="font-semibold text-on-surface">Pickled Gherkins</span>
+</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">Produce</td>
+<td class="px-6 py-4 text-right text-sm font-medium">0.015</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant text-right">KG</td>
+<td class="px-6 py-4 text-sm font-medium text-on-surface text-right">$0.18</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 bg-surface-container-low flex justify-between items-center">
+<button class="flex items-center gap-2 text-primary font-bold text-sm hover:translate-x-1 transition-transform">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+                        Add Ingredient
+                    </button>
+<div class="text-right">
+<span class="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Total Recipe Cost</span>
+<p class="text-xl font-headline font-black text-on-surface">$2.45 <span class="text-xs font-medium text-error ml-1">(INCOMPLETE)</span></p>
+</div>
+</div>
+</section>
+<!-- Bottom Layout: Asymmetric Bento Grid for Meta-Data -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 glass-card rounded-xl p-6 border border-white/40 shadow-sm flex flex-col gap-4">
+<h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Validation Timeline</h4>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-error-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-error" data-icon="history_toggle_off">history_toggle_off</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface">Failed Automated Check (System)</p>
+<p class="text-xs text-on-surface-variant">V2.4.0 draft contains structural inconsistencies that prevent margin calculation.</p>
+</div>
+<span class="text-xs font-medium text-on-surface-variant bg-surface-container px-2 py-1 rounded">2m ago</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-tertiary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-tertiary-container" data-icon="save" style="font-variation-settings: 'FILL' 1;">save</span>
+</div>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-surface">Draft Saved (User)</p>
+<p class="text-xs text-on-surface-variant">Recipe manual override detected for 'Signature Wagyu Burger'.</p>
+</div>
+<span class="text-xs font-medium text-on-surface-variant bg-surface-container px-2 py-1 rounded">1h ago</span>
+</div>
+</div>
+<div class="bg-surface-container-highest rounded-xl p-6 flex flex-col justify-between">
+<div>
+<h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Risk Profile</h4>
+<div class="flex items-end gap-2 mb-1">
+<div class="h-8 w-full bg-error rounded-t-sm"></div>
+<div class="h-12 w-full bg-error rounded-t-sm opacity-60"></div>
+<div class="h-16 w-full bg-error rounded-t-sm opacity-40"></div>
+<div class="h-6 w-full bg-error rounded-t-sm opacity-20"></div>
+</div>
+<p class="text-xs font-bold text-error uppercase">High Inaccuracy Risk</p>
+<p class="text-[11px] text-on-surface-variant mt-2 leading-relaxed">Publishing this version would lead to $12.40 margin loss per unit due to uncalculated mass.</p>
+</div>
+<button class="w-full mt-6 py-2 border-2 border-outline-variant text-on-surface-variant rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="assignment_late">assignment_late</span>
+                        Export Error Log
+                    </button>
+</div>
+</div>
+</div>
+<!-- Floating Sticky Footer for Actions -->
+<footer class="sticky bottom-0 w-full bg-surface-bright/80 backdrop-blur-md px-8 py-4 border-t border-surface-tint/10 flex justify-end gap-3 z-50">
+<button class="px-6 py-2.5 text-on-surface-variant font-bold hover:bg-surface-container rounded-xl transition-colors">
+                Cancel Changes
+            </button>
+<button class="px-8 py-2.5 bg-secondary-container text-on-secondary-container rounded-xl font-bold hover:bg-secondary-fixed transition-colors active:scale-95 duration-100">
+                Save Draft
+            </button>
+<button class="px-10 py-2.5 primary-gradient text-on-primary rounded-xl font-bold shadow-xl shadow-primary/30 flex items-center gap-2 hover:opacity-90 active:scale-95 duration-100">
+<span class="material-symbols-outlined text-[20px]" data-icon="task_alt">task_alt</span>
+                Resolve &amp; Publish
+            </button>
+</footer>
+</main>
+</body></html>

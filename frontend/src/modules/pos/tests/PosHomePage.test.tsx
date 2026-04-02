@@ -153,6 +153,6 @@ describe('PosHomePage', () => {
 
     expect(screen.getByText('POS-001')).toBeInTheDocument()
     expect(screen.getByText('Region #14')).toBeInTheDocument()
-    expect(screen.queryByText('Chưa chọn outlet')).not.toBeInTheDocument()
+    expect(screen.queryByText('No outlet selected')).not.toBeInTheDocument()
   })
 })

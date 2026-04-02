@@ -8,7 +8,7 @@ interface FilterBarProps extends PropsWithChildren {
 
 export function FilterBar({ actions, children, description, title = 'Bộ lọc báo cáo' }: FilterBarProps) {
   return (
-    <section className="surface-panel filter-bar">
+    <section className="workspace-filter-bar">
       <div className="page-header">
         <div>
           <h2 className="card-title">{title}</h2>

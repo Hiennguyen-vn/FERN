@@ -60,6 +60,6 @@ describe('UsersPage', () => {
 
     renderWithProviders(<UsersPage />)
 
-    expect(screen.getByText('Bạn cần quyền iam.user.read để xem user directory.')).toBeInTheDocument()
+    expect(screen.getByText('You need `iam.user.read` to open the user directory.')).toBeInTheDocument()
   })
 })

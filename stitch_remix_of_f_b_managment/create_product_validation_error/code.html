@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Product - Architect ERP</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-high": "#e6e8ea",
+              "inverse-surface": "#2d3133",
+              "surface-dim": "#d8dadc",
+              "surface-container-highest": "#e0e3e5",
+              "on-secondary-fixed": "#0d1c2e",
+              "on-background": "#191c1e",
+              "tertiary-container": "#006846",
+              "on-tertiary-fixed-variant": "#005236",
+              "on-secondary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "tertiary": "#004e33",
+              "inverse-on-surface": "#eff1f3",
+              "primary-container": "#4151b3",
+              "on-primary-fixed": "#000e5e",
+              "outline-variant": "#c5c5d4",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-variant": "#e0e3e5",
+              "surface-bright": "#f7f9fb",
+              "on-secondary-container": "#57657a",
+              "error": "#ba1a1a",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-error": "#ffffff",
+              "tertiary-fixed": "#6ffbbe",
+              "secondary": "#515f74",
+              "surface": "#f7f9fb",
+              "secondary-fixed-dim": "#b9c7df",
+              "background": "#f7f9fb",
+              "secondary-container": "#d5e3fc",
+              "error-container": "#ffdad6",
+              "primary-fixed": "#dee0ff",
+              "on-surface": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "secondary-fixed": "#d5e3fc",
+              "primary": "#27389a",
+              "inverse-primary": "#bbc3ff",
+              "on-tertiary-container": "#5debaf",
+              "on-surface-variant": "#454652",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "surface-container": "#eceef0",
+              "on-tertiary": "#ffffff",
+              "on-secondary-fixed-variant": "#3a485b",
+              "on-error-container": "#93000a",
+              "outline": "#757684",
+              "surface-tint": "#4555b7",
+              "on-tertiary-fixed": "#002113",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#cacfff"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .signature-gradient {
+        background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+      }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-slate-100 dark:bg-slate-950 flex flex-col border-r border-slate-200 dark:border-slate-800 transition-all duration-200 ease-in-out">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 rounded-lg signature-gradient flex items-center justify-center text-white">
+<span class="material-symbols-outlined" data-icon="architecture">architecture</span>
+</div>
+<div>
+<h2 class="font-manrope text-lg font-extrabold text-slate-900 dark:text-slate-100 leading-tight">The Precision Atelier</h2>
+<p class="font-inter text-[10px] font-semibold uppercase tracking-wider text-slate-500">Master Catalog</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-inter text-xs font-semibold uppercase tracking-wider">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-md bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-sm transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-inter text-xs font-semibold uppercase tracking-wider">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-inter text-xs font-semibold uppercase tracking-wider">Catalog</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-inter text-xs font-semibold uppercase tracking-wider">Procurement</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-inter text-xs font-semibold uppercase tracking-wider">Reports</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+<span class="font-inter text-xs font-semibold uppercase tracking-wider">Audit Logs</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-900 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="contact_support">contact_support</span>
+<span class="font-inter text-xs font-semibold uppercase tracking-wider">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen pb-24">
+<!-- TopNavBar -->
+<header class="w-full top-0 sticky z-10 flex justify-between items-center px-8 h-16 bg-slate-50 dark:bg-slate-900 bg-slate-200/50 dark:bg-slate-800/50 backdrop-blur-md">
+<div class="flex items-center gap-4">
+<h1 class="text-xl font-bold tracking-tight text-indigo-900 dark:text-indigo-100 font-headline">Architect ERP</h1>
+<div class="h-4 w-[1px] bg-outline-variant mx-2"></div>
+<nav class="flex gap-6">
+<a class="text-indigo-700 dark:text-indigo-400 font-bold border-b-2 border-indigo-700 dark:border-indigo-400 font-manrope text-sm tracking-tight py-5" href="#">New Product</a>
+<a class="text-slate-500 dark:text-slate-400 font-manrope text-sm font-medium tracking-tight py-5 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors px-2" href="#">History</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<button class="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="professional headshot of a mature executive in a neutral studio setting with soft lighting and grey background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6t_-FlSbPDzXXXr30vmve2BMnBxgXsKd3ZjzXtIx15kvRexGHf3bgWjd7Gya1hfjjCivx2Z7syRFMHthV4lIF4FwkyYs076-D_mytkjNNV3_JIlG5Yy1WbV2czt9C0jIM8nTxXYKGjkjKSVTN5Yi0mssluWEi50Z_zBy5YMdQtKvXFxrI7z2Nyv2o1cnyYLqzPKB_DguD--13SsyC3OS1kixHB7kuPH9OklZF8-UWEiuSBLwYLpUoSUEJ4CLTmi-m-08dBZQXIDPT"/>
+</div>
+</header>
+<div class="max-w-5xl mx-auto px-8 py-10">
+<!-- Critical Error Banner -->
+<div class="mb-8 p-4 rounded-xl bg-error-container flex items-start gap-4 shadow-sm">
+<div class="p-2 bg-error rounded-lg">
+<span class="material-symbols-outlined text-white" data-icon="error_outline" style="font-variation-settings: 'FILL' 1;">error_outline</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-on-error-container">Validation Failed</h3>
+<p class="font-body text-sm text-on-error-container opacity-90">Product Code P-101 already exists in the master catalog. Please provide a unique identifier to proceed.</p>
+</div>
+</div>
+<!-- Bento Form Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Primary Identity Card -->
+<section class="col-span-8 bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/15">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="label">label</span>
+<h2 class="font-headline text-lg font-bold">Identity &amp; Classification</h2>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">Product Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-md px-4 py-3 text-sm focus:ring-2 focus:ring-primary-container" type="text" value="Premium Madagascar Vanilla Bean"/>
+</div>
+<div class="space-y-2">
+<label class="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">Product Code</label>
+<div class="relative">
+<input class="w-full bg-error-container/20 border-2 border-error rounded-md px-4 py-3 text-sm font-bold text-error focus:ring-0" type="text" value="P-101"/>
+<div class="absolute right-3 top-3 text-error">
+<span class="material-symbols-outlined" data-icon="report_problem">report_problem</span>
+</div>
+</div>
+<p class="text-[10px] font-bold text-error uppercase tracking-tight flex items-center gap-1">
+<span class="material-symbols-outlined text-xs" data-icon="info">info</span>
+                                Duplicate code detected in inventory database
+                            </p>
+</div>
+<div class="col-span-2 space-y-2">
+<label class="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">Category</label>
+<select class="w-full bg-surface-container-low border-none rounded-md px-4 py-3 text-sm">
+<option>Dry Goods &amp; Spices</option>
+<option>Fresh Produce</option>
+<option>Dairy &amp; Eggs</option>
+</select>
+</div>
+</div>
+</section>
+<!-- Status & Metadata Card -->
+<section class="col-span-4 bg-surface-container-low rounded-xl p-6 flex flex-col gap-6">
+<div class="p-5 bg-surface-container-lowest rounded-lg border border-outline-variant/15">
+<label class="block font-label text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-3">Lifecycle Stage</label>
+<div class="flex items-center gap-3 text-primary">
+<span class="material-symbols-outlined" data-icon="edit_note" style="font-variation-settings: 'FILL' 1;">edit_note</span>
+<span class="font-headline font-bold">Draft Mode</span>
+</div>
+</div>
+<div class="p-5 bg-surface-container-lowest rounded-lg border border-outline-variant/15 flex-grow">
+<label class="block font-label text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-3">Media Gallery</label>
+<div class="aspect-square rounded-md bg-surface-container-high flex flex-col items-center justify-center border-2 border-dashed border-outline-variant group hover:bg-surface-container-highest transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-outline group-hover:scale-110 transition-transform mb-2" data-icon="add_a_photo">add_a_photo</span>
+<span class="text-[10px] font-bold text-outline">UPLOAD JPG/PNG</span>
+</div>
+</div>
+</section>
+<!-- Procurement Architecture Card -->
+<section class="col-span-12 bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/15">
+<div class="flex items-center gap-2 mb-8">
+<span class="material-symbols-outlined text-primary" data-icon="account_balance_wallet">account_balance_wallet</span>
+<h2 class="font-headline text-lg font-bold">Procurement Architecture</h2>
+</div>
+<div class="grid grid-cols-4 gap-8">
+<div class="space-y-4">
+<div class="p-4 bg-surface-container-low rounded-lg">
+<label class="block font-label text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mb-1">Standard Cost</label>
+<div class="text-2xl font-manrope font-extrabold text-indigo-900">$124.50</div>
+<div class="text-[10px] text-tertiary font-bold mt-1">Per Kilogram (KG)</div>
+</div>
+</div>
+<div class="col-span-3">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<label class="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">Default Vendor</label>
+<input class="w-full bg-surface-container-low border-none rounded-md px-4 py-3 text-sm" placeholder="Select primary supplier..." type="text"/>
+</div>
+<div class="space-y-2">
+<label class="block font-label text-xs font-bold uppercase tracking-wider text-on-surface-variant">Tax Configuration</label>
+<select class="w-full bg-surface-container-low border-none rounded-md px-4 py-3 text-sm">
+<option>VAT Standard (20%)</option>
+<option>Zero Rated (0%)</option>
+</select>
+</div>
+<div class="col-span-2 flex items-center gap-3 p-4 bg-surface-container-high/50 rounded-lg">
+<span class="material-symbols-outlined text-outline" data-icon="info">info</span>
+<p class="text-xs text-on-surface-variant leading-relaxed">Costings are architectural estimates and will be validated against live vendor price lists upon activation.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- Footer / Sticky Action Shell -->
+<footer class="fixed bottom-0 right-0 w-[calc(100%-16rem)] border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex justify-between items-center px-8 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-error-container flex items-center justify-center">
+<span class="material-symbols-outlined text-error text-sm font-bold" data-icon="warning">warning</span>
+</div>
+<span class="font-inter text-sm font-medium text-error">Resolve 1 error to enable creation</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-600 dark:text-slate-300 px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md font-inter text-sm font-medium transition-all active:scale-95">
+                    Save Draft
+                </button>
+<button class="bg-indigo-700/50 text-white/50 px-6 py-2 rounded-md shadow-lg font-inter text-sm font-medium cursor-not-allowed">
+                    Activate Product
+                </button>
+<div class="h-6 w-[1px] bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<button class="bg-indigo-700 text-white px-6 py-2 rounded-md shadow-lg hover:brightness-110 active:scale-95 transition-all font-inter text-sm font-medium signature-gradient">
+                    Save Changes
+                </button>
+</div>
+</footer>
+</main>
+</body></html>

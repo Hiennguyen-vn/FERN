@@ -1,7 +1,7 @@
 export function NetworkOfflineBanner() {
   return (
     <div className="banner banner-warning" role="status">
-      Network offline. Một số thao tác gửi dữ liệu có thể bị chặn cho đến khi kết nối trở lại.
+      Network offline. Some write actions may remain blocked until connectivity is restored.
     </div>
   )
 }

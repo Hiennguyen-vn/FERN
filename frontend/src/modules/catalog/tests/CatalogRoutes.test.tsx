@@ -98,8 +98,8 @@ describe('Catalog route group', () => {
   })
 
   it.each([
-    ['/catalog/products', 'Sản phẩm'],
-    ['/catalog/products/1', 'Chi tiết sản phẩm'],
+    ['/catalog/products', 'Product Master Catalog'],
+    ['/catalog/products/1', 'Product Profile'],
     ['/catalog/ingredients', 'Nguyên liệu'],
     ['/catalog/recipes', 'Công thức'],
     ['/catalog/pricing', 'Bảng giá'],

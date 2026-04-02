@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Employee Management | Architect ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#000e5e",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "on-tertiary-container": "#5debaf",
+                        "on-background": "#191c1e",
+                        "surface-container-high": "#e6e8ea",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "secondary": "#515f74",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#cacfff",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#002113",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#191c1e",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "tertiary": "#004e33",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#f7f9fb",
+                        "secondary-container": "#d5e3fc",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary-container": "#4151b3",
+                        "tertiary-container": "#006846",
+                        "surface-tint": "#4555b7",
+                        "on-surface-variant": "#454652",
+                        "outline": "#757684",
+                        "on-secondary-container": "#57657a",
+                        "primary": "#27389a",
+                        "outline-variant": "#c5c5d4",
+                        "surface-container-low": "#f2f4f6",
+                        "on-primary": "#ffffff",
+                        "background": "#f7f9fb",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-variant": "#e0e3e5",
+                        "surface-container": "#eceef0",
+                        "on-tertiary": "#ffffff",
+                        "surface": "#f7f9fb",
+                        "tertiary-fixed": "#6ffbbe",
+                        "primary-fixed": "#dee0ff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "inverse-primary": "#bbc3ff",
+                        "secondary-fixed": "#d5e3fc"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        .blur-masked {
+            filter: blur(4px);
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#f2f4f6] dark:bg-slate-900 flex flex-col p-4 gap-2 font-inter text-sm font-medium">
+<div class="mb-8 px-2">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl signature-gradient flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<h1 class="text-lg font-black text-[#27389a] dark:text-indigo-300 leading-none">Precision HR</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-70">Enterprise Management</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800 text-[#3F51B5] dark:text-indigo-300 rounded-lg shadow-sm font-semibold translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="badge">badge</span>
+<span>Employee Master</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+<span>Contract Lifecycle</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+<span>Shift Management</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span>Attendance Queue</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span>Payroll Prep</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 border-t border-outline-variant/20 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-[#e2e4e6] rounded-md transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="support_agent">support_agent</span>
+<span>Help Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:bg-[#e2e4e6] rounded-md transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="shutter_speed">shutter_speed</span>
+<span>Privacy</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar (Shared Component) -->
+<header class="ml-64 flex justify-between items-center w-[calc(100%-16rem)] px-6 h-16 bg-[#f7f9fb] dark:bg-slate-900 docked full-width top-0 z-50 sticky no-border">
+<div class="flex items-center gap-4">
+<h2 class="text-xl font-bold tracking-tighter text-[#191c1e] dark:text-slate-100 font-manrope">Architect ERP</h2>
+<div class="h-6 w-[1px] bg-outline-variant/30"></div>
+<div class="flex gap-6 text-sm font-manrope font-semibold tracking-tight">
+<span class="text-[#3F51B5] dark:text-indigo-300 font-bold border-b-2 border-[#3F51B5] h-16 flex items-center">New Entry</span>
+<span class="text-[#454652] dark:text-slate-400 h-16 flex items-center hover:bg-[#f2f4f6] px-2 transition-colors cursor-pointer">Directory</span>
+<span class="text-[#454652] dark:text-slate-400 h-16 flex items-center hover:bg-[#f2f4f6] px-2 transition-colors cursor-pointer">Org Chart</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex flex-col items-end mr-4">
+<span class="text-[10px] font-bold text-primary tracking-wider uppercase">Region: South East</span>
+<span class="text-xs font-medium text-on-surface-variant">Outlet: Downtown Bistro</span>
+</div>
+<div class="flex gap-1">
+<button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors"><span class="material-symbols-outlined text-[#454652]" data-icon="notifications">notifications</span></button>
+<button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors"><span class="material-symbols-outlined text-[#454652]" data-icon="settings">settings</span></button>
+<button class="p-2 rounded-full hover:bg-[#f2f4f6] transition-colors"><span class="material-symbols-outlined text-[#454652]" data-icon="help">help</span></button>
+</div>
+<img alt="HR Manager Profile" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="Professional HR Manager portrait with a friendly smile, corporate office background, soft daylighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXFOr09Ht85hGbNFBOymlxiYTwHK7UISugie2kS8d9XTlk1IDv1rablbwssmYxv8YT1s4JNThOlJhiF3zsSItUtkpQtvxN4eii1O_S5odcfEFnVKEGcnhm8L9E8VP_olqHCwm-_nHxsfu5DREmflDC5Rl-BE6IUHCtvpPwjCt49dT7bDx06lSIU87tRwPvP5TEaZvwPkCPSCEaOX3MwbTsemVG1ekEbRoOdIVq-gpCgHT92mADAF6YKKzgcycB_pyMrf5cwlz6q0s"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 p-8 pb-32">
+<!-- Header & Stepper -->
+<div class="max-w-5xl mx-auto mb-10">
+<div class="flex justify-between items-end mb-8">
+<div>
+<nav class="flex text-xs font-medium text-on-surface-variant gap-2 mb-2">
+<span>Staff</span>
+<span>/</span>
+<span class="text-primary">New Entry</span>
+</nav>
+<h1 class="text-3xl font-extrabold font-headline tracking-tight text-on-surface">Staff Onboarding</h1>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs font-bold text-outline uppercase tracking-widest">Entry ID:</span>
+<span class="bg-surface-container-high px-3 py-1 rounded text-sm font-mono font-bold text-on-surface-variant">ERP-2024-PEND</span>
+</div>
+</div>
+<!-- Stepper -->
+<div class="flex items-center justify-between relative px-2">
+<div class="absolute top-1/2 left-0 w-full h-[2px] bg-surface-container-highest -translate-y-1/2 z-0"></div>
+<!-- Step 1 -->
+<div class="relative z-10 flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-10 h-10 rounded-full signature-gradient flex items-center justify-center text-white shadow-lg">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">person</span>
+</div>
+<span class="text-[11px] font-bold text-primary uppercase tracking-tighter">Identity</span>
+</div>
+<!-- Step 2 -->
+<div class="relative z-10 flex flex-col items-center gap-2 group cursor-pointer">
+<div class="w-10 h-10 rounded-full bg-white border-2 border-primary flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-sm">work_history</span>
+</div>
+<span class="text-[11px] font-bold text-on-surface uppercase tracking-tighter">Placement</span>
+</div>
+<!-- Step 3 -->
+<div class="relative z-10 flex flex-col items-center gap-2 group">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-sm">payments</span>
+</div>
+<span class="text-[11px] font-bold text-outline uppercase tracking-tighter">Payroll</span>
+</div>
+<!-- Step 4 -->
+<div class="relative z-10 flex flex-col items-center gap-2 group">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-sm">security</span>
+</div>
+<span class="text-[11px] font-bold text-outline uppercase tracking-tighter">Scopes</span>
+</div>
+</div>
+</div>
+<!-- Form Layout: Tonal Layering (No Borders) -->
+<div class="max-w-5xl mx-auto space-y-8">
+<!-- Section: Identity -->
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+<div class="flex items-start justify-between mb-8">
+<div>
+<h3 class="text-lg font-bold font-headline text-on-surface">Identity &amp; Personal Details</h3>
+<p class="text-sm text-on-surface-variant">Legal name and identification as per government records.</p>
+</div>
+<div class="w-24 h-24 rounded-xl bg-surface-container-low flex flex-col items-center justify-center border-2 border-dashed border-outline-variant hover:bg-surface-container-high transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">add_a_photo</span>
+<span class="text-[10px] font-bold text-outline mt-1">Upload Photo</span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Full Legal Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary text-on-surface font-medium px-4 py-3" type="text" value="Julianne V. Sterling"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-error uppercase tracking-wider">Employee ID (Required)</label>
+<div class="relative">
+<input class="w-full bg-error-container/20 border-2 border-error/20 rounded-lg focus:ring-2 focus:ring-error text-on-surface font-medium px-4 py-3" type="text" value="EMP-8842"/>
+<div class="absolute right-3 top-3 text-error flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">error</span>
+<span class="text-[10px] font-bold">DUPLICATE</span>
+</div>
+</div>
+<p class="text-[10px] text-error font-medium">This ID is already assigned to 'Robert Chen'. Please use a unique identifier.</p>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Date of Birth</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary text-on-surface font-medium px-4 py-3" type="date"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Personal Email</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary text-on-surface font-medium px-4 py-3" placeholder="j.sterling@example.com" type="email"/>
+</div>
+</div>
+</section>
+<!-- Section: Classification & Assignment -->
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+<h3 class="text-lg font-bold font-headline text-on-surface mb-6">Classification &amp; Assignment</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Primary Outlet</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary text-on-surface font-medium px-4 py-3">
+<option>Downtown Bistro (Main)</option>
+<option>Airport Terminal 2</option>
+<option>Midtown Lounge</option>
+</select>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Department</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary text-on-surface font-medium px-4 py-3">
+<option>Front of House</option>
+<option>Kitchen Ops</option>
+<option>Administration</option>
+</select>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Job Role</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary text-on-surface font-medium px-4 py-3">
+<option>Lead Server</option>
+<option>Sommelier</option>
+<option>Shift Supervisor</option>
+</select>
+</div>
+</div>
+<div class="mt-8 p-4 bg-tertiary-container/10 rounded-lg flex gap-4 items-center">
+<div class="w-10 h-10 rounded-full bg-tertiary-container flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div>
+<p class="text-sm font-bold text-tertiary">F&amp;B Safety Certification Valid</p>
+<p class="text-xs text-on-surface-variant">Expires: Dec 2025 • Verified via Regional Registry</p>
+</div>
+<button class="ml-auto text-xs font-bold text-primary underline">Renew Early</button>
+</div>
+</section>
+<!-- Section: Banking & Tax (Masking Example) -->
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-lg font-bold font-headline text-on-surface">Banking &amp; Fiscal Scopes</h3>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-high rounded-full text-xs font-bold text-on-surface-variant">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">lock</span>
+                        ENCRYPTED PII
+                    </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="p-6 bg-surface-container-low rounded-xl relative group">
+<div class="flex justify-between items-center mb-4">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Primary Salary Account</span>
+<span class="material-symbols-outlined text-primary cursor-pointer">visibility</span>
+</div>
+<div class="space-y-4">
+<div>
+<p class="text-[10px] font-bold text-outline uppercase">Routing Number (ABA)</p>
+<p class="text-lg font-mono font-bold blur-masked">021000021</p>
+</div>
+<div>
+<p class="text-[10px] font-bold text-outline uppercase">Account Number</p>
+<p class="text-lg font-mono font-bold blur-masked">**** **** 8829</p>
+</div>
+</div>
+<div class="absolute inset-0 bg-white/10 backdrop-blur-[1px] rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="bg-primary text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg">Authenticate to View</button>
+</div>
+</div>
+<div class="space-y-6">
+<div class="space-y-1.5">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Tax Identification Number</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary text-on-surface font-medium px-4 py-3" type="password" value="999-00-1111"/>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex-1 space-y-1.5">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Tax Filing Status</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary text-on-surface font-medium px-4 py-3">
+<option>Single / No Dependents</option>
+<option>Head of Household</option>
+</select>
+</div>
+<div class="w-24 space-y-1.5">
+<label class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Withholdings</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary text-on-surface font-medium px-4 py-3 text-center" type="number" value="0"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Security Scopes -->
+<section class="bg-surface-container-lowest rounded-xl p-8 shadow-sm">
+<h3 class="text-lg font-bold font-headline text-on-surface mb-6">POS &amp; Security Scopes</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<label class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl cursor-pointer hover:bg-primary-container/10 transition-colors group">
+<input checked="" class="w-5 h-5 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+<div>
+<p class="text-sm font-bold text-on-surface">POS Access</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Terminal Entry</p>
+</div>
+</label>
+<label class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl cursor-pointer hover:bg-primary-container/10 transition-colors">
+<input class="w-5 h-5 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Void Permissions</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Manager Override</p>
+</div>
+</label>
+<label class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl cursor-pointer hover:bg-primary-container/10 transition-colors">
+<input checked="" class="w-5 h-5 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Inventory View</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Stock Read-Only</p>
+</div>
+</label>
+<label class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl cursor-pointer hover:bg-primary-container/10 transition-colors">
+<input class="w-5 h-5 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Cash Drawer</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Standard Reconciliation</p>
+</div>
+</label>
+</div>
+</section>
+</div>
+</main>
+<!-- Sticky Footer Actions -->
+<footer class="fixed bottom-0 left-64 w-[calc(100%-16rem)] glass-header border-t border-outline-variant/30 h-20 z-50 flex items-center px-12 justify-between">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-error">
+<span class="material-symbols-outlined text-sm">warning</span>
+<span class="text-xs font-bold uppercase tracking-tight">1 Validation Error Found</span>
+</div>
+<div class="h-4 w-[1px] bg-outline-variant/30"></div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="text-xs">Progress: </span>
+<div class="w-32 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-primary w-2/4"></div>
+</div>
+<span class="text-xs font-bold">50%</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-6 py-2.5 rounded-lg text-sm font-bold text-on-surface hover:bg-surface-container-high transition-colors">
+                Cancel Changes
+            </button>
+<button class="px-6 py-2.5 rounded-lg text-sm font-bold bg-secondary-container text-on-secondary-container hover:bg-secondary-container/80 transition-colors">
+                Save as Draft
+            </button>
+<button class="px-8 py-2.5 rounded-lg text-sm font-bold text-white signature-gradient shadow-md hover:scale-[1.02] active:scale-95 transition-all">
+                Validate &amp; Activate
+            </button>
+</div>
+</footer>
+</body></html>

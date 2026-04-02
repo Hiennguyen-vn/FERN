@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Indigo Kitchen OS - My Attendance</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary": "#004e33",
+              "surface-dim": "#d8dadc",
+              "surface-bright": "#f7f9fb",
+              "primary-container": "#4151b3",
+              "surface-container-low": "#f2f4f6",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary": "#ffffff",
+              "on-tertiary-fixed": "#002113",
+              "on-error-container": "#93000a",
+              "on-tertiary-container": "#5debaf",
+              "surface-container-lowest": "#ffffff",
+              "on-secondary-fixed-variant": "#3a485b",
+              "background": "#f7f9fb",
+              "error-container": "#ffdad6",
+              "primary": "#27389a",
+              "on-secondary-fixed": "#0d1c2e",
+              "tertiary-fixed-dim": "#4edea3",
+              "tertiary-fixed": "#6ffbbe",
+              "on-secondary-container": "#57657a",
+              "on-background": "#191c1e",
+              "primary-fixed": "#dee0ff",
+              "surface-container": "#eceef0",
+              "secondary-fixed": "#d5e3fc",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "inverse-primary": "#bbc3ff",
+              "surface-container-highest": "#e0e3e5",
+              "inverse-surface": "#2d3133",
+              "on-surface-variant": "#454652",
+              "surface-container-high": "#e6e8ea",
+              "secondary": "#515f74",
+              "outline-variant": "#c5c5d4",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-primary-fixed": "#000e5e",
+              "secondary-container": "#d5e3fc",
+              "surface-tint": "#4555b7",
+              "secondary-fixed-dim": "#b9c7df",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-fixed-variant": "#005236",
+              "on-primary-container": "#cacfff",
+              "on-primary": "#ffffff",
+              "on-error": "#ffffff",
+              "error": "#ba1a1a",
+              "on-surface": "#191c1e",
+              "on-tertiary": "#ffffff",
+              "tertiary-container": "#006846",
+              "surface": "#f7f9fb",
+              "outline": "#757684"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+      }
+      .primary-gradient {
+        background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+      }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body">
+<!-- SideNavBar (Predicted & Shared Component) -->
+<nav class="h-screen w-64 fixed left-0 top-0 bg-[#f2f4f6] flex flex-col py-8 px-4 space-y-2 z-50">
+<div class="mb-8 px-4">
+<p class="font-headline text-lg font-extrabold text-on-surface tracking-tight">Precision Atelier</p>
+<p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mt-1">Staff Portal</p>
+</div>
+<!-- Navigation Tabs -->
+<a class="text-[#454652] px-4 py-3 hover:translate-x-1 transition-transform flex items-center gap-3 font-manrope text-sm font-semibold tracking-wide" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Action Hub</span>
+</a>
+<a class="bg-[#ffffff] text-[#3F51B5] rounded-lg shadow-sm px-4 py-3 flex items-center gap-3 font-manrope text-sm font-semibold tracking-wide" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span>My Attendance</span>
+</a>
+<!-- Spacer -->
+<div class="flex-grow"></div>
+<!-- Footer Tab -->
+<a class="text-[#454652] px-4 py-3 hover:translate-x-1 transition-transform flex items-center gap-3 font-manrope text-sm font-semibold tracking-wide" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Help Center</span>
+</a>
+<!-- Profile Brief -->
+<div class="mt-6 pt-6 border-t border-outline-variant/20 px-4 flex items-center gap-3">
+<img alt="Staff Profile" class="w-10 h-10 rounded-full object-cover ring-2 ring-white" data-alt="Close up portrait of a friendly professional chef in a clean white uniform with soft kitchen lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAyuM-3ZqbJ-GEHM5Bu3oogVlge569JJdchi6mtfxjVKzd9j9jVZuA3sHI1pI19NyVp_e3pzSIl1mb-zhbV8tKpoTDC43h34TYs_eRUUrVEkFdQduQdwIM8oIZ6M-naafeLPPG_Cku764F-jkCf5R9LjG8NZurH6Pnhc65e9WPrB3K5PC-LAN2ThMiIX_sPsIFYbQPm_3yyWImDbJ0c2eW0czsLxOP0HoG0ZVyeKCg-UaOm5SV0zu3HFfOx-1DlfcJh9O7iJp7IyaH"/>
+<div class="overflow-hidden">
+<p class="text-sm font-bold text-on-surface truncate">Marcus Chen</p>
+<p class="text-xs text-on-surface-variant truncate">Lead Chef de Partie</p>
+</div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="w-full top-0 sticky z-40 bg-[#f7f9fb] flex justify-between items-center px-8 py-4">
+<div class="flex items-center gap-4">
+<div class="flex flex-col">
+<span class="text-on-surface-variant text-[10px] uppercase tracking-widest font-bold">Outlet Location</span>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">location_on</span>
+<span class="font-headline font-bold text-on-surface">South London Outlet</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="bg-surface-container-low px-4 py-2 rounded-xl flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-outline animate-pulse"></div>
+<span class="text-sm font-semibold text-on-surface-variant">Status: Off Duty</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">settings</span>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="px-10 py-8">
+<!-- Hero Layout (Bento Style) -->
+<div class="grid grid-cols-12 gap-6 mb-10">
+<!-- Clock In Action Zone (Primary) -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container-lowest rounded-[2rem] p-8 shadow-sm flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
+<!-- Subtle Background Decoration -->
+<div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+<div class="z-10 flex-grow text-center md:text-left">
+<h1 class="font-headline text-4xl font-extrabold text-on-surface tracking-tight mb-2">08:14 AM</h1>
+<p class="text-on-surface-variant font-medium flex items-center justify-center md:justify-start gap-2">
+<span class="material-symbols-outlined text-sm">event</span>
+                            Tuesday, October 24, 2023
+                        </p>
+<div class="mt-8 flex flex-col sm:flex-row gap-4 items-center">
+<button class="primary-gradient text-white px-10 py-4 rounded-xl font-headline font-bold text-lg shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3">
+<span class="material-symbols-outlined">play_circle</span>
+                                Clock In Now
+                            </button>
+<p class="text-sm text-on-surface-variant font-medium max-w-[200px]">
+                                Your shift is scheduled to begin in 16 minutes.
+                            </p>
+</div>
+</div>
+<div class="w-full md:w-1/3 z-10">
+<div class="glass-card border border-white/40 p-6 rounded-2xl shadow-sm">
+<span class="text-[10px] uppercase font-bold tracking-widest text-primary block mb-3">Up Next</span>
+<div class="space-y-4">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-on-surface-variant">schedule</span>
+<div>
+<p class="text-sm font-bold text-on-surface leading-none">08:30 - 17:00</p>
+<p class="text-xs text-on-surface-variant mt-1">Day Shift (8.5h)</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-on-surface-variant">restaurant_menu</span>
+<div>
+<p class="text-sm font-bold text-on-surface leading-none">Main Kitchen</p>
+<p class="text-xs text-on-surface-variant mt-1">Section B1</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Info Cards (Asymmetric Stack) -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-tertiary-container/10 p-6 rounded-3xl flex-grow border border-tertiary/10">
+<div class="flex justify-between items-start mb-4">
+<div class="bg-tertiary/10 p-2 rounded-lg">
+<span class="material-symbols-outlined text-tertiary">verified</span>
+</div>
+<span class="text-xs font-bold text-tertiary bg-tertiary/20 px-2 py-1 rounded">On Track</span>
+</div>
+<p class="text-sm font-semibold text-on-surface-variant mb-1">Weekly Reliability</p>
+<p class="text-2xl font-headline font-extrabold text-on-surface">98.4%</p>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full mt-4 overflow-hidden">
+<div class="bg-tertiary h-full rounded-full" style="width: 98.4%"></div>
+</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-3xl border border-surface-container-high">
+<p class="text-sm font-bold text-on-surface mb-3">Announcement</p>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+                            "Team briefing today at 08:35 in the central outlet courtyard. Performance reviews begin next Monday."
+                        </p>
+</div>
+</div>
+</div>
+<!-- History Section (Architecture ERP Style) -->
+<section class="mt-12">
+<div class="flex items-center justify-between mb-8">
+<h2 class="font-headline text-xl font-bold text-on-surface flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">history</span>
+                        Attendance History
+                    </h2>
+<button class="text-sm font-bold text-primary hover:underline transition-all">Download Report (PDF)</button>
+</div>
+<div class="bg-surface-container-lowest rounded-[1.5rem] overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Date</th>
+<th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Station</th>
+<th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Clock In</th>
+<th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Clock Out</th>
+<th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Total Hours</th>
+<th class="px-6 py-4 text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-on-surface">Oct 23, 2023</p>
+<p class="text-xs text-on-surface-variant">Monday</p>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs font-semibold text-secondary-fixed-dim bg-secondary px-2 py-1 rounded">Main Kitchen</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-surface">08:28 AM</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-surface">05:04 PM</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-on-surface">8h 36m</p>
+</td>
+<td class="px-6 py-5">
+<span class="bg-tertiary-container text-white text-[10px] px-2 py-1 rounded font-bold uppercase">Verified</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-on-surface">Oct 22, 2023</p>
+<p class="text-xs text-on-surface-variant">Sunday</p>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs font-semibold text-secondary-fixed-dim bg-secondary px-2 py-1 rounded">Prep Station</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-surface">08:31 AM</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-surface">05:12 PM</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-on-surface">8h 41m</p>
+</td>
+<td class="px-6 py-5">
+<span class="bg-tertiary-container text-white text-[10px] px-2 py-1 rounded font-bold uppercase">Verified</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-on-surface">Oct 21, 2023</p>
+<p class="text-xs text-on-surface-variant">Saturday</p>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs font-semibold text-secondary-fixed-dim bg-secondary px-2 py-1 rounded">Pastry</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-surface">12:05 PM</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-surface">09:15 PM</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-on-surface">9h 10m</p>
+</td>
+<td class="px-6 py-5">
+<span class="bg-tertiary-container text-white text-[10px] px-2 py-1 rounded font-bold uppercase">Verified</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors group">
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-on-surface">Oct 20, 2023</p>
+<p class="text-xs text-on-surface-variant">Friday</p>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs font-semibold text-secondary-fixed-dim bg-secondary px-2 py-1 rounded">Main Kitchen</span>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-surface">08:25 AM</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-medium text-on-surface">05:02 PM</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-on-surface">8h 37m</p>
+</td>
+<td class="px-6 py-5">
+<span class="bg-tertiary-container text-white text-[10px] px-2 py-1 rounded font-bold uppercase">Verified</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</div>
+<!-- Sticky Footer for Focused Context -->
+<footer class="mt-auto px-10 py-6 flex items-center justify-between border-t border-outline-variant/10 bg-surface-bright/80 backdrop-blur-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-sm">info</span>
+<span class="text-xs text-on-surface-variant font-medium">Auto-clock out occurs at 00:00. Please ensure you clock out before leaving.</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-4 py-2 hover:bg-surface-container-high rounded transition-all">Support</button>
+<button class="text-xs font-bold text-on-surface-variant uppercase tracking-widest px-4 py-2 hover:bg-surface-container-high rounded transition-all">Shift Swap</button>
+</div>
+</footer>
+</main>
+</body></html>

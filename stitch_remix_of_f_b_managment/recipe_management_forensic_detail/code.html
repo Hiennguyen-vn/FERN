@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-container-highest": "#e0e3e5",
+            "primary-fixed-dim": "#bbc3ff",
+            "surface-variant": "#e0e3e5",
+            "tertiary": "#004e33",
+            "secondary": "#515f74",
+            "on-tertiary-container": "#5debaf",
+            "surface-container-lowest": "#ffffff",
+            "inverse-on-surface": "#eff1f3",
+            "outline": "#757684",
+            "on-primary-fixed": "#000e5e",
+            "on-tertiary-fixed-variant": "#005236",
+            "tertiary-container": "#006846",
+            "on-secondary": "#ffffff",
+            "secondary-fixed": "#d5e3fc",
+            "primary": "#27389a",
+            "on-primary-container": "#cacfff",
+            "on-error": "#ffffff",
+            "on-primary": "#ffffff",
+            "surface-container-high": "#e6e8ea",
+            "surface-container": "#eceef0",
+            "surface-dim": "#d8dadc",
+            "on-surface-variant": "#454652",
+            "inverse-primary": "#bbc3ff",
+            "on-tertiary-fixed": "#002113",
+            "error-container": "#ffdad6",
+            "on-tertiary": "#ffffff",
+            "on-secondary-fixed-variant": "#3a485b",
+            "surface-bright": "#f7f9fb",
+            "on-secondary-container": "#57657a",
+            "surface-tint": "#4555b7",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-surface": "#191c1e",
+            "secondary-fixed-dim": "#b9c7df",
+            "outline-variant": "#c5c5d4",
+            "primary-fixed": "#dee0ff",
+            "on-secondary-fixed": "#0d1c2e",
+            "error": "#ba1a1a",
+            "on-primary-fixed-variant": "#2c3c9e",
+            "surface": "#f7f9fb",
+            "inverse-surface": "#2d3133",
+            "on-error-container": "#93000a",
+            "secondary-container": "#d5e3fc",
+            "primary-container": "#4151b3",
+            "on-background": "#191c1e",
+            "tertiary-fixed": "#6ffbbe",
+            "surface-container-low": "#f2f4f6",
+            "background": "#f7f9fb"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(24px);
+    }
+    .signature-gradient {
+      background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full flex flex-col border-r-0 bg-[#f2f4f6] dark:bg-slate-800 w-64 z-50">
+<div class="px-6 py-8">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<h2 class="text-lg font-extrabold text-[#27389a] leading-none">HQ Operations</h2>
+<p class="text-xs font-medium text-[#454652] mt-1">Global Catalog</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] dark:text-slate-400 hover:text-[#27389a] hover:bg-slate-200/50 transition-all duration-200 ease-in-out font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+          Catalog
+        </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-700 text-[#27389a] dark:text-white rounded-r-lg shadow-sm font-bold font-['Inter'] text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+          Recipes
+        </a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] dark:text-slate-400 hover:text-[#27389a] hover:bg-slate-200/50 transition-all duration-200 ease-in-out font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+          Pricing
+        </a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] dark:text-slate-400 hover:text-[#27389a] hover:bg-slate-200/50 transition-all duration-200 ease-in-out font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+          Outlets
+        </a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-1 border-t border-outline-variant/10">
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+        Settings
+      </a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#454652] font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="contact_support">contact_support</span>
+        Support
+      </a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="pl-64 min-h-screen">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-8 py-4 bg-[#f7f9fb] dark:bg-slate-900 sticky top-0 z-40">
+<div class="flex items-center gap-8">
+<h1 class="text-xl font-bold text-[#191c1e] dark:text-slate-100 font-headline">Architectural ERP</h1>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-outline material-symbols-outlined">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm w-64 focus:ring-2 focus:ring-primary/20" placeholder="Search recipe codes..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-[#f2f4f6] rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-[#f2f4f6] rounded-full transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/20">
+<img alt="User Profile" data-alt="professional portrait of a head chef in a white coat looking confident against a blurred kitchen background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0_WuL5yk6STiJ1lRT_BoRI4gF2r3MEpjGG3Yd7qln9AkLHN7nL8uBGfGjwaIrQqJ6kregJTKIAun2-Zwq_F5unUH8gJvu2Owi1PlJLAqGRm_j1rA0Ch7V3-FPCexGphxPOOptJtNhQOG2P3XsdzxlbotixUoks0ydnc_53ZcXiZ7r8x7nkuefXKCNjK56380QxhO5OS0hZIX3SLKupySYDuxwMl7IAMqAuI_-adBCXJKq17vHHpqDr_9mxIRNzpg4rmjQaQgpXhWL"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-8 max-w-7xl mx-auto">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<div class="flex items-center gap-3 mb-2">
+<span class="bg-tertiary-container text-on-tertiary px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">Active Production</span>
+<span class="text-on-surface-variant text-sm font-medium">Modified 2h ago by Chef Adrian</span>
+</div>
+<h2 class="text-4xl font-extrabold font-headline tracking-tight text-on-surface">Signature Wagyu Burger</h2>
+<p class="text-on-surface-variant mt-2 max-w-2xl font-body">Premium grade A5 wagyu patty, house-made brioche, truffle aioli, and heritage tomatoes. Core menu item for all premium outlets.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-3 rounded-xl bg-secondary-container text-on-secondary-container font-semibold text-sm hover:opacity-90 transition-opacity">
+            Export Specification
+          </button>
+<button class="px-6 py-3 rounded-xl signature-gradient text-white font-semibold text-sm shadow-lg shadow-primary/20 hover:scale-95 transition-all">
+            Create New Version
+          </button>
+</div>
+</div>
+<!-- Bento Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Main Content Area -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<!-- Recipe Stats Glass Card -->
+<div class="grid grid-cols-3 gap-4">
+<div class="glass-card p-6 rounded-xl border border-white/40 shadow-sm">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Total Unit Cost</p>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-extrabold font-headline">$14.85</span>
+<span class="text-error text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">trending_up</span> 12%
+                </span>
+</div>
+<p class="text-[10px] text-outline mt-2 italic">Reflecting Q3 market meat index</p>
+</div>
+<div class="glass-card p-6 rounded-xl border border-white/40 shadow-sm">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Target Margin</p>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-extrabold font-headline">72.4%</span>
+<span class="text-tertiary text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+</span>
+</div>
+<p class="text-[10px] text-outline mt-2 italic">Policy requirement: &gt;70%</p>
+</div>
+<div class="glass-card p-6 rounded-xl border border-white/40 shadow-sm">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Yield Consistency</p>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-extrabold font-headline">98.2%</span>
+</div>
+<p class="text-[10px] text-outline mt-2 italic">Based on 450 units last 7 days</p>
+</div>
+</div>
+<!-- Cost Alert Banner -->
+<div class="bg-error-container/40 p-4 rounded-xl flex items-center gap-4">
+<span class="material-symbols-outlined text-error text-2xl">warning</span>
+<div class="flex-1">
+<p class="text-sm font-bold text-on-error-container">Critical Price Increase: Wagyu Chuck (WGY-004)</p>
+<p class="text-xs text-on-error-container/80">Market price increased by $4.20/kg. This version's margin is projected to drop below 70% next week.</p>
+</div>
+<button class="text-xs font-bold text-error underline decoration-2 underline-offset-4">Audit Vendor</button>
+</div>
+<!-- Ingredient Table Container -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="px-6 py-4 flex justify-between items-center bg-surface-container-low/50">
+<h3 class="font-headline font-bold text-on-surface">Ingredient Breakdown</h3>
+<div class="flex gap-2">
+<button class="p-1.5 hover:bg-surface-container rounded-lg text-outline">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+</button>
+<button class="p-1.5 hover:bg-surface-container rounded-lg text-outline">
+<span class="material-symbols-outlined text-lg">download</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/30 border-b border-outline-variant/10">
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Code</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Ingredient Name</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Unit</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Qty</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Waste %</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Net Qty</th>
+<th class="px-6 py-4 text-[10px] font-bold text-on-surface-variant uppercase tracking-widest text-right">Cost</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-outline">WGY-004</td>
+<td class="px-6 py-4 font-bold text-on-surface">A5 Wagyu Chuck Mince</td>
+<td class="px-6 py-4 text-xs">KG</td>
+<td class="px-6 py-4 text-xs font-medium">0.200</td>
+<td class="px-6 py-4 text-xs text-error font-bold">2.0%</td>
+<td class="px-6 py-4 text-xs text-right">0.196</td>
+<td class="px-6 py-4 text-sm font-bold text-right text-on-surface">$12.40</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-outline">BAK-012</td>
+<td class="px-6 py-4 font-bold text-on-surface">Artisan Brioche Bun</td>
+<td class="px-6 py-4 text-xs">UNIT</td>
+<td class="px-6 py-4 text-xs font-medium">1.000</td>
+<td class="px-6 py-4 text-xs text-tertiary">0.0%</td>
+<td class="px-6 py-4 text-xs text-right">1.000</td>
+<td class="px-6 py-4 text-sm font-bold text-right text-on-surface">$0.85</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-outline">DRY-099</td>
+<td class="px-6 py-4 font-bold text-on-surface">Black Truffle Oil</td>
+<td class="px-6 py-4 text-xs">ML</td>
+<td class="px-6 py-4 text-xs font-medium">5.000</td>
+<td class="px-6 py-4 text-xs text-tertiary">0.5%</td>
+<td class="px-6 py-4 text-xs text-right">4.975</td>
+<td class="px-6 py-4 text-sm font-bold text-right text-on-surface">$1.20</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-4 font-mono text-xs text-outline">VEG-022</td>
+<td class="px-6 py-4 font-bold text-on-surface">Heirloom Tomato Slice</td>
+<td class="px-6 py-4 text-xs">KG</td>
+<td class="px-6 py-4 text-xs font-medium">0.050</td>
+<td class="px-6 py-4 text-xs text-error font-bold">15.0%</td>
+<td class="px-6 py-4 text-xs text-right">0.042</td>
+<td class="px-6 py-4 text-sm font-bold text-right text-on-surface">$0.40</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="bg-surface-container-high/20">
+<td class="px-6 py-4 text-xs font-bold text-on-surface-variant text-right" colspan="6">Total Raw Cost per Unit</td>
+<td class="px-6 py-4 text-lg font-extrabold text-right text-primary">$14.85</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
+<!-- Sidebar Panel -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<!-- Version Hub -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
+<h3 class="font-headline font-bold text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+              Version Management
+            </h3>
+<div class="relative pl-8 border-l-2 border-surface-container-highest space-y-8">
+<!-- v2.2 Future -->
+<div class="relative">
+<div class="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-surface-container-highest border-4 border-surface ring-2 ring-surface-container-highest"></div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-sm font-bold text-on-surface">v2.2 (Future)</span>
+<span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[9px] font-black uppercase rounded">Scheduled</span>
+</div>
+<p class="text-xs text-on-surface-variant font-medium">Go-live: Sept 15, 2024</p>
+<p class="text-[11px] text-outline mt-2 leading-relaxed">Incorporates substitute artisan cheese due to supplier shortage.</p>
+</div>
+</div>
+<!-- v2.1 Current -->
+<div class="relative">
+<div class="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-primary border-4 border-surface ring-4 ring-primary/20"></div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-sm font-bold text-on-surface">v2.1 (Active)</span>
+<span class="px-2 py-0.5 bg-tertiary-container text-on-tertiary text-[9px] font-black uppercase rounded">Production</span>
+</div>
+<p class="text-xs text-on-surface-variant font-medium">Effective since Jun 01, 2024</p>
+<p class="text-[11px] text-outline mt-2 leading-relaxed">Standard production version with regional wagyu mix.</p>
+<div class="mt-3 flex gap-2">
+<button class="text-[10px] font-bold text-primary underline">View Details</button>
+<span class="text-outline text-[10px]">•</span>
+<button class="text-[10px] font-bold text-primary underline">Compare v2.2</button>
+</div>
+</div>
+</div>
+<!-- v1.0 Archived -->
+<div class="relative opacity-60">
+<div class="absolute -left-[41px] top-0 w-4 h-4 rounded-full bg-outline border-4 border-surface"></div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-sm font-bold text-on-surface">v1.0 (Archived)</span>
+<span class="px-2 py-0.5 bg-surface-dim text-on-surface-variant text-[9px] font-black uppercase rounded">Legacy</span>
+</div>
+<p class="text-xs text-on-surface-variant font-medium">Retired May 31, 2024</p>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-6 border-t border-outline-variant/10">
+<button class="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-outline-variant hover:border-primary hover:text-primary transition-all text-xs font-bold text-outline">
+<span class="material-symbols-outlined text-sm">schedule</span>
+                Schedule Future Release
+              </button>
+</div>
+</div>
+<!-- Recipe Image -->
+<div class="relative h-64 rounded-xl overflow-hidden shadow-lg group">
+<img alt="Gourmet Wagyu Burger" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" data-alt="close-up of a high-end wagyu burger with melting cheese, fresh truffle shavings, and a glossy brioche bun in warm moody lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSuqtxTE-4qJg9e05gKoVo1dzO23BQMMQfs9EQMWa1i79i-ZWOVJ297maAxzM0o-Rg_UeXgpG6Iz0AjUBbypJYUMHLFUgaHOFN9UJ6Bapwv6YHgQsV_cCkhxaWrqVTSSMfFwvR8RE-5xd-eXBnA4HVKCcX_pC5amRffyE1MW9jAwB6Frcsps4k6Zx9zxbNByjElxxRjnUsTp2BIz4eockTxXcRgz9pNOQi_Cny5tAFKAwj2XPNa1gJeStdD9U05xybt37mvo7KuQhN"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-6">
+<div>
+<span class="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded mb-2 inline-block uppercase tracking-widest">Master Reference</span>
+<p class="text-white font-headline font-bold text-lg leading-tight">Plating Standard v2.1</p>
+</div>
+</div>
+</div>
+<!-- Production Notes -->
+<div class="bg-surface-container-highest/40 p-6 rounded-xl">
+<h4 class="text-xs font-bold text-on-surface uppercase tracking-widest mb-4">Forensic Audit Log</h4>
+<div class="space-y-4">
+<div class="flex gap-3">
+<div class="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
+<div>
+<p class="text-xs font-bold text-on-surface">Version 2.1 Promotion</p>
+<p class="text-[11px] text-on-surface-variant">Approved by Executive Chef Miller</p>
+<p class="text-[10px] text-outline mt-0.5">Aug 22, 14:32</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="w-2 h-2 rounded-full bg-outline-variant mt-1.5 shrink-0"></div>
+<div>
+<p class="text-xs font-bold text-on-surface">Ingredient Adjustment</p>
+<p class="text-[11px] text-on-surface-variant">Chef Adrian modified waste % for Tomatoes</p>
+<p class="text-[10px] text-outline mt-0.5">Aug 20, 09:15</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Sticky Read-only Banner (Example for Archived) -->
+<!-- This is hidden by default but shown when viewing archived versions -->
+<div class="hidden fixed bottom-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-8 py-4 rounded-full shadow-2xl flex items-center gap-6 z-50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-warning">lock</span>
+<span class="font-headline font-bold">Archived View (v1.0)</span>
+</div>
+<div class="h-4 w-[1px] bg-white/20"></div>
+<p class="text-sm font-medium opacity-80">This version is read-only. Prices and specs are frozen.</p>
+<button class="bg-primary px-4 py-2 rounded-full text-xs font-bold hover:bg-primary-container transition-colors">Restore as Draft</button>
+<button class="text-xs font-bold opacity-60 hover:opacity-100 transition-opacity">Dismiss</button>
+</div>
+</body></html>

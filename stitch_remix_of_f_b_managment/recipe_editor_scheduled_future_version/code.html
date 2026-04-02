@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scheduled Recipe Version | Architect ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary": "#ffffff",
+              "outline": "#757684",
+              "surface-container-lowest": "#ffffff",
+              "error": "#ba1a1a",
+              "secondary-fixed-dim": "#b9c7df",
+              "on-error-container": "#93000a",
+              "surface-variant": "#e0e3e5",
+              "surface-container-highest": "#e0e3e5",
+              "on-surface": "#191c1e",
+              "on-secondary-fixed": "#0d1c2e",
+              "primary-fixed": "#dee0ff",
+              "inverse-primary": "#bbc3ff",
+              "error-container": "#ffdad6",
+              "primary-container": "#4151b3",
+              "inverse-surface": "#2d3133",
+              "tertiary-fixed": "#6ffbbe",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "on-primary-container": "#cacfff",
+              "surface-bright": "#f7f9fb",
+              "surface-container": "#eceef0",
+              "on-tertiary-container": "#5debaf",
+              "surface-dim": "#d8dadc",
+              "on-secondary-fixed-variant": "#3a485b",
+              "background": "#f7f9fb",
+              "surface-tint": "#4555b7",
+              "tertiary-fixed-dim": "#4edea3",
+              "on-primary-fixed": "#000e5e",
+              "secondary-container": "#d5e3fc",
+              "on-tertiary-fixed-variant": "#005236",
+              "on-tertiary-fixed": "#002113",
+              "on-error": "#ffffff",
+              "inverse-on-surface": "#eff1f3",
+              "tertiary-container": "#006846",
+              "outline-variant": "#c5c5d4",
+              "primary": "#27389a",
+              "on-surface-variant": "#454652",
+              "secondary-fixed": "#d5e3fc",
+              "tertiary": "#004e33",
+              "surface-container-high": "#e6e8ea",
+              "secondary": "#515f74",
+              "surface": "#f7f9fb",
+              "on-tertiary": "#ffffff",
+              "on-background": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-secondary-container": "#57657a"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+      }
+      .primary-gradient {
+        background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+      }
+    </style>
+</head>
+<body class="bg-background font-body text-on-surface flex h-screen overflow-hidden">
+<!-- SideNavBar Component -->
+<aside class="bg-slate-50 dark:bg-slate-950 flex flex-col h-full w-64 border-r-0 font-inter text-sm font-medium">
+<div class="flex flex-col h-full p-4 space-y-2">
+<div class="px-2 py-4 mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="close-up of chef hands plating a gourmet dish in a professional kitchen with warm cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzgf-z7AjPd_9ttEDtHviISeTSqJyZW40XU5SBcSlosETyfV4foD3waDyIDJSD2xeuOHYp4Hu3mj0reNAGpZYQRlK1loGLAgoRZ79X1SVZylp1E2Z2zODBOF_spOp_goce0r4wbabpyA4-ohDj7PHMqbp7nKyKsSD4xsQh2tWGdbGmyUDC3aZhG__GibbVX2fIrbL37fVG2KLVFXPihXycKotHySfUl5SHiywlKG2Z-INOSQlO7BXeKZEuwNLgT7OBByTB2QwjFbbq"/>
+</div>
+<div>
+<h2 class="text-lg font-black text-slate-800 dark:text-slate-200">Recipe Editor</h2>
+<p class="text-[10px] text-slate-500 uppercase tracking-widest">V2.4.0 Active</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-400 shadow-sm rounded-md hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span>Recipe List</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="restore_from_trash">restore_from_trash</span>
+<span>Version History</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+<span>Ingredient Mapping</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="rebase_edit">rebase_edit</span>
+<span>Yield Models</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span>Cost Analysis</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:translate-x-1 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+<span>Compliance</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 border-t border-slate-200/60 space-y-1">
+<button class="w-full primary-gradient text-white py-2.5 rounded-xl font-semibold shadow-lg shadow-indigo-200 mb-4 active:scale-95 duration-100">
+                    Save Draft
+                </button>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-200/50 rounded-md" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-200/50 rounded-md" href="#">
+<span class="material-symbols-outlined" data-icon="archive">archive</span>
+<span>Archive</span>
+</a>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+<!-- TopNavBar Component -->
+<header class="bg-white dark:bg-slate-900 flex justify-between items-center w-full px-6 py-3 border-b-0">
+<div class="flex items-center gap-8">
+<h1 class="text-xl font-bold text-slate-900 dark:text-white font-headline tracking-tight">Architect ERP</h1>
+<nav class="hidden md:flex gap-6">
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors font-manrope tracking-tight font-semibold" href="#">Dashboard</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors font-manrope tracking-tight font-semibold" href="#">Inventory</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors font-manrope tracking-tight font-semibold" href="#">Procurement</a>
+<a class="text-indigo-700 dark:text-indigo-400 border-b-2 border-indigo-700 dark:border-indigo-400 pb-1 font-manrope tracking-tight font-semibold" href="#">Recipes</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors font-manrope tracking-tight font-semibold" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-2 mr-4">
+<span class="material-symbols-outlined p-2 text-slate-500 hover:bg-slate-100 rounded-full cursor-pointer" data-icon="history">history</span>
+<span class="material-symbols-outlined p-2 text-slate-500 hover:bg-slate-100 rounded-full cursor-pointer" data-icon="settings">settings</span>
+</div>
+<button class="px-4 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Validate</button>
+<button class="px-4 py-1.5 text-sm font-semibold bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 transition-colors">Activate</button>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8 bg-surface-bright">
+<!-- Recipe Header & Banner -->
+<section class="relative">
+<div class="absolute -top-4 left-0 right-0 h-1 bg-primary-container/20 rounded-full"></div>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm" data-icon="schedule" style="font-variation-settings: 'FILL' 1;">schedule</span>
+                                Scheduled
+                            </span>
+<span class="text-on-surface-variant text-sm font-medium">Effective Date: <span class="text-on-surface font-bold">Oct 1, 2024</span></span>
+</div>
+<h2 class="text-4xl font-extrabold font-headline tracking-tight text-on-surface">Signature Wagyu Burger</h2>
+<p class="text-on-surface-variant font-medium">Internal Reference: BW-772-V3</p>
+</div>
+<div class="flex gap-3">
+<button class="px-4 py-2 bg-white border border-outline-variant text-on-surface font-semibold rounded-lg flex items-center gap-2 hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="edit_calendar">edit_calendar</span>
+                            Edit Schedule
+                        </button>
+<button class="px-4 py-2 bg-white border border-outline-variant text-on-surface font-semibold rounded-lg flex items-center gap-2 hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="content_copy">content_copy</span>
+                            Duplicate as New
+                        </button>
+<button class="px-4 py-2 text-error font-semibold flex items-center gap-2 hover:bg-error-container/20 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="archive">archive</span>
+                            Archive
+                        </button>
+</div>
+</div>
+<!-- Restricted Notice Banner -->
+<div class="mt-8 bg-surface-container-high/50 p-4 rounded-xl border border-outline-variant/30 flex items-start gap-4">
+<span class="material-symbols-outlined text-primary-container" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<div>
+<h4 class="font-bold text-on-surface">Scheduled Version Lockdown</h4>
+<p class="text-sm text-on-surface-variant">This recipe version is currently locked for editing to ensure compliance with the upcoming effective date. To make changes, please duplicate this version or move the effective date to an unscheduled state.</p>
+</div>
+</div>
+</section>
+<!-- Main Layout: Bento Grid Style -->
+<div class="grid grid-cols-12 gap-8">
+<!-- Ingredient Table Section -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-surface-container flex justify-between items-center bg-surface-container-low/30">
+<h3 class="font-headline font-bold text-lg">Ingredient Mapping</h3>
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Fixed Quantities</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-6 py-3 text-xs font-bold text-outline uppercase tracking-wider">Ingredient</th>
+<th class="px-6 py-3 text-xs font-bold text-outline uppercase tracking-wider text-right">Quantity</th>
+<th class="px-6 py-3 text-xs font-bold text-outline uppercase tracking-wider">Unit</th>
+<th class="px-6 py-3 text-xs font-bold text-outline uppercase tracking-wider text-right">Unit Cost</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-dim/10">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-outline" data-icon="restaurant">restaurant</span>
+</div>
+<div>
+<p class="font-semibold text-on-surface">Wagyu Beef Patty (A5)</p>
+<p class="text-[10px] text-on-surface-variant">SKU: PRO-9921</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-mono font-medium text-on-surface">180.00</td>
+<td class="px-6 py-4 text-on-surface-variant">grams</td>
+<td class="px-6 py-4 text-right font-medium text-on-surface">$12.45</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-dim/10">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-outline" data-icon="bakery_dining">bakery_dining</span>
+</div>
+<div>
+<p class="font-semibold text-on-surface">Brioche Bun (Toasted)</p>
+<p class="text-[10px] text-on-surface-variant">SKU: BAK-102</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-mono font-medium text-on-surface">1.00</td>
+<td class="px-6 py-4 text-on-surface-variant">unit</td>
+<td class="px-6 py-4 text-right font-medium text-on-surface">$0.85</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-dim/10">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-outline" data-icon="nutrition">nutrition</span>
+</div>
+<div>
+<p class="font-semibold text-on-surface">Truffle Aioli (Signature)</p>
+<p class="text-[10px] text-on-surface-variant">SKU: SAU-552</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-mono font-medium text-on-surface">15.00</td>
+<td class="px-6 py-4 text-on-surface-variant">ml</td>
+<td class="px-6 py-4 text-right font-medium text-on-surface">$2.10</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-dim/10">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-outline" data-icon="garden_cart">garden_cart</span>
+</div>
+<div>
+<p class="font-semibold text-on-surface">Wild Arugula</p>
+<p class="text-[10px] text-on-surface-variant">SKU: VG-881</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right font-mono font-medium text-on-surface">10.00</td>
+<td class="px-6 py-4 text-on-surface-variant">grams</td>
+<td class="px-6 py-4 text-right font-medium text-on-surface">$0.35</td>
+</tr>
+</tbody>
+<tfoot class="bg-surface-container-low">
+<tr>
+<td class="px-6 py-4 text-right font-bold text-on-surface" colspan="3">Total Batch Cost</td>
+<td class="px-6 py-4 text-right font-bold text-primary">$15.75</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+<!-- Yield Models Bento Section -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary-container" data-icon="rebase_edit">rebase_edit</span>
+<h4 class="font-bold text-on-surface">Yield Estimates</h4>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between">
+<span class="text-sm text-on-surface-variant">Raw Weight</span>
+<span class="text-sm font-bold text-on-surface">220g</span>
+</div>
+<div class="flex justify-between">
+<span class="text-sm text-on-surface-variant">Cooked Yield</span>
+<span class="text-sm font-bold text-on-surface">82%</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mt-2">
+<div class="bg-primary-container h-1.5 rounded-full" style="width: 82%"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-tertiary" data-icon="monitoring">monitoring</span>
+<h4 class="font-bold text-on-surface">Profit Margin</h4>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between">
+<span class="text-sm text-on-surface-variant">Target Sale Price</span>
+<span class="text-sm font-bold text-on-surface">$24.00</span>
+</div>
+<div class="flex justify-between">
+<span class="text-sm text-on-surface-variant">Gross Margin</span>
+<span class="text-sm font-bold text-tertiary">34.3%</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mt-2">
+<div class="bg-tertiary h-1.5 rounded-full" style="width: 34%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Audit History & Timeline Section -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm flex flex-col h-full">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline font-bold text-lg text-on-surface">Scheduling Audit</h3>
+<span class="material-symbols-outlined text-outline" data-icon="history">history</span>
+</div>
+<div class="relative flex-1 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-surface-variant">
+<!-- Event 1 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-xs text-white" data-icon="check" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Scheduled Date Finalized</p>
+<h5 class="text-sm font-bold text-on-surface">Version Scheduled for Q4 Launch</h5>
+<p class="text-xs text-on-surface-variant mt-1">Confirmed by Sarah J. (Regional Director)</p>
+<time class="text-[10px] text-outline font-medium">Aug 14, 2024 • 11:24 AM</time>
+</div>
+</div>
+<!-- Event 2 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-xs text-white" data-icon="check" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Ingredient Compliance</p>
+<h5 class="text-sm font-bold text-on-surface">Wagyu Supply Chain Verified</h5>
+<p class="text-xs text-on-surface-variant mt-1">Supply-chain team validated availability for Oct 1st rollout.</p>
+<time class="text-[10px] text-outline font-medium">Aug 12, 2024 • 04:45 PM</time>
+</div>
+</div>
+<!-- Event 3 -->
+<div class="relative pl-10">
+<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-surface-container flex items-center justify-center border-2 border-primary">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-1">Version Creation</p>
+<h5 class="text-sm font-bold text-on-surface">Initial V3 Recipe Drafted</h5>
+<p class="text-xs text-on-surface-variant mt-1">Base metrics imported from V2 with pricing adjustments.</p>
+<time class="text-[10px] text-outline font-medium">Aug 10, 2024 • 09:12 AM</time>
+</div>
+</div>
+</div>
+<div class="mt-12 p-4 bg-surface-container-low rounded-xl">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary-container text-xl" data-icon="verified">verified</span>
+<span class="font-bold text-on-surface">Architect Validated</span>
+</div>
+<p class="text-xs text-on-surface-variant">This recipe version has passed all internal compliance and yield modeling checks for the specified effective date.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Contextual Restricted UI Element -->
+<div class="fixed bottom-8 right-8">
+<div class="glass-card p-4 rounded-2xl shadow-2xl border border-white/50 flex items-center gap-4 max-w-sm">
+<div class="w-12 h-12 rounded-xl bg-error-container/30 flex items-center justify-center">
+<span class="material-symbols-outlined text-error" data-icon="lock_clock">lock_clock</span>
+</div>
+<div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-tighter">Restriction Active</p>
+<p class="text-sm font-semibold text-on-surface">Direct edits are disabled for scheduled versions.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

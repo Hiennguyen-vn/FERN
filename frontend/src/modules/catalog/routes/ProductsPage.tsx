@@ -1,21 +1,31 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
-import { Button, Card, DataTable, Input, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
+import {
+  Badge,
+  Button,
+  DataTable,
+  PermissionDeniedInline,
+  ReadonlyBanner,
+} from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
 import { usePrincipal } from '@core/auth/auth.selectors'
+import { useScopeContext } from '@core/scopes/useScopeContext'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
-import { LoadedSubsetMeta } from '@shared/ui/LoadedSubsetMeta'
 import { ProductStatusBadge, STATUS_LABELS } from '../components/ProductStatusBadge'
+import { useIngredients } from '../hooks/useIngredients'
 import { useProductCategories, useProducts } from '../hooks/useProducts'
 import type { Product, ProductStatus } from '../model/catalog.types'
-import { getCatalogErrorMessage } from '../services/catalogError.service'
-import { canReadProducts, canWriteProducts } from '../services/catalogPermission.service'
+import {
+  canReadProducts,
+  canReadIngredients,
+  canWriteProducts,
+} from '../services/catalogPermission.service'
 import { matchesSearch } from '../services/catalogReadModel.service'
 
-// Backend ProductStatus: DRAFT, ACTIVE, INACTIVE, DISCONTINUED
 const statusOptions: SelectOption[] = [
-  { label: 'Tất cả trạng thái', value: 'ALL' },
+  { label: 'All statuses', value: 'ALL' },
   { label: STATUS_LABELS.DRAFT, value: 'DRAFT' },
   { label: STATUS_LABELS.ACTIVE, value: 'ACTIVE' },
   { label: STATUS_LABELS.INACTIVE, value: 'INACTIVE' },
@@ -23,29 +33,31 @@ const statusOptions: SelectOption[] = [
 ]
 
 export function ProductsPage() {
-  usePageTitle('Sản phẩm — Catalog')
+  usePageTitle('Product Master Catalog')
+
   const navigate = useNavigate()
   const principal = usePrincipal()
+  const { selectedOutletId } = useScopeContext()
   const canViewProducts = canReadProducts(principal)
+  const canViewIngredients = canReadIngredients(principal)
   const canWrite = canWriteProducts(principal) && principal?.scopeRoots?.system === true
   const { data: products = [], error, isLoading, refetch } = useProducts({ enabled: canViewProducts })
-  const {
-    data: categories = [],
-    error: categoriesError,
-  } = useProductCategories({ enabled: canViewProducts })
+  const { data: categories = [], error: categoriesError } = useProductCategories({ enabled: canViewProducts })
+  const { data: ingredients = [] } = useIngredients({ enabled: canViewIngredients })
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<ProductStatus | 'ALL'>('ALL')
   const [categoryFilter, setCategoryFilter] = useState('ALL')
 
-  const categoryOptions = useMemo<SelectOption[]>(() => {
-    return [
-      { label: 'Tất cả danh mục', value: 'ALL' },
+  const categoryOptions = useMemo<SelectOption[]>(
+    () => [
+      { label: 'All categories', value: 'ALL' },
       ...categories.map((category) => ({
         label: `${category.name} (${category.code})`,
         value: category.code,
       })),
-    ]
-  }, [categories])
+    ],
+    [categories],
+  )
 
   const categoryLookup = useMemo(
     () => new Map(categories.map((category) => [category.code, category] as const)),
@@ -69,116 +81,247 @@ export function ProductsPage() {
     () => [
       {
         key: 'code',
-        header: 'Mã',
-        render: (product) => <span>{product.code}</span>,
+        header: 'Code',
+        render: (product) => <span className="cell-kicker">{product.code}</span>,
       },
       {
-        key: 'name',
-        header: 'Sản phẩm',
+        key: 'product',
+        header: 'Product Name',
         render: (product) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
-            <strong>{product.name}</strong>
-            <span className="muted-text">{product.description ?? 'Không có mô tả.'}</span>
+          <div className="table-identity">
+            <span className="table-avatar">
+              <AppIcon filled name="restaurant_menu" size="sm" />
+            </span>
+            <div className="cell-stack">
+              <strong>{product.name}</strong>
+              <span className="cell-subtitle">{product.description ?? 'No description has been added yet.'}</span>
+            </div>
           </div>
         ),
       },
       {
-        key: 'category',
-        header: 'Danh mục',
-        render: (product) =>
-          categoryLookup.get(product.categoryCode ?? '')?.name ?? product.categoryCode ?? 'Chưa phân loại',
+        key: 'type',
+        header: 'Type',
+        render: () => <Badge>Product</Badge>,
       },
       {
-        key: 'status',
-        header: 'Trạng thái',
+        key: 'category',
+        header: 'Category',
+        render: (product) =>
+          categoryLookup.get(product.categoryCode ?? '')?.name ?? product.categoryCode ?? 'Uncategorized',
+      },
+      {
+        key: 'lifecycle',
+        header: 'Lifecycle',
         render: (product) => <ProductStatusBadge status={product.status} />,
       },
+      {
+        key: 'outletContext',
+        header: 'Outlet Context',
+        render: (product) => (
+          <div className="cell-stack">
+            <strong>{selectedOutletId ? `Outlet #${selectedOutletId}` : 'All outlets'}</strong>
+            <span className="cell-subtitle">
+              {product.status === 'ACTIVE' ? 'Operational review' : 'Catalog governance'}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: 'detailState',
+        header: 'Detail',
+        render: (product) => (
+          <span className="health-line">
+            <span className={`health-dot ${product.status === 'DISCONTINUED' ? 'danger' : product.status === 'DRAFT' ? 'warning' : 'success'}`} />
+            {product.status === 'DISCONTINUED'
+              ? 'Read-only'
+              : product.status === 'DRAFT'
+                ? 'Needs review'
+                : 'Live'}
+          </span>
+        ),
+      },
     ],
-    [categoryLookup],
+    [categoryLookup, selectedOutletId],
   )
 
+  const activeProducts = products.filter((product) => product.status === 'ACTIVE').length
+  const discontinuedProducts = products.filter((product) => product.status === 'DISCONTINUED').length
+  const activeIngredients = ingredients.filter((ingredient) => ingredient.status === 'ACTIVE').length
   const hasFilters = Boolean(search.trim()) || statusFilter !== 'ALL' || categoryFilter !== 'ALL'
-  const emptyTitle = products.length === 0 ? 'Chưa có sản phẩm nào' : 'Không có sản phẩm khớp bộ lọc'
-  const emptyDescription =
-    products.length === 0
-      ? 'Catalog chưa có bản ghi sản phẩm nào để hiển thị.'
-      : 'Thử thay đổi từ khóa, trạng thái hoặc danh mục để mở rộng kết quả.'
 
   if (!canViewProducts) {
     return (
-      <DashboardLayout title="Sản phẩm" description="Browse sản phẩm trong Catalog">
-        <PermissionDeniedInline message="Bạn cần quyền catalog.product.read để xem danh sách sản phẩm." />
+      <DashboardLayout
+        description="Operational master list for active, draft, and discontinued products."
+        eyebrow="Catalog"
+        title="Product Master Catalog"
+      >
+        <PermissionDeniedInline message="You need catalog.product.read to open the product master catalog." />
       </DashboardLayout>
     )
   }
 
   return (
     <DashboardLayout
-      title="Sản phẩm"
-      description="Browse và inspect danh mục sản phẩm đang được publish."
       actions={
-        canWrite ? (
-          <Button asChild size="sm">
-            <Link to="/catalog/products/new">+ Create product</Link>
+        <div className="form-actions align-start">
+          <Button disabled size="sm" variant="secondary">
+            Bulk import
           </Button>
-        ) : null
+          {canWrite ? (
+            <Button asChild size="sm">
+              <Link to="/catalog/products/new">New product</Link>
+            </Button>
+          ) : null}
+        </div>
       }
+      description="Operational master list for active, draft, and discontinued products."
+      eyebrow="Catalog"
+      title="Product Master Catalog"
     >
-      <ReadonlyBanner
-        message={
-          canWrite
-            ? 'Catalog product writes đã được publish cho principal có catalog.product.write + system scope. Detail page hỗ trợ tiếp tục sang edit.'
-            : 'Catalog product writes chỉ publish cho principal có catalog.product.write + system scope. Tài khoản hiện tại đang ở chế độ browse/inspect.'
-        }
-      />
+      {!canWrite ? (
+        <ReadonlyBanner
+          label="Read-first mode"
+          message="Product write flows remain restricted to principals with catalog.product.write and system scope."
+          title="Catalog browse mode"
+        />
+      ) : null}
 
-      <Card title="Bộ lọc sản phẩm">
-        <div className="field-grid">
-          <Input
-            label="Tìm theo mã, tên hoặc mô tả"
+      <section className="workspace-stats-grid">
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="inventory_2" />
+            </span>
+            <span className="workspace-stat-badge success">Live</span>
+          </div>
+          <div className="page-stack" style={{ gap: '0.35rem' }}>
+            <span className="workspace-stat-label">Total items</span>
+            <strong className="workspace-stat-value">{products.length.toLocaleString('en-US')}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="done_all" />
+            </span>
+            <span className="workspace-stat-badge success">Published</span>
+          </div>
+          <div className="page-stack" style={{ gap: '0.35rem' }}>
+            <span className="workspace-stat-label">Active products</span>
+            <strong className="workspace-stat-value">{activeProducts.toLocaleString('en-US')}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="nutrition" />
+            </span>
+            <span className="workspace-stat-badge success">Reference</span>
+          </div>
+          <div className="page-stack" style={{ gap: '0.35rem' }}>
+            <span className="workspace-stat-label">Active ingredients</span>
+            <strong className="workspace-stat-value">{activeIngredients.toLocaleString('en-US')}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card danger">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="warning" />
+            </span>
+            <span className="workspace-stat-badge danger">Attention</span>
+          </div>
+          <div className="page-stack" style={{ gap: '0.35rem' }}>
+            <span className="workspace-stat-label">Discontinued</span>
+            <strong className="workspace-stat-value">{discontinuedProducts.toLocaleString('en-US')}</strong>
+          </div>
+        </article>
+      </section>
+
+      <section className="workspace-filter-bar" aria-label="Product catalog filters">
+        <div className="workspace-inline-search">
+          <AppIcon name="search" size="sm" />
+          <input
+            className="workspace-inline-input"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="VD: CF-001 hoặc Iced Coffee"
+            placeholder="Search by code or product name..."
             value={search}
           />
-          <Select
-            label="Trạng thái"
-            onChange={(event) => setStatusFilter(event.target.value as ProductStatus | 'ALL')}
-            options={statusOptions}
-            value={statusFilter}
-          />
-          <Select
-            label="Danh mục"
-            onChange={(event) => setCategoryFilter(event.target.value)}
-            options={categoryOptions}
-            value={categoryFilter}
-          />
         </div>
-        <LoadedSubsetMeta
-          entityLabel="sản phẩm"
-          filteredCount={filteredRows.length}
-          loadedCount={products.length}
-        />
-      </Card>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Status</span>
+          <select
+            className="workspace-inline-select"
+            onChange={(event) => setStatusFilter(event.target.value as ProductStatus | 'ALL')}
+            value={statusFilter}
+          >
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Category</span>
+          <select
+            className="workspace-inline-select"
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            value={categoryFilter}
+          >
+            {categoryOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Outlet availability</span>
+          <span className="workspace-inline-pill">
+            <AppIcon name="storefront" size="sm" />
+            {selectedOutletId ? `Outlet #${selectedOutletId}` : 'All outlets'}
+          </span>
+        </div>
+      </section>
 
       {categoriesError ? (
         <div className="inline-banner inline-banner-warning" role="status">
-          Không thể tải metadata danh mục. Bảng vẫn hiển thị nhưng nhãn danh mục có thể dùng mã raw.
+          Category metadata could not be loaded. The table is still available with raw category codes.
         </div>
       ) : null}
 
-      <DataTable
-        columns={columns}
-        emptyDescription={hasFilters ? emptyDescription : 'Catalog chưa có sản phẩm nào để hiển thị.'}
-        emptyTitle={hasFilters ? emptyTitle : 'Danh sách sản phẩm đang trống'}
-        error={error ? getCatalogErrorMessage(error, 'Không thể tải danh sách sản phẩm.') : null}
-        loading={isLoading}
-        loadingDescription="Đang tải danh sách sản phẩm và metadata danh mục..."
-        loadingTitle="Đang tải sản phẩm"
-        onRetry={() => void refetch()}
-        onRowClick={(product) => navigate(`/catalog/products/${product.id}`)}
-        rowKey={(product) => product.id}
-        rows={filteredRows}
-      />
+      <section className="surface-panel">
+        <div className="page-header">
+          <div>
+            <h2 className="card-title">Product Master List</h2>
+            <p className="muted-text">
+              {hasFilters
+                ? `${filteredRows.length.toLocaleString('en-US')} rows match the current filters.`
+                : `${products.length.toLocaleString('en-US')} product records are available in the current catalog slice.`}
+            </p>
+          </div>
+        </div>
+
+        <DataTable
+          columns={columns}
+          emptyDescription={
+            hasFilters
+              ? 'Try broadening the search text, status, or category filters.'
+              : 'No product records are available in the catalog yet.'
+          }
+          emptyTitle={hasFilters ? 'No products match the current filters' : 'Catalog is empty'}
+          error={error ? (error instanceof Error ? error.message : 'Unable to load the product catalog.') : null}
+          loading={isLoading}
+          loadingDescription="Loading product records and category metadata..."
+          loadingTitle="Loading product catalog"
+          onRetry={() => void refetch()}
+          onRowClick={(product) => navigate(`/catalog/products/${product.id}`)}
+          rowKey={(product) => product.id}
+          rows={filteredRows}
+        />
+      </section>
     </DashboardLayout>
   )
 }

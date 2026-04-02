@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recipe Master Catalog | Indigo Kitchen OS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-container": "#eceef0",
+            "on-error": "#ffffff",
+            "primary-fixed": "#dee0ff",
+            "secondary": "#515f74",
+            "inverse-on-surface": "#eff1f3",
+            "surface": "#f7f9fb",
+            "on-secondary-fixed": "#0d1c2e",
+            "surface-tint": "#4555b7",
+            "tertiary-fixed-dim": "#4edea3",
+            "tertiary-fixed": "#6ffbbe",
+            "tertiary": "#004e33",
+            "surface-variant": "#e0e3e5",
+            "surface-dim": "#d8dadc",
+            "on-tertiary-fixed": "#002113",
+            "on-tertiary": "#ffffff",
+            "on-primary-fixed": "#000e5e",
+            "on-primary": "#ffffff",
+            "inverse-surface": "#2d3133",
+            "on-surface": "#191c1e",
+            "primary": "#27389a",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary-fixed-variant": "#3a485b",
+            "background": "#f7f9fb",
+            "on-primary-fixed-variant": "#2c3c9e",
+            "secondary-fixed-dim": "#b9c7df",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#bbc3ff",
+            "tertiary-container": "#006846",
+            "on-tertiary-container": "#5debaf",
+            "on-background": "#191c1e",
+            "error-container": "#ffdad6",
+            "error": "#ba1a1a",
+            "surface-bright": "#f7f9fb",
+            "primary-container": "#4151b3",
+            "primary-fixed-dim": "#bbc3ff",
+            "on-secondary": "#ffffff",
+            "secondary-container": "#d5e3fc",
+            "on-secondary-container": "#57657a",
+            "surface-container-high": "#e6e8ea",
+            "outline-variant": "#c5c5d4",
+            "outline": "#757684",
+            "on-tertiary-fixed-variant": "#005236",
+            "surface-container-low": "#f2f4f6",
+            "on-surface-variant": "#454652",
+            "secondary-fixed": "#d5e3fc",
+            "surface-container-highest": "#e0e3e5",
+            "on-primary-container": "#cacfff"
+          },
+          fontFamily: {
+            "headline": ["Manrope"],
+            "body": ["Inter"],
+            "label": ["Inter"]
+          },
+          borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+    .font-headline { font-family: 'Manrope', sans-serif; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(24px); }
+    .signature-gradient { background: linear-gradient(135deg, #27389a 0%, #4151b3 100%); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #e0e3e5; border-radius: 10px; }
+  </style>
+</head>
+<body class="text-on-surface flex overflow-hidden h-screen">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-full py-6 px-4 space-y-2 bg-slate-100 dark:bg-slate-950 h-screen w-64 left-0 border-r-0 font-inter text-xs font-medium uppercase tracking-wider">
+<div class="flex items-center gap-3 px-2 mb-8">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+</div>
+<div class="flex flex-col">
+<span class="font-manrope font-extrabold text-indigo-800 dark:text-indigo-200 text-sm tracking-tight">Product Management</span>
+<span class="text-[10px] text-slate-500 lowercase font-normal">Kitchen Suite v2.4</span>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 font-semibold shadow-sm duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="receipt_long">receipt_long</span>
+<span>Recipes</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="inventory_2">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="shopping_cart">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="monitoring">monitoring</span>
+<span>Analytics</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-slate-200 dark:border-slate-800 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="support_agent">support_agent</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="history_edu">history_edu</span>
+<span>Logs</span>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-hidden bg-surface">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full px-6 py-3 bg-slate-50 dark:bg-slate-900 w-full top-0 border-b-0">
+<div class="flex items-center gap-4">
+<h1 class="text-lg font-bold tracking-tighter text-indigo-900 dark:text-indigo-100 font-headline">Indigo Kitchen OS</h1>
+<div class="h-4 w-[1px] bg-outline-variant"></div>
+<nav class="flex items-center gap-6 font-manrope tracking-tight text-sm font-semibold">
+<span class="text-indigo-700 dark:text-indigo-400 font-bold cursor-pointer">Catalog</span>
+<span class="text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer px-2 py-1 rounded">Menu Matrix</span>
+<span class="text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer px-2 py-1 rounded">Compliance</span>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-slate-200 dark:bg-slate-800 border-none rounded-full text-xs w-64 focus:ring-2 ring-primary/20" placeholder="Global search..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-slate-300 overflow-hidden ml-2 cursor-pointer active:opacity-80">
+<img alt="User profile" data-alt="professional portrait of a culinary operations manager in a minimalist white kitchen background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaPuQFiKMItziDpXNrw-XDMrH-FRwk1oq5dH6Jcqd3Kw24hSxGcuIRj3-1ptDbZtSmHATtd2BCRlw8dcDXqNUo-wNV25I7Gaa4-MBlng6eHjvX-yak3aUD07undWTFWDtqPgcFweXzUqbxL-fSzHeZU7XK5WjuwblD-DGEG6CG7gfdVzMtul91zAe_i5OLqh-NUHpT-VonNBT58yr9K-56scqL8uIf2g6N08tPkAEFslxxzrrMz_-ABppmC7ZLZUT-5xg8mOqcJrjQ"/>
+</div>
+</div>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-8 space-y-8">
+<!-- Page Header Section -->
+<section class="flex justify-between items-end">
+<div>
+<h2 class="text-3xl font-extrabold font-headline tracking-tight text-on-surface">Recipe Master Catalog</h2>
+<p class="text-on-surface-variant max-w-2xl mt-1 font-body text-sm">
+            Manage product composition, version control, and effective date scheduling for the entire estate. 
+            Maintain brand standards across all global franchises and kitchens.
+          </p>
+</div>
+<button class="signature-gradient text-white px-6 py-2.5 rounded-xl font-headline font-bold text-sm flex items-center gap-2 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+          Create New Version
+        </button>
+</section>
+<!-- Summary Stats: Bento Style -->
+<section class="grid grid-cols-1 md:grid-cols-5 gap-4">
+<div class="bg-surface-container-lowest p-5 rounded-2xl border-none shadow-sm flex flex-col justify-between h-32">
+<span class="text-xs font-bold text-outline uppercase tracking-widest font-label">Total Products</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-extrabold font-headline">1,284</span>
+<span class="text-[10px] text-tertiary font-bold">+2.4%</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-2xl border-none shadow-sm flex flex-col justify-between h-32 border-l-4 border-tertiary">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-outline uppercase tracking-widest font-label">Active Recipes</span>
+<span class="material-symbols-outlined text-tertiary text-sm" data-icon="check_circle">check_circle</span>
+</div>
+<span class="text-3xl font-extrabold font-headline text-tertiary">842</span>
+</div>
+<div class="bg-error-container/20 p-5 rounded-2xl border-none shadow-sm flex flex-col justify-between h-32 border-l-4 border-error">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-error uppercase tracking-widest font-label">Missing Recipes</span>
+<span class="material-symbols-outlined text-error text-sm" data-icon="warning" data-weight="fill">warning</span>
+</div>
+<span class="text-3xl font-extrabold font-headline text-error">42</span>
+</div>
+<div class="bg-secondary-container/20 p-5 rounded-2xl border-none shadow-sm flex flex-col justify-between h-32 border-l-4 border-primary">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-primary uppercase tracking-widest font-label">Scheduled</span>
+<span class="material-symbols-outlined text-primary text-sm" data-icon="calendar_month">calendar_month</span>
+</div>
+<span class="text-3xl font-extrabold font-headline text-primary">15</span>
+</div>
+<div class="bg-surface-container-low p-5 rounded-2xl border-none shadow-sm flex flex-col justify-between h-32">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-outline uppercase tracking-widest font-label">Archived</span>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="archive">archive</span>
+</div>
+<span class="text-3xl font-extrabold font-headline text-on-surface-variant">2,105</span>
+</div>
+</section>
+<!-- Filter Bar -->
+<section class="bg-surface-container-low p-3 rounded-2xl flex flex-wrap items-center gap-4 border border-outline-variant/10">
+<div class="flex-1 min-w-[240px] relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm" data-icon="filter_list">filter_list</span>
+<input class="w-full bg-surface-container-lowest border-none py-2.5 pl-10 pr-4 rounded-xl text-sm font-body focus:ring-2 ring-primary/10" placeholder="Search by Product Name or Code..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<label class="text-[10px] font-bold text-outline uppercase tracking-wider px-1">Status</label>
+<select class="bg-surface-container-lowest border-none py-2.5 pl-4 pr-10 rounded-xl text-sm font-medium focus:ring-2 ring-primary/10 appearance-none">
+<option>All Statuses</option>
+<option>Active</option>
+<option>Scheduled</option>
+<option>Draft</option>
+<option>Archived</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<label class="text-[10px] font-bold text-outline uppercase tracking-wider px-1">Readiness</label>
+<select class="bg-surface-container-lowest border-none py-2.5 pl-4 pr-10 rounded-xl text-sm font-medium focus:ring-2 ring-primary/10 appearance-none">
+<option>All Readiness</option>
+<option>Ready</option>
+<option>Missing Ingredients</option>
+<option>Conflicts</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-lowest px-4 py-2 rounded-xl border-none text-sm cursor-pointer hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-outline text-[18px]" data-icon="event">event</span>
+<span class="text-on-surface-variant">Effective Date Range</span>
+</div>
+<button class="bg-surface-container-highest p-2.5 rounded-xl hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="restart_alt">restart_alt</span>
+</button>
+</section>
+<!-- Main Data Table -->
+<section class="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-6 py-4 text-[10px] font-extrabold text-outline uppercase tracking-[0.1em] font-label">Product Details</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-outline uppercase tracking-[0.1em] font-label">Active Ver.</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-outline uppercase tracking-[0.1em] font-label">Next Up</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-outline uppercase tracking-[0.1em] font-label">Live Date</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-outline uppercase tracking-[0.1em] font-label text-center">Items</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-outline uppercase tracking-[0.1em] font-label">Status</th>
+<th class="px-6 py-4 text-[10px] font-extrabold text-outline uppercase tracking-[0.1em] font-label text-right">Updated</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<!-- Row 1: Active -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-variant">
+<img alt="Burger" data-alt="high-quality commercial photography of a gourmet wagyu beef burger with melting cheese and fresh greens on a dark slate background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdz4yXU9FwHyuAYeth_6xnja_HONOovcYCdXhn3GIxnS9pLrRPEgEKSUyiFm2eD39Uxw7H6fUZ31YC9Coh1Z-k_LEKTOnWKZ_pONwkqGsWB1bJMKYEaP9vLcwmZczClxNML2ccOM6hhELwUPY-t5ATT2t2vepJvO2e5mZj57aD2dvkP5MTCXuEvmDBWlbUv4COsINExfKFRC3aX1qyF5k5Ne_k8zHccW_1P1OINBoIaF-kEt7_t8llNAE19R2MqjlV5cxQz3tpIQ0g"/>
+</div>
+<div>
+<div class="font-headline font-bold text-sm">Signature Wagyu Burger</div>
+<div class="text-[11px] font-mono text-outline">WAG-001</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-headline font-semibold text-sm">v2.1</td>
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="text-sm font-medium text-primary">v2.2</span>
+<span class="text-[10px] text-outline">Starts 15 Sep</span>
+</div>
+</td>
+<td class="px-6 py-5 text-sm font-body text-on-surface-variant">01 Jan 2024</td>
+<td class="px-6 py-5 text-center">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-[11px] font-bold">12</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-tertiary-container/10 text-tertiary-fixed-dim uppercase tracking-tighter ring-1 ring-tertiary-container/20">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary mr-1.5"></span>
+                  Active
+                </span>
+</td>
+<td class="px-6 py-5 text-right text-[11px] text-outline">2h ago</td>
+</tr>
+<!-- Row 2: Missing (Red Alert) -->
+<tr class="hover:bg-error-container/5 bg-error-container/10 transition-colors cursor-pointer group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-variant grayscale opacity-60">
+<img alt="Ribs" data-alt="close-up of slow-cooked bbq pork ribs with glossy sauce on a rustic wooden table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6zRhrFFUWuU_mZ8_JlZ7FsViW0zfCk_mdQDxQ9R2-dYTjBgdTN-d0oqNBSZHwjD7AJY4YHdQGVt3oTW0SDpFOnCJIXj8HWqxTehBel7mowOTdgkHOYrrDgrPL4khCHZSuwx92_9hmzVfrN6uwMuVxPg2HRiWllRSJ2e_cEbKyUCTWnuh1x0QROBeqpehZXcgaAx7Jc-OyXxqP3VJdWjyzmi9mGvWBA1hLnuLDHqrrqYR6FTXKgqVVx0fWWlALu_I9YOKe15heGxYa"/>
+</div>
+<div>
+<div class="font-headline font-bold text-sm flex items-center gap-2">
+                      Smoked BBQ Ribs
+                      <span class="material-symbols-outlined text-error text-[16px]" data-icon="error" data-weight="fill">error</span>
+</div>
+<div class="text-[11px] font-mono text-error/70">RIB-402</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-headline font-semibold text-sm text-error">—</td>
+<td class="px-6 py-5">—</td>
+<td class="px-6 py-5 text-sm font-body text-outline italic">Pending</td>
+<td class="px-6 py-5 text-center">
+<span class="px-2 py-0.5 rounded-full bg-error-container text-[11px] font-bold text-error">0</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-error-container text-error uppercase tracking-tighter ring-1 ring-error/20">
+                  Action Required
+                </span>
+</td>
+<td class="px-6 py-5 text-right text-[11px] text-error font-semibold">URGENT</td>
+</tr>
+<!-- Row 3: Scheduled -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-variant">
+<img alt="Salmon" data-alt="seared salmon fillet with lemon butter sauce and asparagus tips on a white porcelain plate" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5CavyMmmfmhW_51G9ldQW1WX_ybJWUTSdj5S4wy6yckWhoBP4w07VJk2JFUXQsPgyngC1Ds2VLJgSgA-u2B3AR1DDUO92cB6TGrUnt9wmY4OIX6crVxZoL6KQZShzXNMMVEEi1OHm-s83KXqbYQf7S_vI91cibzAB0lDTpa1DoVcrpuqqrDtu63vksx9gJseMCHK59G-c6blQes_tNEhwF7bEEVMOSLPXvnXXZXhJOlxwKCVCf_cMo1Nraw0Dc8F7kLIa7W_slxvf"/>
+</div>
+<div>
+<div class="font-headline font-bold text-sm">Atlantic Miso Salmon</div>
+<div class="text-[11px] font-mono text-outline">SEA-099</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-headline font-semibold text-sm">v4.0</td>
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="text-sm font-medium text-primary">v4.1</span>
+<span class="text-[10px] text-outline">Starts 22 Sep</span>
+</div>
+</td>
+<td class="px-6 py-5 text-sm font-body text-on-surface-variant">15 Jul 2023</td>
+<td class="px-6 py-5 text-center">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-[11px] font-bold">8</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-secondary-container text-primary uppercase tracking-tighter ring-1 ring-primary/20">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span>
+                  Scheduled
+                </span>
+</td>
+<td class="px-6 py-5 text-right text-[11px] text-outline">1d ago</td>
+</tr>
+<!-- Row 4: Draft -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-variant">
+<img alt="Sushi" data-alt="artisan sushi platter with tuna, salmon and avocado nigiri on a dark wooden board" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDo5aUpR777UiWkT9JLnO4IX8bKoRZadZNoAQ60JpEeCY65tRcYZHltGgjPt_K5Cr0PlSOJSkZ_Ss0wZcryhEY5h9gx8a72D1UDg9dAiuAZCUWMkFZlYia5rouGrkIG6vmbuWZpOaKBmCcQjDnW6LEw2_WoIuXg9V2VLYZnvuT1ZqwI2a68BLQugSWeP87PHwyOZlpZh0632ElPBiUNux56nALH6f3ugb1RCcLWa2uXdaUXSON-B-6gRnsGWO-q54hyHo-JJ583dLY2"/>
+</div>
+<div>
+<div class="font-headline font-bold text-sm">Umami Sushi Box</div>
+<div class="text-[11px] font-mono text-outline">BOX-221</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-headline font-semibold text-sm text-outline">v1.0</td>
+<td class="px-6 py-5">—</td>
+<td class="px-6 py-5 text-sm font-body text-outline italic">In Review</td>
+<td class="px-6 py-5 text-center">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-[11px] font-bold">18</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-surface-container-highest text-on-surface-variant uppercase tracking-tighter">
+<span class="w-1.5 h-1.5 rounded-full bg-outline mr-1.5"></span>
+                  Draft
+                </span>
+</td>
+<td class="px-6 py-5 text-right text-[11px] text-outline">3d ago</td>
+</tr>
+<!-- Row 5: Active -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-variant">
+<img alt="Salad" data-alt="vibrant mediterranean quinoa salad with chickpeas, cucumbers and cherry tomatoes in a minimalist ceramic bowl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIPnZCJNuWpdnJkQZmScnO8qTYgfLwfYssSX3aMRoMiplVTjKI5_HvdyDMhtogGGOc0fx2fBEkEJo2anD1fq_mVtOpyd8h2dY84IlR0tVsxeWBCKvyslQJblVxQreQTLMkDONGXdfbC4to9z-YGqp4l06QrNGmoTG6olw5FOjt1s6jp7xXK_UZuEl15K3Co8pUZ5eN12BtBqHD2yHYMzh7XO5SrjrSMwhbfa3YDUqp8tfwbfgbn22N9tug1jmt8fNXUdrQYZxVZeG2"/>
+</div>
+<div>
+<div class="font-headline font-bold text-sm">Quinoa Superbowl</div>
+<div class="text-[11px] font-mono text-outline">SAL-882</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5 font-headline font-semibold text-sm">v3.5</td>
+<td class="px-6 py-5">—</td>
+<td class="px-6 py-5 text-sm font-body text-on-surface-variant">02 Mar 2024</td>
+<td class="px-6 py-5 text-center">
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-[11px] font-bold">15</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-tertiary-container/10 text-tertiary-fixed-dim uppercase tracking-tighter ring-1 ring-tertiary-container/20">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary mr-1.5"></span>
+                  Active
+                </span>
+</td>
+<td class="px-6 py-5 text-right text-[11px] text-outline">5h ago</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination Tonal Shift -->
+<div class="bg-surface-container-low px-6 py-4 flex justify-between items-center border-t border-outline-variant/10">
+<span class="text-xs font-medium text-on-surface-variant">Showing 1-15 of 1,284 products</span>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg bg-surface-container-lowest border border-outline-variant/30 hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="chevron_left">chevron_left</span>
+</button>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded-lg bg-primary text-white text-xs font-bold">1</button>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-xs font-bold transition-colors">2</button>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-xs font-bold transition-colors">3</button>
+<span class="px-2">...</span>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container-high text-xs font-bold transition-colors">86</button>
+</div>
+<button class="p-2 rounded-lg bg-surface-container-lowest border border-outline-variant/30 hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Mobile BottomNavBar (Hidden on desktop) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-surface-container-lowest flex justify-around items-center py-3 border-t border-outline-variant/20 shadow-2xl z-50">
+<button class="flex flex-col items-center gap-1 text-outline">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-[10px] font-bold">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="text-[10px] font-bold">Recipes</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-outline">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="text-[10px] font-bold">Stock</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-outline">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-[10px] font-bold">Settings</span>
+</button>
+</nav>
+</body></html>

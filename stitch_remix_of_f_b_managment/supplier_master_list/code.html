@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Supplier Master Hub | ProcureMaster</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline": "#757684",
+                        "on-secondary-container": "#57657a",
+                        "primary": "#27389a",
+                        "outline-variant": "#c5c5d4",
+                        "surface-bright": "#f7f9fb",
+                        "secondary-container": "#d5e3fc",
+                        "tertiary": "#004e33",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#006846",
+                        "surface-tint": "#4555b7",
+                        "on-surface-variant": "#454652",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary-container": "#4151b3",
+                        "surface": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#d5e3fc",
+                        "tertiary-fixed": "#6ffbbe",
+                        "primary-fixed": "#dee0ff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "inverse-primary": "#bbc3ff",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-variant": "#e0e3e5",
+                        "surface-container": "#eceef0",
+                        "surface-container-low": "#f2f4f6",
+                        "on-primary": "#ffffff",
+                        "background": "#f7f9fb",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e6e8ea",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#d8dadc",
+                        "inverse-surface": "#2d3133",
+                        "on-primary-fixed": "#000e5e",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "on-tertiary-container": "#5debaf",
+                        "on-background": "#191c1e",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-surface": "#191c1e",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-error-container": "#93000a",
+                        "secondary": "#515f74",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#002113",
+                        "on-primary-container": "#cacfff"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar Component -->
+<aside class="h-screen w-72 fixed left-0 top-0 bg-[#f2f4f6] dark:bg-slate-900 flex flex-col py-6 gap-2 z-40">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-white" data-icon="inventory_2">inventory_2</span>
+</div>
+<div>
+<h2 class="font-manrope font-bold text-slate-900 dark:text-white leading-tight">Global Supply</h2>
+<p class="text-xs text-on-surface-variant font-inter tracking-wide uppercase">Enterprise ERP</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-600 dark:text-slate-400 px-4 py-3 mx-2 flex items-center gap-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-inter text-sm tracking-wide">Dashboard</span>
+</a>
+<a class="bg-white dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-semibold shadow-sm rounded-lg mx-2 px-4 py-3 flex items-center gap-3 translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-inter text-sm tracking-wide">Suppliers</span>
+</a>
+<a class="text-slate-600 dark:text-slate-400 px-4 py-3 mx-2 flex items-center gap-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-inter text-sm tracking-wide">Procurement</span>
+</a>
+<a class="text-slate-600 dark:text-slate-400 px-4 py-3 mx-2 flex items-center gap-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-inter text-sm tracking-wide">Finance</span>
+</a>
+<a class="text-slate-600 dark:text-slate-400 px-4 py-3 mx-2 flex items-center gap-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors mt-auto" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-inter text-sm tracking-wide">Settings</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-72 min-h-screen">
+<!-- TopAppBar Component -->
+<header class="flex justify-between items-center px-6 h-16 w-full z-50 backdrop-blur-md sticky top-0 bg-[#f7f9fb] dark:bg-slate-950">
+<div class="flex items-center gap-4">
+<h1 class="text-lg font-extrabold tracking-tight text-indigo-700 dark:text-indigo-300 font-manrope">ProcureMaster</h1>
+<div class="h-6 w-px bg-outline-variant mx-2"></div>
+<h2 class="font-manrope text-sm font-medium text-on-surface">Supplier Master Hub</h2>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors scale-95 duration-150 ease-in-out text-slate-500">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors scale-95 duration-150 ease-in-out text-slate-500">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button class="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors scale-95 duration-150 ease-in-out text-slate-500">
+<span class="material-symbols-outlined" data-icon="apps">apps</span>
+</button>
+<div class="ml-2 flex items-center gap-3 pl-4 border-l border-outline-variant">
+<div class="text-right">
+<p class="text-xs font-bold leading-none">Finance Admin</p>
+<p class="text-[10px] text-on-surface-variant">Central Command</p>
+</div>
+<img alt="Administrator Profile" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="Professional headshot of a corporate finance administrator in a modern office setting, clean lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdUnBhEWvJE9MTY4k-5yC8-zP8WLt7PzCYlprgXUJcG4R4EEKe-JmuWq1uQPsgE93eXQe3pT5kCIWWps4oVUMk6VreviO22edGuOd3VBa410PPWR6omR_s46qma0TkBaRfmYoj5lGKEylovxUlUNi4pa4iciNaL2O70tecar2pKmktUPw_IxhypHYkhsNOmSX7kaSfRfoTik_1QFf2m8I-bSwMa7fCfTbJnrRPnwLSq_R36x0Cn7uv_4_C3WOWBPlHHSVHOYCVwxEJ"/>
+</div>
+</div>
+</header>
+<section class="p-8">
+<!-- Bento Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<!-- Card 1: Total -->
+<div class="bg-surface-container-lowest p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl" data-icon="groups">groups</span>
+</div>
+<p class="text-sm font-label text-on-surface-variant uppercase tracking-widest font-semibold mb-1">Total Suppliers</p>
+<h3 class="text-4xl font-headline font-extrabold text-primary">128</h3>
+<div class="mt-4 flex items-center gap-1 text-tertiary text-xs font-bold">
+<span class="material-symbols-outlined text-sm" data-icon="trending_up">trending_up</span>
+<span>+4% from last month</span>
+</div>
+</div>
+<!-- Card 2: Active -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border-l-4 border-tertiary">
+<p class="text-sm font-label text-on-surface-variant uppercase tracking-widest font-semibold mb-1">Active</p>
+<h3 class="text-4xl font-headline font-extrabold text-on-surface">112</h3>
+<p class="mt-4 text-xs text-on-surface-variant italic">Operational status verified</p>
+</div>
+<!-- Card 3: Pending -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border-l-4 border-error">
+<p class="text-sm font-label text-on-surface-variant uppercase tracking-widest font-semibold mb-1">Pending/Inactive</p>
+<h3 class="text-4xl font-headline font-extrabold text-on-surface">16</h3>
+<p class="mt-4 text-xs text-on-surface-variant italic">Awaiting documentation</p>
+</div>
+<!-- Card 4: Recently Updated -->
+<div class="bg-primary text-white p-6 rounded-xl shadow-lg bg-gradient-to-br from-primary to-primary-container">
+<p class="text-sm font-label opacity-80 uppercase tracking-widest font-semibold mb-1">Recently Updated</p>
+<h3 class="text-4xl font-headline font-extrabold">4</h3>
+<div class="mt-4 flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-primary bg-slate-300"></div>
+<div class="w-6 h-6 rounded-full border-2 border-primary bg-slate-400"></div>
+<div class="w-6 h-6 rounded-full border-2 border-primary bg-slate-500"></div>
+<div class="w-6 h-6 rounded-full border-2 border-primary flex items-center justify-center bg-white/20 text-[10px]">+1</div>
+</div>
+</div>
+</div>
+<!-- Filter & Search Bar -->
+<div class="bg-surface-container-low p-4 rounded-xl mb-6 flex flex-wrap items-center gap-4">
+<div class="flex-1 min-w-[300px] relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-xl" data-icon="search">search</span>
+<input class="w-full bg-surface-container-lowest border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 placeholder:text-outline-variant" placeholder="Search Supplier Code, Legal Name, Tax ID..." type="text"/>
+</div>
+<div class="h-8 w-px bg-outline-variant hidden lg:block"></div>
+<div class="flex items-center gap-2">
+<select class="bg-surface-container-lowest border-none rounded-lg text-xs font-semibold py-2 px-4 focus:ring-2 focus:ring-primary/20">
+<option>Status: All</option>
+<option>Active</option>
+<option>Inactive</option>
+<option>Pending</option>
+</select>
+<select class="bg-surface-container-lowest border-none rounded-lg text-xs font-semibold py-2 px-4 focus:ring-2 focus:ring-primary/20">
+<option>Terms: NET30</option>
+<option>NET45</option>
+<option>COD</option>
+</select>
+<select class="bg-surface-container-lowest border-none rounded-lg text-xs font-semibold py-2 px-4 focus:ring-2 focus:ring-primary/20">
+<option>Region: All</option>
+<option>North America</option>
+<option>Europe</option>
+<option>APAC</option>
+</select>
+</div>
+<button class="bg-primary text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:brightness-110 transition-all shadow-md">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                    Register New
+                </button>
+</div>
+<!-- Main Data Table -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-high/50 text-on-surface-variant text-[10px] uppercase tracking-widest font-bold">
+<th class="px-6 py-4">Supplier Code</th>
+<th class="px-6 py-4">Legal Name</th>
+<th class="px-6 py-4">Tax Status</th>
+<th class="px-6 py-4">Payment Terms</th>
+<th class="px-6 py-4">Bank Detail Status</th>
+<th class="px-6 py-4">Activation Status</th>
+<th class="px-6 py-4">Updated At</th>
+<th class="px-6 py-4"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-xs font-bold text-primary">SUP-001</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-xs font-bold text-outline">FF</div>
+<span class="text-sm font-semibold">Fresh Farms Ltd.</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-container/10 text-tertiary text-[10px] font-bold px-2 py-1 rounded">Verified</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium">NET 30</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 group-hover:hidden">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="text-[10px] text-outline italic blur-[2px]">************</span>
+</div>
+<span class="hidden group-hover:inline text-[10px] text-primary font-bold">Restricted View</span>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter">Active</span>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">Oct 12, 2023</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-xs font-bold text-primary">SUP-002</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-xs font-bold text-outline">PM</div>
+<span class="text-sm font-semibold">Prime Meats Inc.</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-container/10 text-tertiary text-[10px] font-bold px-2 py-1 rounded">Verified</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium">NET 45</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="text-[10px] text-outline italic blur-[2px]">************</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter">Active</span>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">Sep 28, 2023</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</td>
+</tr>
+<!-- Row 3 (Pending) -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-xs font-bold text-primary">SUP-003</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-xs font-bold text-outline">GD</div>
+<span class="text-sm font-semibold">Global Dairy Co.</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-error-container text-error text-[10px] font-bold px-2 py-1 rounded">Missing Doc</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium">COD</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="text-[10px] text-outline italic blur-[2px]">************</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-surface-variant text-on-surface-variant text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter">Pending</span>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">Oct 14, 2023</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-xs font-bold text-primary">SUP-004</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-xs font-bold text-outline">OW</div>
+<span class="text-sm font-semibold">Ocean Waves Seafood</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-container/10 text-tertiary text-[10px] font-bold px-2 py-1 rounded">Verified</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium">NET 30</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-sm" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="text-[10px] text-outline italic blur-[2px]">************</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter">Active</span>
+</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">Oct 01, 2023</td>
+<td class="px-6 py-4 text-right">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="p-4 bg-surface-container-low/30 border-t border-surface-container flex items-center justify-between">
+<p class="text-xs text-on-surface-variant font-medium">Showing 4 of 128 suppliers</p>
+<div class="flex gap-2">
+<button class="p-1 rounded hover:bg-surface-container-high text-outline">
+<span class="material-symbols-outlined text-lg" data-icon="first_page">first_page</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-outline">
+<span class="material-symbols-outlined text-lg" data-icon="chevron_left">chevron_left</span>
+</button>
+<div class="flex items-center px-4 gap-1">
+<span class="text-xs font-bold text-primary">1</span>
+<span class="text-xs text-outline">/</span>
+<span class="text-xs text-outline">32</span>
+</div>
+<button class="p-1 rounded hover:bg-surface-container-high text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="chevron_right">chevron_right</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-high text-primary">
+<span class="material-symbols-outlined text-lg" data-icon="last_page">last_page</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer Audit Info -->
+<footer class="px-8 pb-8 flex justify-between items-center opacity-60">
+<div class="flex items-center gap-2 text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">
+<span class="material-symbols-outlined text-sm" data-icon="verified_user">verified_user</span>
+                Data Encryption Active
+            </div>
+<div class="text-[10px] text-on-surface-variant">
+                Last Master Sync: 2023-10-24 14:22:11 | Server: US-EAST-ERP-01
+            </div>
+</footer>
+</main>
+<!-- FAB for Quick Actions - Contextual Suppression Check -->
+<!-- Hidden on Details/Settings as per instructions, but useful on Master Hub -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 transition-transform z-50">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</button>
+</body></html>

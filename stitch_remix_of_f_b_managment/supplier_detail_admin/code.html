@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Supplier Detail View - ProcureMaster</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .masked-data {
+            filter: blur(4px);
+            user-select: none;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "outline": "#757684",
+                        "on-secondary-container": "#57657a",
+                        "primary": "#27389a",
+                        "outline-variant": "#c5c5d4",
+                        "surface-bright": "#f7f9fb",
+                        "secondary-container": "#d5e3fc",
+                        "tertiary": "#004e33",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#006846",
+                        "surface-tint": "#4555b7",
+                        "on-surface-variant": "#454652",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary-container": "#4151b3",
+                        "surface": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#d5e3fc",
+                        "tertiary-fixed": "#6ffbbe",
+                        "primary-fixed": "#dee0ff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "inverse-primary": "#bbc3ff",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-variant": "#e0e3e5",
+                        "surface-container": "#eceef0",
+                        "surface-container-low": "#f2f4f6",
+                        "on-primary": "#ffffff",
+                        "background": "#f7f9fb",
+                        "error-container": "#ffdad6",
+                        "surface-container-high": "#e6e8ea",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#d8dadc",
+                        "inverse-surface": "#2d3133",
+                        "on-primary-fixed": "#000e5e",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "on-tertiary-container": "#5debaf",
+                        "on-background": "#191c1e",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-surface": "#191c1e",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-error-container": "#93000a",
+                        "secondary": "#515f74",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#002113",
+                        "on-primary-container": "#cacfff"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface font-body text-on-surface flex min-h-screen">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-72 fixed left-0 top-0 bg-[#f2f4f6] dark:bg-slate-900 flex flex-col py-6 gap-2 z-40">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined">inventory_2</span>
+</div>
+<div>
+<h2 class="font-manrope font-bold text-slate-900 dark:text-white leading-tight">Global Supply</h2>
+<p class="text-[10px] uppercase tracking-widest text-slate-500">Enterprise ERP</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-600 dark:text-slate-400 px-4 py-3 mx-2 flex items-center gap-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors font-inter text-sm tracking-wide" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="bg-white dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-semibold shadow-sm rounded-lg mx-2 px-4 py-3 flex items-center gap-3 translate-x-1 transition-transform font-inter text-sm tracking-wide" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+                Suppliers
+            </a>
+<a class="text-slate-600 dark:text-slate-400 px-4 py-3 mx-2 flex items-center gap-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors font-inter text-sm tracking-wide" href="#">
+<span class="material-symbols-outlined">shopping_cart</span>
+                Procurement
+            </a>
+<a class="text-slate-600 dark:text-slate-400 px-4 py-3 mx-2 flex items-center gap-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors font-inter text-sm tracking-wide" href="#">
+<span class="material-symbols-outlined">payments</span>
+                Finance
+            </a>
+<a class="text-slate-600 dark:text-slate-400 px-4 py-3 mx-2 flex items-center gap-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors font-inter text-sm tracking-wide" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</nav>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-72 flex-1 flex flex-col">
+<!-- TopAppBar (Shared Component) -->
+<header class="flex justify-between items-center px-6 h-16 w-full z-50 backdrop-blur-md bg-[#f7f9fb] dark:bg-slate-950 sticky top-0">
+<div class="flex items-center gap-4">
+<span class="text-lg font-extrabold tracking-tight text-indigo-700 dark:text-indigo-300 font-manrope">ProcureMaster</span>
+<div class="h-6 w-px bg-outline-variant/30"></div>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-sm">search</span>
+<input class="pl-9 pr-4 py-1.5 bg-surface-container-low border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-primary/20" placeholder="Search supplier database..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors rounded-full active:scale-95 duration-150">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="Administrator Profile" class="w-full h-full object-cover" data-alt="professional portrait of a senior financial administrator in a clean office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuARChhOj-ydy7OVV8z2ZYNlg2SJmS8xKCtZRXqGcoOxPNdDz1DMixhcxjSh1fdBiNkvNkum9jLNgOYj5mf_-tzPxhStA8sVhYTRXWBLwarwljz6oOdWIPQxuD2E2XqRhzYBgqHK1FO937dL6a6rTPWIMQeYD8u1bZdePbet_Fz7kUTBqjgZwrenvP6bL4scOP-uqkM0XbA06DwlVnWz_RkihPtrJ8fRrBQcbmOHWig3XkdCy8irxl83XZHdcsSLopjho5WwLMozKheY"/>
+</div>
+</div>
+</header>
+<!-- Content Area -->
+<div class="p-8 flex gap-8">
+<!-- Left: Main Detail Sections -->
+<div class="flex-1 space-y-8 max-w-4xl">
+<!-- Header Section -->
+<div class="flex items-end justify-between">
+<div>
+<nav class="flex items-center gap-2 text-xs font-medium text-on-surface-variant mb-2 uppercase tracking-widest">
+<span>Suppliers</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-primary font-bold">SUP-001</span>
+</nav>
+<h1 class="text-3xl font-headline font-extrabold text-on-surface">Supplier: Fresh Farms Ltd</h1>
+<p class="text-on-surface-variant mt-1 font-medium tracking-tight">System Entity ID: SUP-001-FF-2023</p>
+</div>
+<div class="flex items-center gap-3 mb-1">
+<span class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-tertiary-container text-on-tertiary-container">
+                            Active
+                        </span>
+</div>
+</div>
+<!-- Section Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- 1. Supplier Identity -->
+<section class="bg-surface-container-lowest p-6 rounded-xl space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-xl">fingerprint</span>
+<h3 class="font-headline font-bold text-sm text-on-surface">Supplier Identity</h3>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Full Business Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg text-sm font-medium focus:ring-primary/20" type="text" value="Fresh Farms Ltd"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Supplier Code</label>
+<input class="w-full bg-surface-dim/30 border-none rounded-lg text-sm font-medium text-on-surface/60 cursor-not-allowed" readonly="" type="text" value="SUP-001"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Website</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg text-sm font-medium focus:ring-primary/20" type="text" value="www.freshfarms.co.uk"/>
+</div>
+</div>
+</div>
+</section>
+<!-- 2. Legal Info -->
+<section class="bg-surface-container-lowest p-6 rounded-xl space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-xl">gavel</span>
+<h3 class="font-headline font-bold text-sm text-on-surface">Legal Info</h3>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Registered Address</label>
+<textarea class="w-full bg-surface-container-low border-none rounded-lg text-sm font-medium focus:ring-primary/20 resize-none" rows="2">Unit 14, Industrial Valley, Oxfordshire, OX4 4GA, United Kingdom</textarea>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Registration Number</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg text-sm font-medium focus:ring-primary/20" type="text" value="UK-8829410"/>
+</div>
+</div>
+</section>
+<!-- 3. Tax Info -->
+<section class="bg-surface-container-lowest p-6 rounded-xl space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-xl">receipt_long</span>
+<h3 class="font-headline font-bold text-sm text-on-surface">Tax Info</h3>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">VAT / Tax ID</label>
+<input class="w-full bg-surface-container-low border-none rounded-lg text-sm font-medium focus:ring-primary/20" type="text" value="GB 123 4567 89"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Tax Category</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg text-sm font-medium focus:ring-primary/20">
+<option>Standard Rated (20%)</option>
+<option>Zero Rated</option>
+<option>Exempt</option>
+</select>
+</div>
+</div>
+</section>
+<!-- 4. Payment Terms -->
+<section class="bg-surface-container-lowest p-6 rounded-xl space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-xl">schedule</span>
+<h3 class="font-headline font-bold text-sm text-on-surface">Payment Terms</h3>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Default Terms</label>
+<select class="w-full bg-surface-container-low border-none rounded-lg text-sm font-medium focus:ring-primary/20">
+<option selected="">NET 30</option>
+<option>NET 15</option>
+<option>Due on Receipt</option>
+<option>Prepaid</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Currency</label>
+<div class="flex items-center gap-3 bg-surface-container-low px-3 py-2 rounded-lg">
+<span class="font-bold text-primary">GBP</span>
+<span class="text-sm text-on-surface-variant font-medium">British Pound Sterling</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. Bank Details (Spans 2 columns) -->
+<section class="md:col-span-2 bg-surface-container-lowest p-6 rounded-xl border border-primary/10">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">account_balance</span>
+<h3 class="font-headline font-bold text-sm text-on-surface">Bank Details</h3>
+</div>
+<button class="flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/20">
+<span class="material-symbols-outlined text-sm">visibility</span>
+                                REVEAL SENSITIVE DATA
+                            </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Account Holder</label>
+<p class="text-sm font-semibold">Fresh Farms Limited</p>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Bank Name</label>
+<p class="text-sm font-semibold">Lloyds Bank Commercial</p>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">Account Number</label>
+<p class="text-sm font-semibold flex items-center gap-2">
+<span class="masked-data">0011</span><span>5678</span>
+</p>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">SWIFT / BIC</label>
+<p class="text-sm font-semibold masked-data">LOYDGB21XXX</p>
+</div>
+</div>
+</section>
+<!-- 6. Audit/History -->
+<section class="md:col-span-2 bg-surface-container-low p-6 rounded-xl">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-outline text-xl">history</span>
+<h3 class="font-headline font-bold text-sm text-on-surface">Audit &amp; Revision History</h3>
+</div>
+<div class="space-y-0 relative">
+<!-- Timeline Track -->
+<div class="absolute left-[7px] top-2 bottom-2 w-0.5 bg-outline-variant/30"></div>
+<div class="relative pl-8 pb-6">
+<div class="absolute left-0 top-1 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-white"></div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm font-bold text-on-surface">Bank account details updated</p>
+<p class="text-xs text-on-surface-variant mt-0.5">By Administrator (Sarah J.) • Verification Pending</p>
+</div>
+<span class="text-[10px] font-medium text-on-surface-variant">2 hours ago</span>
+</div>
+</div>
+<div class="relative pl-8 pb-6">
+<div class="absolute left-0 top-1 w-4 h-4 rounded-full bg-outline flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-white/50"></div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm font-medium text-on-surface">Supplier Status changed to 'Active'</p>
+<p class="text-xs text-on-surface-variant mt-0.5">By System Automation • Onboarding complete</p>
+</div>
+<span class="text-[10px] font-medium text-on-surface-variant">Oct 24, 2023</span>
+</div>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-4 h-4 rounded-full bg-outline flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-white/50"></div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm font-medium text-on-surface">Initial Profile Created</p>
+<p class="text-xs text-on-surface-variant mt-0.5">By Procurement Lead (Mark R.)</p>
+</div>
+<span class="text-[10px] font-medium text-on-surface-variant">Oct 20, 2023</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- Right Action Panel -->
+<aside class="w-80 space-y-6">
+<div class="sticky top-24">
+<div class="bg-surface-container-highest p-6 rounded-2xl shadow-sm space-y-4">
+<h4 class="font-headline font-extrabold text-xs text-on-surface-variant uppercase tracking-[0.2em] mb-4">Management Actions</h4>
+<button class="w-full flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-br from-primary to-primary-container text-white rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform active:scale-95 text-sm">
+<span class="material-symbols-outlined text-lg">save</span>
+                            SAVE DETAILED CHANGES
+                        </button>
+<button class="w-full flex items-center justify-center gap-2 px-6 py-3 bg-surface-container-lowest text-on-surface-variant border border-outline-variant/30 rounded-xl font-semibold hover:bg-surface-bright transition-colors text-sm">
+<span class="material-symbols-outlined text-lg">edit</span>
+                            EDIT PROFILE
+                        </button>
+<div class="pt-4 border-t border-outline-variant/20">
+<button class="w-full flex items-center justify-center gap-2 px-6 py-3 text-error bg-error-container/30 hover:bg-error-container/50 rounded-xl font-bold transition-colors text-sm">
+<span class="material-symbols-outlined text-lg">block</span>
+                                INACTIVATE SUPPLIER
+                            </button>
+</div>
+</div>
+<!-- Quick Summary Card -->
+<div class="mt-6 bg-surface-container-low/50 backdrop-blur-sm p-6 rounded-2xl space-y-4">
+<h4 class="font-headline font-bold text-xs text-on-surface-variant uppercase tracking-wider">Financial Snapshot</h4>
+<div class="space-y-4">
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant mb-1">TOTAL SPEND (YTD)</p>
+<p class="text-2xl font-headline font-extrabold text-primary">£42,850.00</p>
+</div>
+<div class="flex items-center justify-between">
+<p class="text-xs font-medium text-on-surface-variant">Pending Invoices</p>
+<span class="text-xs font-bold text-on-surface">12</span>
+</div>
+<div class="flex items-center justify-between">
+<p class="text-xs font-medium text-on-surface-variant">Days Payable (Avg)</p>
+<span class="text-xs font-bold text-tertiary">28.4 Days</span>
+</div>
+</div>
+<div class="pt-4 border-t border-outline-variant/10">
+<img alt="Financial Performance Chart" class="w-full h-24 object-cover rounded-lg opacity-80 grayscale hover:grayscale-0 transition-all" data-alt="data visualization line graph showing consistent spend patterns with a professional aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDywrmmpKFZWWDXAO_MfJPvFFtOPpcGe-h4pt4MFB1ub7gQ6hF12AlZGT95ai7-15Pt0zSDQUkuPouqb3GvIBeHyBVwQxAplVgMn4znblqyUpBH1NASBUaFsW4UhD3JSYtQfZc1_YlWaTdstN_KiVcx-mGARHQGxMLEUeckXBbCRAIaMZcT8bjh6h-OsoCNz-ky2Nt9wlvkB8er0eoa2B_Q_ai9UXL88tMdDiTj8O-lhODyJVesR9CNw5-B2sIhVb4RWwUk_OcWvaAu"/>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+</body></html>

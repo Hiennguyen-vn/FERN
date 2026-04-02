@@ -252,9 +252,9 @@ describe('HR route group', () => {
   })
 
   it.each([
-    ['/hr/employees', 'Nhân viên'],
+    ['/hr/employees', 'Employee Master'],
     ['/hr/employees/new', 'Create Employee'],
-    ['/hr/employees/1', 'Chi tiết nhân viên'],
+    ['/hr/employees/1', 'Employee Profile'],
     ['/hr/contracts?employeeId=1', 'Hợp đồng'],
     ['/hr/contracts/new', 'Create Contract'],
     ['/hr/contracts/10?employeeId=1', 'Chi tiết hợp đồng'],

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Edit Ingredient | Precision Atelier ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-surface": "#2d3133",
+                        "inverse-primary": "#bbc3ff",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-primary": "#ffffff",
+                        "surface-tint": "#4555b7",
+                        "surface": "#f7f9fb",
+                        "on-primary-fixed": "#000e5e",
+                        "on-primary-container": "#cacfff",
+                        "on-surface-variant": "#454652",
+                        "outline": "#757684",
+                        "secondary-fixed": "#d5e3fc",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary-container": "#5debaf",
+                        "background": "#f7f9fb",
+                        "tertiary": "#004e33",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container": "#eceef0",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "on-tertiary-fixed": "#002113",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-container-high": "#e6e8ea",
+                        "on-secondary-container": "#57657a",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "secondary": "#515f74",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "primary-container": "#4151b3",
+                        "outline-variant": "#c5c5d4",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#f7f9fb",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "tertiary-container": "#006846",
+                        "surface-dim": "#d8dadc",
+                        "primary-fixed": "#dee0ff",
+                        "on-background": "#191c1e",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary": "#27389a",
+                        "secondary-container": "#d5e3fc"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface overflow-x-hidden">
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 left-0 top-0 fixed bg-[#f2f4f6] dark:bg-slate-950 flex flex-col p-4 space-y-2 z-40">
+<div class="mb-8 px-2">
+<h1 class="text-lg font-black text-[#27389a] dark:text-[#4151b3] font-headline">Precision Atelier</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Enterprise Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-[#ffffff] dark:bg-slate-800 text-[#3F51B5] dark:text-white rounded-lg shadow-sm font-bold text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span>Ingredients</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#ffffff]/50 transition-all rounded-lg font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 border-t border-outline-variant/20 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] hover:text-[#191c1e] text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="contact_support">contact_support</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-error hover:bg-error-container/20 rounded-lg text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="bg-[#f7f9fb] dark:bg-slate-900 sticky top-0 z-50 flex justify-between items-center w-full px-8 py-4">
+<div class="flex items-center gap-4">
+<span class="text-on-surface-variant font-label text-sm font-medium tracking-tight">ING-8842-X</span>
+<h2 class="text-xl font-bold text-[#191c1e] dark:text-white font-headline">Madagascar Bourbon Vanilla Bean</h2>
+<span class="px-3 py-0.5 bg-tertiary-container text-on-tertiary-container rounded-full text-[11px] font-extrabold tracking-wider">ACTIVE</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-xl" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-xl" data-icon="help_outline">help_outline</span>
+</div>
+<img alt="Product Manager Profile" class="w-8 h-8 rounded-full border border-outline-variant" data-alt="close-up portrait of a professional woman with a confident expression in a clean modern office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrwCd6LcS9LTjxWQoHMx0s62NisE1WvbIlx_t2uH016V190345jx3GYFWwHZWTgozCtjjZiAcRXjzTfzh1XW7JrOTJU4DlijPKa5mCPB0YOY94Dk3teB2Xuzw2mjoYr3tP2Bkbnq_X-rE0oYaVQPlPVE9BEjEphwqEDuGyc3saRblaQ01_886gPQy0gbSuVBZAOzbh8LQfPeSMhepcpeBd7lbV1OVCE7u11K-0w5bWEeTVlYyy6Oyu4VTfuZB3L6bzhx9tvvaKY-4-"/>
+</div>
+</header>
+<!-- Content Body -->
+<div class="p-8 pb-32 max-w-7xl mx-auto w-full">
+<!-- Warning Banner -->
+<div class="mb-8 flex items-center gap-4 p-4 bg-error-container/30 border-l-4 border-error rounded-r-xl">
+<span class="material-symbols-outlined text-error" data-icon="warning">warning</span>
+<div>
+<p class="text-sm font-bold text-on-error-container">Critical Dependency Alert</p>
+<p class="text-xs text-on-error-container opacity-80 font-medium italic">Marking as discontinued will affect 5 active recipes including 'Signature Crème Brûlée' and 'Vanilla Chiffon Cake'.</p>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-8">
+<!-- Main Form Column -->
+<div class="col-span-8 space-y-8">
+<!-- Identity Section -->
+<section class="bg-surface-container-lowest p-6 rounded-xl shadow-sm">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="fingerprint">fingerprint</span>
+<h3 class="text-sm font-extrabold uppercase tracking-widest text-on-surface-variant font-label">Ingredient Identity</h3>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Formal Name</label>
+<input class="w-full bg-surface-container-low border-none rounded-md focus:ring-2 focus:ring-primary text-sm py-2.5 px-3 font-medium" type="text" value="Madagascar Bourbon Vanilla Bean"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Internal SKU</label>
+<input class="w-full bg-surface-container-low border-none rounded-md focus:ring-2 focus:ring-primary text-sm py-2.5 px-3 font-medium" type="text" value="VAN-MAD-B-001"/>
+</div>
+<div class="col-span-2 space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Technical Description</label>
+<textarea class="w-full bg-surface-container-low border-none rounded-md focus:ring-2 focus:ring-primary text-sm py-2.5 px-3 font-medium" rows="3">Grown in the Sava region of Madagascar. Hand-picked, cured for months to develop rich, creamy, sweet flavor profiles with balsamic undertones.</textarea>
+</div>
+</div>
+</section>
+<!-- Classification & Properties -->
+<div class="grid grid-cols-2 gap-8">
+<section class="bg-surface-container-lowest p-6 rounded-xl shadow-sm">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="category">category</span>
+<h3 class="text-sm font-extrabold uppercase tracking-widest text-on-surface-variant font-label">Classification</h3>
+</div>
+<div class="space-y-4">
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Primary Category</label>
+<select class="w-full bg-surface-container-low border-none rounded-md text-sm py-2.5 px-3 font-medium">
+<option>Baking &amp; Pastry</option>
+<option selected="">Flavorings &amp; Extracts</option>
+<option>Spices &amp; Herbs</option>
+</select>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Storage Requirement</label>
+<div class="flex gap-2">
+<span class="px-3 py-1.5 bg-surface-container-high rounded text-xs font-bold text-on-surface">Ambient</span>
+<span class="px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded text-xs font-bold">Cool/Dark</span>
+<span class="px-3 py-1.5 bg-surface-container-high rounded text-xs font-bold text-on-surface opacity-40">Refrigerated</span>
+</div>
+</div>
+</div>
+</section>
+<section class="bg-surface-container-lowest p-6 rounded-xl shadow-sm">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="straighten">straighten</span>
+<h3 class="text-sm font-extrabold uppercase tracking-widest text-on-surface-variant font-label">Measurement</h3>
+</div>
+<div class="space-y-4">
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Purchase Unit</label>
+<input class="w-full bg-surface-container-low border-none rounded-md text-sm py-2.5 px-3 font-medium" type="text" value="Kilogram (kg)"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Recipe Unit</label>
+<input class="w-full bg-surface-container-low border-none rounded-md text-sm py-2.5 px-3 font-medium" type="text" value="Gram (g)"/>
+</div>
+</div>
+<div class="p-3 bg-surface-container-low rounded-lg">
+<p class="text-[10px] text-on-surface-variant font-bold uppercase mb-1">Conversion Factor</p>
+<p class="text-sm font-mono font-bold text-primary">1 Purchase Unit = 1000 Recipe Units</p>
+</div>
+</div>
+</section>
+</div>
+<!-- Commercial Usability -->
+<section class="bg-surface-container-lowest p-6 rounded-xl shadow-sm">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="payments">payments</span>
+<h3 class="text-sm font-extrabold uppercase tracking-widest text-on-surface-variant font-label">Commercial Usability</h3>
+</div>
+<div class="grid grid-cols-3 gap-6">
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Last Purchase Price</label>
+<div class="flex items-center bg-surface-container-low rounded-md px-3 py-2.5">
+<span class="text-on-surface-variant text-sm font-bold mr-2">$</span>
+<input class="w-full bg-transparent border-none p-0 focus:ring-0 text-sm font-medium" type="text" value="482.50"/>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Vendor Lead Time</label>
+<div class="flex items-center bg-surface-container-low rounded-md px-3 py-2.5">
+<input class="w-full bg-transparent border-none p-0 focus:ring-0 text-sm font-medium" type="text" value="14"/>
+<span class="text-on-surface-variant text-[10px] font-bold ml-2">DAYS</span>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Waste Factor</label>
+<div class="flex items-center bg-surface-container-low rounded-md px-3 py-2.5">
+<input class="w-full bg-transparent border-none p-0 focus:ring-0 text-sm font-medium" type="text" value="2.5"/>
+<span class="text-on-surface-variant text-sm font-bold ml-2">%</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Sidebar column -->
+<div class="col-span-4 space-y-8">
+<!-- Recipe Usage Card -->
+<section class="glass-card p-6 rounded-xl border border-outline-variant/10 shadow-xl overflow-hidden relative">
+<div class="absolute top-0 right-0 -mt-2 -mr-2 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="menu_book">menu_book</span>
+<h3 class="text-sm font-extrabold uppercase tracking-widest text-on-surface-variant font-label">Recipe Usage</h3>
+</div>
+<span class="bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-bold">5 ACTIVE</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-lg group hover:bg-surface-container transition-colors">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Signature Crème Brûlée</span>
+<span class="text-[10px] text-on-surface-variant">Pastry Dept</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary text-lg" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-lg group hover:bg-surface-container transition-colors">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Vanilla Chiffon Cake</span>
+<span class="text-[10px] text-on-surface-variant">Baking Dept</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary text-lg" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-lg group hover:bg-surface-container transition-colors">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Bean-infused Syrup</span>
+<span class="text-[10px] text-on-surface-variant">Bar/Beverage</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary text-lg" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-lg group hover:bg-surface-container transition-colors">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">Pâtissière Base</span>
+<span class="text-[10px] text-on-surface-variant">Production Room</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary text-lg" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-lowest rounded-lg group hover:bg-surface-container transition-colors">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-surface">House Ice Cream</span>
+<span class="text-[10px] text-on-surface-variant">Dessert Station</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary text-lg" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+</div>
+</div>
+<button class="w-full mt-6 py-2.5 text-[11px] font-bold text-primary bg-primary/5 rounded-lg border border-primary/10 hover:bg-primary/10 transition-colors uppercase tracking-widest">
+                            View Full Dependency Map
+                        </button>
+</section>
+<!-- Quality Standards -->
+<section class="bg-surface-container-lowest p-6 rounded-xl shadow-sm">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary" data-icon="verified">verified</span>
+<h3 class="text-sm font-extrabold uppercase tracking-widest text-on-surface-variant font-label">QC Standards</h3>
+</div>
+<div class="space-y-4">
+<div class="flex items-start gap-3">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary mt-2"></div>
+<p class="text-xs text-on-surface-variant font-medium">Minimum moisture content 30%</p>
+</div>
+<div class="flex items-start gap-3">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary mt-2"></div>
+<p class="text-xs text-on-surface-variant font-medium">Length must exceed 15cm per pod</p>
+</div>
+<div class="flex items-start gap-3">
+<div class="w-1.5 h-1.5 rounded-full bg-tertiary mt-2"></div>
+<p class="text-xs text-on-surface-variant font-medium">No visible mold or external crystallization</p>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Actions -->
+<footer class="fixed bottom-0 left-64 right-0 bg-surface-bright/95 backdrop-blur-md border-t border-outline-variant/10 px-8 py-5 flex justify-between items-center z-50">
+<div class="flex items-center gap-4">
+<button class="px-6 py-3 bg-error text-on-error rounded-md text-xs font-bold shadow-lg hover:shadow-xl hover:bg-error/90 transition-all uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="inventory_2">inventory_2</span>
+                    Mark Discontinued
+                </button>
+<button class="px-6 py-3 border border-outline-variant text-on-surface-variant rounded-md text-xs font-bold hover:bg-surface-container-high transition-all uppercase tracking-widest">
+                    Deactivate
+                </button>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-6 py-3 text-on-surface-variant text-xs font-bold hover:underline">Discard Changes</button>
+<button class="px-8 py-3 signature-gradient text-white rounded-md text-xs font-black shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-[0.15em] flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="save">save</span>
+                    Save Changes
+                </button>
+</div>
+</footer>
+</main>
+</body></html>

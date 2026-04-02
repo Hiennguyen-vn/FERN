@@ -293,12 +293,14 @@
 .nav-link:hover {
   color: var(--primary);
   background: var(--surface-container);
+  transform: translateX(2px);
 }
 
 .nav-link.active {
   color: var(--primary);
-  background: var(--surface-container-highest);
+  background: var(--surface-container-lowest);
   font-weight: var(--font-semibold);
+  box-shadow: var(--shadow-sm);
 }
 
 .nav-link-short {
@@ -881,6 +883,7 @@
 .summary-card,
 .action-kpi-card {
   min-height: 10.5rem;
+  border-radius: var(--radius-2xl);
 }
 
 .summary-card-label,
@@ -1648,7 +1651,7 @@
 
 .button {
   min-height: 2.5rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   box-shadow: none;
 }
 
@@ -1733,9 +1736,11 @@
   grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr) minmax(18rem, 1fr);
 }
 
-.action-hub-glass-panel {
+.action-hub-glass-panel,
+.glass-card {
   background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
 .action-timeline {
@@ -1840,7 +1845,7 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 1.25rem;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   background: var(--surface-container-lowest);
   box-shadow: var(--shadow-ambient);
   border: none;
@@ -1926,8 +1931,8 @@
   gap: 0.875rem;
   padding: 0.875rem 1rem;
   border-radius: var(--radius-xl);
-  background: var(--surface-container-lowest);
-  box-shadow: var(--shadow-ambient);
+  background: var(--surface-container-low);
+  box-shadow: none;
   border: none;
 }
 
@@ -1949,8 +1954,9 @@
 .workspace-inline-select,
 .workspace-inline-pill {
   min-height: 2.5rem;
-  border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-md);
+  border: none;
+  box-shadow: 0 0 0 1px rgba(224, 227, 229, 0.9);
+  border-radius: var(--radius-lg);
   background: var(--surface-container-lowest);
   color: var(--on-surface);
 }
@@ -2455,7 +2461,7 @@
 .payroll-summary-card {
   min-height: 11rem;
   padding: 1.35rem;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   background: var(--surface-container-lowest);
   box-shadow: var(--shadow-ambient);
   border: none;

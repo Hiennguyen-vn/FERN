@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sales Dashboard | Indigo Kitchen OS ERP</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-surface": "#2d3133",
+              "outline-variant": "#c5c5d4",
+              "on-primary-container": "#cacfff",
+              "primary-container": "#4151b3",
+              "on-secondary": "#ffffff",
+              "primary-fixed-dim": "#bbc3ff",
+              "primary": "#27389a",
+              "surface-variant": "#e0e3e5",
+              "inverse-primary": "#bbc3ff",
+              "surface-tint": "#4555b7",
+              "on-error-container": "#93000a",
+              "secondary-fixed": "#d5e3fc",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-bright": "#f7f9fb",
+              "surface-container-lowest": "#ffffff",
+              "on-surface": "#191c1e",
+              "on-secondary-container": "#57657a",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "inverse-on-surface": "#eff1f3",
+              "error": "#ba1a1a",
+              "on-secondary-fixed": "#0d1c2e",
+              "secondary": "#515f74",
+              "surface-dim": "#d8dadc",
+              "surface": "#f7f9fb",
+              "on-secondary-fixed-variant": "#3a485b",
+              "surface-container-highest": "#e0e3e5",
+              "on-tertiary": "#ffffff",
+              "on-primary-fixed": "#000e5e",
+              "on-primary": "#ffffff",
+              "on-surface-variant": "#454652",
+              "error-container": "#ffdad6",
+              "on-error": "#ffffff",
+              "tertiary": "#004e33",
+              "tertiary-fixed": "#6ffbbe",
+              "outline": "#757684",
+              "on-tertiary-container": "#5debaf",
+              "tertiary-container": "#006846",
+              "secondary-fixed-dim": "#b9c7df",
+              "surface-container-low": "#f2f4f6",
+              "secondary-container": "#d5e3fc",
+              "on-background": "#191c1e",
+              "background": "#f7f9fb",
+              "primary-fixed": "#dee0ff",
+              "surface-container": "#eceef0",
+              "on-tertiary-fixed": "#002113",
+              "surface-container-high": "#e6e8ea",
+              "on-tertiary-fixed-variant": "#005236"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, .font-headline { font-family: 'Manrope', sans-serif; }
+        .signature-gradient { background: linear-gradient(135deg, #27389a 0%, #4151b3 100%); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex min-h-screen">
+<!-- SideNavBar (from JSON) -->
+<aside class="bg-slate-100 dark:bg-slate-950 h-screen w-64 fixed left-0 top-0 z-50 flex flex-col p-4 space-y-2 border-r-0">
+<div class="mb-8 px-2 py-4">
+<h1 class="text-indigo-900 dark:text-indigo-100 font-black text-xl">Region Hub</h1>
+<p class="text-xs font-medium text-slate-500 uppercase tracking-widest">Precision Atelier</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center space-x-3 px-4 py-3 bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 font-bold rounded-lg shadow-sm" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-sm">Dashboard</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+<span class="text-sm">Outlets</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="text-sm">Sales</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="text-sm">Inventory</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-all hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+<span class="text-sm">Reports</span>
+</a>
+</nav>
+<div class="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-1">
+<a class="flex items-center space-x-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+<a class="flex items-center space-x-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="text-sm">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Canvas -->
+<main class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- TopNavBar (from JSON) -->
+<header class="bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-xl docked full-width top-0 sticky z-40 flex justify-between items-center w-full px-6 py-3">
+<div class="flex items-center gap-6">
+<span class="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Architectural ERP</span>
+<nav class="flex space-x-4 items-center">
+<span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Home</span>
+<span class="text-slate-300">/</span>
+<span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Sales</span>
+<span class="text-slate-300">/</span>
+<span class="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-widest border-b-2 border-indigo-700">Dashboard</span>
+</nav>
+</div>
+<div class="flex items-center space-x-6">
+<div class="flex items-center bg-surface-container-low rounded-xl px-3 py-1.5 space-x-2">
+<span class="material-symbols-outlined text-outline" data-icon="location_on">location_on</span>
+<span class="text-sm font-medium">Greater London</span>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="expand_more">expand_more</span>
+</div>
+<div class="flex items-center bg-surface-container-low rounded-xl px-3 py-1.5 space-x-2">
+<span class="material-symbols-outlined text-outline" data-icon="calendar_today">calendar_today</span>
+<span class="text-sm font-medium">Current Month</span>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="expand_more">expand_more</span>
+</div>
+<div class="flex items-center space-x-3 text-slate-500">
+<button class="hover:bg-slate-200/50 dark:hover:bg-slate-800/50 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:bg-slate-200/50 dark:hover:bg-slate-800/50 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="public">public</span>
+</button>
+<img alt="Region Manager Profile" class="w-8 h-8 rounded-full border border-surface-variant" data-alt="Professional headshot of a region manager with a focused and confident expression, neutral business background, sharp lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBujQheQJmOrma5TlrVlsy7ptPlytD3P-pSaaileCi6R5NkdyiXEOztKvU-TRLXRTRh0Zt2IomwvxwVFGO9rOCfziYIqRaob6RHJOqZPEYLsCuuPr0aOGOu8oyuh_KWN5beQDoe2ns9lHNYPnCSLq3-vfGkAb0m6HGrqe5zdArEQ41OPnNKLBAyMCX0T4se1zfZW1MsK2gVtgYjceaVS5FVQCyApwmc4KlnvHRb0CzoPhlyxSz9F6NWtNQGxCAhFqPvOsyERUT6RYHh"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-8 space-y-8 max-w-7xl mx-auto w-full">
+<!-- Summary Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<!-- Regional Revenue -->
+<div class="bg-surface-container-lowest rounded-xl p-6 transition-all hover:bg-white border-none shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+<p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-2">Regional Revenue</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-3xl font-extrabold text-on-surface">£1,245,000</h3>
+</div>
+<div class="mt-4 flex items-center text-tertiary font-bold text-sm">
+<span class="material-symbols-outlined text-sm mr-1" data-icon="trending_up">trending_up</span>
+                        +8.2% vs prev period
+                    </div>
+</div>
+<!-- ATV -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+<p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-2">Avg Transaction Value</p>
+<h3 class="text-3xl font-extrabold text-on-surface">£28.50</h3>
+<div class="mt-4 text-on-surface-variant text-sm flex items-center">
+<span class="material-symbols-outlined text-sm mr-1" data-icon="analytics">analytics</span>
+                        Stable across region
+                    </div>
+</div>
+<!-- Top Performing -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+<p class="text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-2">Top Performing Outlet</p>
+<h3 class="text-xl font-bold text-on-surface">Central Plaza</h3>
+<p class="text-sm text-on-surface-variant mt-1">112% of target achieved</p>
+<div class="mt-4">
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full signature-gradient" style="width: 85%"></div>
+</div>
+</div>
+</div>
+<!-- Warnings -->
+<div class="bg-error-container rounded-xl p-6 border-none">
+<p class="text-on-error-container text-xs font-bold uppercase tracking-widest mb-2">Performance Drop</p>
+<div class="flex items-center justify-between">
+<h3 class="text-3xl font-extrabold text-on-error-container">3</h3>
+<span class="material-symbols-outlined text-error text-3xl" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<p class="mt-2 text-error text-sm font-medium">Critical attention required</p>
+</div>
+</div>
+<!-- Main Analytics Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Sales Performance Chart (Placeholder) -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="text-xl font-bold text-on-surface">Revenue Trends</h2>
+<p class="text-sm text-on-surface-variant">Daily sales breakdown across London region</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container-low px-3 py-1 rounded text-xs font-bold">DAILY</button>
+<button class="bg-primary text-on-primary px-3 py-1 rounded text-xs font-bold">WEEKLY</button>
+</div>
+</div>
+<!-- SVG Chart Placeholder -->
+<div class="relative h-64 w-full bg-surface-container-low/30 rounded-lg flex items-end px-4 gap-4 pb-4">
+<div class="flex-1 bg-primary-container/20 h-1/2 rounded-t-sm relative group">
+<div class="absolute inset-x-0 bottom-0 bg-primary-container h-3/4 rounded-t-sm"></div>
+</div>
+<div class="flex-1 bg-primary-container/20 h-3/4 rounded-t-sm relative group">
+<div class="absolute inset-x-0 bottom-0 bg-primary-container h-4/5 rounded-t-sm"></div>
+</div>
+<div class="flex-1 bg-primary-container/20 h-2/3 rounded-t-sm relative group">
+<div class="absolute inset-x-0 bottom-0 bg-primary-container h-1/2 rounded-t-sm"></div>
+</div>
+<div class="flex-1 bg-primary-container/20 h-4/5 rounded-t-sm relative group">
+<div class="absolute inset-x-0 bottom-0 bg-primary-container h-full rounded-t-sm"></div>
+</div>
+<div class="flex-1 bg-primary-container/20 h-1/2 rounded-t-sm relative group">
+<div class="absolute inset-x-0 bottom-0 bg-primary-container h-2/3 rounded-t-sm"></div>
+</div>
+<div class="flex-1 bg-primary-container/20 h-2/3 rounded-t-sm relative group">
+<div class="absolute inset-x-0 bottom-0 bg-primary-container h-4/5 rounded-t-sm"></div>
+</div>
+<div class="flex-1 bg-primary-container/20 h-5/6 rounded-t-sm relative group">
+<div class="absolute inset-x-0 bottom-0 bg-primary-container h-2/3 rounded-t-sm"></div>
+</div>
+</div>
+<div class="flex justify-between mt-4 px-4 text-[10px] font-bold text-outline uppercase tracking-tighter">
+<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+</div>
+<!-- Best Selling Categories -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+<h2 class="text-xl font-bold text-on-surface mb-6">Category Performance</h2>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-sm font-semibold">Burgers</span>
+<span class="text-xs font-bold text-on-surface-variant">42% Growth</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-tertiary-container" style="width: 82%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-sm font-semibold">Beverages</span>
+<span class="text-xs font-bold text-on-surface-variant">28% Growth</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary-container" style="width: 65%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-sm font-semibold">Desserts</span>
+<span class="text-xs font-bold text-on-surface-variant">12% Growth</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary-container" style="width: 44%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-sm font-semibold">Sides</span>
+<span class="text-xs font-bold text-on-surface-variant">5% Growth</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-outline-variant" style="width: 31%"></div>
+</div>
+</div>
+</div>
+<button class="w-full mt-10 py-3 text-sm font-bold text-primary hover:bg-primary/5 rounded-lg transition-colors border border-primary/10">
+                        View Menu Analytics
+                    </button>
+</div>
+</div>
+<!-- Outlet Sales Matrix -->
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden">
+<div class="px-6 py-5 flex items-center justify-between bg-white">
+<h2 class="text-xl font-bold text-on-surface">Outlet Performance Matrix</h2>
+<div class="flex gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm" data-icon="search">search</span>
+<input class="pl-9 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-sm w-64 focus:ring-2 focus:ring-primary/20" placeholder="Search outlet..." type="text"/>
+</div>
+<button class="flex items-center gap-2 bg-surface-container-low px-4 py-2 rounded-lg text-sm font-bold">
+<span class="material-symbols-outlined text-sm" data-icon="filter_list">filter_list</span>
+                            Filters
+                        </button>
+</div>
+</div>
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+<th class="px-6 py-4">Outlet Name</th>
+<th class="px-6 py-4">Sales Target</th>
+<th class="px-6 py-4">Actual Sales</th>
+<th class="px-6 py-4">% Achieved</th>
+<th class="px-6 py-4">Status</th>
+<th class="px-6 py-4">Growth %</th>
+<th class="px-6 py-4 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="px-6 py-4 font-bold text-sm">Central Plaza</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">£210,000</td>
+<td class="px-6 py-4 text-sm font-semibold">£235,200</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold">112%</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full">
+<div class="bg-tertiary-container h-full" style="width: 100%"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">Target Met</span>
+</td>
+<td class="px-6 py-4 text-tertiary font-bold text-xs">+12.4%</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 material-symbols-outlined text-outline" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="px-6 py-4 font-bold text-sm">Terminal 5 Intl</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">£185,000</td>
+<td class="px-6 py-4 text-sm font-semibold">£191,000</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold">103%</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full">
+<div class="bg-tertiary-container h-full" style="width: 100%"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">Target Met</span>
+</td>
+<td class="px-6 py-4 text-tertiary font-bold text-xs">+5.1%</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 material-symbols-outlined text-outline" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group bg-error-container/5">
+<td class="px-6 py-4 font-bold text-sm">Downtown Hub</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">£150,000</td>
+<td class="px-6 py-4 text-sm font-semibold">£124,500</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-error">83%</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full">
+<div class="bg-error h-full" style="width: 83%"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-error-container text-on-error-container text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">Behind</span>
+</td>
+<td class="px-6 py-4 text-error font-bold text-xs">-8.2%</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 material-symbols-outlined text-outline" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="px-6 py-4 font-bold text-sm">Canary Wharf</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">£290,000</td>
+<td class="px-6 py-4 text-sm font-semibold">£292,800</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold">101%</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full">
+<div class="bg-tertiary-container h-full" style="width: 100%"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">Target Met</span>
+</td>
+<td class="px-6 py-4 text-tertiary font-bold text-xs">+1.2%</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 material-symbols-outlined text-outline" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group bg-error-container/5">
+<td class="px-6 py-4 font-bold text-sm">Oxford St Flagship</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">£350,000</td>
+<td class="px-6 py-4 text-sm font-semibold">£315,000</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-error">90%</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full">
+<div class="bg-error h-full" style="width: 90%"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-error-container text-on-error-container text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">Behind</span>
+</td>
+<td class="px-6 py-4 text-error font-bold text-xs">-3.5%</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 material-symbols-outlined text-outline" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="px-6 py-4 font-bold text-sm">Southbank Social</td>
+<td class="px-6 py-4 text-sm text-on-surface-variant">£140,000</td>
+<td class="px-6 py-4 text-sm font-semibold">£148,400</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold">106%</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full">
+<div class="bg-tertiary-container h-full" style="width: 100%"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase">Target Met</span>
+</td>
+<td class="px-6 py-4 text-tertiary font-bold text-xs">+4.8%</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 material-symbols-outlined text-outline" data-icon="more_vert">more_vert</button>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="px-6 py-4 flex items-center justify-between border-t border-surface-container-low text-xs text-on-surface-variant font-bold">
+<span>Showing 6 of 42 outlets</span>
+<div class="flex gap-2">
+<button class="bg-surface-container-low p-2 rounded-lg hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-sm" data-icon="chevron_left">chevron_left</span></button>
+<button class="bg-surface-container-low p-2 rounded-lg hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-sm" data-icon="chevron_right">chevron_right</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Action -->
+<footer class="mt-auto bg-surface-bright py-4 px-8 border-t border-surface-tint/10 flex justify-end items-center sticky bottom-0 z-30">
+<div class="flex gap-4">
+<button class="px-6 py-2.5 rounded-lg text-sm font-bold border border-outline-variant hover:bg-surface-container-low transition-colors">Export Report</button>
+<button class="px-8 py-2.5 rounded-lg text-sm font-bold text-white signature-gradient shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity">Schedule Update</button>
+</div>
+</footer>
+</main>
+</body></html>

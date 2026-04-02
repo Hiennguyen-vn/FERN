@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "tertiary": "#004e33",
+              "on-primary-fixed": "#000e5e",
+              "primary-container": "#4151b3",
+              "outline": "#757684",
+              "on-error": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "on-tertiary-fixed": "#002113",
+              "inverse-on-surface": "#eff1f3",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-secondary-fixed": "#0d1c2e",
+              "error-container": "#ffdad6",
+              "on-secondary-container": "#57657a",
+              "on-primary": "#ffffff",
+              "surface-container-lowest": "#ffffff",
+              "primary-fixed": "#dee0ff",
+              "surface-container-high": "#e6e8ea",
+              "surface-dim": "#d8dadc",
+              "secondary-container": "#d5e3fc",
+              "on-tertiary-fixed-variant": "#005236",
+              "surface-variant": "#e0e3e5",
+              "on-background": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "inverse-primary": "#bbc3ff",
+              "tertiary-container": "#006846",
+              "background": "#f7f9fb",
+              "surface-tint": "#4555b7",
+              "on-secondary": "#ffffff",
+              "on-surface": "#191c1e",
+              "surface-container-highest": "#e0e3e5",
+              "on-surface-variant": "#454652",
+              "primary": "#27389a",
+              "error": "#ba1a1a",
+              "on-tertiary-container": "#5debaf",
+              "tertiary-fixed": "#6ffbbe",
+              "on-error-container": "#93000a",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "secondary": "#515f74",
+              "surface-container": "#eceef0",
+              "outline-variant": "#c5c5d4",
+              "secondary-fixed-dim": "#b9c7df",
+              "on-secondary-fixed-variant": "#3a485b",
+              "on-tertiary": "#ffffff",
+              "on-primary-container": "#cacfff",
+              "surface": "#f7f9fb",
+              "tertiary-fixed-dim": "#4edea3",
+              "secondary-fixed": "#d5e3fc",
+              "inverse-surface": "#2d3133"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- Sidebar Navigation Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#f2f4f6] dark:bg-slate-950 flex flex-col py-4 z-50">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm">restaurant</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-sm leading-tight text-on-surface">Downtown Bistro</h2>
+<p class="text-[10px] text-on-surface-variant tracking-wider uppercase">Outlet #402</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center px-6 py-3 text-[#454652] hover:bg-[#e2e4e6] transition-all group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="dashboard">dashboard</span>
+<span class="font-['Inter'] text-sm tracking-tight">Overview</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#454652] hover:bg-[#e2e4e6] transition-all group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="groups">groups</span>
+<span class="font-['Inter'] text-sm tracking-tight">Staffing</span>
+</a>
+<a class="flex items-center px-6 py-3 bg-[#ffffff] text-[#3F51B5] font-bold rounded-l-lg ml-2 transition-all" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="fact_check">fact_check</span>
+<span class="font-['Inter'] text-sm tracking-tight">Attendance</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#454652] hover:bg-[#e2e4e6] transition-all group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="payments">payments</span>
+<span class="font-['Inter'] text-sm tracking-tight">Payroll</span>
+</a>
+<a class="flex items-center px-6 py-3 text-[#454652] hover:bg-[#e2e4e6] transition-all group" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="settings">settings</span>
+<span class="font-['Inter'] text-sm tracking-tight">Settings</span>
+</a>
+</nav>
+<div class="mt-auto px-4">
+<a class="flex items-center px-6 py-3 text-[#454652] hover:bg-[#e2e4e6] transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="contact_support">contact_support</span>
+<span class="font-['Inter'] text-sm tracking-tight">Support</span>
+</a>
+</div>
+</aside>
+<main class="ml-64 min-h-screen flex flex-col bg-surface">
+<!-- Top Navigation Bar -->
+<header class="flex justify-between items-center w-full px-8 h-16 bg-[#f7f9fb] border-b border-transparent z-40">
+<div class="flex items-center gap-8">
+<h1 class="text-xl font-bold tracking-tight text-[#191c1e] font-headline">Precision Atelier ERP</h1>
+<nav class="hidden md:flex gap-6">
+<a class="font-['Manrope'] font-semibold text-sm text-[#454652]" href="#">Dashboard</a>
+<a class="font-['Manrope'] font-semibold text-sm text-[#454652]" href="#">Analytics</a>
+<a class="font-['Manrope'] font-semibold text-sm text-[#3F51B5] border-b-2 border-[#3F51B5] pb-1" href="#">Schedule</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-2">
+<button class="p-2 text-on-surface-variant hover:bg-[#f2f4f6] rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-[#f2f4f6] rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right">
+<p class="text-xs font-bold text-on-surface">Alex S.</p>
+<p class="text-[10px] text-on-surface-variant">General Manager</p>
+</div>
+<img alt="Manager Profile" class="w-8 h-8 rounded-full bg-secondary-container object-cover" data-alt="professional portrait of a restaurant manager in a minimalist modern setting with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwuiV4tGLwJy0CMZvEWpkWdOod4gMo8Qt3F0McVGCAF5Rt_ijhgMPe6gfScqrEs1xukGdrjCpb_H2bvH1TIrE5mt3V5MExScqNTsteFdZ4vM1Gyti_Jo27tcZV3exgAC45T8Ztc2-ossr6elQBn9effCEin5mpU5jDFDEy_jY6P6uXhrloAdHiMd9a72LvoG1_7Y3Pl7iyvTWZmSG7upDzXhWFG5fA501146aZHm7ujq-PA9mfmY27yBXCALL8M_AftkguLkFAi1Pk"/>
+</div>
+</div>
+</header>
+<!-- Read-Only Banner -->
+<div class="bg-tertiary px-8 py-2.5 flex items-center justify-between text-white">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-sm" data-icon="lock">lock</span>
+<span class="text-xs font-label font-semibold tracking-wide">READ-ONLY RECORD: This attendance entry has been approved and posted to payroll.</span>
+</div>
+<span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase font-bold tracking-widest">Locked State</span>
+</div>
+<!-- Main Content Area -->
+<div class="flex-1 p-8 flex gap-8">
+<!-- Left Side: Record Details -->
+<div class="flex-1 space-y-6">
+<!-- Status Banner Card -->
+<div class="bg-surface-container-lowest rounded-xl p-8 flex items-center justify-between shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 rounded-full bg-tertiary-container/10 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-4xl" data-icon="verified" data-weight="fill" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-2 py-0.5 bg-tertiary-container text-white text-[10px] font-bold rounded uppercase tracking-tighter">Approved</span>
+<span class="text-on-surface-variant text-xs">• Finalized Oct 24, 18:02</span>
+</div>
+<h2 class="text-2xl font-headline font-extrabold text-on-surface tracking-tight">Marcus Holloway</h2>
+<p class="text-sm text-on-surface-variant">Senior Line Cook • Employee ID: #MH-9021</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest mb-1">Total Shift Pay</p>
+<p class="text-3xl font-headline font-black text-tertiary">$184.50</p>
+</div>
+</div>
+<!-- Bento Grid Data Modules -->
+<div class="grid grid-cols-3 gap-6">
+<div class="col-span-2 bg-surface-container-low rounded-xl p-6 space-y-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Shift Breakdown</h3>
+<div class="grid grid-cols-2 gap-8">
+<div>
+<label class="text-[10px] text-on-surface-variant uppercase block mb-1">Clock In</label>
+<p class="text-lg font-bold text-on-surface">08:02 AM</p>
+<p class="text-xs text-tertiary flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-xs" data-icon="check_circle">check_circle</span>
+                                    On-time Arrival
+                                </p>
+</div>
+<div>
+<label class="text-[10px] text-on-surface-variant uppercase block mb-1">Clock Out</label>
+<p class="text-lg font-bold text-on-surface">04:45 PM</p>
+<p class="text-xs text-on-surface-variant mt-1">Scheduled: 05:00 PM</p>
+</div>
+<div>
+<label class="text-[10px] text-on-surface-variant uppercase block mb-1">Total Hours</label>
+<p class="text-lg font-bold text-on-surface">8h 43m</p>
+</div>
+<div>
+<label class="text-[10px] text-on-surface-variant uppercase block mb-1">Break Duration</label>
+<p class="text-lg font-bold text-on-surface">45m (Paid)</p>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/10">
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">Verification Map</h3>
+<div class="relative rounded-lg overflow-hidden h-32 bg-surface-variant mb-3">
+<img class="w-full h-full object-cover grayscale opacity-60" data-alt="minimalist clean map view showing a specific location pin in an urban area with soft muted colors" data-location="San Francisco" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD88zLBP4ePfTlGyr8vY9nzcLy-0nFD_ve53xknWnke5WscYIeLCQtnr4ipbVdjHWea5mf74tLYEBpkq34wRNW9LMC88mtgOFxTpJhZ6TOTNNMnrLy8prLtcSdMxrTmlw9HywS0t4JzMvFVUL0W3BANpekEMFGagRzEEVN_U4zjDInx9HuruqDOjpIwd0-zqQr0Y9Sooj9DmiK3aeYZxWk76ilBrfha8UHBj4VdyWNC83XQf4GTVGGnqT9IGnXsWuE0gizetzU6ptVL"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/40 animate-pulse">
+<div class="w-3 h-3 rounded-full bg-primary shadow-lg shadow-primary/50"></div>
+</div>
+</div>
+</div>
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm mt-0.5" data-icon="location_on">location_on</span>
+<p class="text-[10px] text-on-surface-variant leading-relaxed">Verified Geofence: Main Entrance Terminal (POS-01)</p>
+</div>
+</div>
+</div>
+<!-- Verified Table -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/10">
+<div class="px-6 py-4 bg-surface-container-low flex justify-between items-center">
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Approval Ledger</h3>
+<span class="text-[10px] text-tertiary font-bold bg-tertiary-container/10 px-2 py-0.5 rounded">VERIFIED RECORD</span>
+</div>
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50 border-b border-outline-variant/10">
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Metric</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Reported</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Adjustment</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/5">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 text-xs font-semibold text-on-surface">Base Shift</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">08:00 - 17:00</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">None</td>
+<td class="px-6 py-4">
+<span class="text-[10px] font-bold text-tertiary uppercase tracking-tighter">Verified</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 text-xs font-semibold text-on-surface">Overtime (1.5x)</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">0.0h</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">None</td>
+<td class="px-6 py-4">
+<span class="text-[10px] font-bold text-tertiary uppercase tracking-tighter">Verified</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 text-xs font-semibold text-on-surface">Lunch Deduction</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">-0.75h</td>
+<td class="px-6 py-4 text-xs text-on-surface-variant">Adjusted to Paid</td>
+<td class="px-6 py-4">
+<span class="text-[10px] font-bold text-tertiary uppercase tracking-tighter">Verified</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right Side: Audit & History (Locked Terminal State) -->
+<div class="w-80 space-y-6">
+<!-- Audit Trail Card -->
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-sm border border-outline-variant/10 relative overflow-hidden">
+<!-- Read-only masking texture -->
+<div class="absolute inset-0 pointer-events-none opacity-[0.03]" style="background-image: radial-gradient(#191c1e 1px, transparent 1px); background-size: 8px 8px;"></div>
+<h3 class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-xs" data-icon="history">history</span>
+                        Audit Trail
+                    </h3>
+<div class="space-y-6 relative">
+<div class="absolute left-[11px] top-2 bottom-2 w-0.5 bg-surface-variant"></div>
+<!-- Audit Step 1 -->
+<div class="relative flex gap-4">
+<div class="w-6 h-6 rounded-full bg-tertiary-container flex items-center justify-center z-10 border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[12px] text-white" data-icon="done" data-weight="fill" style="font-variation-settings: 'FILL' 1;">done</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">System Posted</p>
+<p class="text-xs font-semibold text-on-surface mt-0.5">Payroll Batch #8812</p>
+<p class="text-[10px] text-on-surface-variant mt-1">Oct 24, 18:05</p>
+</div>
+</div>
+<!-- Audit Step 2: Main Approval Action -->
+<div class="relative flex gap-4">
+<div class="w-6 h-6 rounded-full bg-tertiary-container flex items-center justify-center z-10 border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[12px] text-white" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Approved By Manager</p>
+<div class="flex items-center gap-2 mt-0.5">
+<img alt="Manager Profile" class="w-4 h-4 rounded-full" data-alt="small thumbnail profile photo of a manager" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDadaD7g9gogtBq3CgSb3NH6gAvjwlPn85EEwGCzuQlf_kWOgfgumtZfJWQAGoaglzlJ6TDrmrZFc8nh4BBMo9Il29D2J3bCSMKOZ7DBxGboIj84OvtNpl47GQjEd8VL1DPaVmFLXHt4dqF9znA18GJVX9sMm9o13LE-J3aQvMJNkbzi993v3QExEVhkh7otl721lAncynPsGbGfUFbiASUbynLTZgwb71J-Iw6FA-6j1Zt8ZPKvm2jbYHhgCTV1CauuMBWQaxZmJqC"/>
+<p class="text-xs font-bold text-on-surface">Alex S.</p>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1">Oct 24, 18:02</p>
+<p class="text-[11px] text-on-surface-variant italic mt-2 border-l-2 border-tertiary/20 pl-3 py-1">
+                                    "Confirmed shift manual adjustment for the kitchen trainee oversight."
+                                </p>
+</div>
+</div>
+<!-- Audit Step 3 -->
+<div class="relative flex gap-4">
+<div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center z-10 border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[12px] text-on-surface-variant" data-icon="edit">edit</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Record Modified</p>
+<p class="text-xs font-semibold text-on-surface mt-0.5">Adjusted Lunch (Paid)</p>
+<p class="text-[10px] text-on-surface-variant mt-1">Oct 24, 17:58</p>
+</div>
+</div>
+<!-- Audit Step 4 -->
+<div class="relative flex gap-4">
+<div class="w-6 h-6 rounded-full bg-surface-variant flex items-center justify-center z-10 border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[12px] text-on-surface-variant" data-icon="login">login</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Shift Logged</p>
+<p class="text-xs font-semibold text-on-surface mt-0.5">POS Clock-out</p>
+<p class="text-[10px] text-on-surface-variant mt-1">Oct 24, 16:45</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Stats / Immutable View -->
+<div class="bg-surface-dim/40 rounded-xl p-6 border border-outline-variant/20">
+<h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant mb-4">Identity Verification</h3>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-xs text-on-surface-variant">Device ID</span>
+<span class="text-xs font-mono font-bold text-on-surface">POS-TERM-SF-004</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-xs text-on-surface-variant">Auth Method</span>
+<span class="text-xs font-bold text-on-surface">Biometric FaceID</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-xs text-on-surface-variant">IP Address</span>
+<span class="text-xs font-mono font-bold text-on-surface">192.168.1.104</span>
+</div>
+</div>
+<div class="mt-6 pt-6 border-t border-outline-variant/10">
+<button class="w-full py-3 px-4 bg-surface-container-highest text-on-surface text-xs font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="print">print</span>
+                            Download Audit PDF
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

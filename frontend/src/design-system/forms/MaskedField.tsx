@@ -11,19 +11,6 @@ interface MaskedFieldProps {
   value?: ReactNode
 }
 
-function getDisplayValue(mode: MaskedMode, value: ReactNode) {
-  switch (mode) {
-    case 'hidden':
-      return 'Hidden by policy'
-    case 'masked':
-      return '••••••••'
-    case 'readonly-visible':
-    case 'fully-visible':
-    default:
-      return value
-  }
-}
-
 export function MaskedField({
   className,
   helperText,
@@ -31,13 +18,26 @@ export function MaskedField({
   mode = 'fully-visible',
   value = '—',
 }: MaskedFieldProps) {
+  const isMasked = mode === 'masked'
+  const isHidden = mode === 'hidden'
+
   return (
     <div className={clsx('masked-field surface-panel', className)}>
       <span className="field-label">{label}</span>
-      <strong className={clsx('masked-field-value', mode !== 'fully-visible' && mode !== 'readonly-visible' && 'muted-text')}>
-        {getDisplayValue(mode, value)}
-      </strong>
-      {helperText ? <span className="muted-text">{helperText}</span> : null}
+      {isHidden ? (
+        <span className="muted-text" style={{ fontStyle: 'italic', fontSize: '0.875rem' }}>
+          Hidden by policy
+        </span>
+      ) : (
+        <strong
+          className="masked-field-value"
+          style={isMasked ? { filter: 'blur(4px)', userSelect: 'none', pointerEvents: 'none' } : undefined}
+          aria-hidden={isMasked}
+        >
+          {value}
+        </strong>
+      )}
+      {helperText ? <span className="muted-text" style={{ fontSize: '0.78rem' }}>{helperText}</span> : null}
     </div>
   )
 }

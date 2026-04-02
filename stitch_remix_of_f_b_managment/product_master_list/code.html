@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Product Master List | Atelier ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "surface-tint": "#4555b7",
+                        "secondary-fixed": "#d5e3fc",
+                        "inverse-primary": "#bbc3ff",
+                        "secondary-container": "#d5e3fc",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "inverse-surface": "#2d3133",
+                        "background": "#f7f9fb",
+                        "error-container": "#ffdad6",
+                        "primary": "#27389a",
+                        "on-tertiary-container": "#5debaf",
+                        "outline": "#757684",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f2f4f6",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#002113",
+                        "on-primary-fixed": "#000e5e",
+                        "surface-bright": "#f7f9fb",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-surface-variant": "#454652",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "surface-variant": "#e0e3e5",
+                        "on-secondary-container": "#57657a",
+                        "surface-container": "#eceef0",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#515f74",
+                        "surface-container-lowest": "#ffffff",
+                        "outline-variant": "#c5c5d4",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "on-primary-container": "#cacfff",
+                        "primary-fixed": "#dee0ff",
+                        "on-background": "#191c1e",
+                        "tertiary": "#004e33",
+                        "surface": "#f7f9fb",
+                        "surface-dim": "#d8dadc",
+                        "tertiary-container": "#006846",
+                        "primary-container": "#4151b3",
+                        "surface-container-highest": "#e0e3e5"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex overflow-hidden h-screen">
+<!-- SideNavBar Shell -->
+<aside class="hidden md:flex flex-col h-screen p-4 gap-y-4 w-64 bg-[#f2f4f6] dark:bg-[#1f2022] font-['Inter'] text-sm font-medium no-border space-y-1 flat no-shadows">
+<div class="flex items-center gap-3 px-2 mb-6">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+</div>
+<div>
+<div class="text-lg font-black tracking-tighter text-[#3F51B5]">Atelier Logo</div>
+<div class="text-[10px] uppercase tracking-widest text-on-surface-variant">Precision ERP</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:text-[#3F51B5] hover:bg-[#ebedf0] dark:hover:bg-[#383a3c] transition-colors duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 bg-[#ffffff] dark:bg-[#2e3032] text-[#3F51B5] dark:text-[#b0c4ff] shadow-sm rounded-md Active: translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>Product Catalog</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:text-[#3F51B5] hover:bg-[#ebedf0] dark:hover:bg-[#383a3c] transition-colors duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined" data-icon="warehouse">warehouse</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:text-[#3F51B5] hover:bg-[#ebedf0] dark:hover:bg-[#383a3c] transition-colors duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:text-[#3F51B5] hover:bg-[#ebedf0] dark:hover:bg-[#383a3c] transition-colors duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+<span>Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 dark:text-slate-400 hover:text-[#3F51B5] hover:bg-[#ebedf0] dark:hover:bg-[#383a3c] transition-colors duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 border-t border-surface-variant flex items-center gap-3 px-2">
+<img alt="Product Manager Profile" class="w-10 h-10 rounded-full object-cover" data-alt="Professional portrait of a male product manager with a friendly expression in a modern office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6LnRS23Uq_2NOoJjTa2YKbXUWnGRu4lgII4_dO8HDlVI0kU9CewzAJfC6hM0iArAGup69Ald9CtXlCqdvS1osEFjLdDV2X0XdWXS8dRxztaf0TbUmXba5iKCgHhVCcX8WWXrfkWU0_uTr4AL6X7GgWvfHVX4dQViIOJsf7CSTcFUVrA9r_SVHPOYHGbF21eyK_1MDubA4P2Nq2x781ifR7-bCQWyf7EXFSetVCsBRySVRAKJXzqfB2mrif1_gumS__g5-5mZbTU7a"/>
+<div class="overflow-hidden">
+<p class="text-xs font-bold truncate">Alex Chen</p>
+<p class="text-[10px] text-on-surface-variant">Product Lead</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+<!-- TopNavBar Shell -->
+<header class="flex justify-between items-center w-full px-6 py-3 bg-[#f7f9fb] dark:bg-[#191c1e] font-['Manrope'] font-semibold tracking-tight docked full-width top-0 bg-[#f2f4f6] dark:bg-[#2e3032] no-border tonal-shift flat no-shadows backdrop-blur-xl">
+<div class="flex items-center gap-4">
+<div class="flex items-center text-sm gap-2 text-on-surface-variant">
+<span class="text-[#3F51B5] font-bold">Catalog</span>
+<span class="material-symbols-outlined text-xs" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface">Product Master</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+<input class="bg-surface-container-lowest border-none rounded-xl pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-2 focus:ring-[#3F51B5] transition-all" placeholder="Search by code or name..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-xl text-slate-500 hover:bg-white/50 dark:hover:bg-white/10 transition-all">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-xl text-slate-500 hover:bg-white/50 dark:hover:bg-white/10 transition-all">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+<!-- Dashboard Summary Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-surface-container-lowest p-5 rounded-xl flex flex-col gap-1">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Total Items</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-extrabold text-[#3F51B5]">1,248</span>
+<span class="text-xs text-tertiary font-bold">+4.2%</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl flex flex-col gap-1">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Active Products</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-extrabold text-on-surface">842</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-5 rounded-xl flex flex-col gap-1">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Active Ingredients</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-extrabold text-on-surface">312</span>
+</div>
+</div>
+<div class="bg-error-container/40 p-5 rounded-xl flex flex-col gap-1 border-l-4 border-error">
+<span class="text-xs font-bold text-error uppercase tracking-wider">Discontinued</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-extrabold text-on-error-container">12</span>
+<span class="material-symbols-outlined text-error text-lg" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+</div>
+</div>
+<!-- Header & Action Row -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<h2 class="text-2xl font-extrabold tracking-tight text-on-surface">Product Master Catalog</h2>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-highest rounded-xl text-sm font-bold text-[#3F51B5] hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="upload_file">upload_file</span>
+                        Bulk Import
+                    </button>
+<button class="flex items-center gap-2 px-6 py-2 bg-gradient-to-br from-primary to-primary-container rounded-xl text-sm font-bold text-on-primary shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                        New Product
+                    </button>
+</div>
+</div>
+<!-- Filter Bar Section -->
+<div class="bg-surface-container-lowest p-4 rounded-xl flex flex-wrap items-center gap-4">
+<div class="flex flex-col gap-1.5 min-w-[120px]">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase ml-1">Type</label>
+<select class="bg-surface-container-low border-none rounded-lg text-sm font-medium px-3 py-2 focus:ring-2 focus:ring-[#3F51B5]">
+<option>All Types</option>
+<option>Product</option>
+<option>Ingredient</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5 min-w-[140px]">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase ml-1">Status</label>
+<select class="bg-surface-container-low border-none rounded-lg text-sm font-medium px-3 py-2 focus:ring-2 focus:ring-[#3F51B5]">
+<option>All Statuses</option>
+<option>Draft</option>
+<option>Active</option>
+<option>Inactive</option>
+<option>Discontinued</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5 min-w-[160px]">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase ml-1">Category</label>
+<select class="bg-surface-container-low border-none rounded-lg text-sm font-medium px-3 py-2 focus:ring-2 focus:ring-[#3F51B5]">
+<option>All Categories</option>
+<option>Main Course</option>
+<option>Beverages</option>
+<option>Produce</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5 min-w-[160px]">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase ml-1">Outlet Availability</label>
+<select class="bg-surface-container-low border-none rounded-lg text-sm font-medium px-3 py-2 focus:ring-2 focus:ring-[#3F51B5]">
+<option>All Outlets</option>
+<option>Downtown Hub</option>
+<option>Eastside Kitchen</option>
+</select>
+</div>
+<div class="mt-auto">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+</button>
+</div>
+</div>
+<!-- Main Data Table -->
+<div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Code</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Product Name</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Type</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Category</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Lifecycle</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest text-center">Outlet Availability</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest text-right">Eff. Price</th>
+<th class="px-6 py-4 text-[10px] font-black text-on-surface-variant uppercase tracking-widest text-center">Recipe</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-xs font-bold text-primary">P-101</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-sm" data-icon="lunch_dining">lunch_dining</span>
+</div>
+<span class="text-sm font-semibold text-on-surface">Signature Wagyu Burger</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 bg-surface-container rounded-md text-[10px] font-bold text-on-secondary-container">PRODUCT</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">Main Course</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-tertiary/10 text-tertiary rounded-full text-[10px] font-extrabold">ACTIVE</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center justify-center gap-2">
+<div class="w-24 h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-full"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">15/15</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right text-sm font-bold text-on-surface">$22.00</td>
+<td class="px-6 py-4 text-center">
+<div class="flex items-center justify-center text-tertiary" title="Recipe Ready">
+<span class="material-symbols-outlined text-lg" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-xs font-bold text-primary">I-202</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant text-sm" data-icon="nutrition">nutrition</span>
+</div>
+<span class="text-sm font-semibold text-on-surface">Avocado Hass</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 bg-surface-container rounded-md text-[10px] font-bold text-on-secondary-container">INGREDIENT</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">Produce</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-tertiary/10 text-tertiary rounded-full text-[10px] font-extrabold">ACTIVE</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center justify-center gap-2">
+<div class="w-24 h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[53%]"></div>
+</div>
+<span class="text-[10px] font-bold text-on-surface-variant">8/15</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right text-sm font-medium text-outline">—</td>
+<td class="px-6 py-4 text-center">
+<span class="text-outline material-symbols-outlined text-lg" data-icon="remove_circle_outline">remove_circle_outline</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-xs font-bold text-primary">P-105</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-error-container/20 flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-error text-sm" data-icon="eco">eco</span>
+</div>
+<span class="text-sm font-semibold text-on-surface-variant line-through">Seasonal Summer Salad</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 bg-error-container/20 rounded-md text-[10px] font-bold text-error">PRODUCT</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">Entrees</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-error text-on-error rounded-full text-[10px] font-extrabold">DISCONTINUED</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center justify-center gap-2">
+<div class="w-24 h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-error w-0"></div>
+</div>
+<span class="text-[10px] font-bold text-error">0/15</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right text-sm font-bold text-on-surface">$14.00</td>
+<td class="px-6 py-4 text-center">
+<div class="flex items-center justify-center text-error" title="Recipe Archived">
+<span class="material-symbols-outlined text-lg" data-icon="archive">archive</span>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="px-6 py-4 text-xs font-bold text-primary">P-106</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-secondary-container/30 flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-sm" data-icon="coffee">coffee</span>
+</div>
+<span class="text-sm font-semibold text-on-surface">New Matcha Latte</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="px-2 py-1 bg-surface-container rounded-md text-[10px] font-bold text-on-secondary-container">PRODUCT</span>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">Beverages</td>
+<td class="px-6 py-4">
+<span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container rounded-full text-[10px] font-extrabold">DRAFT</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center justify-center gap-2">
+<div class="w-24 h-1.5 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-secondary w-0"></div>
+</div>
+<span class="text-[10px] font-bold text-outline">0/15</span>
+</div>
+</td>
+<td class="px-6 py-4 text-right text-sm font-bold text-on-surface">$6.50</td>
+<td class="px-6 py-4 text-center">
+<div class="flex items-center justify-center text-outline" title="Recipe Pending">
+<span class="material-symbols-outlined text-lg" data-icon="pending">pending</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Empty State Illustration Placeholder (Hidden by default, shown if no results) -->
+<div class="hidden flex flex-col items-center justify-center py-20 px-4 text-center space-y-4">
+<div class="w-64 h-64 bg-surface-container rounded-full flex items-center justify-center relative overflow-hidden">
+<img alt="Empty state illustration" class="w-full h-full object-cover mix-blend-overlay opacity-20" data-alt="Conceptual 3D illustration of an empty floating glass shelf in a minimalist clean warehouse setting with soft blue lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDbsx2ATutKSRdCYu5DuSz4-fYgh11KM4hTRzCkHkqFZW-eAuzYMcd-rbGUxQyBAPelS5KGZuVoT5pl6ks1gS6auYavWzy8p683-uZ2fv4EbIRC-N6siAFKJRrHfXwGFkC3pwVOiAA3rTFCnVLYDzqbUGIM1C8eVqu_QKYO74n2UztrmqGT6_cebtoSnajLS3-5VHLyTYMvRNh6daunMli_QnEEBsnoz8baxt9_ieGiR3hUb5m2jpAIRihPsi42V6vQenMa7Z9iNzV"/>
+<span class="material-symbols-outlined text-6xl text-outline-variant absolute" data-icon="search_off">search_off</span>
+</div>
+<div>
+<h3 class="text-xl font-extrabold text-on-surface">No products found</h3>
+<p class="text-on-surface-variant max-w-xs mt-1">We couldn't find any items matching your current filter criteria.</p>
+</div>
+<button class="px-6 py-2 bg-surface-container-highest text-[#3F51B5] font-bold rounded-xl hover:bg-surface-container-high transition-colors">
+                    Clear All Filters
+                </button>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-between py-2">
+<span class="text-xs text-on-surface-variant">Showing <span class="font-bold">1-4</span> of 1,248 items</span>
+<div class="flex items-center gap-1">
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined" data-icon="first_page">first_page</span>
+</button>
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<div class="flex items-center gap-1 mx-2">
+<button class="w-8 h-8 rounded-lg bg-primary text-on-primary text-xs font-bold">1</button>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container text-xs font-bold">2</button>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container text-xs font-bold">3</button>
+<span class="px-1">...</span>
+<button class="w-8 h-8 rounded-lg hover:bg-surface-container text-xs font-bold">312</button>
+</div>
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+<button class="p-1.5 rounded-lg hover:bg-surface-container text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="last_page">last_page</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB for quick action (Suppressed on detail pages as per guidelines) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-br from-primary to-primary-container rounded-full text-on-primary shadow-2xl flex items-center justify-center md:hidden">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</body></html>

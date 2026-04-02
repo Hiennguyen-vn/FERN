@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create Purchase Order - Architectural ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary": "#ffffff",
+                        "inverse-primary": "#bbc3ff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#004e33",
+                        "primary-container": "#4151b3",
+                        "primary": "#27389a",
+                        "error-container": "#ffdad6",
+                        "surface-tint": "#4555b7",
+                        "secondary": "#515f74",
+                        "on-secondary-container": "#57657a",
+                        "on-primary-fixed": "#000e5e",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#e6e8ea",
+                        "error": "#ba1a1a",
+                        "outline-variant": "#c5c5d4",
+                        "on-background": "#191c1e",
+                        "surface-container-highest": "#e0e3e5",
+                        "primary-fixed": "#dee0ff",
+                        "surface-container": "#eceef0",
+                        "background": "#f7f9fb",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-tertiary-container": "#5debaf",
+                        "outline": "#757684",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "secondary-fixed": "#d5e3fc",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "on-surface": "#191c1e",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary-container": "#cacfff",
+                        "surface": "#f7f9fb",
+                        "secondary-container": "#d5e3fc",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "on-surface-variant": "#454652",
+                        "surface-dim": "#d8dadc",
+                        "on-error": "#ffffff",
+                        "tertiary-container": "#006846",
+                        "on-tertiary-fixed": "#002113",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-variant": "#e0e3e5"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+<!-- SideNavBar Component -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-slate-100 dark:bg-slate-900 flex flex-col h-full p-4 space-y-2 z-50">
+<div class="flex items-center gap-3 px-2 mb-8">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">architecture</span>
+</div>
+<div>
+<div class="text-lg font-black text-slate-900 dark:text-slate-100 leading-tight">The Atelier</div>
+<div class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Global Ops</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/30 dark:hover:bg-slate-800/30 transition-all duration-200 ease-in-out font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-sm rounded-md font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shopping_cart</span> Procurement
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/30 dark:hover:bg-slate-800/30 transition-all duration-200 ease-in-out font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">inventory_2</span> Inventory
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/30 dark:hover:bg-slate-800/30 transition-all duration-200 ease-in-out font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">point_of_sale</span> Sales
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/30 dark:hover:bg-slate-800/30 transition-all duration-200 ease-in-out font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">storefront</span> Outlets
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/30 dark:hover:bg-slate-800/30 transition-all duration-200 ease-in-out font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">analytics</span> Reports
+            </a>
+</nav>
+<div class="pt-4 mt-auto border-t border-slate-200/50 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/30 dark:hover:bg-slate-800/30 transition-all duration-200 ease-in-out font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/30 dark:hover:bg-slate-800/30 transition-all duration-200 ease-in-out font-inter text-sm font-medium" href="#">
+<span class="material-symbols-outlined">contact_support</span> Support
+            </a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="ml-64 pb-24">
+<!-- TopNavBar Component -->
+<header class="w-full sticky top-0 z-40 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-xl flex justify-between items-center px-6 py-3 font-manrope tracking-tight">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-slate-500">
+<span class="material-symbols-outlined text-sm">location_on</span>
+<span class="text-sm font-semibold text-slate-900">South London Outlet</span>
+</div>
+<div class="h-4 w-px bg-slate-300"></div>
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-slate-200/50 border-none rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 w-64 transition-all" placeholder="Search orders..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:bg-slate-200/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-200/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-primary-container overflow-hidden">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="professional portrait of a man in business attire, clean background, neutral lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzkp1KZSB5seWbYWqbJobux9p1XgViEV2mVdaq9t4sbkORkftdQVcNkH0erigUBDfjBT-zpNvq60dJmIWYMCfMMPfeGwx9LkkKmJhVBWlaGQtUvNpegMeMgRKNgkz8l6-J_21SZEGMgZ1S15cIqUxnzDNSDBnqrxTUcfMAHzMlTYaM-UTokuO1o9gNkHsqTSlv7nz_wo8SmZmItGkrawY9w6dnsNrwIRWVkqIyTPh8cQVxCgu6CTfKUQb-qWIfYH-9CnM9P_eDsafS"/>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-8 max-w-7xl mx-auto space-y-6">
+<!-- Page Header Section -->
+<section class="flex flex-wrap items-end justify-between gap-6 mb-8">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">PO #DRAFT-8829</h1>
+<span class="bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Draft</span>
+</div>
+<p class="text-on-surface-variant text-sm font-medium">Created by <span class="text-slate-900">Alex Sterling</span> • Kitchen Ops Manager</p>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] font-bold uppercase text-on-surface-variant tracking-[0.15em]">Expected Delivery Date</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-indigo-600 text-lg">calendar_today</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-lowest border-none rounded-md text-sm font-medium text-slate-900 shadow-sm focus:ring-2 focus:ring-indigo-500/20" type="date" value="2024-11-24"/>
+</div>
+</div>
+</section>
+<!-- Tonal Architecture Grid: Info Sections -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Section 1: Supplier Info -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-indigo-600">local_shipping</span>
+<h3 class="font-bold text-slate-900 uppercase text-xs tracking-widest">Supplier Information</h3>
+</div>
+<div class="space-y-4">
+<div class="relative">
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase mb-1.5 tracking-wider">Search Approved Suppliers</label>
+<div class="relative">
+<input class="w-full pl-4 pr-10 py-2.5 bg-surface-container-lowest border-none rounded-md text-sm font-semibold text-slate-900 shadow-sm" type="text" value="London Artisan Provisions Ltd."/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">expand_more</span>
+</div>
+<div class="mt-2 flex items-center gap-2 text-tertiary text-xs font-bold">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">verified</span>
+                                Verified Tier 1 Supplier
+                            </div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-2">
+<div>
+<p class="text-[10px] text-on-surface-variant font-bold uppercase">Contract ID</p>
+<p class="text-sm font-medium text-slate-700">CONT-2024-APL</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant font-bold uppercase">Payment Terms</p>
+<p class="text-sm font-medium text-slate-700">Net 30 Days</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 2: Outlet Info (Read-only) -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-indigo-600">store</span>
+<h3 class="font-bold text-slate-900 uppercase text-xs tracking-widest">Outlet Information</h3>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="space-y-3">
+<div>
+<p class="text-[10px] text-on-surface-variant font-bold uppercase">Destination Outlet</p>
+<p class="text-sm font-semibold text-slate-900">South London Hub</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant font-bold uppercase">Delivery Contact</p>
+<p class="text-sm font-medium text-slate-700">Mark Thompson</p>
+</div>
+</div>
+<div class="space-y-3">
+<div>
+<p class="text-[10px] text-on-surface-variant font-bold uppercase">Shipping Address</p>
+<p class="text-sm font-medium text-slate-700 leading-relaxed italic opacity-75">
+                                    Unit 4, Bermondsey Trading Estate<br/>
+                                    London, SE16 3LL
+                                </p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 3: Order Lines Table -->
+<div class="bg-surface-container-lowest rounded-xl shadow-[0px_12px_32px_rgba(25,28,30,0.04)] overflow-hidden">
+<div class="px-6 py-4 flex justify-between items-center border-b border-surface-container-low">
+<h3 class="font-bold text-slate-900 uppercase text-xs tracking-widest">Order Items</h3>
+<button class="flex items-center gap-2 text-indigo-700 text-xs font-bold hover:bg-indigo-50 px-3 py-1.5 rounded-md transition-colors">
+<span class="material-symbols-outlined text-lg">add_circle</span>
+                        Add Item
+                    </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low">
+<tr>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.1em]">Item Name &amp; SKU</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.1em]">Quantity</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.1em]">UOM</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.1em]">Unit Price</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.1em]">Tax %</th>
+<th class="px-6 py-3 text-[10px] font-bold text-on-surface-variant uppercase tracking-[0.1em] text-right">Line Total</th>
+<th class="px-6 py-3"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-4">
+<div class="font-semibold text-slate-900 text-sm">Artisan Wheat Flour</div>
+<div class="text-[10px] font-medium text-on-surface-variant font-mono">SKU: PROV-221-F</div>
+</td>
+<td class="px-6 py-4">
+<input class="w-20 px-2 py-1 bg-surface-container border-none rounded text-sm font-medium focus:ring-1 focus:ring-indigo-500" type="number" value="25"/>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600">25kg Sack</td>
+<td class="px-6 py-4 text-sm text-slate-600">£42.50</td>
+<td class="px-6 py-4 text-sm text-slate-600">0%</td>
+<td class="px-6 py-4 text-sm font-bold text-slate-900 text-right">£1,062.50</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-error opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 (Validation State) -->
+<tr class="bg-error-container/20 hover:bg-error-container/30 transition-colors group">
+<td class="px-6 py-4">
+<div class="font-semibold text-slate-900 text-sm">Salted Butter (Heritage)</div>
+<div class="text-[10px] font-medium text-on-surface-variant font-mono">SKU: PROV-990-B</div>
+</td>
+<td class="px-6 py-4">
+<div class="relative">
+<input class="w-20 px-2 py-1 border-2 border-error rounded text-sm font-medium focus:ring-0" placeholder="0" type="number"/>
+<div class="absolute -bottom-5 left-0 text-[9px] font-bold text-error uppercase whitespace-nowrap">Quantity Required</div>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600">Case (20x250g)</td>
+<td class="px-6 py-4 text-sm text-slate-600">£78.00</td>
+<td class="px-6 py-4 text-sm text-slate-600">20%</td>
+<td class="px-6 py-4 text-sm font-bold text-slate-900 text-right">£0.00</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-error transition-opacity">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-4">
+<div class="font-semibold text-slate-900 text-sm">Madagascan Vanilla Pods</div>
+<div class="text-[10px] font-medium text-on-surface-variant font-mono">SKU: PROV-112-V</div>
+</td>
+<td class="px-6 py-4">
+<input class="w-20 px-2 py-1 bg-surface-container border-none rounded text-sm font-medium focus:ring-1 focus:ring-indigo-500" type="number" value="2"/>
+</td>
+<td class="px-6 py-4 text-sm text-slate-600">100g Pack</td>
+<td class="px-6 py-4 text-sm text-slate-600">£115.00</td>
+<td class="px-6 py-4 text-sm text-slate-600">0%</td>
+<td class="px-6 py-4 text-sm font-bold text-slate-900 text-right">£230.00</td>
+<td class="px-6 py-4 text-right">
+<button class="text-slate-400 hover:text-error opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Section 4: Totals & Notes -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 space-y-2">
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Internal Notes &amp; Delivery Instructions</label>
+<textarea class="w-full bg-surface-container-low border-none rounded-xl p-4 text-sm text-slate-700 shadow-inner focus:ring-2 focus:ring-indigo-500/20" placeholder="e.g. Please deliver to back entrance before 10 AM..." rows="6"></textarea>
+</div>
+<div class="bg-surface-container-low rounded-xl p-6 h-fit border border-outline-variant/10">
+<h3 class="font-bold text-slate-900 uppercase text-xs tracking-widest mb-4">Summary</h3>
+<div class="space-y-3">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Subtotal</span>
+<span class="font-medium text-slate-900">£1,292.50</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Tax (VAT 20%)</span>
+<span class="font-medium text-slate-900">£15.60</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Shipping Est.</span>
+<span class="font-medium text-slate-700 italic">TBD</span>
+</div>
+<div class="pt-3 border-t border-slate-300 flex justify-between items-end">
+<span class="font-bold text-slate-900 uppercase text-xs">Grand Total</span>
+<span class="text-2xl font-black text-indigo-700 tracking-tight">£1,308.10</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer Actions -->
+<footer class="fixed bottom-0 right-0 w-[calc(100%-16rem)] bg-white/90 dark:bg-slate-950/90 backdrop-blur-md flex justify-between items-center px-8 py-4 z-50 border-t border-slate-200/20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+<div class="flex items-center gap-4">
+<button class="px-6 py-2.5 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors">
+                    Cancel Draft
+                </button>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-6 py-2.5 rounded-lg text-sm font-bold text-secondary-container bg-surface-container-high hover:bg-surface-container-highest transition-colors">
+                    Save Draft
+                </button>
+<button class="px-8 py-2.5 rounded-lg text-sm font-bold text-white bg-gradient-to-br from-primary to-primary-container shadow-lg shadow-primary/20 hover:scale-[0.98] transition-transform">
+                    Submit for Approval
+                </button>
+</div>
+</footer>
+</main>
+<!-- Overlay Visual Texture -->
+<div class="fixed inset-0 pointer-events-none z-[-1] opacity-[0.03]">
+<img alt="" class="w-full h-full object-cover grayscale" data-alt="subtle abstract blueprint architectural lines background with light blue and grey tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVcaqqnlWHcCRZc0Ns0G6BdUvwL3PwDXD09ZOaVy74KzdSqDJyZHqjjrPzJVg-KVOjssHp1mm0c82Ce_welzwfqsyWaSpbojkgErxx472DyIClmoNB_IzoQmvue8LeB7OqZl3H8Q0NGw8atW6t5sHyc4z82L0S2MmSdShtN0vI4OcDaEzHliYQGn8YHgvEq7VInOZfDxnNVng5lHe1aGsInePdBqpZrKVUUgHHC55y0xqpqj_Z4-WWztu6oVy3EjKB1z3F0Eyhqf5p"/>
+</div>
+</body></html>

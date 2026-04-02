@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>POS Session - Reconciled View | South London Outlet</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-high": "#e6e8ea",
+              "on-secondary-container": "#57657a",
+              "on-error": "#ffffff",
+              "tertiary-fixed-dim": "#4edea3",
+              "on-tertiary-fixed-variant": "#005236",
+              "on-error-container": "#93000a",
+              "secondary": "#515f74",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "error-container": "#ffdad6",
+              "error": "#ba1a1a",
+              "on-secondary-fixed": "#0d1c2e",
+              "tertiary-container": "#006846",
+              "primary-container": "#4151b3",
+              "outline-variant": "#c5c5d4",
+              "on-secondary": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "on-background": "#191c1e",
+              "surface-container-low": "#f2f4f6",
+              "secondary-fixed-dim": "#b9c7df",
+              "primary": "#27389a",
+              "secondary-container": "#d5e3fc",
+              "surface-dim": "#d8dadc",
+              "primary-fixed": "#dee0ff",
+              "surface-tint": "#4555b7",
+              "inverse-surface": "#2d3133",
+              "inverse-on-surface": "#eff1f3",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#cacfff",
+              "surface": "#f7f9fb",
+              "on-primary-fixed": "#000e5e",
+              "secondary-fixed": "#d5e3fc",
+              "tertiary-fixed": "#6ffbbe",
+              "on-tertiary": "#ffffff",
+              "on-surface": "#191c1e",
+              "on-secondary-fixed-variant": "#3a485b",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-container": "#5debaf",
+              "background": "#f7f9fb",
+              "on-surface-variant": "#454652",
+              "outline": "#757684",
+              "surface-container-lowest": "#ffffff",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-tertiary-fixed": "#002113",
+              "tertiary": "#004e33",
+              "surface-container-highest": "#e0e3e5",
+              "surface-container": "#eceef0"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        .blur-mask {
+            filter: blur(4px);
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-slate-100 dark:bg-slate-950 flex flex-col p-4 space-y-2 z-50">
+<div class="mb-8 px-2">
+<h1 class="font-manrope font-extrabold text-indigo-900 dark:text-white uppercase tracking-widest text-sm">The Precision Atelier</h1>
+<p class="text-[10px] text-slate-500 font-medium">Enterprise Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-inter text-sm font-medium hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-bold shadow-sm font-inter text-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="point_of_sale">point_of_sale</span>
+<span>POS</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-inter text-sm font-medium hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-inter text-sm font-medium hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-inter text-sm font-medium hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+<span>Workforce</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 border-t border-slate-200 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-inter text-sm font-medium hover:bg-white/50" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 font-inter text-sm font-medium hover:bg-white/50" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span>Logs</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center px-6 py-3 w-full bg-slate-50 dark:bg-slate-900 border-b-0 sticky top-0 z-40">
+<div class="flex items-center gap-6">
+<span class="text-lg font-bold text-indigo-900 dark:text-indigo-200 font-manrope tracking-tight">South London Outlet</span>
+<div class="h-6 w-px bg-slate-200"></div>
+<nav class="flex gap-4">
+<button class="text-indigo-700 dark:text-indigo-400 border-b-2 border-indigo-700 font-manrope font-semibold px-1 py-1">Active Session</button>
+<button class="text-slate-500 dark:text-slate-400 font-manrope font-semibold hover:bg-slate-200 transition-colors px-2 py-1 rounded">History</button>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:bg-slate-200 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-200 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="flex items-center gap-3 ml-2 pl-4 border-l border-slate-200">
+<img alt="Manager Profile" class="w-8 h-8 rounded-full object-cover" data-alt="professional headshot of a middle-aged male manager in a clean modern office setting with soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfiQWqYjc6sewVpF9hBpteVdVUt3BpIGGw35mxbxCOQ2Tlzz5gO1PJIVkV5tVr4LISM_EbKGz9nUsE9IZ4ste3dHkGfU5tdChvHxZBb137ymHFtiI7q9_j5OPrZzIpsP1_cDC-HP4CTfgzzA5rPdMDvZ6S9ZbqtRfky1DnjX5Q92P2y0f5H-SK7q91xzpwPBWmTWU-_xTg9no_TbJQZcI3nTCNy42pFfgTIXO-pvTqmYFf5ioW1f6k3zXacTeyPo7EvfOMXjhk1pg1"/>
+</div>
+</div>
+</header>
+<!-- Session Status Banner -->
+<div class="bg-primary text-on-primary px-8 py-3 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span class="font-headline font-bold tracking-tight text-sm uppercase">SESSION RECONCILED - READ ONLY</span>
+</div>
+<div class="flex items-center gap-6 text-xs font-medium opacity-90">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="person">person</span>
+<span>Reconciled by Alex Sterling at 10:15 PM</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="calendar_today">calendar_today</span>
+<span>Oct 24, 2023</span>
+</div>
+</div>
+</div>
+<div class="p-8 space-y-8">
+<!-- Financial Summary Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<!-- Total Sales -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border-l-4 border-primary">
+<p class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-2">Gross Sales</p>
+<h3 class="text-2xl font-headline font-extrabold text-on-surface">£4,285.50</h3>
+<p class="text-tertiary text-xs font-medium mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-xs" data-icon="trending_up">trending_up</span>
+                        +12% vs yesterday
+                    </p>
+</div>
+<!-- Expected Cash -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm">
+<p class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-2">Expected Cash</p>
+<h3 class="text-2xl font-headline font-extrabold text-on-surface">£1,142.00</h3>
+<p class="text-on-surface-variant text-[10px] mt-1">Float: £200.00 included</p>
+</div>
+<!-- Actual Cash -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm">
+<p class="text-on-surface-variant text-xs font-bold uppercase tracking-wider mb-2">Actual Cash</p>
+<h3 class="text-2xl font-headline font-extrabold text-on-surface">£1,140.50</h3>
+<p class="text-on-surface-variant text-[10px] mt-1">Verified by Alexander S.</p>
+</div>
+<!-- Variance -->
+<div class="bg-error-container p-6 rounded-xl shadow-sm">
+<p class="text-on-error-container text-xs font-bold uppercase tracking-wider mb-2">Variance</p>
+<h3 class="text-2xl font-headline font-extrabold text-on-error-container">-£1.50</h3>
+<p class="text-on-error-container text-[10px] font-bold mt-1">THRESHOLD EXCEEDED</p>
+</div>
+</div>
+<!-- Main Data Canvas -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+<!-- Detailed Audit Trail -->
+<div class="lg:col-span-2 space-y-6">
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<div class="px-6 py-4 bg-surface-container-low flex justify-between items-center">
+<h2 class="font-headline font-bold text-on-surface">Payment Reconciliation</h2>
+<button class="flex items-center gap-2 px-4 py-2 signature-gradient text-white rounded-lg text-xs font-bold hover:shadow-lg transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="ios_share">ios_share</span>
+                                EXPORT REPORT
+                            </button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant bg-surface-bright">
+<th class="px-6 py-4">Method</th>
+<th class="px-6 py-4">System Expected</th>
+<th class="px-6 py-4">Physical Count</th>
+<th class="px-6 py-4 text-right">Variance</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-surface-container border-opacity-50 text-on-surface/60">
+<td class="px-6 py-4 font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-lg" data-icon="payments">payments</span> Cash
+                                        </td>
+<td class="px-6 py-4">£1,142.00</td>
+<td class="px-6 py-4 font-bold">£1,140.50</td>
+<td class="px-6 py-4 text-right font-bold text-error">-£1.50</td>
+</tr>
+<tr class="border-b border-surface-container border-opacity-50 text-on-surface/60">
+<td class="px-6 py-4 font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-lg" data-icon="credit_card">credit_card</span> Visa/Mastercard
+                                        </td>
+<td class="px-6 py-4">£2,980.50</td>
+<td class="px-6 py-4 font-bold">£2,980.50</td>
+<td class="px-6 py-4 text-right font-bold text-tertiary">£0.00</td>
+</tr>
+<tr class="border-b border-surface-container border-opacity-50 text-on-surface/60">
+<td class="px-6 py-4 font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-lg" data-icon="account_balance_wallet">account_balance_wallet</span> Gift Cards
+                                        </td>
+<td class="px-6 py-4">£163.00</td>
+<td class="px-6 py-4 font-bold">£163.00</td>
+<td class="px-6 py-4 text-right font-bold text-tertiary">£0.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Sensitive Financials Masked -->
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-surface-dim/20 p-6 rounded-xl border border-dashed border-outline-variant">
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Internal Audit Details</p>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-sm">
+<span class="text-on-surface-variant">Session ID</span>
+<span class="font-mono text-on-surface/50">#PX-8829-24</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<span class="text-on-surface-variant">Net Margin %</span>
+<span class="blur-mask font-bold">24.5%</span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<span class="text-on-surface-variant">Tax Liability (Est)</span>
+<span class="blur-mask font-bold">£857.10</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-dim/20 p-6 rounded-xl border border-dashed border-outline-variant flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-outline text-3xl mb-2" data-icon="lock_clock">lock_clock</span>
+<p class="text-xs font-bold text-on-surface-variant uppercase">Actions Locked</p>
+<p class="text-[10px] text-on-surface-variant mt-1 leading-relaxed">This session is closed and cannot be modified. Export for accounting.</p>
+</div>
+</div>
+</div>
+<!-- Sidebar Content -->
+<aside class="space-y-6">
+<!-- Session Metadata Card -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm space-y-4">
+<h4 class="font-headline font-bold text-sm text-on-surface">Timeline &amp; Logs</h4>
+<div class="space-y-6 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-variant">
+<!-- Step 1 -->
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-4 h-4 rounded-full bg-primary ring-4 ring-white"></div>
+<p class="text-xs font-bold text-on-surface">Session Opened</p>
+<p class="text-[10px] text-on-surface-variant">Oct 24, 08:00 AM by Sarah J.</p>
+</div>
+<!-- Step 2 -->
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-4 h-4 rounded-full bg-primary ring-4 ring-white"></div>
+<p class="text-xs font-bold text-on-surface">Mid-Day Float Audit</p>
+<p class="text-[10px] text-on-surface-variant">Oct 24, 02:30 PM by Sarah J.</p>
+</div>
+<!-- Step 3 -->
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-4 h-4 rounded-full bg-primary ring-4 ring-white"></div>
+<p class="text-xs font-bold text-on-surface">Session Closed</p>
+<p class="text-[10px] text-on-surface-variant">Oct 24, 10:00 PM by Alex S.</p>
+</div>
+<!-- Step 4 -->
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-4 h-4 rounded-full bg-tertiary ring-4 ring-white"></div>
+<p class="text-xs font-bold text-on-surface">Final Reconciliation</p>
+<p class="text-[10px] text-on-surface-variant">Oct 24, 10:15 PM by Alex S.</p>
+</div>
+</div>
+</div>
+<!-- Variance Notes -->
+<div class="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-error-container">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-error text-sm" data-icon="assignment_late">assignment_late</span>
+<h4 class="font-headline font-bold text-sm text-on-surface">Audit Note</h4>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed bg-surface-container-low p-3 rounded italic">
+                            "Variance of £1.50 noted in Till 2. Discrepancy likely due to small change error during lunch rush. Flagged for review by finance but within acceptable operational margin."
+                        </p>
+<p class="text-[10px] font-bold text-on-surface-variant mt-3 text-right">— ALEX STERLING (FINANCE)</p>
+</div>
+</aside>
+</div>
+<!-- Readonly Grid of Order History -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="font-headline font-bold text-on-surface">Order History Extract</h3>
+<div class="flex gap-2">
+<div class="px-3 py-1 bg-surface-container-high text-[10px] font-bold rounded-full text-on-surface-variant">TOTAL ORDERS: 142</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden opacity-80 pointer-events-none grayscale-[0.3]">
+<table class="w-full text-left">
+<thead>
+<tr class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant bg-surface-bright border-b border-surface-container">
+<th class="px-6 py-4">Order ID</th>
+<th class="px-6 py-4">Time</th>
+<th class="px-6 py-4">Table</th>
+<th class="px-6 py-4">Server</th>
+<th class="px-6 py-4 text-right">Amount</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-surface-container/30">
+<td class="px-6 py-3 font-mono text-xs">#77381</td>
+<td class="px-6 py-3 text-on-surface-variant">09:12 PM</td>
+<td class="px-6 py-3 text-on-surface-variant">T-14</td>
+<td class="px-6 py-3 text-on-surface-variant">James L.</td>
+<td class="px-6 py-3 text-right font-medium">£82.40</td>
+</tr>
+<tr class="border-b border-surface-container/30">
+<td class="px-6 py-3 font-mono text-xs">#77382</td>
+<td class="px-6 py-3 text-on-surface-variant">09:18 PM</td>
+<td class="px-6 py-3 text-on-surface-variant">Bar-02</td>
+<td class="px-6 py-3 text-on-surface-variant">Sarah J.</td>
+<td class="px-6 py-3 text-right font-medium">£12.50</td>
+</tr>
+<tr class="border-b border-surface-container/30">
+<td class="px-6 py-3 font-mono text-xs">#77383</td>
+<td class="px-6 py-3 text-on-surface-variant">09:25 PM</td>
+<td class="px-6 py-3 text-on-surface-variant">T-04</td>
+<td class="px-6 py-3 text-on-surface-variant">James L.</td>
+<td class="px-6 py-3 text-right font-medium">£145.00</td>
+</tr>
+</tbody>
+</table>
+<div class="p-4 text-center bg-surface-container-lowest">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">End of Record</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

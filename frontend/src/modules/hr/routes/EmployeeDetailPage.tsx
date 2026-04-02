@@ -1,14 +1,15 @@
 import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@app/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import {
   Button,
+  Card,
   DataTable,
   EmptyState,
-  EntityHeader,
   ErrorState,
-  FormSection,
+  MaskedField,
   PermissionDeniedInline,
   ReadonlyBanner,
   StatusBadge,
@@ -30,6 +31,19 @@ import {
   saveRecentHrContract,
   saveRecentHrEmployee,
 } from '../services/recentHrLookups.service'
+
+function getPrimaryAssignment(assignments: HrAssignment[]) {
+  return assignments.find((assignment) => assignment.primaryAssignment) ?? assignments[0] ?? null
+}
+
+function getPrimaryContract(contracts: HrContract[]) {
+  return (
+    contracts.find((contract) => contract.contractStatus.toUpperCase() === 'ACTIVE') ??
+    contracts.find((contract) => contract.contractStatus.toUpperCase() === 'SIGNED') ??
+    contracts[0] ??
+    null
+  )
+}
 
 export function EmployeeDetailPage() {
   const navigate = useNavigate()
@@ -70,7 +84,13 @@ export function EmployeeDetailPage() {
     })
   }, [contractsQuery.data, employeeQuery.data])
 
-  usePageTitle(employeeQuery.data ? `${employeeQuery.data.fullName} — HR` : 'Chi tiết nhân viên — HR')
+  const contracts = contractsQuery.data ?? []
+  const assignments = assignmentsQuery.data ?? []
+  const primaryAssignment = getPrimaryAssignment(assignments)
+  const primaryContract = getPrimaryContract(contracts)
+  const profileCompleteness = [employeeQuery.data?.email, employeeQuery.data?.phone, employeeQuery.data?.userAccountId].filter(Boolean).length
+
+  usePageTitle(employeeQuery.data ? `${employeeQuery.data.fullName} Employee Profile` : 'Employee Profile')
 
   const contractColumns = useMemo<Array<DataTableColumn<HrContract>>>(
     () => [
@@ -78,9 +98,9 @@ export function EmployeeDetailPage() {
         key: 'contract',
         header: 'Contract',
         render: (contract) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="cell-stack">
             <strong>#{contract.id}</strong>
-            <span className="muted-text">{contract.employmentType}</span>
+            <span className="cell-subtitle">{contract.employmentType}</span>
           </div>
         ),
       },
@@ -91,13 +111,13 @@ export function EmployeeDetailPage() {
       },
       {
         key: 'salary',
-        header: 'Base salary',
+        header: 'Base Salary',
         render: (contract) =>
-          canReadSensitiveContractFields ? formatCurrencyAmount(contract.baseSalary) : '••••••',
+          canReadSensitiveContractFields ? formatCurrencyAmount(contract.baseSalary) : 'Masked by policy',
       },
       {
         key: 'dates',
-        header: 'Effective dates',
+        header: 'Effective Window',
         render: (contract) => formatDateRange(contract.startDate, contract.endDate),
       },
     ],
@@ -110,9 +130,9 @@ export function EmployeeDetailPage() {
         key: 'assignment',
         header: 'Assignment',
         render: (assignment) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="cell-stack">
             <strong>{assignment.positionTitle}</strong>
-            <span className="muted-text">
+            <span className="cell-subtitle">
               Region #{assignment.regionId} · Outlet #{assignment.outletId}
             </span>
           </div>
@@ -130,7 +150,7 @@ export function EmployeeDetailPage() {
       },
       {
         key: 'dates',
-        header: 'Effective dates',
+        header: 'Effective Window',
         render: (assignment) => formatDateRange(assignment.startDate, assignment.endDate),
       },
     ],
@@ -139,8 +159,12 @@ export function EmployeeDetailPage() {
 
   if (!canReadEmployee) {
     return (
-      <DashboardLayout title="Chi tiết nhân viên" description="Inspect hồ sơ nhân viên và dữ liệu HR liên quan">
-        <PermissionDeniedInline message="Bạn cần quyền hr.employee.read để xem chi tiết nhân viên." />
+      <DashboardLayout
+        description="Inspect employee profile, assignments, and HR contract coverage."
+        eyebrow="HR Management"
+        title="Employee Profile"
+      >
+        <PermissionDeniedInline message="You need hr.employee.read to inspect employee profiles." />
       </DashboardLayout>
     )
   }
@@ -148,23 +172,30 @@ export function EmployeeDetailPage() {
   if (!Number.isFinite(employeeId) || employeeId <= 0) {
     return (
       <DashboardLayout
-        title="Chi tiết nhân viên"
-        description="Inspect hồ sơ nhân viên và dữ liệu HR liên quan"
         actions={
           <Button asChild size="sm" variant="secondary">
-            <Link to="/hr/employees">Quay lại danh sách</Link>
+            <Link to="/hr/employees">Back to employees</Link>
           </Button>
         }
+        description="Inspect employee profile, assignments, and HR contract coverage."
+        eyebrow="HR Management"
+        title="Employee Profile"
       >
-        <EmptyState description="URL không chứa employeeId hợp lệ." title="Thiếu employeeId hợp lệ" />
+        <EmptyState description="The current URL does not include a valid employee ID." title="Missing employee ID" />
       </DashboardLayout>
     )
   }
 
   if (employeeQuery.isLoading) {
     return (
-      <DashboardLayout title="Chi tiết nhân viên" description="Inspect hồ sơ nhân viên và dữ liệu HR liên quan">
-        <EmptyState description="Đang tải hồ sơ nhân viên, hợp đồng và assignments..." title="Đang tải chi tiết nhân viên" />
+      <DashboardLayout
+        description="Inspect employee profile, assignments, and HR contract coverage."
+        eyebrow="HR Management"
+        title="Employee Profile"
+      >
+        <Card title="Loading employee profile">
+          <p className="muted-text">Loading employee profile, contracts, and assignment history...</p>
+        </Card>
       </DashboardLayout>
     )
   }
@@ -172,19 +203,20 @@ export function EmployeeDetailPage() {
   if (employeeQuery.error) {
     return (
       <DashboardLayout
-        title="Chi tiết nhân viên"
-        description="Inspect hồ sơ nhân viên và dữ liệu HR liên quan"
         actions={
           <Button asChild size="sm" variant="secondary">
-            <Link to="/hr/employees">Quay lại danh sách</Link>
+            <Link to="/hr/employees">Back to employees</Link>
           </Button>
         }
+        description="Inspect employee profile, assignments, and HR contract coverage."
+        eyebrow="HR Management"
+        title="Employee Profile"
       >
         <ErrorState
-          actionLabel="Tải lại"
-          message={getHrErrorMessage(employeeQuery.error, 'Không thể tải hồ sơ nhân viên.')}
+          actionLabel="Retry"
+          message={getHrErrorMessage(employeeQuery.error, 'Unable to load the employee profile.')}
           onAction={() => void employeeQuery.refetch()}
-          title="Không thể tải nhân viên"
+          title="Unable to load employee profile"
         />
       </DashboardLayout>
     )
@@ -193,15 +225,16 @@ export function EmployeeDetailPage() {
   if (!employeeQuery.data) {
     return (
       <DashboardLayout
-        title="Chi tiết nhân viên"
-        description="Inspect hồ sơ nhân viên và dữ liệu HR liên quan"
         actions={
           <Button asChild size="sm" variant="secondary">
-            <Link to="/hr/employees">Quay lại danh sách</Link>
+            <Link to="/hr/employees">Back to employees</Link>
           </Button>
         }
+        description="Inspect employee profile, assignments, and HR contract coverage."
+        eyebrow="HR Management"
+        title="Employee Profile"
       >
-        <EmptyState description="Nhân viên này không tồn tại hoặc không còn trong phạm vi hiện tại." title="Không tìm thấy nhân viên" />
+        <EmptyState description="This employee could not be found in the current HR scope." title="Employee not found" />
       </DashboardLayout>
     )
   }
@@ -210,86 +243,215 @@ export function EmployeeDetailPage() {
 
   return (
     <DashboardLayout
-      title="Chi tiết nhân viên"
-      description="Read-first inspection cho hồ sơ nhân viên, hợp đồng và assignments."
       actions={
-        <Button asChild size="sm" variant="secondary">
-          <Link to="/hr/employees">Quay lại danh sách</Link>
-        </Button>
-      }
-    >
-      <ReadonlyBanner message="HR detail hiện publish ở chế độ read-first. Các thao tác edit/write chưa được mở ở bước này." />
-
-      <EntityHeader
-        actions={
-          canReadContracts ? (
+        <div className="form-actions align-start">
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/hr/employees">Back to employees</Link>
+          </Button>
+          {canReadContracts ? (
             <Button onClick={() => navigate(`/hr/contracts?employeeId=${employee.id}`)} size="sm" variant="secondary">
               Open contracts
             </Button>
-          ) : null
-        }
-        eyebrow="HR / Employee"
-        metadata={
-          <>
-            <span>{employee.employeeCode}</span>
-            <span>Status: {employee.status}</span>
-            <span>Hired: {formatDateLabel(employee.hiredAt)}</span>
-            <span>User account: {employee.userAccountId ? `#${employee.userAccountId}` : 'Unlinked'}</span>
-          </>
-        }
-        status={<StatusBadge status={employee.status} />}
-        title={buildEmployeeLabel(employee)}
+          ) : null}
+        </div>
+      }
+      description="Inspect employee profile, assignments, and HR contract coverage."
+      eyebrow="HR Management"
+      title="Employee Profile"
+    >
+      <ReadonlyBanner
+        label="Read-first workspace"
+        message="Employee detail is currently published for inspection, contract review, and assignment drill-down. Editing remains outside this pass."
+        title="HR profile is currently in read-first mode"
+        tone="warning"
       />
 
-      <FormSection description="Hồ sơ read-only phục vụ people operations và payroll preparation." title="Employee overview">
-        <div className="meta-grid">
-          <span>Gender: {employee.gender ?? 'Unknown'}</span>
-          <span>Date of birth: {formatDateLabel(employee.dob)}</span>
-          <span>Email: {employee.email ?? 'No email'}</span>
-          <span>Phone: {employee.phone ?? 'No phone'}</span>
+      <section className="detail-hero-grid">
+        <article className="surface-panel detail-hero-card">
+          <div className="detail-hero-body">
+            <div className="detail-media-frame">
+              <AppIcon name="person" size="lg" />
+            </div>
+            <div className="detail-summary-copy">
+              <div className="entity-header-title">
+                <h2>{employee.fullName}</h2>
+                <StatusBadge status={employee.status} />
+              </div>
+              <p className="muted-text">
+                Employee ID: <strong>{employee.employeeCode}</strong>
+              </p>
+              <div className="key-value-list">
+                <div className="key-value-row">
+                  <span>Email</span>
+                  <strong>{employee.email ?? 'No email'}</strong>
+                </div>
+                <div className="key-value-row">
+                  <span>Phone</span>
+                  <strong>{employee.phone ?? 'No phone'}</strong>
+                </div>
+                <div className="key-value-row">
+                  <span>Joined</span>
+                  <strong>{formatDateLabel(employee.hiredAt)}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <aside className="detail-side-stack">
+          <Card className="detail-side-card" title="Assignment & Status">
+            <div className="detail-side-list">
+              <div className="detail-side-row">
+                <span>Region</span>
+                <strong>{primaryAssignment ? `Region #${primaryAssignment.regionId}` : 'Unassigned'}</strong>
+              </div>
+              <div className="detail-side-row">
+                <span>Outlet</span>
+                <strong>{primaryAssignment ? `Outlet #${primaryAssignment.outletId}` : 'Unassigned'}</strong>
+              </div>
+              <div className="detail-side-row">
+                <span>Current role</span>
+                <strong>{primaryAssignment?.positionTitle ?? 'No assignment yet'}</strong>
+              </div>
+              <div className="detail-side-row">
+                <span>User account</span>
+                <strong>{employee.userAccountId ? `Linked #${employee.userAccountId}` : 'Unlinked'}</strong>
+              </div>
+            </div>
+          </Card>
+        </aside>
+      </section>
+
+      <section className="surface-grid">
+        <div className="surface-grid-main">
+          <Card title="Contract Snapshot">
+            {primaryContract ? (
+              <>
+                <div className="key-value-list">
+                  <div className="key-value-row">
+                    <span>Reference</span>
+                    <strong>#{primaryContract.id}</strong>
+                  </div>
+                  <div className="key-value-row">
+                    <span>Employment type</span>
+                    <strong>{primaryContract.employmentType}</strong>
+                  </div>
+                  <div className="key-value-row">
+                    <span>Effective window</span>
+                    <strong>{formatDateRange(primaryContract.startDate, primaryContract.endDate)}</strong>
+                  </div>
+                </div>
+                <div className="workspace-stats-grid" style={{ marginTop: '1rem' }}>
+                  <MaskedField
+                    helperText={canReadSensitiveContractFields ? 'Visible in read-only mode' : 'Masked by policy'}
+                    label="Base salary"
+                    mode={canReadSensitiveContractFields ? 'readonly-visible' : 'masked'}
+                    value={formatCurrencyAmount(primaryContract.baseSalary)}
+                  />
+                  <MaskedField
+                    helperText={canReadSensitiveContractFields ? 'Visible in read-only mode' : 'Masked by policy'}
+                    label="Tax code"
+                    mode={canReadSensitiveContractFields ? 'readonly-visible' : 'masked'}
+                    value={primaryContract.taxCode ?? '—'}
+                  />
+                </div>
+              </>
+            ) : (
+              <EmptyState description="No contract is available for this employee in the current scope." title="No contract snapshot" />
+            )}
+          </Card>
+
+          <Card title="Contracts">
+            {canReadContracts ? (
+              <DataTable
+                columns={contractColumns}
+                emptyDescription="No contracts are available for this employee in the current scope."
+                emptyTitle="No contracts"
+                error={contractsQuery.error ? getHrErrorMessage(contractsQuery.error, 'Unable to load contracts.') : null}
+                errorTitle="Unable to load contracts"
+                loading={contractsQuery.isLoading}
+                loadingDescription="Loading employee contracts..."
+                loadingTitle="Loading contracts"
+                onRetry={() => void contractsQuery.refetch()}
+                onRowClick={(contract) => navigate(`/hr/contracts/${contract.id}?employeeId=${employee.id}`)}
+                rowKey={(contract) => contract.id}
+                rows={contracts}
+              />
+            ) : (
+              <PermissionDeniedInline message="You need hr.contract.read to inspect employee contracts." />
+            )}
+          </Card>
         </div>
-      </FormSection>
 
-      <FormSection description="Hợp đồng của nhân viên trong phạm vi hiện tại." title="Contracts">
-        {canReadContracts ? (
-          <DataTable
-            columns={contractColumns}
-            emptyDescription="Nhân viên này chưa có hợp đồng nào trong phạm vi hiện tại."
-            emptyTitle="No contracts"
-            error={contractsQuery.error ? getHrErrorMessage(contractsQuery.error, 'Không thể tải contracts.') : null}
-            errorTitle="Không thể tải contracts"
-            loading={contractsQuery.isLoading}
-            loadingDescription="Đang tải contracts của nhân viên..."
-            loadingTitle="Loading contracts"
-            onRetry={() => void contractsQuery.refetch()}
-            onRowClick={(contract) => navigate(`/hr/contracts/${contract.id}?employeeId=${employee.id}`)}
-            rowKey={(contract) => contract.id}
-            rows={contractsQuery.data ?? []}
-          />
-        ) : (
-          <PermissionDeniedInline message="Bạn cần quyền hr.contract.read để xem danh sách hợp đồng của nhân viên." />
-        )}
-      </FormSection>
+        <aside className="surface-grid-side">
+          <section className="workspace-stats-grid">
+            <article className="workspace-stat-card">
+              <div className="workspace-stat-topline">
+                <span className="workspace-stat-icon">
+                  <AppIcon filled name="badge" />
+                </span>
+              </div>
+              <div className="page-stack" style={{ gap: '0.35rem' }}>
+                <span className="workspace-stat-label">Employee record</span>
+                <strong className="workspace-stat-value">{buildEmployeeLabel(employee)}</strong>
+              </div>
+            </article>
+            <article className="workspace-stat-card">
+              <div className="workspace-stat-topline">
+                <span className="workspace-stat-icon">
+                  <AppIcon filled name="description" />
+                </span>
+              </div>
+              <div className="page-stack" style={{ gap: '0.35rem' }}>
+                <span className="workspace-stat-label">Contracts</span>
+                <strong className="workspace-stat-value">{contracts.length}</strong>
+              </div>
+            </article>
+            <article className="workspace-stat-card">
+              <div className="workspace-stat-topline">
+                <span className="workspace-stat-icon">
+                  <AppIcon filled name="schedule" />
+                </span>
+              </div>
+              <div className="page-stack" style={{ gap: '0.35rem' }}>
+                <span className="workspace-stat-label">Assignments</span>
+                <strong className="workspace-stat-value">{assignments.length}</strong>
+              </div>
+            </article>
+            <article className="workspace-stat-card warning">
+              <div className="workspace-stat-topline">
+                <span className="workspace-stat-icon">
+                  <AppIcon filled name="shield" />
+                </span>
+              </div>
+              <div className="page-stack" style={{ gap: '0.35rem' }}>
+                <span className="workspace-stat-label">Profile completeness</span>
+                <strong className="workspace-stat-value">{profileCompleteness}/3</strong>
+              </div>
+            </article>
+          </section>
 
-      <FormSection description="Assignment history để hiểu phạm vi làm việc và vị trí hiện tại." title="Assignments">
-        {canReadAssignments ? (
-          <DataTable
-            columns={assignmentColumns}
-            emptyDescription="Nhân viên này chưa có assignment nào trong phạm vi hiện tại."
-            emptyTitle="No assignments"
-            error={assignmentsQuery.error ? getHrErrorMessage(assignmentsQuery.error, 'Không thể tải assignments.') : null}
-            errorTitle="Không thể tải assignments"
-            loading={assignmentsQuery.isLoading}
-            loadingDescription="Đang tải assignment history..."
-            loadingTitle="Loading assignments"
-            onRetry={() => void assignmentsQuery.refetch()}
-            rowKey={(assignment) => assignment.id}
-            rows={assignmentsQuery.data ?? []}
-          />
-        ) : (
-          <PermissionDeniedInline message="Bạn cần quyền hr.shift.read để xem assignment history của nhân viên." />
-        )}
-      </FormSection>
+          <Card title="Assignments">
+            {canReadAssignments ? (
+              <DataTable
+                columns={assignmentColumns}
+                emptyDescription="No assignments are available for this employee in the current scope."
+                emptyTitle="No assignments"
+                error={assignmentsQuery.error ? getHrErrorMessage(assignmentsQuery.error, 'Unable to load assignments.') : null}
+                errorTitle="Unable to load assignments"
+                loading={assignmentsQuery.isLoading}
+                loadingDescription="Loading employee assignment history..."
+                loadingTitle="Loading assignments"
+                onRetry={() => void assignmentsQuery.refetch()}
+                rowKey={(assignment) => assignment.id}
+                rows={assignments}
+              />
+            ) : (
+              <PermissionDeniedInline message="You need hr.shift.read to inspect employee assignments." />
+            )}
+          </Card>
+        </aside>
+      </section>
     </DashboardLayout>
   )
 }

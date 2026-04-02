@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Attendance Summary | Architectural ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-surface": "#191c1e",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "inverse-primary": "#bbc3ff",
+                        "outline-variant": "#c5c5d4",
+                        "secondary-container": "#d5e3fc",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#4151b3",
+                        "secondary": "#515f74",
+                        "on-surface-variant": "#454652",
+                        "inverse-surface": "#2d3133",
+                        "surface-tint": "#4555b7",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-primary-container": "#cacfff",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "surface": "#f7f9fb",
+                        "on-tertiary-fixed": "#002113",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "tertiary": "#004e33",
+                        "surface-container": "#eceef0",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed": "#d5e3fc",
+                        "surface-bright": "#f7f9fb",
+                        "outline": "#757684",
+                        "on-background": "#191c1e",
+                        "primary": "#27389a",
+                        "on-tertiary-container": "#5debaf",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-secondary-container": "#57657a",
+                        "on-tertiary": "#ffffff",
+                        "background": "#f7f9fb",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "tertiary-container": "#006846",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary-fixed": "#dee0ff",
+                        "on-primary-fixed": "#000e5e",
+                        "tertiary-fixed": "#6ffbbe"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-slate-50/80 backdrop-blur-xl shadow-sm h-16 flex justify-between items-center px-6">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-indigo-900">Architectural ERP</span>
+<div class="hidden md:flex items-center gap-6">
+<nav class="flex items-center gap-6 text-sm font-manrope tracking-tight">
+<a class="text-slate-500 hover:text-indigo-600 transition-colors" href="#">Operations</a>
+<a class="text-indigo-700 font-semibold" href="#">Human Resources</a>
+<a class="text-slate-500 hover:text-indigo-600 transition-colors" href="#">Finance</a>
+<a class="text-slate-500 hover:text-indigo-600 transition-colors" href="#">Inventory</a>
+</nav>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-slate-100 px-3 py-1.5 rounded-full flex items-center gap-2">
+<span class="material-symbols-outlined text-lg text-slate-500">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-xs w-48 font-body" placeholder="Search data..." type="text"/>
+</div>
+<button class="p-2 text-slate-500 hover:bg-slate-200/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-200/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">storefront</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden ml-2 ring-2 ring-indigo-100">
+<img alt="HR Manager Profile" data-alt="Professional HR Manager portrait with a friendly smile, clean corporate background, soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDx54WeQckDjMe9AfNl8TTZX_PbuGhdrTIFH9jX4Ho-t76rQSsofLJ4GGHFOSg_h3YKqSI-pL-CugA5vYd9C4AAo53_dL-byRWJbzLsOvJVBGTEf0lXyfL0ZDFJVJlnSVGLgQdaNHM3jl-H4ijT8LQO23W1w5qBH1d0xe1oxfbYGuXcziGPhOT9BkDSHx99yySleihzFNbXBjwYnZOEryfVzpMDuyXKacXp_2ruIFb4Iqcge9j_wE2U1czCA4YP_8BgGts6AsTmfw"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 pt-16 bg-slate-100 flex flex-col border-r border-slate-200 z-40">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 rounded-lg bg-indigo-700 flex items-center justify-center text-white">
+<span class="material-symbols-outlined">domain</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-sm tracking-tight text-on-surface">HR Management</h2>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Enterprise Suite</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-200 transition-all font-inter text-sm" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span>Employees</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-200 transition-all font-inter text-sm" href="#">
+<span class="material-symbols-outlined">description</span>
+<span>Contracts</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white text-indigo-700 font-bold shadow-sm font-inter text-sm" href="#">
+<span class="material-symbols-outlined">history_toggle_off</span>
+<span>Attendance</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-200 transition-all font-inter text-sm" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span>Payroll</span>
+</a>
+</nav>
+<button class="mt-8 w-full signature-gradient text-white py-3 rounded-xl font-bold text-sm shadow-md flex items-center justify-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-lg">person_add</span>
+                Add New Employee
+            </button>
+</div>
+<div class="mt-auto p-6 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-200 transition-all font-inter text-sm" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-200 transition-all font-inter text-sm" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="pl-64 pt-16 min-h-screen">
+<div class="p-8 max-w-[1400px] mx-auto">
+<!-- Header & Filter Bar -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+<div>
+<p class="text-xs font-bold text-primary tracking-[0.2em] uppercase mb-2">Operational Oversight</p>
+<h1 class="text-4xl font-headline font-extrabold text-on-surface tracking-tighter">Attendance Summary</h1>
+</div>
+<div class="flex flex-wrap items-center gap-3 bg-surface-container-low p-2 rounded-2xl">
+<div class="px-4 py-2 bg-surface-container-lowest rounded-xl shadow-sm flex items-center gap-2 cursor-pointer">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Region</span>
+<span class="text-sm font-semibold">All Regions</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</div>
+<div class="px-4 py-2 bg-surface-container-lowest rounded-xl shadow-sm flex items-center gap-2 cursor-pointer">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Outlet</span>
+<span class="text-sm font-semibold">Global View</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</div>
+<div class="px-4 py-2 bg-surface-container-lowest rounded-xl shadow-sm flex items-center gap-2 cursor-pointer">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Date</span>
+<span class="text-sm font-semibold">Oct 24, 2023</span>
+<span class="material-symbols-outlined text-sm">calendar_month</span>
+</div>
+<button class="bg-indigo-50 text-indigo-700 p-2 rounded-xl hover:bg-indigo-100 transition-colors">
+<span class="material-symbols-outlined">tune</span>
+</button>
+</div>
+</div>
+<!-- Bento Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+<div class="glass-card p-6 rounded-full shadow-sm border border-white/50 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">check_circle</span>
+</div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Attendance Rate</p>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-tertiary">94.2%</span>
+<span class="text-xs font-bold text-tertiary-container bg-tertiary-fixed-dim/20 px-2 py-0.5 rounded-full">+1.2%</span>
+</div>
+<p class="text-[11px] text-slate-500 mt-2">vs. previous 7-day average</p>
+</div>
+<div class="glass-card p-6 rounded-full shadow-sm border border-white/50 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-error">
+<span class="material-symbols-outlined text-6xl">warning</span>
+</div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Unresolved Exceptions</p>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-error">28</span>
+<span class="text-xs font-bold text-error bg-error-container/50 px-2 py-0.5 rounded-full">High</span>
+</div>
+<p class="text-[11px] text-slate-500 mt-2">Requires manual review</p>
+</div>
+<div class="glass-card p-6 rounded-full shadow-sm border border-white/50 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-6xl">schedule</span>
+</div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Late Arrivals</p>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-on-surface">14</span>
+<span class="text-xs font-bold text-secondary bg-secondary-container px-2 py-0.5 rounded-full">-3</span>
+</div>
+<p class="text-[11px] text-slate-500 mt-2">Current shift: Morning</p>
+</div>
+<div class="glass-card p-6 rounded-full shadow-sm border border-white/50 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-primary">
+<span class="material-symbols-outlined text-6xl">hourglass_empty</span>
+</div>
+<p class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-4">Overtime Hours</p>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-primary">142.5</span>
+<span class="text-xs font-bold text-primary-container bg-primary-fixed/50 px-2 py-0.5 rounded-full">Trend Up</span>
+</div>
+<p class="text-[11px] text-slate-500 mt-2">Accumulated this week</p>
+</div>
+</div>
+<!-- Main Data Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+<!-- Regional Heatmap Visual -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-full p-8 shadow-sm">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-headline font-bold text-lg">Regional Attendance Performance</h3>
+<p class="text-sm text-slate-500">Live occupancy levels across all active outlets</p>
+</div>
+<div class="flex items-center gap-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-error"></div> Crit</div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-primary"></div> Norm</div>
+<div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-tertiary"></div> High</div>
+</div>
+</div>
+<div class="space-y-6">
+<!-- Custom Bar Chart UI -->
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+<span>Manhattan North (6 Outlets)</span>
+<span>98%</span>
+</div>
+<div class="h-3 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-tertiary rounded-full" style="width: 98%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+<span>Brooklyn Center (12 Outlets)</span>
+<span>92%</span>
+</div>
+<div class="h-3 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 92%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+<span>Queens East (8 Outlets)</span>
+<span>78%</span>
+</div>
+<div class="h-3 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-error rounded-full" style="width: 78%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+<span>Jersey Terminal (4 Outlets)</span>
+<span>95%</span>
+</div>
+<div class="h-3 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-tertiary rounded-full" style="width: 95%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+<span>Staten Central (5 Outlets)</span>
+<span>88%</span>
+</div>
+<div class="h-3 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 88%"></div>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-8 border-t border-slate-100 flex justify-between items-center">
+<button class="text-sm font-bold text-primary flex items-center gap-2">
+                            View Detailed Map Overlay
+                            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+<div class="flex -space-x-2">
+<img alt="Analyst 1" class="h-8 w-8 rounded-full border-2 border-white" data-alt="Male HR analyst profile thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBkxGlca9kbcFAfKVm-WcuKghBq6gt4BnVEs6_2hOk0NA8Ug6n3lMnK27Jpnkv38RJZmniwp7IzHa7XlYKQPm6f1QX7a40AR4OVLp6leXPB6QFvcrcKLte-hJZncHru9IDJI_XLosMxnxo9jkWqh3W0wazGVfO1F1eFk1BMNdetafq6KvicepWh1w2yLoXUjR_sDQE-vaY3EZRzYHieGLVyzJhi3WLQvBpO5XcB9xZZBEp9sKeXDxWkBo1Kjl1fQm_ICcCypbLtTUE"/>
+<img alt="Analyst 2" class="h-8 w-8 rounded-full border-2 border-white" data-alt="Female HR analyst profile thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAalEuN4xSWmm2IDgqxZ0T9_gXm4zwlzXLhy0oMyJCXYYCFA9aHfOHCkVS84h5vK0GBw-LVbZiFiIvSkfb1QhhOQdE_Flk9Xgh2QYQyXXFl3wvql6BPH16LrUv2k9d46i1GzFUpZ6YASop66NstZnpAsOYcQtEOFeAgBtOIZ8b4kDUZIVN--oBMKHTsFOLR9XIkgR0xBVdj5cahdlhxNwHoJLzZX65LaDrhp2-S4qcGzTs2Bv2eut40pLBrDpKUVAWzSXVfoK8Q1Yc"/>
+<div class="h-8 w-8 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">+3</div>
+</div>
+</div>
+</div>
+<!-- Exception Queue Side Panel -->
+<div class="bg-surface-container-high rounded-full p-6 shadow-inner">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-lg">Priority Exceptions</h3>
+<span class="bg-error-container text-error px-2 py-1 rounded-lg text-[10px] font-bold uppercase">Action Required</span>
+</div>
+<div class="space-y-4 max-h-[500px] overflow-y-auto no-scrollbar pr-2">
+<!-- Exception Item 1 -->
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-10 h-10 rounded-full bg-slate-100 overflow-hidden">
+<img alt="Marcus Chen" data-alt="Headshot of a male employee for payroll exception" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBH1PZINuKgBybd9zUjzBshVHfxNxWLsQwehnFs4m__Qx2QfktKEGFidOm4Z-Syb0YOT9TkM1h1Dsgq6O2FC6sdiuiL4DE0JE4NynlZ7gEuElUUj3V_mokPFS8re5xa5w9PFrtNkYpWF52N1oZB0neiL13HZQP38ElgmoK1iC9sazPUxGN_qXpiSyc5kcceKethFYACxlJF3YTGp_YTiKUp-RxC1aJOnUtDudqksePDm0bWd3FP0GA_VpLrTiTHw_d2a6AQ0Ra6WFU"/>
+</div>
+<div>
+<h4 class="text-sm font-bold">Marcus Chen</h4>
+<p class="text-[11px] text-slate-500">Brooklyn Outlet #42</p>
+</div>
+</div>
+<div class="bg-error-container/20 p-2 rounded-lg flex items-start gap-2">
+<span class="material-symbols-outlined text-error text-lg">no_accounts</span>
+<p class="text-xs text-error font-medium">Missing Clock-Out (Shift Ended 18:00)</p>
+</div>
+</div>
+<!-- Exception Item 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-10 h-10 rounded-full bg-slate-100 overflow-hidden">
+<img alt="Sarah Jenkins" data-alt="Headshot of a female employee for attendance exception" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdxDJbTDc_Y3DGa8-q5a3Ar84QAzSO-QbDjhRVMqvsuaMUQafln_9VyGwx1uNmr2UVmPMMaQ0vswKSvAM5SjbV0P3o0Lt7fAb8OVHT4jLuLopUqxH2XgtXOEEg6pFQR0kBGL9sC7Y9cnjPvpjFol_ouHIqu9FtXXtmIRd1oohPHJ18382xZ6Rih1WhZuEbdlE4iGYqyASHxOI4_iaQj3iJmzIXWRKU8_uPDU4R19ToBNaiceVTmRYwwdJvQctix70g63pKdu6XA7I"/>
+</div>
+<div>
+<h4 class="text-sm font-bold">Sarah Jenkins</h4>
+<p class="text-[11px] text-slate-500">Manhattan North #09</p>
+</div>
+</div>
+<div class="bg-secondary-container/30 p-2 rounded-lg flex items-start gap-2">
+<span class="material-symbols-outlined text-secondary text-lg">history</span>
+<p class="text-xs text-secondary font-medium">Significant Variance (Late +45m)</p>
+</div>
+</div>
+<!-- Exception Item 3 -->
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-10 h-10 rounded-full bg-slate-100 overflow-hidden">
+<img alt="David Miller" data-alt="Headshot of a male employee for overtime exception" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtPT-Uzs02-SoAO0v0dAehlo3NQePvi445ZV-lPYdrXEUnyntwj1SIJ8cP3WlGDV0BKxA34SeXPtmS6_euV5o-cNvvmPqM5crMCJ7jH99PGOp3gcZEOuVYQjDgWuHyuwwfzRJX6ERMxtbcUcDqB8fPHc3LJ35nkr7NiVSr6WNBj2HnVgrYBHic4WV4MR4NtKol_2V__cXL8UZiT7emNXK0q075zioFDOwlbJf3dHTHElfPkMwrgCoHvoAtsxnaJLJfrEG3vUMU5h4"/>
+</div>
+<div>
+<h4 class="text-sm font-bold">David Miller</h4>
+<p class="text-[11px] text-slate-500">Queens East #12</p>
+</div>
+</div>
+<div class="bg-primary-container/10 p-2 rounded-lg flex items-start gap-2">
+<span class="material-symbols-outlined text-primary text-lg">warning</span>
+<p class="text-xs text-primary font-medium">Potential Overtime Cap Breach</p>
+</div>
+</div>
+<!-- Exception Item 4 -->
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-10 h-10 rounded-full bg-slate-100 overflow-hidden">
+<img alt="Elena Rodriguez" data-alt="Headshot of a female employee for system exception" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALorxjtZX18_7-lTu-xISQ9166FG2pU9D4eQ-g6VclVBxRbWHbqYVxbfD4-6l-uVsO_pNddEln_k11uTf1RNqZ2Hp1gJ8fzUmzitw_ac1z1FqMXtedxJmymg2jEfELFKv3-SyBWuu6ztAxHIxFt6086uFvj_zXdq2iVx8RdcOINjfPzebEtX7K7bqEVhvbXtxGXrEkoAxve5uTDciLi_r3zRe7l2aVHlJKBpOdJsRNZNQj_ZG_k0s243RTxvQsEOnR_qNDp7loQdI"/>
+</div>
+<div>
+<h4 class="text-sm font-bold">Elena Rodriguez</h4>
+<p class="text-[11px] text-slate-500">Jersey Terminal #02</p>
+</div>
+</div>
+<div class="bg-error-container/20 p-2 rounded-lg flex items-start gap-2">
+<span class="material-symbols-outlined text-error text-lg">device_unknown</span>
+<p class="text-xs text-error font-medium">Biometric Auth Failed (3 attempts)</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-3 border border-indigo-200 text-indigo-700 rounded-xl text-xs font-bold hover:bg-white transition-colors">
+                        View All 28 Exceptions
+                    </button>
+</div>
+</div>
+<!-- Bottom Detail Table / Activity -->
+<div class="bg-surface-container-lowest rounded-full p-8 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline font-bold text-lg">Live Attendance Stream</h3>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-slate-100 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200">Export Report</button>
+<button class="px-4 py-2 bg-indigo-700 rounded-lg text-xs font-bold text-white shadow-lg">Refresh Feed</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left font-inter">
+<thead>
+<tr class="text-[10px] uppercase tracking-widest text-slate-400 font-extrabold border-b border-slate-100">
+<th class="pb-4 font-bold">Employee</th>
+<th class="pb-4 font-bold">Outlet</th>
+<th class="pb-4 font-bold">Shift Start</th>
+<th class="pb-4 font-bold">Clock In</th>
+<th class="pb-4 font-bold">Status</th>
+<th class="pb-4 font-bold">Variance</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-50">
+<tr class="group hover:bg-slate-50 transition-colors">
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700">JT</div>
+<span class="text-sm font-semibold">James Thompson</span>
+</div>
+</td>
+<td class="py-4 text-sm text-slate-600">Manhattan North #09</td>
+<td class="py-4 text-sm text-slate-600">08:00 AM</td>
+<td class="py-4 text-sm text-slate-600">07:54 AM</td>
+<td class="py-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-bold px-2 py-1 rounded-full uppercase">On Time</span>
+</td>
+<td class="py-4 text-sm font-semibold text-tertiary">-6m</td>
+</tr>
+<tr class="group hover:bg-slate-50 transition-colors">
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-700">LW</div>
+<span class="text-sm font-semibold">Linda Wu</span>
+</div>
+</td>
+<td class="py-4 text-sm text-slate-600">Brooklyn Center #02</td>
+<td class="py-4 text-sm text-slate-600">08:00 AM</td>
+<td class="py-4 text-sm text-slate-600">08:12 AM</td>
+<td class="py-4">
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-1 rounded-full uppercase">Late</span>
+</td>
+<td class="py-4 text-sm font-semibold text-secondary">+12m</td>
+</tr>
+<tr class="group hover:bg-slate-50 transition-colors">
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-[10px] font-bold text-red-700">KS</div>
+<span class="text-sm font-semibold">Kevin Smith</span>
+</div>
+</td>
+<td class="py-4 text-sm text-slate-600">Queens East #12</td>
+<td class="py-4 text-sm text-slate-600">09:00 AM</td>
+<td class="py-4 text-sm text-slate-400">N/A</td>
+<td class="py-4">
+<span class="bg-error-container text-error text-[10px] font-bold px-2 py-1 rounded-full uppercase">Absent</span>
+</td>
+<td class="py-4 text-sm font-semibold text-error">--</td>
+</tr>
+<tr class="group hover:bg-slate-50 transition-colors">
+<td class="py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700">RB</div>
+<span class="text-sm font-semibold">Rachel Black</span>
+</div>
+</td>
+<td class="py-4 text-sm text-slate-600">Jersey Terminal #01</td>
+<td class="py-4 text-sm text-slate-600">08:30 AM</td>
+<td class="py-4 text-sm text-slate-600">08:29 AM</td>
+<td class="py-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-bold px-2 py-1 rounded-full uppercase">On Time</span>
+</td>
+<td class="py-4 text-sm font-semibold text-tertiary">-1m</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual FAB - Restricted to Home/Dashboard -->
+<button class="fixed bottom-8 right-8 signature-gradient text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-2xl">add</span>
+</button>
+</body></html>

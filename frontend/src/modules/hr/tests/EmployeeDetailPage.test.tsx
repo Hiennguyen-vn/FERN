@@ -95,11 +95,12 @@ describe('EmployeeDetailPage', () => {
       { route: '/hr/employees/42' },
     )
 
-    expect(await screen.findByText('EMP-042 · Pham Thi C')).toBeInTheDocument()
-    expect(screen.getByText('Contracts')).toBeInTheDocument()
-    expect(screen.getByText('Assignments')).toBeInTheDocument()
-    expect(screen.getByText('#200')).toBeInTheDocument()
-    expect(screen.getByText('Area Trainer')).toBeInTheDocument()
+    expect(await screen.findByText(/Employee ID:/)).toBeInTheDocument()
+    expect(screen.getByText('Pham Thi C')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Contracts' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Assignments' })).toBeInTheDocument()
+    expect(screen.getAllByText('#200').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Area Trainer').length).toBeGreaterThan(0)
   })
 
   it('shows section-level permission denial when contracts and assignments are unavailable', async () => {
@@ -117,7 +118,7 @@ describe('EmployeeDetailPage', () => {
       { route: '/hr/employees/42' },
     )
 
-    expect(await screen.findByText('Bạn cần quyền hr.contract.read để xem danh sách hợp đồng của nhân viên.')).toBeInTheDocument()
-    expect(screen.getByText('Bạn cần quyền hr.shift.read để xem assignment history của nhân viên.')).toBeInTheDocument()
+    expect(await screen.findByText('You need hr.contract.read to inspect employee contracts.')).toBeInTheDocument()
+    expect(screen.getByText('You need hr.shift.read to inspect employee assignments.')).toBeInTheDocument()
   })
 })

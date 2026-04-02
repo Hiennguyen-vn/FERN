@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Contracts List - Indigo Kitchen OS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-surface": "#191c1e",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "inverse-primary": "#bbc3ff",
+                        "outline-variant": "#c5c5d4",
+                        "secondary-container": "#d5e3fc",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#4151b3",
+                        "secondary": "#515f74",
+                        "on-surface-variant": "#454652",
+                        "inverse-surface": "#2d3133",
+                        "surface-tint": "#4555b7",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-primary-container": "#cacfff",
+                        "error": "#ba1a1a",
+                        "error-container": "#ffdad6",
+                        "surface": "#f7f9fb",
+                        "on-tertiary-fixed": "#002113",
+                        "on-error-container": "#93000a",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "tertiary": "#004e33",
+                        "surface-container": "#eceef0",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed": "#d5e3fc",
+                        "surface-bright": "#f7f9fb",
+                        "outline": "#757684",
+                        "on-background": "#191c1e",
+                        "primary": "#27389a",
+                        "on-tertiary-container": "#5debaf",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-secondary-container": "#57657a",
+                        "on-tertiary": "#ffffff",
+                        "background": "#f7f9fb",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "tertiary-container": "#006846",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "primary-fixed": "#dee0ff",
+                        "on-primary-fixed": "#000e5e",
+                        "tertiary-fixed": "#6ffbbe"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .tonal-nesting {
+            background-color: #f2f4f6; /* surface-container-low */
+        }
+        .signature-gradient {
+            background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-slate-50/80 backdrop-blur-xl flex justify-between items-center px-6 h-16 w-full shadow-sm">
+<div class="flex items-center gap-4">
+<span class="text-xl font-bold tracking-tighter text-indigo-900 font-headline">Architectural ERP</span>
+<div class="hidden md:flex items-center bg-slate-100 px-3 py-1.5 rounded-lg border-none">
+<span class="material-symbols-outlined text-slate-500 text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-64 text-slate-600 font-body" placeholder="Global search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-200/50 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-500">notifications</span>
+</button>
+<button class="p-2 hover:bg-slate-200/50 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-500">storefront</span>
+</button>
+<button class="p-2 hover:bg-slate-200/50 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-500">language</span>
+</button>
+<div class="h-8 w-8 rounded-full bg-primary-container flex items-center justify-center overflow-hidden border border-slate-200">
+<img alt="HR Manager Profile" data-alt="close up headshot of a professional HR manager in a bright office environment, smiling confidently" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIbnMKg1t4KAuj0TB-zEjTdMDc6S8EeVXFtjSRNP_z-7KsQFGBTJ1kx7wH6upkirYxh-tq4xd-8VeMEHZcwc9J1tA68xtXiW9gT3NkOUp2fH0-ARVahUYl2CeTIKj4wtg1Sw9bvOphoGfcnVAV8JJUset63_Q45XRs3E2qxuut2WuQzD2uZ5pB2RZXUAsn9-vyaztfriY_VuNgKM63Sa-VAZV6jkeAJq4eImYrXW3EzL3IHKSJ7fa1OZpYokpy38r-QIxogxpydBQ"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 pt-16 flex flex-col border-r border-slate-200 bg-slate-100 font-inter text-sm antialiased z-40">
+<div class="p-6 border-b border-slate-200/60">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-lg signature-gradient flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">corporate_fare</span>
+</div>
+<div>
+<h2 class="font-bold text-slate-900 leading-tight">HR Management</h2>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Enterprise Suite</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-4 py-6 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-200 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span>Employees</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 bg-white text-indigo-700 font-bold shadow-sm rounded-xl" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">description</span>
+<span>Contracts</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-200 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined">history_toggle_off</span>
+<span>Attendance</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2.5 text-slate-600 hover:text-indigo-600 hover:bg-slate-200 transition-all rounded-xl" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span>Payroll</span>
+</a>
+</nav>
+<div class="px-4 pb-8 space-y-1">
+<button class="w-full mb-4 py-3 px-4 signature-gradient text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-indigo-200">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>Add New Employee</span>
+</button>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-indigo-600 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-indigo-600 transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 pt-20 p-8 min-h-screen">
+<!-- Header & Breadcrumbs -->
+<div class="mb-8 flex justify-between items-end">
+<div>
+<nav class="flex items-center gap-2 text-xs text-on-surface-variant font-medium mb-2">
+<span>HR Management</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="text-primary">Contracts</span>
+</nav>
+<h1 class="text-3xl font-headline font-extrabold tracking-tight text-on-surface">Contract Repository</h1>
+<p class="text-on-surface-variant mt-1 text-sm">Review, monitor and audit employee contractual obligations.</p>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-surface-container-highest text-on-surface-variant font-semibold rounded-lg text-sm flex items-center gap-2 hover:bg-slate-200 transition-colors">
+<span class="material-symbols-outlined text-sm">download</span>
+                    Export Audit Log
+                </button>
+</div>
+</div>
+<!-- Bento Summary Cards -->
+<div class="grid grid-cols-12 gap-6 mb-8">
+<div class="col-span-12 lg:col-span-4 glass-card p-6 rounded-full border border-white/40 shadow-sm relative overflow-hidden">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-1">Total Active Contracts</p>
+<h3 class="text-4xl font-headline font-extrabold text-primary">1,284</h3>
+<div class="mt-4 flex items-center gap-1.5 text-tertiary font-bold text-sm">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+4.2% from last month</span>
+</div>
+</div>
+<div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">assignment_turned_in</span>
+</div>
+</div>
+<!-- Abstract Texture -->
+<div class="absolute -bottom-6 -right-6 h-32 w-32 bg-primary/5 rounded-full blur-3xl"></div>
+</div>
+<div class="col-span-12 lg:col-span-4 glass-card p-6 rounded-full border border-white/40 shadow-sm relative overflow-hidden">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-1">Expiring (30 Days)</p>
+<h3 class="text-4xl font-headline font-extrabold text-on-surface">42</h3>
+<div class="mt-4 flex items-center gap-1.5 text-on-surface-variant font-medium text-sm">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span>Critical window: 12 days</span>
+</div>
+</div>
+<div class="h-12 w-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">event_repeat</span>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 glass-card p-6 rounded-full border border-white/40 shadow-sm relative overflow-hidden bg-error-container/20">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 mb-1">Missing Documents</p>
+<h3 class="text-4xl font-headline font-extrabold text-error">08</h3>
+<div class="mt-4 flex items-center gap-1.5 text-error font-bold text-sm">
+<span class="material-symbols-outlined text-sm">warning</span>
+<span>Action Required</span>
+</div>
+</div>
+<div class="h-12 w-12 rounded-full bg-error/10 flex items-center justify-center text-error">
+<span class="material-symbols-outlined">rule</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Filter Bar -->
+<div class="bg-surface-container-low p-4 rounded-xl mb-6 flex flex-wrap items-center gap-4 border-none">
+<div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">public</span>
+<select class="bg-transparent border-none text-xs font-semibold text-on-surface focus:ring-0 p-0 pr-6">
+<option>Region: All Areas</option>
+<option>EMEA</option>
+<option>APAC</option>
+<option>AMER</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">store</span>
+<select class="bg-transparent border-none text-xs font-semibold text-on-surface focus:ring-0 p-0 pr-6">
+<option>Outlet: All Kitchens</option>
+<option>Central Park West</option>
+<option>Harajuku Flagship</option>
+<option>London Soho</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">category</span>
+<select class="bg-transparent border-none text-xs font-semibold text-on-surface focus:ring-0 p-0 pr-6">
+<option>Contract: All Types</option>
+<option>Permanent</option>
+<option>Part-time</option>
+<option>Seasonal</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">verified</span>
+<select class="bg-transparent border-none text-xs font-semibold text-on-surface focus:ring-0 p-0 pr-6">
+<option>Status: All</option>
+<option>Draft</option>
+<option>Active</option>
+<option>Expired</option>
+<option>Terminated</option>
+</select>
+</div>
+<div class="flex-1"></div>
+<button class="text-xs font-bold text-primary flex items-center gap-1 hover:underline">
+<span class="material-symbols-outlined text-sm">filter_alt_off</span>
+                Clear Filters
+            </button>
+</div>
+<!-- Main Table Container -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-high/30 border-b border-surface-container-highest">
+<tr>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant">Employee</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant">Contract ID</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant">Type</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant">Lifecycle</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant">Base Salary</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant text-center">Status</th>
+<th class="px-6 py-4 text-[10px] font-extrabold uppercase tracking-widest text-on-surface-variant text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container-low">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-all">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full overflow-hidden bg-surface-container-high">
+<img alt="Employee Avatar" data-alt="portrait of a young female chef in a professional white jacket with a focused expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgpdU-z7h0OxuKRpyIOkF293sytByqIiHwUHXuVOs1gEH5bMr2kZOpzfFZ6K8ruEmr-yVbsQ7xGP8i1Gta5aJxlabVOv2QKBWKLJiuuqgDAUSnHP8l824zRtGMf20XaBW_viidXiVFYqs6nR5rxRMM331KZHNAtGyfW5On1hFgHA3gaRom4fP0cdfdBj3PPH_pOg_lsGTGQZ_OSVOt7f430Vm83OTIoufZpDSZ8plECA7J9nnk8cK6q4MBH_HP3eOLjFAJM4x3Krw"/>
+</div>
+<div>
+<p class="font-bold text-slate-900 text-sm">Elena Sorokin</p>
+<p class="text-xs text-on-surface-variant">ID: EMP-9021</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-mono font-medium text-primary">IK-CTR-2024-001</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold px-2 py-1 bg-surface-container-high rounded text-on-surface-variant">Permanent</span>
+</td>
+<td class="px-6 py-4">
+<div class="text-xs">
+<p class="text-slate-900 font-medium">Jan 12, 2024</p>
+<p class="text-on-surface-variant">N/A (Indefinite)</p>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 group">
+<span class="text-sm font-semibold blur-[4px] select-none text-on-surface-variant">$84,000.00</span>
+<span class="material-symbols-outlined text-sm text-outline cursor-pointer hover:text-primary">visibility_off</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-tertiary-container text-tertiary-fixed border-none">
+                                Active
+                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2">
+<button class="p-1.5 hover:bg-slate-200 rounded-lg text-primary" title="View Detail">
+<span class="material-symbols-outlined text-lg">read_more</span>
+</button>
+<button class="p-1.5 hover:bg-slate-200 rounded-lg text-on-surface-variant" title="Renew">
+<span class="material-symbols-outlined text-lg">sync</span>
+</button>
+<button class="p-1.5 hover:bg-error-container/30 rounded-lg text-error" title="Terminate">
+<span class="material-symbols-outlined text-lg">person_off</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-all">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full overflow-hidden bg-surface-container-high">
+<img alt="Employee Avatar" data-alt="professional portrait of a middle-aged male manager in a dark suit with a warm and approachable smile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPHTkaqtJ-nEeS0R_xNR9jMdB5uxP2vu9-qe1DPPhbm5Yx75uBniS9cJL6AP_TCEKmMOj7uigmU4Lky_p9DB1vEcRmrpA1G29GzLIpzsvWs4r8UPD6Xzh4UneSoio62iAZt-0gyluIcbYfL8x6oYpb5uUgNHGBPvDckwIehzNTPhRQLqQ7vvOGK_-qjqnXLXgRZPHo9XGqUrKExAdepLOTL6KMgPT8TDxKcpQaCIsjMaG6ujxamgAT1j5Rjabz9VJIhxOwMuqRPs4"/>
+</div>
+<div>
+<p class="font-bold text-slate-900 text-sm">Julian Weaver</p>
+<p class="text-xs text-on-surface-variant">ID: EMP-4412</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-mono font-medium text-primary">IK-CTR-2023-892</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold px-2 py-1 bg-surface-container-high rounded text-on-surface-variant">Seasonal</span>
+</td>
+<td class="px-6 py-4">
+<div class="text-xs">
+<p class="text-slate-900 font-medium">Jun 01, 2023</p>
+<p class="text-error font-bold">Aug 31, 2024</p>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 group">
+<span class="text-sm font-semibold blur-[4px] select-none text-on-surface-variant">$22,500.00</span>
+<span class="material-symbols-outlined text-sm text-outline cursor-pointer hover:text-primary">visibility_off</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-secondary-container text-on-secondary-container border-none">
+                                Expiring
+                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2">
+<button class="p-1.5 hover:bg-slate-200 rounded-lg text-primary" title="View Detail">
+<span class="material-symbols-outlined text-lg">read_more</span>
+</button>
+<button class="p-1.5 hover:bg-slate-200 rounded-lg text-on-surface-variant" title="Renew">
+<span class="material-symbols-outlined text-lg">sync</span>
+</button>
+<button class="p-1.5 hover:bg-error-container/30 rounded-lg text-error" title="Terminate">
+<span class="material-symbols-outlined text-lg">person_off</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-all">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full overflow-hidden bg-surface-container-high">
+<img alt="Employee Avatar" data-alt="candid shot of a pastry chef working in a clean modern kitchen, dusting flour over a table" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUUHFod0tDBx8d4pgCmAN6ylwAIB0qjNXdxnC-SRL9vOC1lw5LCjck7K1o9KqSOwcoQUVDq9SvhqFOQnBbjfTDME1wThrsWinri4XP94aAQZLDVraonRCuYZy-Ox0vQA_8ai3WTJed0H5jatI1VRFKjdJJaGWFfBhDRE74mFb8ltw6arNdqHmGPTxWN8-mTqCOW7DVDXXf8eCU0gdZqZWo7XA-PIaEKdQcRSugwjuoFreE4BFvvPBGVwM9EiK-lUqq_rLKk5U-Mkk"/>
+</div>
+<div>
+<p class="font-bold text-slate-900 text-sm">Marcus Tan</p>
+<p class="text-xs text-on-surface-variant">ID: EMP-1102</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-mono font-medium text-primary">IK-CTR-2024-055</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold px-2 py-1 bg-surface-container-high rounded text-on-surface-variant">Part-time</span>
+</td>
+<td class="px-6 py-4">
+<div class="text-xs">
+<p class="text-slate-900 font-medium">May 20, 2024</p>
+<p class="text-on-surface-variant">May 19, 2025</p>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 group">
+<span class="text-sm font-semibold blur-[4px] select-none text-on-surface-variant">$38,000.00</span>
+<span class="material-symbols-outlined text-sm text-outline cursor-pointer hover:text-primary">visibility_off</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-surface-container-high text-on-surface-variant border-none">
+                                Draft
+                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2">
+<button class="p-1.5 hover:bg-slate-200 rounded-lg text-primary" title="View Detail">
+<span class="material-symbols-outlined text-lg">read_more</span>
+</button>
+<button class="p-1.5 hover:bg-slate-200 rounded-lg text-on-surface-variant" title="Renew">
+<span class="material-symbols-outlined text-lg">sync</span>
+</button>
+<button class="p-1.5 hover:bg-error-container/30 rounded-lg text-error" title="Terminate">
+<span class="material-symbols-outlined text-lg">person_off</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-all">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full overflow-hidden bg-surface-container-high">
+<img alt="Employee Avatar" data-alt="corporate portrait of a smiling woman with glasses in a modern architect studio setting with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTbDDwLL-v7ilO5lhpvX-NgFZOJN7w-K009byaO2Q-n3Iv26qZ4ek22YmuSJdt6TdTnOhOQgTWe5tRsaqdePBqIA6Gtb3lGzrhdulRRfjIKpj2L48eLbqM2b6jOBq4GkoABTmyH-GV1dC--dImIEluE382Lie9N4FVWkZrhX1ROgKn6nUUYZ_p2lCebzaWghqaPv6K-C7XPyxNSeHTkRt2HGRVYrkozJhAhLZEX9wOAqHL8-zogeFH78TKfBArEH80oCnMVdnH7CM"/>
+</div>
+<div>
+<p class="font-bold text-slate-900 text-sm">Lara Brooks</p>
+<p class="text-xs text-on-surface-variant">ID: EMP-3049</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-mono font-medium text-primary">IK-CTR-2022-114</span>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-semibold px-2 py-1 bg-surface-container-high rounded text-on-surface-variant">Permanent</span>
+</td>
+<td class="px-6 py-4">
+<div class="text-xs">
+<p class="text-slate-900 font-medium">Feb 15, 2022</p>
+<p class="text-on-surface-variant">Dec 31, 2023</p>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2 group">
+<span class="text-sm font-semibold blur-[4px] select-none text-on-surface-variant">$92,000.00</span>
+<span class="material-symbols-outlined text-sm text-outline cursor-pointer hover:text-primary">visibility_off</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-error-container text-on-error-container border-none">
+                                Terminated
+                            </span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex items-center justify-end gap-2">
+<button class="p-1.5 hover:bg-slate-200 rounded-lg text-primary" title="View Detail">
+<span class="material-symbols-outlined text-lg">read_more</span>
+</button>
+<button class="p-1.5 opacity-50 cursor-not-allowed" disabled="" title="Renew">
+<span class="material-symbols-outlined text-lg text-slate-400">sync</span>
+</button>
+<button class="p-1.5 opacity-50 cursor-not-allowed" disabled="" title="Terminate">
+<span class="material-symbols-outlined text-lg text-slate-400">person_off</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination -->
+<div class="px-6 py-4 bg-surface-container-low/50 flex justify-between items-center">
+<p class="text-xs text-on-surface-variant">Showing <span class="font-bold text-on-surface">1 - 4</span> of 1,284 contracts</p>
+<div class="flex gap-1">
+<button class="p-2 bg-white rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="px-3 py-1 bg-primary text-white rounded-lg text-xs font-bold">1</button>
+<button class="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-on-surface-variant hover:bg-slate-50">2</button>
+<button class="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-on-surface-variant hover:bg-slate-50">3</button>
+<button class="p-2 bg-white rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

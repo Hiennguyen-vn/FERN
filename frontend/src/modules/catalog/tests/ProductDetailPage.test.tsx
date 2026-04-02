@@ -77,11 +77,11 @@ describe('ProductDetailPage', () => {
       { route: '/catalog/products/1' },
     )
 
-    expect(await screen.findByRole('heading', { name: 'Chi tiết sản phẩm' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Product Profile' })).toBeInTheDocument()
     expect(screen.getByText('Iced Coffee')).toBeInTheDocument()
-    expect(screen.getByText(/REC-COFFEE/)).toBeInTheDocument()
+    expect(screen.getAllByText(/REC-COFFEE/).length).toBeGreaterThan(0)
     expect(screen.getAllByText('Permission denied')).toHaveLength(2)
-    expect(screen.getByText('Bạn không có quyền catalog.price.read nên pricing snapshot bị ẩn.')).toBeInTheDocument()
+    expect(screen.getByText('You do not have catalog.price.read, so pricing detail is hidden on this product.')).toBeInTheDocument()
   })
 
   it('renders a page error when the product query fails', async () => {
@@ -113,6 +113,6 @@ describe('ProductDetailPage', () => {
       { route: '/catalog/products/1' },
     )
 
-    expect(screen.getByText('Bạn cần quyền catalog.product.read để xem chi tiết sản phẩm.')).toBeInTheDocument()
+    expect(screen.getByText('You need catalog.product.read to inspect product detail.')).toBeInTheDocument()
   })
 })

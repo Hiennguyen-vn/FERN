@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Stock Count Entry - Architect ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-tertiary": "#ffffff",
+                        "surface-container-highest": "#e0e3e5",
+                        "error-container": "#ffdad6",
+                        "on-background": "#191c1e",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "tertiary": "#004e33",
+                        "surface-container-high": "#e6e8ea",
+                        "outline": "#757684",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#d5e3fc",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-bright": "#f7f9fb",
+                        "primary-fixed": "#dee0ff",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-tertiary-container": "#5debaf",
+                        "on-secondary-container": "#57657a",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-tertiary-fixed": "#002113",
+                        "on-surface-variant": "#454652",
+                        "tertiary-fixed": "#6ffbbe",
+                        "surface-container": "#eceef0",
+                        "secondary": "#515f74",
+                        "on-surface": "#191c1e",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "inverse-surface": "#2d3133",
+                        "background": "#f7f9fb",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-variant": "#e0e3e5",
+                        "surface-dim": "#d8dadc",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-secondary": "#ffffff",
+                        "surface": "#f7f9fb",
+                        "on-primary-fixed": "#000e5e",
+                        "on-error": "#ffffff",
+                        "outline-variant": "#c5c5d4",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "surface-container-low": "#f2f4f6",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "inverse-primary": "#bbc3ff",
+                        "tertiary-container": "#006846",
+                        "primary-container": "#4151b3",
+                        "surface-tint": "#4555b7",
+                        "primary": "#27389a",
+                        "on-primary-container": "#cacfff"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary-container">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-slate-50 dark:bg-slate-900 flex justify-between items-center w-full px-6 h-16">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold text-indigo-900 dark:text-indigo-400 tracking-tighter">Architect ERP</span>
+<nav class="hidden md:flex items-center gap-6 font-manrope text-sm font-semibold tracking-tight">
+<a class="text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors px-3 py-2 rounded-lg" href="#">Dashboard</a>
+<a class="text-indigo-700 dark:text-indigo-300 font-bold border-b-2 border-indigo-700 px-3 py-2" href="#">Inventory</a>
+<a class="text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors px-3 py-2 rounded-lg" href="#">Procurement</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+<input class="bg-surface-container-low border-none rounded-full pl-10 pr-4 py-1.5 text-sm w-64 focus:ring-2 focus:ring-primary" placeholder="Global search..." type="text"/>
+</div>
+<button class="material-symbols-outlined text-indigo-900 dark:text-indigo-400 p-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors rounded-full">notifications</button>
+<button class="material-symbols-outlined text-indigo-900 dark:text-indigo-400 p-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors rounded-full">help</button>
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-xs font-bold text-on-primary-container overflow-hidden">
+<img alt="User profile" data-alt="Professional headshot of a young male logistics manager with short dark hair in a clean office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1TVIG6FDl9AQ4cTd4ia9zR2HTuw1EqNdOXzb76wWk7sZt5Hod-xSD7zVPuuksoBP-Yda2b6p4rEskFNHipun6Ys2_NTsdc0fwuM-8a6-tki-0VRKLgs5hbOOkcc73peHKlfWfSZqUCBPkxw_gG7fTln1vt6xIlveDzSp17lF2aG67B0BI51iVsm-5yCe9CjAOskI37IZsPl5MTQwN54wz6XiE5FDa0K5z6DoMx1VwBr38OE2keawqMeu6jARF8gbKMbDNdsScSqkD"/>
+</div>
+</div>
+</header>
+<div class="flex pt-16 min-h-screen pb-32">
+<!-- Side Navigation Bar -->
+<aside class="hidden md:flex flex-col h-[calc(100vh-64px)] w-64 fixed left-0 bg-slate-100 dark:bg-slate-800/50 py-8 px-4 gap-2 font-inter text-xs font-medium uppercase tracking-widest">
+<div class="px-4 mb-6">
+<div class="flex items-center gap-3 mb-1">
+<div class="w-10 h-10 rounded bg-indigo-900 flex items-center justify-center text-white">
+<span class="material-symbols-outlined">restaurant</span>
+</div>
+<div>
+<h3 class="text-indigo-900 dark:text-indigo-400 font-bold tracking-tight normal-case text-sm">Main Kitchen</h3>
+<p class="text-[10px] text-slate-500 normal-case">Central Warehouse</p>
+</div>
+</div>
+</div>
+<a class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-900 text-indigo-900 dark:text-indigo-400 font-bold shadow-sm rounded-lg transition-transform translate-x-1" href="#">
+<span class="material-symbols-outlined text-lg">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-600 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">shopping_cart</span>
+<span>Procurement</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-600 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">restaurant</span>
+<span>Operations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-600 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">analytics</span>
+<span>Reporting</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 dark:text-slate-400 hover:text-indigo-600 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+<span>Settings</span>
+</a>
+<div class="mt-auto px-2">
+<button class="w-full bg-primary text-on-primary py-3 rounded-lg font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">add</span>
+                    New Count
+                </button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 p-8 bg-surface">
+<!-- Breadcrumb & Header Layer -->
+<div class="mb-8">
+<div class="flex items-center gap-2 text-xs text-outline mb-4">
+<span>Inventory</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span>Stock Counts</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-on-surface">CNT-2024-001</span>
+</div>
+<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+<div>
+<div class="flex items-center gap-4 mb-2">
+<h1 class="text-3xl font-headline font-extrabold tracking-tight text-on-surface">CNT-2024-001</h1>
+<div class="flex items-center gap-2 px-3 py-1 bg-tertiary-container text-on-tertiary-container rounded-full text-xs font-bold uppercase tracking-widest">
+<span class="w-2 h-2 rounded-full bg-on-tertiary-container pulse-dot"></span>
+                                COUNTING
+                            </div>
+</div>
+<div class="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-lg">location_on</span>
+<span class="font-semibold">South London Outlet</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-lg">calendar_today</span>
+<span>Oct 28, 2024</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline text-lg">person</span>
+<span class="text-on-surface-variant italic">Alex Sterling</span>
+</div>
+</div>
+</div>
+<!-- Search & Filter Toolbar -->
+<div class="flex items-center gap-3 bg-surface-container-low p-1.5 rounded-xl">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+<input class="bg-surface-container-lowest border-none rounded-lg pl-10 pr-4 py-2 text-sm w-72 focus:ring-1 focus:ring-primary shadow-sm" placeholder="Search ingredient..." type="text"/>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant mx-1"></div>
+<div class="flex gap-1">
+<button class="px-4 py-2 text-xs font-bold rounded-lg bg-primary text-on-primary">All</button>
+<button class="px-4 py-2 text-xs font-bold rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors">Matched</button>
+<button class="px-4 py-2 text-xs font-bold rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors">Variance</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Data Table Module -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden mb-6">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low font-label text-[10px] uppercase tracking-widest text-on-surface-variant">
+<tr>
+<th class="px-6 py-4 font-bold">Ingredient</th>
+<th class="px-6 py-4 font-bold text-right">System Qty</th>
+<th class="px-6 py-4 font-bold text-center w-48">Actual Qty Input</th>
+<th class="px-6 py-4 font-bold text-right">Variance</th>
+<th class="px-6 py-4 font-bold">Notes</th>
+<th class="px-6 py-4 w-10"></th>
+</tr>
+</thead>
+<tbody class="text-sm font-body">
+<!-- Row 1: Variance -->
+<tr class="group hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">Organic Tuscan Olive Oil</span>
+<span class="text-xs text-on-surface-variant">INV-OIL-002 • 1L Bottle</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right font-medium">24 L</td>
+<td class="px-6 py-5">
+<input class="w-full text-center font-bold text-lg bg-white border-2 border-primary-container rounded-lg py-2 focus:ring-offset-2 focus:ring-primary" type="number" value="22"/>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="px-3 py-1 bg-error-container text-error font-bold rounded-full">-2 L</span>
+</td>
+<td class="px-6 py-5">
+<input class="w-full bg-transparent border-none text-xs text-on-surface-variant focus:ring-0 placeholder:text-outline-variant italic" placeholder="Add note..." type="text" value="Broken seal on 2 bottles"/>
+</td>
+<td class="px-4 py-5">
+<button class="material-symbols-outlined text-outline opacity-0 group-hover:opacity-100 transition-opacity">more_vert</button>
+</td>
+</tr>
+<!-- Row 2: Matched -->
+<tr class="group hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">Aged Brie de Meaux</span>
+<span class="text-xs text-on-surface-variant">INV-CHS-881 • Whole Wheel</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right font-medium">2</td>
+<td class="px-6 py-5">
+<input class="w-full text-center font-bold text-lg bg-white border-2 border-outline-variant rounded-lg py-2 focus:ring-offset-2 focus:ring-primary" type="number" value="2"/>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="text-outline font-medium">0</span>
+</td>
+<td class="px-6 py-5">
+<input class="w-full bg-transparent border-none text-xs text-on-surface-variant focus:ring-0 placeholder:text-outline-variant italic" placeholder="Add note..." type="text"/>
+</td>
+<td class="px-4 py-5">
+<button class="material-symbols-outlined text-outline opacity-0 group-hover:opacity-100 transition-opacity">more_vert</button>
+</td>
+</tr>
+<!-- Row 3: Pos Variance -->
+<tr class="group hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">Madagascar Vanilla Beans</span>
+<span class="text-xs text-on-surface-variant">INV-SPC-012 • 50g Pack</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right font-medium">10</td>
+<td class="px-6 py-5">
+<input class="w-full text-center font-bold text-lg bg-white border-2 border-primary-container rounded-lg py-2 focus:ring-offset-2 focus:ring-primary" type="number" value="12"/>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant font-bold rounded-full">+2</span>
+</td>
+<td class="px-6 py-5">
+<input class="w-full bg-transparent border-none text-xs text-on-surface-variant focus:ring-0 placeholder:text-outline-variant italic" placeholder="Add note..." type="text" value="Found extra box in cold storage"/>
+</td>
+<td class="px-4 py-5">
+<button class="material-symbols-outlined text-outline opacity-0 group-hover:opacity-100 transition-opacity">more_vert</button>
+</td>
+</tr>
+<!-- Row 4: Default -->
+<tr class="group hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">Heirloom San Marzano</span>
+<span class="text-xs text-on-surface-variant">INV-VEG-045 • 5kg Crate</span>
+</div>
+</td>
+<td class="px-6 py-5 text-right font-medium">15</td>
+<td class="px-6 py-5">
+<input class="w-full text-center font-bold text-lg bg-white border-2 border-outline-variant rounded-lg py-2 focus:ring-offset-2 focus:ring-primary" placeholder="0" type="number"/>
+</td>
+<td class="px-6 py-5 text-right">
+<span class="text-outline-variant italic text-xs">Pending</span>
+</td>
+<td class="px-6 py-5">
+<input class="w-full bg-transparent border-none text-xs text-on-surface-variant focus:ring-0 placeholder:text-outline-variant italic" placeholder="Add note..." type="text"/>
+</td>
+<td class="px-4 py-5">
+<button class="material-symbols-outlined text-outline opacity-0 group-hover:opacity-100 transition-opacity">more_vert</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Summary Strip -->
+<div class="bg-surface-container-high rounded-xl p-6 flex flex-wrap items-center justify-between gap-8 mb-4">
+<div class="flex gap-10">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Total Lines</p>
+<p class="text-2xl font-headline font-extrabold text-on-surface">342</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1 text-error">With Variance</p>
+<p class="text-2xl font-headline font-extrabold text-error">12</p>
+</div>
+</div>
+<div class="flex gap-10 border-l border-outline-variant pl-10">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Pos Variance</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-tertiary text-sm">trending_up</span>
+<span class="text-lg font-bold text-tertiary">+2</span>
+</div>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold mb-1">Neg Variance</p>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-error text-sm">trending_down</span>
+<span class="text-lg font-bold text-error">-14</span>
+</div>
+</div>
+</div>
+<div class="ml-auto text-right">
+<p class="text-xs text-on-surface-variant mb-1">Last Saved: 2 mins ago</p>
+<div class="flex items-center gap-2 justify-end">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-xs font-semibold text-tertiary uppercase tracking-tight">Cloud Synced</span>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Sticky Footer Actions -->
+<footer class="fixed bottom-0 left-0 w-full z-40 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 px-8 py-4 flex justify-between items-center shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+<div class="flex items-center gap-4">
+<span class="font-inter text-[10px] text-slate-400 uppercase tracking-widest">© 2024 ARCHITECTURAL ERP. ALL RIGHTS RESERVED.</span>
+<div class="flex gap-4 text-[10px] text-slate-400 font-inter">
+<a class="hover:text-indigo-500 transition-colors" href="#">Support</a>
+<a class="hover:text-indigo-500 transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-indigo-500 transition-colors" href="#">User Guide</a>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-6 py-2.5 text-sm font-bold text-secondary hover:bg-surface-container transition-colors rounded-lg">
+                Cancel Count
+            </button>
+<button class="px-6 py-2.5 text-sm font-bold text-primary-container bg-secondary-container hover:bg-blue-100 transition-colors rounded-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">save</span>
+                Save Draft
+            </button>
+<button class="px-8 py-2.5 text-sm font-bold bg-slate-200 text-slate-400 rounded-lg cursor-not-allowed flex items-center gap-2" disabled="">
+<span class="material-symbols-outlined text-lg">publish</span>
+                Post to Ledger
+                <span class="material-symbols-outlined text-xs" style="font-variation-settings: 'FILL' 1;">lock</span>
+</button>
+</div>
+</footer>
+<!-- Mobile Navigation (Visible only on small screens) -->
+<div class="md:hidden fixed bottom-16 left-0 right-0 h-16 bg-surface-container-highest flex items-center justify-around z-40">
+<button class="flex flex-col items-center gap-1 text-indigo-700 font-bold">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-[10px]">Inventory</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined">shopping_cart</span>
+<span class="text-[10px]">Orders</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined">restaurant</span>
+<span class="text-[10px]">Ops</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-[10px]">Reports</span>
+</button>
+</div>
+</body></html>

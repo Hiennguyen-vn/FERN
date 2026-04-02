@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#d5e3fc",
+                        "surface-tint": "#4555b7",
+                        "on-primary-container": "#cacfff",
+                        "tertiary-container": "#006846",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "primary-fixed": "#dee0ff",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-high": "#e6e8ea",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c5c5d4",
+                        "outline": "#757684",
+                        "on-error-container": "#93000a",
+                        "surface-container": "#eceef0",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "inverse-surface": "#2d3133",
+                        "on-tertiary-fixed": "#002113",
+                        "on-background": "#191c1e",
+                        "primary-fixed-dim": "#bbc3ff",
+                        "surface": "#f7f9fb",
+                        "secondary": "#515f74",
+                        "primary": "#27389a",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#004e33",
+                        "on-primary-fixed-variant": "#2c3c9e",
+                        "surface-variant": "#e0e3e5",
+                        "inverse-primary": "#bbc3ff",
+                        "tertiary-fixed": "#6ffbbe",
+                        "surface-dim": "#d8dadc",
+                        "primary-container": "#4151b3",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f2f4f6",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary-container": "#57657a",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "on-tertiary-container": "#5debaf",
+                        "background": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "on-error": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "on-surface-variant": "#454652",
+                        "on-primary-fixed": "#000e5e"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e0e3e5; border-radius: 10px; }
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface select-none h-screen overflow-hidden flex flex-col">
+<!-- Top Navigation Anchor (Shared Component Mapping: TopNavBar) -->
+<header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 flex justify-between items-center w-full px-8 h-16 shadow-sm dark:shadow-none">
+<div class="flex items-center gap-6">
+<h1 class="text-xl font-black tracking-tighter text-indigo-950 dark:text-white uppercase">Precision Atelier</h1>
+<div class="h-6 w-px bg-outline-variant/30"></div>
+<div class="flex flex-col">
+<span class="text-xs font-bold font-headline uppercase tracking-widest text-on-surface-variant">Outlet</span>
+<span class="text-sm font-semibold text-primary">London Central</span>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-tertiary-container/10 rounded-full">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="text-xs font-bold text-tertiary uppercase tracking-tight">System Online</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex flex-col items-end mr-4">
+<span class="text-xs font-bold text-on-surface-variant">Table #12</span>
+<span class="text-sm font-medium">Guest: Alex Sterling</span>
+</div>
+<button class="p-2 text-slate-600 hover:text-indigo-500 transition-all">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-600 hover:text-indigo-500 transition-all">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center border-2 border-white shadow-sm">
+<img class="w-full h-full object-cover rounded-full" data-alt="Professional headshot of a restaurant manager with a clean background and sharp lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDHlui3lBBqB2RsFd8AKcJsqi73z1YWF51JyqBGsENQX0t-EA0MWw6Te-ItOdkCdDVxY9SpUBn_XGTjxqst3K0DRQtTOuTF4dvWEWn7Glg0d5OJ4taUjJhp23Wsov0WaxzpItIEgacco1JTl0hNwy_QVeINVhF0XVcHH4XgCueGAFBwxvHIh1N35NYVrliN9dlFGAvv4qGJF9bRoY1M_8w_MPGblJdHD8bgGgP8w9io8_AToO3v4oXZMkBL0Vw8TXeJ9N42z8ehx17"/>
+</div>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden">
+<!-- Left Panel: Product Menu (Bento Grid Inspired) -->
+<section class="flex-1 flex flex-col bg-surface overflow-hidden">
+<!-- Categories Row -->
+<div class="p-6 flex gap-3 overflow-x-auto no-scrollbar bg-surface-container-low">
+<button class="px-6 py-3 bg-white dark:bg-slate-950 rounded-xl shadow-sm text-indigo-700 font-bold font-headline whitespace-nowrap">
+                    All Menu
+                </button>
+<button class="px-6 py-3 text-on-surface-variant font-medium hover:bg-white/50 rounded-xl transition-all whitespace-nowrap">
+                    Entrées
+                </button>
+<button class="px-6 py-3 text-on-surface-variant font-medium hover:bg-white/50 rounded-xl transition-all whitespace-nowrap">
+                    Main Course
+                </button>
+<button class="px-6 py-3 text-on-surface-variant font-medium hover:bg-white/50 rounded-xl transition-all whitespace-nowrap">
+                    Signature Steaks
+                </button>
+<button class="px-6 py-3 text-on-surface-variant font-medium hover:bg-white/50 rounded-xl transition-all whitespace-nowrap">
+                    Artisan Sides
+                </button>
+<button class="px-6 py-3 text-on-surface-variant font-medium hover:bg-white/50 rounded-xl transition-all whitespace-nowrap">
+                    Wine Cellar
+                </button>
+</div>
+<!-- Product Grid -->
+<div class="flex-1 p-6 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto custom-scrollbar">
+<!-- Product Card -->
+<button class="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+<div class="relative h-32 w-full">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Top-down view of a gourmet salmon salad with vibrant greens and citrus dressing" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOLvAWtt-REqPKSce5RvUVaIFAcDKcZJFzPaL4Yjj_NnroiCn6zbUppYzRQZrqBhPYngim728gmD9chO8C-oGqcqiIOdgQC54JHtHRHfQurqJfeWH4Ff7l4wYEwsND9JNuP2Qp5K0GBSaRhDNFQEPO2-24cJoJ8ym7wFWLoZcaXtk0pz6oucxgRMk67-8RqNWDG4w-UKGSkt_5I9sN9iqZhSQaUsJC4epd8Fg78Dyyls5jwFEA1FcEsGZKuklm1pawf9iH5pXEuw3Q"/>
+<div class="absolute top-2 right-2 px-2 py-1 bg-tertiary/90 backdrop-blur-md rounded text-[10px] font-bold text-white uppercase">
+                            Stock: 42
+                        </div>
+</div>
+<div class="p-4 text-left flex flex-col justify-between flex-1">
+<h3 class="font-headline font-bold text-on-surface line-clamp-1">Miso-Glazed Salmon</h3>
+<div class="mt-2 flex justify-between items-end">
+<span class="text-sm font-body text-on-surface-variant">Main</span>
+<span class="text-lg font-bold font-headline text-primary">£24.50</span>
+</div>
+</div>
+</button>
+<!-- Product Card -->
+<button class="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+<div class="relative h-32 w-full">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Juicy charcoal grilled ribeye steak with rosemary sprig on a rustic ceramic plate" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhouGGipp_msItUxpJoAc1GS6M_QHUeqv4BaW8bC-6KhYgRBE2OQ5M9e2Jsx4THbIP42WBU9Z1XdL63bICUUCjqGbH1OIvg61wYaA4h7nxLiYJVqKRkJAoR5bfJsqTxgIkC2dZni-IhCUt5CV1Obi9lEd0oCaw61O7AOpU_k608wkkewwbIuXFr6APRjPd1g7kSqPF7hshSA9FnLMUi6VwzzE_hE9RFoF4sl_nuKHsw9B0DkWK_b0rRLjO61DtzH0op8VO9uhEU_2v"/>
+<div class="absolute top-2 right-2 px-2 py-1 bg-tertiary/90 backdrop-blur-md rounded text-[10px] font-bold text-white uppercase">
+                            Stock: 12
+                        </div>
+</div>
+<div class="p-4 text-left flex flex-col justify-between flex-1">
+<h3 class="font-headline font-bold text-on-surface line-clamp-1">Aged Ribeye 300g</h3>
+<div class="mt-2 flex justify-between items-end">
+<span class="text-sm font-body text-on-surface-variant">Signature</span>
+<span class="text-lg font-bold font-headline text-primary">£38.00</span>
+</div>
+</div>
+</button>
+<!-- Product Card (Low Stock Warning) -->
+<button class="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+<div class="relative h-32 w-full">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Artisanal sourdough pizza with fresh buffalo mozzarella and basil leaves" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDprlaMsyvZ4Gw2bMxJQQlCOecPFRfp4C-6Xvh5F5OrIEhuMw16i_jLkcM1NRj1pFmAZP9ABlkrdC8ZW1tHyIgzaDIL4W10316t6CHNP6A-GeM9S822ePyr57h7eEFVUZv2GBPjW_t6pBmMozXt0sWwHnDj95CL2o3Xh7q2ynebmKeL7ky3g5RN5DJQtijSYFObdOWgNx14GR3NaXcGHxeN1C9DYlpqCGdNBPOONDd-o2d2ZFZp-UM_jMT6d4zIauuJAjxF6CnSxObw"/>
+<div class="absolute top-2 right-2 px-2 py-1 bg-error/90 backdrop-blur-md rounded text-[10px] font-bold text-white uppercase">
+                            Only 3 Left
+                        </div>
+</div>
+<div class="p-4 text-left flex flex-col justify-between flex-1">
+<h3 class="font-headline font-bold text-on-surface line-clamp-1">Buffalo Margherita</h3>
+<div class="mt-2 flex justify-between items-end">
+<span class="text-sm font-body text-on-surface-variant">Main</span>
+<span class="text-lg font-bold font-headline text-primary">£16.00</span>
+</div>
+</div>
+</button>
+<button class="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+<div class="relative h-32 w-full">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Dark crystal glass of classic Old Fashioned cocktail with a large ice cube and orange peel" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5zVQQNYvrgW-jdNLlg6UyWHCs_ZvfrZWhSIz_x15WXN7Li6w_yq3fopdXI73rJ1gIJ4YW6RVr2T-T9NRUGh3mqVb57lc1ONoz-HFmMJS4tjvoAUoYcm3cuh5QgK3ollOOPiYMqG28MO2J2IDm9YyI31mf8ayTKfwp7Npz7dxRvkC_GRXNsloXqlzOIrcvj1yeQI4HMSatcHsnaYaFCPkld4P04oJD2m4RgJ2rLQO3vVH4fvuVgr139POBH1nuc_KbyehV6J6pyINF"/>
+<div class="absolute top-2 right-2 px-2 py-1 bg-tertiary/90 backdrop-blur-md rounded text-[10px] font-bold text-white uppercase">
+                            Stock: ∞
+                        </div>
+</div>
+<div class="p-4 text-left flex flex-col justify-between flex-1">
+<h3 class="font-headline font-bold text-on-surface line-clamp-1">Smoked Old Fashioned</h3>
+<div class="mt-2 flex justify-between items-end">
+<span class="text-sm font-body text-on-surface-variant">Cocktails</span>
+<span class="text-lg font-bold font-headline text-primary">£14.50</span>
+</div>
+</div>
+</button>
+<!-- Grid Item: More coming from DB... (Placeholders) -->
+<button class="group relative flex flex-col bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm opacity-60 hover:opacity-100 transition-all active:scale-[0.98]">
+<div class="relative h-32 w-full bg-surface-container-high animate-pulse"></div>
+<div class="p-4 text-left">
+<div class="h-4 w-3/4 bg-surface-container-high rounded mb-2"></div>
+<div class="h-4 w-1/4 bg-surface-container-high rounded"></div>
+</div>
+</button>
+</div>
+</section>
+<!-- Right Panel: Cart/Checkout (Architectural Stacking) -->
+<aside class="w-[420px] bg-surface-container-low flex flex-col border-l border-outline-variant/10 shadow-2xl z-10">
+<!-- Order Header -->
+<div class="p-6 bg-white dark:bg-slate-900 border-b border-outline-variant/20 flex justify-between items-center">
+<div>
+<h2 class="text-lg font-extrabold font-headline tracking-tight">Active Order</h2>
+<div class="flex items-center gap-2 mt-1">
+<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">Dine-in</span>
+<span class="text-xs text-on-surface-variant font-medium">Order #8921</span>
+</div>
+</div>
+<button class="p-2 rounded-xl bg-surface-container hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-outline" data-icon="person_add">person_add</span>
+</button>
+</div>
+<!-- Cart List -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
+<!-- Item -->
+<div class="p-4 bg-white dark:bg-slate-950 rounded-xl shadow-sm border border-transparent hover:border-indigo-100 transition-all group">
+<div class="flex justify-between items-start">
+<div class="flex gap-3">
+<div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Close up of steak texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-KyCfFWOqCSXkw6UUPz4nErnsNes4ez1_NPg1yEqb6qseoTxHTbhnGTtw2MFSGU5rQGgbqxwOdBnwdpk1nVy3HimSb20Wogp3OioVN-a8f9aIVh78WeRVrOrexR68KSaiRvs5HBstMoH5--MM0eNeSaEEvh-Ka0Saj17ivsAC7HQFOrV4b23nZngQra8J_-Tyeec-QuGrIwzHz-HNXT-pqXX2BFB4W1zhBUNkLy2gOheTbzPLS6WGAHdFy4czjIt7IliPCwkzbB4-"/>
+</div>
+<div>
+<h4 class="font-bold font-headline text-sm">Aged Ribeye 300g</h4>
+<p class="text-xs text-tertiary font-medium">Medium Rare, Peppercorn Sauce</p>
+</div>
+</div>
+<span class="font-bold text-primary">£38.00</span>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex items-center bg-surface-container rounded-full px-1 py-1">
+<button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="mx-3 text-sm font-bold">1</span>
+<button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+<button class="text-error opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-sm" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Item -->
+<div class="p-4 bg-white dark:bg-slate-950 rounded-xl shadow-sm border border-transparent">
+<div class="flex justify-between items-start">
+<div class="flex gap-3">
+<div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Cocktail in low light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrvMxgZtth5WSCzJ7V3hsTSTFDZi79G6_0T2QoSVQip7GWnN7vCaqDEmtXjJ4q04aptztTFdYtr9J6b1dPSMxvNd8rqjielcEhM7PjHW5ztbw4TVeuwBK0CdUm_OfERgCVDP9ZCAxqsS5lbwwchjcpjtrurSSyIIxWlHMTM1MLuJIgy8IphI17DFHfXyvUsDKp7yh2-GsIMYfN-udYvtN2bls9ZaWwytzO_6okYMIZeVdt5qW_5xE4k7rR_74lCeMU-AK0bALlC8tG"/>
+</div>
+<div>
+<h4 class="font-bold font-headline text-sm">Smoked Old Fashioned</h4>
+<p class="text-xs text-on-surface-variant">Double Bourbon</p>
+</div>
+</div>
+<span class="font-bold text-primary">£29.00</span>
+</div>
+<div class="mt-4 flex justify-between items-center">
+<div class="flex items-center bg-surface-container rounded-full px-1 py-1">
+<button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="mx-3 text-sm font-bold">2</span>
+<button class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+<button class="text-error">
+<span class="material-symbols-outlined text-sm" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Totals & Actions -->
+<div class="p-6 bg-white dark:bg-slate-900 border-t border-outline-variant/30 space-y-4">
+<div class="space-y-2">
+<div class="flex justify-between text-sm text-on-surface-variant font-medium">
+<span>Subtotal</span>
+<span>£67.00</span>
+</div>
+<div class="flex justify-between text-sm text-on-surface-variant font-medium">
+<span>Service Charge (12.5%)</span>
+<span>£8.38</span>
+</div>
+<div class="flex justify-between pt-2 border-t border-dashed border-outline-variant/30">
+<span class="text-lg font-headline font-extrabold">Total Amount</span>
+<span class="text-lg font-headline font-extrabold text-primary">£75.38</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<button class="py-4 bg-secondary-container text-on-secondary-container font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="call_split">call_split</span>
+                        Split Bill
+                    </button>
+<button class="py-4 bg-surface-container-highest text-on-surface font-bold rounded-xl flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-lg" data-icon="print">print</span>
+                        Print KOT
+                    </button>
+</div>
+<button class="w-full py-6 bg-gradient-to-br from-primary to-primary-container text-white font-headline font-extrabold text-xl rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-3 hover:scale-[1.01] active:scale-[0.97] transition-all">
+<span class="material-symbols-outlined text-2xl" data-icon="payments" data-weight="fill" style="font-variation-settings: 'FILL' 1;">payments</span>
+                    PAY NOW
+                </button>
+</div>
+</aside>
+</main>
+<!-- Side Navigation Anchor (Hidden on POS context, but available as Utility Bar) -->
+<nav class="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-100 flex md:hidden items-center justify-around z-50">
+<button class="flex flex-col items-center gap-1 text-indigo-700">
+<span class="material-symbols-outlined" data-icon="point_of_sale" data-weight="fill" style="font-variation-settings: 'FILL' 1;">point_of_sale</span>
+<span class="text-[10px] font-bold uppercase">POS</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined" data-icon="table_restaurant">table_restaurant</span>
+<span class="text-[10px] font-bold uppercase">Tables</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="text-[10px] font-bold uppercase">Stock</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-500">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-[10px] font-bold uppercase">More</span>
+</button>
+</nav>
+<!-- Side Panel Indicator for Outlet Switch (Floating UI) -->
+<button class="fixed bottom-8 left-8 p-4 bg-indigo-950 text-white rounded-full shadow-2xl flex items-center gap-3 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="sync_alt">sync_alt</span>
+<span class="text-sm font-bold pr-2">Switch Outlet</span>
+</button>
+</body></html>

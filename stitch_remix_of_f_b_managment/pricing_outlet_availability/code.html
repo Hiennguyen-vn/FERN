@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pricing &amp; Outlet Availability | Architect ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed-dim": "#bbc3ff",
+              "primary": "#27389a",
+              "tertiary-fixed-dim": "#4edea3",
+              "on-primary": "#ffffff",
+              "primary-fixed": "#dee0ff",
+              "on-error": "#ffffff",
+              "surface-tint": "#4555b7",
+              "on-tertiary-container": "#5debaf",
+              "on-secondary-fixed": "#0d1c2e",
+              "on-secondary": "#ffffff",
+              "surface-container-high": "#e6e8ea",
+              "surface-container": "#eceef0",
+              "surface-bright": "#f7f9fb",
+              "error": "#ba1a1a",
+              "on-tertiary": "#ffffff",
+              "inverse-on-surface": "#eff1f3",
+              "error-container": "#ffdad6",
+              "surface-container-highest": "#e0e3e5",
+              "secondary": "#515f74",
+              "primary-container": "#4151b3",
+              "inverse-primary": "#bbc3ff",
+              "on-primary-fixed": "#000e5e",
+              "on-secondary-fixed-variant": "#3a485b",
+              "on-secondary-container": "#57657a",
+              "on-primary-container": "#cacfff",
+              "on-background": "#191c1e",
+              "secondary-container": "#d5e3fc",
+              "outline-variant": "#c5c5d4",
+              "tertiary-fixed": "#6ffbbe",
+              "secondary-fixed": "#d5e3fc",
+              "tertiary-container": "#006846",
+              "secondary-fixed-dim": "#b9c7df",
+              "on-surface-variant": "#454652",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-fixed-variant": "#005236",
+              "on-surface": "#191c1e",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "surface-container-lowest": "#ffffff",
+              "on-tertiary-fixed": "#002113",
+              "surface": "#f7f9fb",
+              "background": "#f7f9fb",
+              "outline": "#757684",
+              "surface-dim": "#d8dadc",
+              "surface-container-low": "#f2f4f6",
+              "tertiary": "#004e33",
+              "on-error-container": "#93000a",
+              "inverse-surface": "#2d3133"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        vertical-align: middle;
+      }
+      body { font-family: 'Inter', sans-serif; }
+      h1, h2, h3, .font-headline { font-family: 'Manrope', sans-serif; }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+      }
+      .signature-gradient {
+        background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+      }
+      /* Custom scrollbar for data density */
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #e0e3e5; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- SideNavBar (Shared Component) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-[#f2f4f6] flex flex-col py-6 px-4 space-y-2 z-50">
+<div class="mb-8 px-2">
+<h2 class="font-headline text-xl font-extrabold tracking-tight text-primary">Architect ERP</h2>
+<p class="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-semibold mt-1">Precision Atelier</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-inter text-xs uppercase tracking-wider font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+<span class="font-inter text-xs uppercase tracking-wider font-semibold">Catalog</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined text-[20px]">inventory_2</span>
+<span class="font-inter text-xs uppercase tracking-wider font-semibold">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-white text-indigo-700 rounded-md shadow-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">payments</span>
+<span class="font-inter text-xs uppercase tracking-wider font-semibold">Pricing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined text-[20px]">storefront</span>
+<span class="font-inter text-xs uppercase tracking-wider font-semibold">Outlets</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all duration-200 rounded-md" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-inter text-xs uppercase tracking-wider font-semibold">Settings</span>
+</a>
+</nav>
+<div class="pt-6 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 hover:text-indigo-600 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="font-inter text-xs uppercase tracking-wider font-semibold">Help</span>
+</a>
+<div class="flex items-center gap-3 px-3 py-4 mt-4 border-t border-outline-variant/20">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container text-xs font-bold">PM</div>
+<div class="flex flex-col">
+<span class="text-[11px] font-bold text-on-surface">Precision Admin</span>
+<span class="text-[9px] text-on-surface-variant uppercase tracking-tighter">Enterprise Admin</span>
+</div>
+<span class="material-symbols-outlined ml-auto text-on-surface-variant text-sm cursor-pointer">logout</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- TopNavBar (Shared Component Inspired) -->
+<header class="w-full h-16 flex items-center justify-between px-8 bg-[#f7f9fb] sticky top-0 z-40">
+<div class="flex items-center gap-4">
+<nav class="flex items-center text-[11px] font-label font-medium uppercase tracking-widest text-on-surface-variant">
+<span class="hover:text-primary cursor-pointer">Catalog</span>
+<span class="material-symbols-outlined text-xs mx-2">chevron_right</span>
+<span class="hover:text-primary cursor-pointer">Product Master</span>
+<span class="material-symbols-outlined text-xs mx-2">chevron_right</span>
+<span class="text-primary font-bold">Pricing</span>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">notifications</span>
+<span class="absolute top-0 right-0 w-1.5 h-1.5 bg-error rounded-full"></span>
+</div>
+<div class="h-8 w-px bg-outline-variant/30"></div>
+<button class="flex items-center gap-2 px-4 py-2 signature-gradient text-white rounded-lg shadow-lg shadow-indigo-200/50 scale-95 hover:scale-100 duration-150 ease-in-out font-label text-xs font-semibold">
+<span class="material-symbols-outlined text-sm">add</span>
+                    Quick Action
+                </button>
+</div>
+</header>
+<!-- Workspace Content -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left: Product Selector -->
+<section class="w-80 bg-surface-container-low flex flex-col border-r border-transparent">
+<div class="p-6 space-y-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-sm">search</span>
+<input class="w-full bg-surface-container-lowest border-none rounded-lg pl-10 pr-4 py-2.5 text-xs font-body focus:ring-1 focus:ring-primary" placeholder="Search products..." type="text"/>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2.5 py-1 bg-primary text-on-primary rounded-full text-[10px] font-bold tracking-tight">All</span>
+<span class="px-2.5 py-1 bg-surface-container-highest text-on-surface-variant rounded-full text-[10px] font-bold tracking-tight cursor-pointer hover:bg-outline-variant">Artisan Pastry</span>
+<span class="px-2.5 py-1 bg-surface-container-highest text-on-surface-variant rounded-full text-[10px] font-bold tracking-tight cursor-pointer hover:bg-outline-variant">Hot Beverages</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto px-4 space-y-1 pb-6">
+<!-- Product List Item -->
+<div class="group p-3 bg-surface-container-lowest rounded-xl shadow-sm cursor-pointer border border-transparent hover:border-primary/20 transition-all">
+<div class="flex gap-3">
+<div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="close-up of a perfectly glazed almond croissant on a white marble surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhKCwN5nStcqwNRFkV8uLooIgDTQqmB3DlcyyH0vr_uwjhKDceC2-_Syz7-rRS42vqxXmFV7KeQks3hI4lV-sQNx5ime5yHeHClpVgSCLdvrbZCqHjtajk38iSn5_4wGUdjo43RoeeZ4KTzgZfzCGX-fBXVTJjkg6JYjFVo5kRN4-d5cLnyF290B4VuucF4MQRWHNyBS1seExv6BjWVcMd5kGCa5bz-WQAGJMF6uYfEHetkZNb4xRY_vRbbcm9IRSK5bP_HD9yAoM7"/>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline text-xs font-bold text-on-surface truncate">Almond Croissant</h4>
+<p class="text-[10px] text-on-surface-variant font-medium">CAT-0922 • £22.00</p>
+</div>
+</div>
+</div>
+<!-- Repeated items for density -->
+<div class="group p-3 bg-transparent rounded-xl cursor-pointer hover:bg-surface-container-highest transition-all">
+<div class="flex gap-3">
+<div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="rich espresso shot with thick crema being poured into a small glass cup" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDYIMqcXphJYHLAfMqodHywSl4r7C69r0FuCWv6Z3Izx-02SgT2qi8YCCyS9J74Lr2Y4B_Oc5AxzDxG4PuVPZvMlWbTRdUE-WGirL7Okf2lcTsHwGrtUACRWu_ufaPekRafziXz0XsxClO73jRWlKRxRmNIiOZT5PviJ1NCKXlivF7PelSclVYAXJLiun46JEDHDQP_GjJVveaWwDuLNEhmeGBoFjEaGnVRwvnQ1SKfFv38A1RnAWCSnPb9a-S3MGmoy6q0ImCXyzV"/>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline text-xs font-bold text-on-surface truncate">Signature Espresso</h4>
+<p class="text-[10px] text-on-surface-variant font-medium">CAT-0104 • £3.50</p>
+</div>
+</div>
+</div>
+<div class="group p-3 bg-transparent rounded-xl cursor-pointer hover:bg-surface-container-highest transition-all">
+<div class="flex gap-3">
+<div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="modern sourdough bread loaf with beautiful scoring on a dark wooden board" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcJnTh0MhH1eWRxRf5YSzsdSkl0ohbJ862s-wxCOW6fl1rA1tDb7dxCwhAAblGDsrgfEJZW54uQsXkrN-ZTeyT4sLix9nOXVViCeacGhxsU1-ZJjOso_f9WIqmojJAy9M87VzmQDy_hKbKwW89-dF585CQ3OQPSvrZr3ekwPwigP91N71KTeSZkuzjtzcLcs4th9Rfm8XmXo6b-TeNJcoAoImaJjmRuZZbcBkUe_F_ucZaeWOC8W_7MZciQ-DgKi3nq0A3T7iMBKkw"/>
+</div>
+<div class="flex-1 min-w-0">
+<h4 class="font-headline text-xs font-bold text-on-surface truncate">Pain au Sourdough</h4>
+<p class="text-[10px] text-on-surface-variant font-medium">CAT-0112 • £6.20</p>
+</div>
+</div>
+</div>
+<!-- Spacer for high density simulation -->
+<div class="h-20 flex items-center justify-center">
+<span class="text-[10px] text-outline font-medium">End of Results</span>
+</div>
+</div>
+</section>
+<!-- Right: Detailed Workspace -->
+<section class="flex-1 bg-surface overflow-y-auto">
+<div class="max-w-6xl mx-auto p-8 space-y-8">
+<!-- Top Summary Bento -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div class="md:col-span-2 glass-card p-6 rounded-2xl shadow-sm border border-white/40 flex flex-col justify-between">
+<span class="text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Active Product</span>
+<div class="mt-4 flex items-end gap-2">
+<h1 class="text-4xl font-headline font-extrabold text-primary">Almond Croissant</h1>
+<span class="text-xs font-label font-bold text-tertiary bg-tertiary-fixed-dim/20 px-2 py-0.5 rounded mb-1">LIVE</span>
+</div>
+<div class="flex gap-4 mt-4">
+<div class="flex flex-col">
+<span class="text-[10px] text-on-surface-variant">Effective Price</span>
+<span class="text-xl font-headline font-bold text-on-surface">£22.00</span>
+</div>
+<div class="w-px bg-outline-variant/30"></div>
+<div class="flex flex-col">
+<span class="text-[10px] text-on-surface-variant">Tax Profile</span>
+<span class="text-xl font-headline font-bold text-on-surface">VAT Standard (20%)</span>
+</div>
+</div>
+</div>
+<div class="bg-primary-container p-6 rounded-2xl flex flex-col justify-between text-on-primary-container relative overflow-hidden">
+<div class="z-10">
+<span class="text-[10px] font-label font-bold uppercase tracking-widest opacity-80">Future Scheduled</span>
+<div class="text-4xl font-headline font-extrabold mt-2">01</div>
+</div>
+<span class="material-symbols-outlined absolute -right-4 -bottom-4 text-9xl opacity-10">schedule</span>
+<div class="z-10 text-[11px] font-medium mt-4">Starts: Oct 12, 2024</div>
+</div>
+<div class="bg-surface-container-low p-6 rounded-2xl flex flex-col justify-between border border-outline-variant/10">
+<div>
+<span class="text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Active Outlets</span>
+<div class="text-4xl font-headline font-extrabold text-on-surface mt-2">12<span class="text-lg text-outline">/15</span></div>
+</div>
+<div class="w-full bg-surface-container-highest h-1 rounded-full overflow-hidden mt-4">
+<div class="bg-primary h-full w-[80%]"></div>
+</div>
+</div>
+</div>
+<!-- Pricing Timeline Table -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="text-lg font-headline font-bold text-on-surface">Pricing Timeline &amp; Rules</h3>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-surface-container-highest hover:bg-outline-variant transition-colors rounded-lg text-xs font-bold text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">history</span>
+                                    History
+                                </button>
+<button class="px-4 py-2 signature-gradient text-white rounded-lg text-xs font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">add_task</span>
+                                    Schedule Price
+                                </button>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-2xl shadow-sm overflow-hidden">
+<table class="w-full border-collapse">
+<thead>
+<tr class="bg-surface-container-low">
+<th class="text-left py-4 px-6 text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Scope / Outlet</th>
+<th class="text-left py-4 px-6 text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Price</th>
+<th class="text-left py-4 px-6 text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Tax Class</th>
+<th class="text-left py-4 px-6 text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Effective From</th>
+<th class="text-left py-4 px-6 text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Effective To</th>
+<th class="text-left py-4 px-6 text-[10px] font-label font-bold uppercase tracking-widest text-on-surface-variant">Status</th>
+</tr>
+</thead>
+<tbody class="text-xs">
+<!-- Default Policy -->
+<tr class="hover:bg-surface-container transition-colors group">
+<td class="py-4 px-6 font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">public</span>
+                                            Default Policy
+                                        </td>
+<td class="py-4 px-6 font-bold">£22.00</td>
+<td class="py-4 px-6 text-on-surface-variant">Standard VAT</td>
+<td class="py-4 px-6 text-on-surface-variant">Jan 01, 2024</td>
+<td class="py-4 px-6 text-on-surface-variant">—</td>
+<td class="py-4 px-6">
+<span class="px-2 py-1 bg-tertiary/10 text-tertiary font-bold rounded-md">Active</span>
+</td>
+</tr>
+<!-- Scheduled Override -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="py-4 px-6">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">London Flagship</span>
+<span class="text-[9px] uppercase tracking-tighter text-on-surface-variant">Outlet Override</span>
+</div>
+</td>
+<td class="py-4 px-6 font-bold">£24.50</td>
+<td class="py-4 px-6 text-on-surface-variant">Premium VAT</td>
+<td class="py-4 px-6 text-on-surface-variant">Oct 12, 2024</td>
+<td class="py-4 px-6 text-on-surface-variant">Dec 31, 2024</td>
+<td class="py-4 px-6">
+<span class="px-2 py-1 bg-primary/10 text-primary font-bold rounded-md">Scheduled</span>
+</td>
+</tr>
+<!-- Conflict Row -->
+<tr class="bg-error-container/20 hover:bg-error-container/30 transition-colors">
+<td class="py-4 px-6">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">Manchester Hub</span>
+<span class="text-[9px] uppercase tracking-tighter text-on-surface-variant">Outlet Override</span>
+</div>
+</td>
+<td class="py-4 px-6 font-bold">£21.00</td>
+<td class="py-4 px-6 text-on-surface-variant">Standard VAT</td>
+<td class="py-4 px-6 text-on-surface-variant">Sep 20, 2024</td>
+<td class="py-4 px-6 text-on-surface-variant">Oct 30, 2024</td>
+<td class="py-4 px-6 flex items-center gap-2">
+<span class="px-2 py-1 bg-error/10 text-error font-bold rounded-md">Conflict</span>
+<span class="material-symbols-outlined text-error text-sm cursor-help" title="Overlaps with Seasonal Promotion">info</span>
+</td>
+</tr>
+<!-- Expired Row -->
+<tr class="opacity-50 hover:opacity-100 transition-opacity">
+<td class="py-4 px-6">
+<div class="flex flex-col">
+<span class="font-bold text-on-surface">Summer Pop-up</span>
+<span class="text-[9px] uppercase tracking-tighter text-on-surface-variant">Campaign</span>
+</div>
+</td>
+<td class="py-4 px-6 font-bold">£18.00</td>
+<td class="py-4 px-6 text-on-surface-variant">Standard VAT</td>
+<td class="py-4 px-6 text-on-surface-variant">Jun 01, 2024</td>
+<td class="py-4 px-6 text-on-surface-variant">Aug 31, 2024</td>
+<td class="py-4 px-6">
+<span class="px-2 py-1 bg-outline-variant/40 text-on-surface-variant font-bold rounded-md">Expired</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Outlet Availability Section -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="lg:col-span-2 space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="text-lg font-headline font-bold text-on-surface">Outlet Availability</h3>
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1.5 text-on-surface-variant text-sm">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-lg pl-9 pr-4 py-1.5 text-xs focus:ring-1 focus:ring-primary" placeholder="Filter outlets..." type="text"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<!-- Outlet Card -->
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center justify-between group hover:shadow-md transition-all border border-transparent hover:border-primary/5">
+<div class="flex items-center gap-3">
+<div class="w-2 h-8 bg-tertiary rounded-full"></div>
+<div>
+<p class="text-xs font-bold text-on-surface">Covent Garden</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Kitchen &amp; POS</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-bold text-tertiary">Available</span>
+<div class="w-8 h-4 bg-tertiary/20 rounded-full relative cursor-pointer">
+<div class="absolute right-0.5 top-0.5 w-3 h-3 bg-tertiary rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Outlet Card 2 -->
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center justify-between group hover:shadow-md transition-all border border-transparent hover:border-primary/5">
+<div class="flex items-center gap-3">
+<div class="w-2 h-8 bg-error rounded-full"></div>
+<div>
+<p class="text-xs font-bold text-on-surface">Heathrow T5</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-tighter">Duty Free</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-bold text-error">Unavailable</span>
+<div class="w-8 h-4 bg-outline-variant/30 rounded-full relative cursor-pointer">
+<div class="absolute left-0.5 top-0.5 w-3 h-3 bg-outline rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Density filler -->
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center justify-between opacity-80">
+<div class="flex items-center gap-3">
+<div class="w-2 h-8 bg-tertiary rounded-full"></div>
+<p class="text-xs font-bold text-on-surface">Knightsbridge</p>
+</div>
+<div class="w-8 h-4 bg-tertiary/20 rounded-full relative">
+<div class="absolute right-0.5 top-0.5 w-3 h-3 bg-tertiary rounded-full"></div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm flex items-center justify-between opacity-80">
+<div class="flex items-center gap-3">
+<div class="w-2 h-8 bg-tertiary rounded-full"></div>
+<p class="text-xs font-bold text-on-surface">Soho Corner</p>
+</div>
+<div class="w-8 h-4 bg-tertiary/20 rounded-full relative">
+<div class="absolute right-0.5 top-0.5 w-3 h-3 bg-tertiary rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar Actions -->
+<div class="space-y-6">
+<h3 class="text-lg font-headline font-bold text-on-surface">Control Panel</h3>
+<div class="bg-surface-container-low rounded-2xl p-6 space-y-4 border border-outline-variant/20">
+<button class="w-full flex items-center justify-between px-4 py-3 bg-surface-container-lowest hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition-all group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary group-hover:text-white">add_circle</span>
+                                        Add Outlet Price
+                                    </div>
+<span class="material-symbols-outlined text-sm opacity-50">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between px-4 py-3 bg-surface-container-lowest hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition-all group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary group-hover:text-white">toggle_on</span>
+                                        Set Availability
+                                    </div>
+<span class="material-symbols-outlined text-sm opacity-50">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between px-4 py-3 bg-surface-container-lowest hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition-all group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary group-hover:text-white">sync_problem</span>
+                                        Validate Conflicts
+                                    </div>
+<span class="px-1.5 py-0.5 bg-error text-white text-[9px] rounded">1</span>
+</button>
+</div>
+<!-- Maintenance Alert -->
+<div class="p-4 rounded-xl bg-secondary-container/30 border border-secondary-container/50">
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-secondary">info</span>
+<div>
+<p class="text-[11px] font-bold text-secondary">Scheduled Maintenance</p>
+<p class="text-[10px] text-on-secondary-container leading-tight mt-1">Price synchronization for EU outlets will be delayed between 02:00 - 04:00 UTC tomorrow.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

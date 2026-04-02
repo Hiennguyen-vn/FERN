@@ -154,28 +154,28 @@ export function PosHomePage() {
   if (!selectedOutletId || !effectiveRegionId) {
     return (
       <section className="page-stack pos-home-page">
-        <ReadonlyBanner message="POS cần outlet context để kiểm tra session và tạo order. Chọn outlet bên dưới hoặc dùng bộ chọn ở góc phải phía trên." />
+        <ReadonlyBanner message="POS needs an outlet context to resolve sessions and create orders. Choose an outlet below or from the shell." />
         <EmptyState
-          description="Chọn outlet trong danh sách bên dưới để bắt đầu ca bán hàng."
-          title="Chưa chọn outlet"
+          description="Choose an outlet below to begin the front-of-house selling workspace."
+          title="No outlet selected"
         >
           {outletIds.length > 0 ? (
             <div style={{ marginTop: '1rem', maxWidth: '320px' }}>
               <Select
-                label="Chọn outlet vận hành"
+                label="Choose operating outlet"
                 onChange={(event) => {
                   if (event.target.value) {
                     setSelectedOutletId(Number(event.target.value))
                   }
                 }}
                 options={outletIds.map((id) => ({ label: `Outlet #${id}`, value: String(id) }))}
-                placeholder="-- Chọn outlet --"
+                placeholder="-- Choose outlet --"
                 value={selectedOutletId ? String(selectedOutletId) : ''}
               />
             </div>
           ) : (
             <p className="muted-text" style={{ marginTop: '0.5rem' }}>
-              Tài khoản này chưa được gán outlet. Liên hệ System Admin để được cấp phạm vi outlet.
+              This account has not been assigned an outlet scope. Contact a system administrator to continue.
             </p>
           )}
         </EmptyState>
@@ -187,8 +187,8 @@ export function PosHomePage() {
     return (
       <section className="page-stack pos-home-page">
         <PermissionDeniedInline
-          message="Cần quyền `pos.session.read` để POS kiểm tra session hiện tại và hiển thị workspace bán hàng an toàn."
-          title="Không thể mở POS workspace"
+          message="You need `pos.session.read` to inspect the current session and unlock the POS workspace."
+          title="Unable to open POS workspace"
         />
       </section>
     )
@@ -201,7 +201,7 @@ export function PosHomePage() {
           actionLabel="Retry"
           message={openSessionsQuery.error instanceof Error ? openSessionsQuery.error.message : 'Failed to load POS session'}
           onAction={() => void openSessionsQuery.refetch()}
-          title="Không thể tải POS session"
+          title="Unable to load POS session"
         />
       </section>
     )
@@ -211,7 +211,7 @@ export function PosHomePage() {
     <section className="page-stack pos-home-page">
       {reusedSessionCode ? (
         <div className="inline-banner inline-banner-success">
-          Đã dùng lại open session hiện có: <strong>{reusedSessionCode}</strong>
+          Reused the current open session: <strong>{reusedSessionCode}</strong>
         </div>
       ) : null}
 
@@ -236,13 +236,13 @@ export function PosHomePage() {
           session={currentSession}
         />
       ) : (
-        <FormSection description="Mở ca làm việc trước khi tạo order hoặc nhận payment." title="Open POS session">
+        <FormSection description="Open a selling session before creating orders or accepting payment." title="Open POS session">
           {!isOnline ? (
-            <ReadonlyBanner message="Đang offline nên chưa thể mở session mới. Hãy kết nối lại để tiếp tục." />
+            <ReadonlyBanner message="The terminal is offline, so a new session cannot be opened yet. Reconnect to continue." />
           ) : !canOpenSessionPermission ? (
             <PermissionDeniedInline
-              message="Cần quyền `pos.session.open` để mở ca làm việc mới tại outlet hiện tại."
-              title="Không thể mở session"
+              message="You need `pos.session.open` to open a new selling session at the current outlet."
+              title="Unable to open session"
             />
           ) : null}
           <div className="field-grid">
@@ -303,7 +303,7 @@ export function PosHomePage() {
                   note: openSessionNote || undefined,
                 })
               }
-              title="Không thể mở session"
+              title="Unable to open session"
             />
           ) : null}
         </FormSection>
@@ -314,20 +314,20 @@ export function PosHomePage() {
           actionLabel="Retry close"
           message={closeSessionMutation.error instanceof Error ? closeSessionMutation.error.message : 'Failed to close POS session'}
           onAction={() => setCloseDialogOpen(true)}
-          title="Không thể đóng session"
+          title="Unable to close session"
         />
       ) : null}
 
       {currentSession ? (
         <>
           {!isOnline ? (
-            <ReadonlyBanner message="POS đang offline. Tạo order mới và đóng session tạm thời bị khóa cho đến khi kết nối trở lại." />
+            <ReadonlyBanner message="POS is offline. Creating new orders and closing the session remain locked until the connection returns." />
           ) : null}
 
           {!canReadCatalogPermission ? (
             <PermissionDeniedInline
-              message="POS cần cả `catalog.product.read` và `catalog.price.read` để resolve menu theo outlet, availability và effective price."
-              title="Không thể tải catalog"
+              message="POS needs both `catalog.product.read` and `catalog.price.read` to resolve outlet menu, availability, and effective price."
+              title="Unable to load catalog"
             />
           ) : null}
 
@@ -372,7 +372,7 @@ export function PosHomePage() {
                         : 'Failed to load product catalog'
                   }
                   onAction={() => void catalogQuery.refetch()}
-                  title="Không thể tải catalog"
+                  title="Unable to load catalog"
                 />
               ) : null}
 
@@ -415,13 +415,13 @@ export function PosHomePage() {
           {createOrderMutation.error ? (
             <ErrorState
               message={createOrderMutation.error instanceof Error ? createOrderMutation.error.message : 'Failed to create order'}
-              title="Không thể tạo order"
+              title="Unable to create order"
             />
           ) : null}
         </>
       ) : !openSessionsQuery.isLoading ? (
         <EmptyState
-          description="Mở session để thấy catalog, cart và tạo order mới."
+          description="Open a session to load the catalog, cart, and order creation flow."
           title="No open POS session"
         />
       ) : null}
@@ -429,7 +429,7 @@ export function PosHomePage() {
       <ConfirmActionDialog
         confirmLabel="Close session"
         danger
-        description="Chỉ nên đóng session khi mọi order đã hoàn tất hoặc đã được hủy."
+        description="Close the session only after every order has been completed or cancelled."
         onCancel={() => setCloseDialogOpen(false)}
         onConfirm={async () => {
           if (!currentSession) {

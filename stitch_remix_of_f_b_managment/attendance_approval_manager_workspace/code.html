@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Attendance Queue | Architect ERP</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-lowest": "#ffffff",
+              "on-primary-fixed": "#000e5e",
+              "primary-fixed-dim": "#bbc3ff",
+              "on-tertiary-container": "#5debaf",
+              "on-background": "#191c1e",
+              "surface-container-high": "#e6e8ea",
+              "error": "#ba1a1a",
+              "error-container": "#ffdad6",
+              "inverse-surface": "#2d3133",
+              "surface-dim": "#d8dadc",
+              "on-tertiary-fixed-variant": "#005236",
+              "secondary": "#515f74",
+              "on-error": "#ffffff",
+              "on-primary-container": "#cacfff",
+              "surface-container-highest": "#e0e3e5",
+              "on-tertiary-fixed": "#002113",
+              "inverse-on-surface": "#eff1f3",
+              "on-secondary-fixed": "#0d1c2e",
+              "on-error-container": "#93000a",
+              "on-surface": "#191c1e",
+              "on-primary-fixed-variant": "#2c3c9e",
+              "tertiary": "#004e33",
+              "on-secondary": "#ffffff",
+              "surface-bright": "#f7f9fb",
+              "secondary-container": "#d5e3fc",
+              "secondary-fixed-dim": "#b9c7df",
+              "primary-container": "#4151b3",
+              "tertiary-container": "#006846",
+              "surface-tint": "#4555b7",
+              "on-surface-variant": "#454652",
+              "outline": "#757684",
+              "on-secondary-container": "#57657a",
+              "primary": "#27389a",
+              "outline-variant": "#c5c5d4",
+              "surface-container-low": "#f2f4f6",
+              "on-primary": "#ffffff",
+              "background": "#f7f9fb",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface-variant": "#e0e3e5",
+              "surface-container": "#eceef0",
+              "on-tertiary": "#ffffff",
+              "surface": "#f7f9fb",
+              "tertiary-fixed": "#6ffbbe",
+              "primary-fixed": "#dee0ff",
+              "on-secondary-fixed-variant": "#3a485b",
+              "inverse-primary": "#bbc3ff",
+              "secondary-fixed": "#d5e3fc"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(24px);
+      }
+      .signature-gradient {
+        background: linear-gradient(135deg, #27389a 0%, #4151b3 100%);
+      }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- Top Navigation Shell -->
+<header class="bg-[#f7f9fb] dark:bg-slate-900 text-[#3F51B5] dark:text-indigo-400 font-manrope tracking-tight font-semibold docked full-width top-0 z-50 sticky no-border bg-[#f2f4f6] dark:bg-slate-800 flat no shadows flex justify-between items-center w-full px-6 h-16">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-[#191c1e] dark:text-slate-100">Architect ERP</span>
+<div class="hidden md:flex items-center gap-6 text-sm">
+<span class="text-[#454652] dark:text-slate-400 hover:bg-[#f2f4f6] dark:hover:bg-slate-800 transition-colors px-3 py-2 rounded">Dashboards</span>
+<span class="text-[#3F51B5] dark:text-indigo-300 font-bold border-b-2 border-[#3F51B5] px-3 py-2">Attendance Queue</span>
+<span class="text-[#454652] dark:text-slate-400 hover:bg-[#f2f4f6] dark:hover:bg-slate-800 transition-colors px-3 py-2 rounded">Reporting</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex items-center gap-4 text-xs font-label uppercase tracking-widest text-on-surface-variant">
+<span>Region: South East</span>
+<div class="w-px h-4 bg-outline-variant"></div>
+<span class="font-bold text-primary">Outlet: Downtown Bistro</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 material-symbols-outlined text-on-surface-variant hover:bg-surface-container transition-colors rounded-full">notifications</button>
+<button class="p-2 material-symbols-outlined text-on-surface-variant hover:bg-surface-container transition-colors rounded-full">settings</button>
+<img alt="HR Manager Profile" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcLo9S5MZ4YRo3LfZTN4gOGwWerhyQ1QvGL8IWQPeZJCwULJJm_V74tSCFZ4mCNSTg8KgUUbQZwgBao8gDHxclhtSt4fx-IvxfojsgIsEfU1z3QrwGp4GADQhB7ye8wvI52whzZ-H6smPlEMu0ZcS8l76RG9EXTLveRe6RQpDJf4ZC9zUlfSkZnicNJBUds0nMAR-DXB5KN64F1fNl4A9wPr4mOs-iOViRClnreCJaErxLTEn05SB-EAEtgIPfdPKETFuFGOyFzw8"/>
+</div>
+</div>
+</header>
+<div class="flex">
+<!-- Side Navigation Shell -->
+<aside class="bg-[#f2f4f6] dark:bg-slate-900 text-[#3F51B5] dark:text-indigo-400 font-inter text-sm font-medium h-screen w-64 fixed left-0 top-0 z-40 no-border tonal-layering flat no shadows flex flex-col h-full p-4 gap-2 pt-20">
+<div class="mb-6 px-2">
+<h2 class="text-lg font-black text-[#27389a] dark:text-indigo-300">Precision HR</h2>
+<p class="text-[10px] uppercase tracking-tighter text-on-surface-variant opacity-70">Enterprise Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="badge">badge</span>
+<span>Employee Master</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+<span>Contract Lifecycle</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+<span>Shift Management</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-white dark:bg-slate-800 text-[#3F51B5] dark:text-indigo-300 rounded-lg shadow-sm font-semibold translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="fact_check">fact_check</span>
+<span>Attendance Queue</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span>Payroll Prep</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] dark:text-slate-400 hover:text-[#191c1e] hover:bg-[#e2e4e6] dark:hover:bg-slate-800/50 rounded-lg transition-all group" href="#">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 border-t border-outline-variant/20 space-y-1">
+<button class="w-full signature-gradient text-on-primary py-2.5 rounded-md font-bold mb-4 flex items-center justify-center gap-2 shadow-md">
+<span class="material-symbols-outlined text-sm">add</span>
+                    New Staff Entry
+                </button>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] text-xs" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="support_agent">support_agent</span>
+<span>Help Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-[#454652] text-xs" href="#">
+<span class="material-symbols-outlined text-lg" data-icon="shutter_speed">shutter_speed</span>
+<span>Privacy</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-64 p-8 min-h-screen">
+<!-- Header Section -->
+<div class="mb-8 flex justify-between items-end">
+<div>
+<h1 class="font-headline text-3xl font-extrabold text-on-surface tracking-tight">Attendance Approval Queue</h1>
+<p class="text-on-surface-variant font-medium">Review and validate shift exceptions for Downtown Bistro</p>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-surface-container-high text-on-surface rounded-md font-semibold text-sm flex items-center gap-2 hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-base">filter_list</span>
+                        Filters
+                    </button>
+<button class="px-4 py-2 signature-gradient text-on-primary rounded-md font-semibold text-sm flex items-center gap-2 shadow-lg active:scale-95 transition-all">
+<span class="material-symbols-outlined text-base">done_all</span>
+                        Bulk Approve (12)
+                    </button>
+</div>
+</div>
+<!-- Bento Summary Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+<div class="col-span-1 bg-surface-container-lowest p-6 rounded-xl shadow-sm flex flex-col justify-between border-l-4 border-primary">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Pending Approval</span>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-primary">24</span>
+<span class="text-xs text-error font-semibold flex items-center">+5 today</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2">Requires immediate action</p>
+</div>
+<div class="col-span-1 bg-surface-container-lowest p-6 rounded-xl shadow-sm flex flex-col justify-between border-l-4 border-tertiary">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Approved Today</span>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-tertiary">142</span>
+<span class="text-xs text-tertiary font-semibold flex items-center">94% of shift</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2">Processed successfully</p>
+</div>
+<div class="col-span-1 bg-surface-container-lowest p-6 rounded-xl shadow-sm flex flex-col justify-between border-l-4 border-error">
+<span class="text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2">Rejected/Disputed</span>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold text-error">08</span>
+<span class="text-xs text-on-surface-variant font-semibold">Flagged for review</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2">Requires management notes</p>
+</div>
+<div class="col-span-1 bg-primary text-on-primary p-6 rounded-xl shadow-lg flex flex-col justify-between relative overflow-hidden">
+<div class="absolute -right-4 -top-4 opacity-10">
+<span class="material-symbols-outlined text-8xl" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+<span class="text-xs font-bold text-primary-fixed-dim uppercase tracking-widest mb-2">Labor Efficiency</span>
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-extrabold">98.2%</span>
+</div>
+<p class="text-xs text-primary-fixed-dim mt-2">Actual vs Scheduled</p>
+</div>
+</div>
+<div class="flex gap-6 items-start">
+<!-- Queue Table Section -->
+<div class="flex-1 bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden border border-outline-variant/10">
+<div class="px-6 py-4 bg-surface-container-low flex justify-between items-center">
+<h3 class="font-headline font-bold text-on-surface">Queue: High Priority Exceptions</h3>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-lg">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-surface-container-lowest border border-outline-variant/30 rounded-md text-sm focus:ring-1 focus:ring-primary outline-none" placeholder="Search staff..." type="text"/>
+</div>
+</div>
+</div>
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="px-6 py-3 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Employee</th>
+<th class="px-6 py-3 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Shift Window</th>
+<th class="px-6 py-3 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Actual Log</th>
+<th class="px-6 py-3 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant">Exception</th>
+<th class="px-6 py-3 text-[10px] uppercase font-bold tracking-widest text-on-surface-variant text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Row 1: Active Selection -->
+<tr class="bg-surface-container-low/30 hover:bg-surface-container transition-colors cursor-pointer border-l-4 border-primary">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Michael" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBqjuiGrv1j7MX7nOVM_nLRBt_gdP5R_pWsTqq3nxL_b89VQfUUfdjcRL2BSiR3KRKQ2aYry3IIz9-asvvPUknSg_kpF4Z0x5xUiJq0YtX0QghWvWPPgUwjRlMYRfhj12AO97J9FzrbQgt3SUbIP-gN1lm0dOJGUxpxNNu2mIEnwC5S4uiMEGl_Q0nMGYNb53m2NTsj36oB9YWHObYdaXcnCYgG_8sj6XaKXuAyvaowtbi9IGS9rehy2LIwMAiv_i49WmqbcUyZ4o"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Michael Chen</p>
+<p class="text-[10px] text-on-surface-variant">Senior Chef de Partie</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">
+                                    09:00 - 17:00
+                                </td>
+<td class="px-6 py-4">
+<p class="text-xs font-bold text-on-surface">09:12 - 17:05</p>
+<p class="text-[10px] text-error font-medium">12m Late In</p>
+</td>
+<td class="px-6 py-4">
+<span class="bg-error-container text-on-error-container text-[10px] font-bold px-2 py-0.5 rounded uppercase">Late Clock-in</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-outline">pending_actions</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Sarah" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCkHWCdb3BrwJRlxab9oS_3hO1ogwgKUpQibi3j53RnOkbUzpm05ZxMJGE181FAFQamm16ko0ko9RXmgqKgK4oxYWcFPUld5unx0tUBcVsGedsZf90-lVc_s9vM4O8CX08LDBl6UogywNJHWVgBkiAMQuH1F9e0MMDDlln410iayoA6WCaqKJn_SS4EngXhFeKuFqEyUcmGx-SpdwVe-YD21bGCujQTK8c7LRFl5FB5Zd8sqYVuWI30OOLha-BxP8K5md-jgvLCd0"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Sarah J. Miller</p>
+<p class="text-[10px] text-on-surface-variant">Head Mixologist</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">
+                                    16:00 - 00:00
+                                </td>
+<td class="px-6 py-4">
+<p class="text-xs font-bold text-on-surface">15:55 - 01:15</p>
+<p class="text-[10px] text-tertiary font-medium">75m OT (Unapproved)</p>
+</td>
+<td class="px-6 py-4">
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-0.5 rounded uppercase">Extra Hours</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-outline">pending_actions</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="David" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDiC9j0NZRrQyidJFC7vGSfrZm3U67OD19Ww2bofoCr28KL07CnTeoa2oqdlPxBry_id-NbCOCIpKyDMKZZPNQJ0c_7akZLZ50YSPInzbY6M-Q3tXXO66FIyngMFqzlmSz33_VmZtiXA636FvXDpqRExaQjBuLyY4FzwHv1o6ecX-AJ55fliT5nOZ8BDywbEl076obohAWISCpMxDwWikep6Tp9JpeRfHyfXR6z5mhUscl4WqkAfcJNlgNCTpAzim-VsQVS3PhUv-o"/>
+<div>
+<p class="text-sm font-bold text-on-surface">David Vance</p>
+<p class="text-[10px] text-on-surface-variant">Floor Lead</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">
+                                    10:00 - 18:00
+                                </td>
+<td class="px-6 py-4">
+<p class="text-xs font-bold text-on-surface">10:00 - 17:15</p>
+<p class="text-[10px] text-error font-medium">45m Early Out</p>
+</td>
+<td class="px-6 py-4">
+<span class="bg-error-container text-on-error-container text-[10px] font-bold px-2 py-0.5 rounded uppercase">Early Departure</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-outline">pending_actions</span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-colors cursor-pointer">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Eliza" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuANxfSnDlSCsOKqgnc8k5Iu_YA1XmFL4Hr7CTAme1WtwI8iYor-4kED3GV1Z-idq6mYs5hmAtyHGhnknxsGIYqsyZ8vKKdFzT07IPK0ijyjGHeWcDYahSGMp9pad0Z1UYA0KX6IVTOBDYZJjaY_pkCbyBBE9dfOVOsH9BrFxTLHTqq-woUZpNsg0_QldLC9VVkKr5HaA7DHZ6JUvOV-4D2PwMrRpLDrJBatLBx6WFx4Qhb1DGAjEsg38vv6gelmG4wInrWFGR5upX8"/>
+<div>
+<p class="text-sm font-bold text-on-surface">Eliza Thorne</p>
+<p class="text-[10px] text-on-surface-variant">Waitstaff</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-xs font-medium text-on-surface-variant">
+                                    12:00 - 20:00
+                                </td>
+<td class="px-6 py-4">
+<p class="text-xs font-bold text-on-surface">11:58 - 20:02</p>
+<p class="text-[10px] text-on-surface-variant italic">On Time</p>
+</td>
+<td class="px-6 py-4">
+<span class="bg-surface-variant text-on-surface-variant text-[10px] font-bold px-2 py-0.5 rounded uppercase">Manual Adj Req</span>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-outline">pending_actions</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Side Decision Panel -->
+<aside class="w-96 sticky top-24">
+<div class="bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/10 overflow-hidden flex flex-col">
+<div class="p-6 border-b border-outline-variant/10 bg-surface-container-low">
+<h4 class="font-headline font-bold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">info</span>
+                                Detailed Review
+                            </h4>
+</div>
+<div class="p-6 space-y-6">
+<div class="flex items-center gap-4">
+<img alt="Michael" class="w-16 h-16 rounded-xl shadow-sm border-2 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2Qvt9q0RUBnBa9sUgCIQ5rWm5ek2XtiryHuUfD8kGplXuIB5veGCBTGsI_BkJpZa2cQVX5o7FHYJOvQpCZ4SUFdNsyMEBydzh3Il_EwuLQPfvo1fwGWKJeKPXbbxv9Qjfra2l5HB3R7Y-TlqyRsF6JfvUKY_4XV91tq6ls25FyPgcGRMWsF9dWOOn1PDzdm6REWXVlQ2KLG61oS69p6i51FtgZJWPX3Thx8ZiSOZ3g8WdH4kmgXC6yQ7NHH8IUhRU_nPe7ibNSI8"/>
+<div>
+<h5 class="font-headline font-bold text-lg text-on-surface">Michael Chen</h5>
+<p class="text-sm text-on-surface-variant font-medium">Senior Chef de Partie</p>
+<p class="text-xs text-primary font-bold mt-1">Emp ID: #8829</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg space-y-3">
+<div class="flex justify-between items-center">
+<span class="text-xs font-bold text-on-surface-variant uppercase">Shift Details</span>
+<span class="text-[10px] bg-outline-variant/20 px-2 py-0.5 rounded">22 Oct 2023</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase mb-1">Scheduled</p>
+<p class="text-sm font-bold">09:00 - 17:00</p>
+<p class="text-[10px] text-outline">8.0 hrs planned</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase mb-1">Actual</p>
+<p class="text-sm font-bold text-error">09:12 - 17:05</p>
+<p class="text-[10px] text-error font-medium">7.9 hrs tracked</p>
+</div>
+</div>
+</div>
+<div>
+<h6 class="text-xs font-bold text-on-surface-variant uppercase mb-3">Manager Notes / Discrepancy Reason</h6>
+<div class="relative group">
+<textarea class="w-full h-24 p-3 bg-surface-container-low border-none rounded-lg text-sm focus:ring-1 focus:ring-primary outline-none resize-none" placeholder="Add internal notes for payroll..."></textarea>
+<div class="absolute bottom-2 right-2 flex gap-1">
+<span class="bg-surface-container-highest p-1 rounded material-symbols-outlined text-xs cursor-pointer hover:bg-outline-variant">mic</span>
+<span class="bg-surface-container-highest p-1 rounded material-symbols-outlined text-xs cursor-pointer hover:bg-outline-variant">attach_file</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-2 mt-2">
+<button class="text-[10px] bg-outline-variant/10 hover:bg-outline-variant/30 px-2 py-1 rounded transition-colors">Transit Delay</button>
+<button class="text-[10px] bg-outline-variant/10 hover:bg-outline-variant/30 px-2 py-1 rounded transition-colors">Approved OT</button>
+<button class="text-[10px] bg-outline-variant/10 hover:bg-outline-variant/30 px-2 py-1 rounded transition-colors">Staff Shortage</button>
+</div>
+</div>
+<div class="pt-4 space-y-3">
+<button class="w-full signature-gradient text-on-primary py-3 rounded-md font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined">check_circle</span>
+                                    Approve for Payroll
+                                </button>
+<div class="flex gap-3">
+<button class="flex-1 border border-error text-error py-2.5 rounded-md font-bold text-sm hover:bg-error-container/10 transition-colors">
+                                        Reject Shift
+                                    </button>
+<button class="flex-1 bg-surface-container-high text-on-surface-variant py-2.5 rounded-md font-bold text-sm hover:bg-surface-container-highest transition-colors">
+                                        Escalate
+                                    </button>
+</div>
+</div>
+</div>
+<div class="mt-auto p-4 bg-surface-container-highest/50 flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">history</span>
+<p class="text-[10px] text-on-surface-variant">Michael has <span class="font-bold text-error">3 late clock-ins</span> in the last 15 days.</p>
+</div>
+</div>
+</aside>
+</div>
+</main>
+</div>
+<!-- Floating Action Button - Supressed on this detail-heavy screen as per guidelines -->
+</body></html>
