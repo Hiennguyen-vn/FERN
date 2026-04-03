@@ -4,10 +4,10 @@ export interface StockBalance {
   regionId: number
   outletId: number
   ingredientId: number
-  qtyOnHand: string
-  qtyReserved: string
-  qtyAvailable: string
-  unitCost: string
+  qtyOnHand: number
+  qtyReserved: number
+  qtyAvailable: number
+  unitCost: number
   lastCountDate: string | null
 }
 
@@ -16,11 +16,11 @@ export interface InventoryTransaction {
   regionId: number
   outletId: number
   ingredientId: number
-  qtyChange: string
+  qtyChange: number
   businessDate: string
   txnTime: string
   txnType: string
-  unitCost: string
+  unitCost: number
   sourceReferenceType: string | null
   sourceReferenceId: string | null
   createdByUserId: number | null
@@ -59,7 +59,7 @@ export interface StockAdjustment {
   outletId: number
   ingredientId: number
   adjustmentDirection: AdjustmentDirection
-  qty: string
+  qty: number
   businessDate: string
   reason: string
   note: string | null
@@ -87,7 +87,7 @@ export interface WasteRecord {
   regionId: number
   outletId: number
   ingredientId: number
-  qty: string
+  qty: number
   businessDate: string
   reason: string
   note: string | null
@@ -106,13 +106,14 @@ export interface CreateWasteRecordRequest {
 }
 
 // ─── Stock count session ──────────────────────────────────────────────────────
-export type StockCountSessionStatus = 'OPEN' | 'IN_PROGRESS' | 'POSTED' | 'CANCELLED'
+/** Matches backend `StockCountSessionStatus`: DRAFT → COUNTING → POSTED | CANCELLED */
+export type StockCountSessionStatus = 'DRAFT' | 'COUNTING' | 'POSTED' | 'CANCELLED'
 
 export interface StockCountLine {
   ingredientId: number
-  systemQty: string
-  actualQty: string | null
-  varianceQty: string | null
+  systemQty: number
+  actualQty: number | null
+  varianceQty: number | null
   note: string | null
 }
 
@@ -145,3 +146,23 @@ export interface StockCountLineInput {
 export interface UpdateStockCountLinesRequest {
   lines: StockCountLineInput[]
 }
+
+export interface StockCountSessionSummary {
+  id: number
+  status: StockCountSessionStatus
+  regionId: number
+  outletId: number
+  countDate: string
+  note: string | null
+  startedAt: string | null
+  postedAt: string | null
+}
+
+export interface StockCountSessionListFilters {
+  outletId: number
+  status?: string
+  page: number
+  size: number
+}
+
+export type StockCountSessionSummaryPage = PageResponse<StockCountSessionSummary>

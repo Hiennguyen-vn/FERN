@@ -12,7 +12,7 @@ describe('catalogResolver.service', () => {
           scopeId: null,
           priceType: 'RETAIL',
           currencyCode: 'VND',
-          priceValue: '45000',
+          priceValue: 45000,
           effectiveFrom: '2026-01-01',
           effectiveTo: null,
         },
@@ -23,7 +23,7 @@ describe('catalogResolver.service', () => {
           scopeId: 101,
           priceType: 'DINE_IN',
           currencyCode: 'VND',
-          priceValue: '48000',
+          priceValue: 48000,
           effectiveFrom: '2026-01-01',
           effectiveTo: null,
         },
@@ -34,7 +34,7 @@ describe('catalogResolver.service', () => {
           scopeId: null,
           priceType: 'RETAIL',
           currencyCode: 'VND',
-          priceValue: '55000',
+          priceValue: 55000,
           effectiveFrom: '2026-01-01',
           effectiveTo: null,
         },
@@ -45,7 +45,7 @@ describe('catalogResolver.service', () => {
           scopeId: null,
           priceType: 'DINE_IN',
           currencyCode: 'VND',
-          priceValue: '99000',
+          priceValue: 99000,
           effectiveFrom: '2025-01-01',
           effectiveTo: '2025-12-31',
         },
@@ -106,12 +106,12 @@ describe('catalogResolver.service', () => {
     expect(menuItems[0]).toMatchObject({
       productId: 2,
       priceType: 'RETAIL',
-      priceValue: '55000',
+      priceValue: 55000,
     })
     expect(menuItems[1]).toMatchObject({
       productId: 1,
       priceType: 'DINE_IN',
-      priceValue: '48000',
+      priceValue: 48000,
       scopeType: 'OUTLET',
     })
   })

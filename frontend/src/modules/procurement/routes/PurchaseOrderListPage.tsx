@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AppIcon } from '@app/components/AppIcon'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import {
   Button,
   DataTable,
@@ -54,9 +54,8 @@ function getMonthKey(value: string) {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-function toAmount(value: string) {
-  const amount = Number(value)
-  return Number.isFinite(amount) ? amount : 0
+function toAmount(value: number) {
+  return Number.isFinite(value) ? value : 0
 }
 
 function getLeadDays(order: PurchaseOrder) {

@@ -12,6 +12,9 @@ import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.DownstreamUnavailableException;
 import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.observability.CorrelationId;
+import com.fern.platform.web.FernGlobalExceptionHandler;
+import com.fern.procurementservice.observability.ProcurementUnhandledExceptionListener;
+import java.util.List;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -33,7 +36,9 @@ class GlobalExceptionHandlerTest {
     void setUp() {
         operationalAlertPublisher = new RecordingAlertPublisher();
         mockMvc = MockMvcBuilders.standaloneSetup(new ThrowingController())
-                .setControllerAdvice(new GlobalExceptionHandler(new SimpleMeterRegistry(), operationalAlertPublisher))
+                .setControllerAdvice(new FernGlobalExceptionHandler(
+                        "procurement-service",
+                        List.of(new ProcurementUnhandledExceptionListener(new SimpleMeterRegistry(), operationalAlertPublisher))))
                 .build();
     }
 

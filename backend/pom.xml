@@ -24,6 +24,7 @@
         <module>platform-security</module>
         <module>platform-observability</module>
         <module>platform-test-support</module>
+        <module>platform-web</module>
         <module>services/org-service</module>
         <module>services/iam-service</module>
         <module>services/catalog-service</module>

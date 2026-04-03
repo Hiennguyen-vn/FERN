@@ -193,7 +193,7 @@ export function PosSessionDetailPage() {
             <CurrencyInput
               label="Counted cash amount"
               min="0"
-              onChange={(event) => setCountedCashAmount(event.target.value)}
+              onChange={(value) => setCountedCashAmount(value)}
               value={countedCashAmount}
             />
           </div>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import {
   Button,

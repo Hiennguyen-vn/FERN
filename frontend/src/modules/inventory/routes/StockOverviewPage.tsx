@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AppIcon } from '@app/components/AppIcon'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { Badge, Button, Card, DataTable, EmptyState, ErrorState, Input, PermissionDeniedInline, ReadonlyBanner, Select } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { useScopeContext } from '@core/scopes/useScopeContext'
@@ -54,8 +54,8 @@ export function StockOverviewPage() {
       : null,
   )
   const balances = query.data?.items ?? []
-  const lowStockCount = balances.filter((row) => Number(row.qtyAvailable) > 0 && Number(row.qtyAvailable) <= 5).length
-  const outOfStockCount = balances.filter((row) => Number(row.qtyAvailable) <= 0).length
+  const lowStockCount = balances.filter((row) => row.qtyAvailable > 0 && row.qtyAvailable <= 5).length
+  const outOfStockCount = balances.filter((row) => row.qtyAvailable <= 0).length
   const recentlyCounted = balances.filter((row) => row.lastCountDate).length
 
   const columns: Array<DataTableColumn<StockBalance>> = [
@@ -70,7 +70,7 @@ export function StockOverviewPage() {
       key: 'qtyAvailable',
       header: 'Available',
       render: (row) => (
-        <Badge tone={Number(row.qtyAvailable) > 0 ? 'success' : 'warning'}>{row.qtyAvailable}</Badge>
+        <Badge tone={row.qtyAvailable > 0 ? 'success' : 'warning'}>{row.qtyAvailable}</Badge>
       ),
     },
     { key: 'unitCost', header: 'Unit cost', render: (row) => row.unitCost },
@@ -108,11 +108,19 @@ export function StockOverviewPage() {
               </Link>
             </Button>
           ) : null}
+          {hasPermission ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to="/inventory/stock-count-sessions">
+                <AppIcon name="history" size="sm" />
+                Count sessions
+              </Link>
+            </Button>
+          ) : null}
           {canCreateStockCount ? (
             <Button asChild size="sm">
               <Link to="/inventory/stock-count-sessions/new">
                 <AppIcon name="inventory" size="sm" />
-                Stock count
+                New count
               </Link>
             </Button>
           ) : null}

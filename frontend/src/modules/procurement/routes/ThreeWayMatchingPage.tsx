@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { Badge, Card, EmptyState, ErrorState, Input, PermissionDeniedInline } from '@design-system/index'
 import { DataTable } from '@design-system/tables/DataTable'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
@@ -11,18 +11,18 @@ import { canReadPurchaseOrders } from '../services/procurementPermission.service
 
 interface MatchedLine {
   ingredientId: number
-  poQty: string
-  grQty: string
-  invoiceQty: string
-  poPrice: string | null
-  grCost: string
-  invoicePrice: string | null
+  poQty: number
+  grQty: number
+  invoiceQty: number
+  poPrice: number | null
+  grCost: number
+  invoicePrice: number | null
   status: 'matched' | 'partial' | 'mismatch' | 'missing'
 }
 
-function computeMatchStatus(poQty: string, grQty: string, invoiceQty: string): MatchedLine['status'] {
-  if (!grQty || grQty === '0') return 'missing'
-  if (!invoiceQty || invoiceQty === '0') return 'missing'
+function computeMatchStatus(poQty: number, grQty: number, invoiceQty: number): MatchedLine['status'] {
+  if (!grQty) return 'missing'
+  if (!invoiceQty) return 'missing'
   if (poQty === grQty && grQty === invoiceQty) return 'matched'
   if (poQty === grQty || grQty === invoiceQty) return 'partial'
   return 'mismatch'
@@ -69,8 +69,8 @@ export function ThreeWayMatchingPage() {
       for (const line of gr.lines) {
         const prev = grByIngredient.get(line.ingredientId) ?? { qty: 0, cost: 0 }
         grByIngredient.set(line.ingredientId, {
-          qty: prev.qty + Number(line.qtyReceived),
-          cost: Number(line.unitCost),
+          qty: prev.qty + line.qtyReceived,
+          cost: line.unitCost,
         })
       }
     }
@@ -88,8 +88,8 @@ export function ThreeWayMatchingPage() {
               if (grLine) {
                 const prev = invoiceByIngredient.get(grLine.ingredientId) ?? { qty: 0, price: 0 }
                 invoiceByIngredient.set(grLine.ingredientId, {
-                  qty: prev.qty + Number(line.qtyInvoiced),
-                  price: Number(line.unitPrice ?? 0),
+                  qty: prev.qty + (line.qtyInvoiced ?? 0),
+                  price: line.unitPrice ?? 0,
                 })
               }
             }
@@ -101,8 +101,8 @@ export function ThreeWayMatchingPage() {
     for (const poLine of po.lines) {
       const gr = grByIngredient.get(poLine.ingredientId)
       const inv = invoiceByIngredient.get(poLine.ingredientId)
-      const grQty = gr ? String(gr.qty) : '0'
-      const invoiceQty = inv ? String(inv.qty) : '0'
+      const grQty = gr?.qty ?? 0
+      const invoiceQty = inv?.qty ?? 0
 
       matchedLines.push({
         ingredientId: poLine.ingredientId,
@@ -110,8 +110,8 @@ export function ThreeWayMatchingPage() {
         grQty,
         invoiceQty,
         poPrice: poLine.expectedUnitPrice,
-        grCost: gr ? String(gr.cost) : '0',
-        invoicePrice: inv ? String(inv.price) : null,
+        grCost: gr?.cost ?? 0,
+        invoicePrice: inv?.price ?? null,
         status: computeMatchStatus(poLine.qtyOrdered, grQty, invoiceQty),
       })
     }

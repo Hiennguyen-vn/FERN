@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import {
   AuditMetaBlock,
@@ -206,8 +206,8 @@ export function PayrollPaidPage() {
           mode={canReadDetail ? 'readonly-visible' : 'masked'}
           value={formatFinanceCurrency(summary.totalNetPay)}
         />
-        <MaskedField label="Employee result count" mode="readonly-visible" value={summary.employeeCount} />
-        <MaskedField label="Exceptions" mode="readonly-visible" value={summary.exceptionCount} />
+        <MaskedField label="Employee result count" mode="readonly-visible" value={summary.employeeCount.toString()} />
+        <MaskedField label="Exceptions" mode="readonly-visible" value={summary.exceptionCount.toString()} />
       </div>
 
       <AuditMetaBlock

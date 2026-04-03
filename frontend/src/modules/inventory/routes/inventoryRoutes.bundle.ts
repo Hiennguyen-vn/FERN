@@ -1,5 +1,7 @@
 export { InventoryTransactionsPage } from './InventoryTransactionsPage'
 export { StockAdjustmentCreatePage } from './StockAdjustmentCreatePage'
 export { StockCountSessionCreatePage } from './StockCountSessionCreatePage'
+export { StockCountSessionDetailPage } from './StockCountSessionDetailPage'
+export { StockCountSessionsPage } from './StockCountSessionsPage'
 export { StockOverviewPage } from './StockOverviewPage'
 export { WasteRecordCreatePage } from './WasteRecordCreatePage'

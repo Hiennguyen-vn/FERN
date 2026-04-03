@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { Button, Card, EmptyState, ErrorState, PermissionDeniedInline } from '@design-system/index'
 import { appConfig } from '@core/config/appConfig'

@@ -57,6 +57,8 @@ export const catalogApi = {
     gatewayClient.post<Product>(PRODUCT_BASE, body).then((r) => r.data),
   updateProduct: (id: number, body: ProductUpsertRequest) =>
     gatewayClient.put<Product>(`${PRODUCT_BASE}/${id}`, body).then((r) => r.data),
+  deactivateProduct: (id: number) =>
+    gatewayClient.post<Product>(`${PRODUCT_BASE}/${id}/deactivate`).then((r) => r.data),
 
   // Categories
   listProductCategories: () =>

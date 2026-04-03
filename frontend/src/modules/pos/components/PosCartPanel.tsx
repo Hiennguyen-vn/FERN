@@ -67,7 +67,7 @@ export function PosCartPanel({
                   <QuantityInput
                     label="Qty"
                     min="0.0001"
-                    onChange={(event) => onQtyChange(item.productId, event.target.value)}
+                    onChange={(value) => onQtyChange(item.productId, String(value))}
                     step="0.0001"
                     value={item.qty}
                   />

@@ -5,10 +5,12 @@ import com.fern.inventoryservice.dto.InventoryCommands.StockCountLineInput;
 import com.fern.inventoryservice.dto.InventoryCommands.UpdateStockCountLinesRequest;
 import com.fern.inventoryservice.dto.InventoryResponses.StockCountLineResponse;
 import com.fern.inventoryservice.dto.InventoryResponses.StockCountSessionResponse;
+import com.fern.inventoryservice.dto.InventoryResponses.StockCountSessionSummaryResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
+import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.contracts.StockCountPostedEvent;
 import com.fern.platform.contracts.StockCountPostedLine;
@@ -25,12 +27,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.MDC;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class StockCountService {
+    private static final int MAX_PAGE_SIZE = 200;
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final InventoryAuthorizer inventoryAuthorizer;
     private final InventoryRepository inventoryRepository;
@@ -287,6 +292,61 @@ public class StockCountService {
         return getStockCountSession(id);
     }
 
+    @Transactional(readOnly = true)
+    public PageResponse<StockCountSessionSummaryResponse> listStockCountSessions(
+            FernPrincipal principal,
+            Long outletId,
+            String status,
+            int page,
+            int size
+    ) {
+        validatePage(page, size);
+        validateStatusFilter(status);
+        inventoryAuthorizer.requireOutletAccess(principal, outletId, PermissionCodes.INVENTORY_BALANCE_READ);
+        StringBuilder sql = new StringBuilder("""
+                SELECT id, status, region_id, outlet_id, count_date, note, started_at, posted_at
+                FROM inventory.stock_count_session
+                WHERE outlet_id = :outletId
+                """);
+        MapSqlParameterSource parameters = inventoryRepository.params("outletId", outletId);
+        if (status != null && !status.isBlank()) {
+            sql.append(" AND status = :status");
+            parameters.addValue("status", status.trim().toUpperCase());
+        }
+        sql.append(" ORDER BY id DESC LIMIT :limit OFFSET :offset");
+        parameters.addValue("limit", size + 1);
+        parameters.addValue("offset", page * size);
+        List<StockCountSessionSummaryResponse> items = jdbcTemplate.query(
+                sql.toString(),
+                parameters,
+                (rs, rowNum) -> new StockCountSessionSummaryResponse(
+                        rs.getLong("id"),
+                        rs.getString("status"),
+                        rs.getLong("region_id"),
+                        rs.getLong("outlet_id"),
+                        rs.getObject("count_date", LocalDate.class),
+                        rs.getString("note"),
+                        instant(rs, "started_at"),
+                        instant(rs, "posted_at")
+                )
+        );
+        return toPageResponse(items, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public StockCountSessionResponse readStockCountSession(FernPrincipal principal, Long id) {
+        Long outletId = jdbcTemplate.query("""
+                SELECT outlet_id
+                FROM inventory.stock_count_session
+                WHERE id = :id
+                """, inventoryRepository.params("id", id), rs -> rs.next() ? rs.getLong("outlet_id") : null);
+        if (outletId == null) {
+            throw new ResourceNotFoundException("Stock count session not found");
+        }
+        inventoryAuthorizer.requireOutletAccess(principal, outletId, PermissionCodes.INVENTORY_BALANCE_READ);
+        return getStockCountSession(id);
+    }
+
     public StockCountSessionResponse getStockCountSession(Long id) {
         SessionProjection session = jdbcTemplate.query("""
                 SELECT id, status, region_id, outlet_id, count_date, note, started_at, posted_at
@@ -458,6 +518,35 @@ public class StockCountService {
 
     private String stockCountPostedIdempotencyKey(Long stockCountSessionId) {
         return "inventory.stock_count.posted:session:" + stockCountSessionId;
+    }
+
+    private void validatePage(int page, int size) {
+        if (page < 0) {
+            throw new BadRequestException("Page cannot be negative");
+        }
+        if (size <= 0) {
+            throw new BadRequestException("Page size must be positive");
+        }
+        if (size > MAX_PAGE_SIZE) {
+            throw new BadRequestException("Page size cannot exceed 200");
+        }
+    }
+
+    private <T> PageResponse<T> toPageResponse(List<T> items, int page, int size) {
+        boolean hasMore = items.size() > size;
+        List<T> pagedItems = hasMore ? List.copyOf(items.subList(0, size)) : items;
+        return new PageResponse<>(pagedItems, page, size, hasMore);
+    }
+
+    private void validateStatusFilter(String status) {
+        if (status == null || status.isBlank()) {
+            return;
+        }
+        try {
+            StockCountSessionStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Invalid stock count session status filter");
+        }
     }
 
     private record StockCountSessionRecord(

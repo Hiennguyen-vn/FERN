@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import {
@@ -336,13 +336,13 @@ export function PayrollReportPage() {
               helperText="Number of employee rows inside the selected payroll run report."
               label="Employees"
               mode="readonly-visible"
-              value={payrollDetailSummary.employeeCount}
+              value={payrollDetailSummary.employeeCount.toString()}
             />
             <MaskedField
               helperText="Allocation rows grouped by outlet."
               label="Allocations"
               mode="readonly-visible"
-              value={payrollDetailSummary.allocationCount}
+              value={payrollDetailSummary.allocationCount.toString()}
             />
             <MaskedField
               helperText={canReadDetail ? 'Visible because detail permission is granted.' : 'Masked because payroll detail permission is missing.'}

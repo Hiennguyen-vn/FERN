@@ -27,9 +27,9 @@ export interface PosSession {
   openedAt: BackendInstant
   closedAt: BackendInstant
   reconciledAt: BackendInstant
-  expectedCashAmount: number | string | null
-  countedCashAmount: number | string | null
-  discrepancyAmount: number | string | null
+  expectedCashAmount: number | null
+  countedCashAmount: number | null
+  discrepancyAmount: number | null
 }
 
 export interface SaleOrderLine {
@@ -37,18 +37,18 @@ export interface SaleOrderLine {
   productId: number
   productCode: string
   productNameSnapshot: string
-  unitPrice: string
-  qty: string
-  discountAmount: string
-  taxAmount: string
-  lineTotal: string
+  unitPrice: number
+  qty: number
+  discountAmount: number
+  taxAmount: number
+  lineTotal: number
   note: string | null
 }
 
 export interface SalePayment {
   id: number
   paymentMethod: PosPaymentMethod | string
-  amount: number | string
+  amount: number
   status: SalePaymentStatus | string
   paymentTime: BackendInstant
   transactionRef: string | null
@@ -64,10 +64,10 @@ export interface SaleOrder {
   orderType: PosOrderType | string
   status: SaleOrderStatus | string
   paymentStatus: SaleOrderPaymentStatus | string
-  subtotal: number | string
-  discountAmount: number | string
-  taxAmount: number | string
-  totalAmount: number | string
+  subtotal: number
+  discountAmount: number
+  taxAmount: number
+  totalAmount: number
   note: string | null
   createdAt: BackendInstant
   completedAt: BackendInstant
@@ -92,7 +92,7 @@ export interface ProductPrice {
   scopeId: number | null
   priceType: CatalogPriceType | string
   currencyCode: string
-  priceValue: string
+  priceValue: number
   effectiveFrom: string | null
   effectiveTo: string | null
 }
@@ -111,7 +111,7 @@ export interface ResolvedMenuItem {
   description: string | null
   imageUrl: string | null
   currencyCode: string
-  priceValue: string
+  priceValue: number
   priceType: CatalogPriceType | string
   scopeType: PriceScopeType | string
 }

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -27,6 +28,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.core.KafkaTemplate;
 
 class CatalogOutboxPublisherTest {
@@ -62,7 +64,7 @@ class CatalogOutboxPublisherTest {
         JdbcOutboxPublisherSupport.ClaimedOutboxEvent event = pendingEvent(0);
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(event));
-        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
         catalogOutboxPublisher.publishPending();
@@ -70,7 +72,10 @@ class CatalogOutboxPublisherTest {
         ArgumentCaptor<MapSqlParameterSource> parameters = ArgumentCaptor.forClass(MapSqlParameterSource.class);
         verify(jdbcTemplate).update(anyString(), parameters.capture());
         assertThat(parameters.getValue().getValue("publishedStatus")).isEqualTo("PUBLISHED");
-        verify(kafkaTemplate).send(event.eventType(), event.partitionKey(), event.payload());
+        verify(kafkaTemplate).send(argThat((ProducerRecord<String, String> r) ->
+                r.topic().equals(event.eventType())
+                        && r.key().equals(event.partitionKey())
+                        && r.value().equals(event.payload())));
     }
 
     @Test
@@ -79,7 +84,7 @@ class CatalogOutboxPublisherTest {
         RuntimeException failure = new RuntimeException("kafka unavailable");
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(event));
-        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.failedFuture(failure));
 
         catalogOutboxPublisher.publishPending();
@@ -95,7 +100,7 @@ class CatalogOutboxPublisherTest {
         JdbcOutboxPublisherSupport.ClaimedOutboxEvent event = pendingEvent(2);
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(event));
-        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("kafka unavailable")));
 
         catalogOutboxPublisher.publishPending();
@@ -120,14 +125,20 @@ class CatalogOutboxPublisherTest {
         );
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(failedEvent, nextEvent));
-        when(kafkaTemplate.send(failedEvent.eventType(), failedEvent.partitionKey(), failedEvent.payload()))
-                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("kafka unavailable")));
-        when(kafkaTemplate.send(nextEvent.eventType(), nextEvent.partitionKey(), nextEvent.payload()))
-                .thenReturn(CompletableFuture.completedFuture(null));
+        when(kafkaTemplate.send(any(ProducerRecord.class))).thenAnswer(invocation -> {
+            ProducerRecord<String, String> record = invocation.getArgument(0);
+            if (record.topic().equals(failedEvent.eventType()) && record.value().equals(failedEvent.payload())) {
+                return CompletableFuture.failedFuture(new RuntimeException("kafka unavailable"));
+            }
+            return CompletableFuture.completedFuture(null);
+        });
 
         catalogOutboxPublisher.publishPending();
 
-        verify(kafkaTemplate).send(nextEvent.eventType(), nextEvent.partitionKey(), nextEvent.payload());
+        verify(kafkaTemplate).send(argThat((ProducerRecord<String, String> r) ->
+                r.topic().equals(nextEvent.eventType())
+                        && r.key().equals(nextEvent.partitionKey())
+                        && r.value().equals(nextEvent.payload())));
         verify(jdbcTemplate, times(2)).update(anyString(), any(MapSqlParameterSource.class));
     }
 
@@ -145,10 +156,13 @@ class CatalogOutboxPublisherTest {
         );
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(failedEvent, nextEvent));
-        when(kafkaTemplate.send(failedEvent.eventType(), failedEvent.partitionKey(), failedEvent.payload()))
-                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("kafka unavailable")));
-        when(kafkaTemplate.send(nextEvent.eventType(), nextEvent.partitionKey(), nextEvent.payload()))
-                .thenReturn(CompletableFuture.completedFuture(null));
+        when(kafkaTemplate.send(any(ProducerRecord.class))).thenAnswer(invocation -> {
+            ProducerRecord<String, String> record = invocation.getArgument(0);
+            if (record.topic().equals(failedEvent.eventType()) && record.value().equals(failedEvent.payload())) {
+                return CompletableFuture.failedFuture(new RuntimeException("kafka unavailable"));
+            }
+            return CompletableFuture.completedFuture(null);
+        });
         doThrow(new RuntimeException("alert unavailable")).when(operationalAlertPublisher).publish(
                 anyString(),
                 anyString(),
@@ -163,7 +177,10 @@ class CatalogOutboxPublisherTest {
 
         catalogOutboxPublisher.publishPending();
 
-        verify(kafkaTemplate).send(nextEvent.eventType(), nextEvent.partitionKey(), nextEvent.payload());
+        verify(kafkaTemplate).send(argThat((ProducerRecord<String, String> r) ->
+                r.topic().equals(nextEvent.eventType())
+                        && r.key().equals(nextEvent.partitionKey())
+                        && r.value().equals(nextEvent.payload())));
         verify(jdbcTemplate, times(2)).update(anyString(), any(MapSqlParameterSource.class));
     }
 

@@ -8,6 +8,7 @@ import { ProductDetailPage } from '../routes/ProductDetailPage'
 
 const mocks = vi.hoisted(() => ({
   useProduct: vi.fn(),
+  useDeactivateProduct: vi.fn(),
   useRecipes: vi.fn(),
   useRecipeVersions: vi.fn(),
   useProductPrices: vi.fn(),
@@ -16,6 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('../hooks/useProducts', () => ({
   useProduct: mocks.useProduct,
+  useDeactivateProduct: mocks.useDeactivateProduct,
 }))
 
 vi.mock('../hooks/useRecipes', () => ({
@@ -52,6 +54,12 @@ describe('ProductDetailPage', () => {
       error: null,
       isLoading: false,
       refetch: vi.fn(),
+    })
+    mocks.useDeactivateProduct.mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      error: null,
     })
     mocks.useRecipes.mockReturnValue({
       data: [{ id: 10, productId: 1, recipeCode: 'REC-COFFEE', description: 'Base drink' }],

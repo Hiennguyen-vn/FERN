@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { lazy, useState } from 'react'
+import { useState } from 'react'
 import { createBrowserRouter, Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppIcon } from '@app/components/AppIcon'
 import { AppShell } from '@app/layouts/AppShell'
@@ -28,318 +28,99 @@ import {
   resolveReportsLandingPath,
   resolveWorkforceLandingPath,
 } from './moduleLanding.service'
+import { canReadGoodsReceipts, canReadPurchaseOrders } from '@core/permissions/procurement.permissions'
+
 import {
-  canReadPurchaseOrders,
-  canReadGoodsReceipts,
-} from '@modules/procurement/services/procurementPermission.service'
+  PosHomePage,
+  PosOrderDetailPage,
+  PosSessionsPage,
+  PosSessionDetailPage,
+  SupplierListPage,
+  SupplierCreatePage,
+  PurchaseOrderCreatePage,
+  PurchaseOrderDetailPage,
+  GoodsReceiptCreatePage,
+  GoodsReceiptDetailPage,
+  SupplierInvoiceCreatePage,
+  SupplierInvoiceDetailPage,
+  SupplierPaymentCreatePage,
+  PurchaseOrderListPage,
+  GoodsReceiptListPage,
+  SupplierInvoiceListPage,
+  SupplierPaymentListPage,
+  ThreeWayMatchingPage,
+  StockOverviewPage,
+  InventoryTransactionsPage,
+  StockAdjustmentCreatePage,
+  WasteRecordCreatePage,
+  StockCountSessionCreatePage,
+  StockCountSessionsPage,
+  StockCountSessionDetailPage,
+  MyAttendancePage,
+  AttendanceReviewPage,
+  AttendanceDetailPage,
+  ProductsPage,
+  ProductCreatePage,
+  ProductDetailPage,
+  ProductEditPage,
+  IngredientsPage,
+  IngredientCreatePage,
+  IngredientEditPage,
+  RecipesPage,
+  PricingPage,
+  AvailabilityPage,
+  PromotionsPage,
+  UsersPage,
+  UserDetailPage,
+  AssignmentsPage,
+  EffectiveAccessPage,
+  AuditEventsPage,
+  AuditEventDetailPage,
+  SecurityEventsPage,
+  RequestTracesPage,
+  RequestTraceDetailPage,
+  RegionalDashboardPage,
+  RegionalOutletSummaryPage,
+  RegionalOutletDetailPage,
+  ExchangeRateManagementPage,
+  OrgRegionsPage,
+  OrgRegionDetailPage,
+  OrgRegionCreatePage,
+  OrgRegionEditPage,
+  OrgOutletsPage,
+  OrgOutletDetailPage,
+  OrgOutletCreatePage,
+  OrgOutletEditPage,
+  EmployeesPage,
+  EmployeeCreatePage,
+  EmployeeDetailPage,
+  ContractsPage,
+  ContractCreatePage,
+  ContractDetailPage,
+  AssignmentCreatePage,
+  AttendanceSummaryPage,
+  PayrollPreparationPage,
+  PayrollDraftReviewPage,
+  ShiftSchedulingPage,
+  SuppliersPage,
+  SupplierDetailPage,
+  PaymentRequestsPage,
+  PayrollApprovalPage,
+  PayrollApprovalDetailPage,
+  PayrollPaidPage,
+  FinanceConfigPage,
+  PayrollPeriodsPage,
+  ReportsDashboardPage,
+  RevenueReportPage,
+  InventoryReportPage,
+  PayrollReportPage,
+  ExportJobsPage,
+  ExportJobDetailPage,
+  ExportPreviewPage,
+  ExportDownloadPage,
+  OutletRevenueReportPage,
+} from './lazyRouteElements'
 
-// ─── Lazy imports: POS ────────────────────────────────────────────────────────
-const PosHomePage = lazy(() =>
-  import('@modules/pos/routes/posRoutes.bundle').then((m) => ({ default: m.PosHomePage })),
-)
-const PosOrderDetailPage = lazy(() =>
-  import('@modules/pos/routes/posRoutes.bundle').then((m) => ({ default: m.PosOrderDetailPage })),
-)
-const PosSessionsPage = lazy(() =>
-  import('@modules/pos/routes/posRoutes.bundle').then((m) => ({ default: m.PosSessionsPage })),
-)
-const PosSessionDetailPage = lazy(() =>
-  import('@modules/pos/routes/posRoutes.bundle').then((m) => ({ default: m.PosSessionDetailPage })),
-)
-
-// ─── Lazy imports: Procurement ────────────────────────────────────────────────
-const PurchaseOrderCreatePage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.PurchaseOrderCreatePage,
-  })),
-)
-const PurchaseOrderDetailPage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.PurchaseOrderDetailPage,
-  })),
-)
-const GoodsReceiptCreatePage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.GoodsReceiptCreatePage,
-  })),
-)
-const GoodsReceiptDetailPage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.GoodsReceiptDetailPage,
-  })),
-)
-const SupplierInvoiceCreatePage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.SupplierInvoiceCreatePage,
-  })),
-)
-const SupplierInvoiceDetailPage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.SupplierInvoiceDetailPage,
-  })),
-)
-const SupplierPaymentCreatePage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.SupplierPaymentCreatePage,
-  })),
-)
-const PurchaseOrderListPage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.PurchaseOrderListPage,
-  })),
-)
-const GoodsReceiptListPage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.GoodsReceiptListPage,
-  })),
-)
-const SupplierInvoiceListPage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.SupplierInvoiceListPage,
-  })),
-)
-const SupplierPaymentListPage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.SupplierPaymentListPage,
-  })),
-)
-const ThreeWayMatchingPage = lazy(() =>
-  import('@modules/procurement/routes/procurementRoutes.bundle').then((m) => ({
-    default: m.ThreeWayMatchingPage,
-  })),
-)
-
-// ─── Lazy imports: Inventory ──────────────────────────────────────────────────
-const StockOverviewPage = lazy(() =>
-  import('@modules/inventory/routes/inventoryRoutes.bundle').then((m) => ({ default: m.StockOverviewPage })),
-)
-const InventoryTransactionsPage = lazy(() =>
-  import('@modules/inventory/routes/inventoryRoutes.bundle').then((m) => ({
-    default: m.InventoryTransactionsPage,
-  })),
-)
-const StockAdjustmentCreatePage = lazy(() =>
-  import('@modules/inventory/routes/inventoryRoutes.bundle').then((m) => ({
-    default: m.StockAdjustmentCreatePage,
-  })),
-)
-const WasteRecordCreatePage = lazy(() =>
-  import('@modules/inventory/routes/inventoryRoutes.bundle').then((m) => ({
-    default: m.WasteRecordCreatePage,
-  })),
-)
-const StockCountSessionCreatePage = lazy(() =>
-  import('@modules/inventory/routes/inventoryRoutes.bundle').then((m) => ({
-    default: m.StockCountSessionCreatePage,
-  })),
-)
-
-// ─── Lazy imports: Workforce ──────────────────────────────────────────────────
-const MyAttendancePage = lazy(() =>
-  import('@modules/workforce/routes/workforceRoutes.bundle').then((m) => ({ default: m.MyAttendancePage })),
-)
-const AttendanceReviewPage = lazy(() =>
-  import('@modules/workforce/routes/workforceRoutes.bundle').then((m) => ({
-    default: m.AttendanceReviewPage,
-  })),
-)
-const AttendanceDetailPage = lazy(() =>
-  import('@modules/workforce/routes/workforceRoutes.bundle').then((m) => ({ default: m.AttendanceDetailPage })),
-)
-
-// ─── Lazy imports: Catalog ───────────────────────────────────────────────────
-const ProductsPage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.ProductsPage })),
-)
-const ProductCreatePage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.ProductCreatePage })),
-)
-const ProductDetailPage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.ProductDetailPage })),
-)
-const ProductEditPage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.ProductEditPage })),
-)
-const IngredientsPage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.IngredientsPage })),
-)
-const IngredientCreatePage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.IngredientCreatePage })),
-)
-const IngredientEditPage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.IngredientEditPage })),
-)
-const RecipesPage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.RecipesPage })),
-)
-const PricingPage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.PricingPage })),
-)
-const AvailabilityPage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.AvailabilityPage })),
-)
-const PromotionsPage = lazy(() =>
-  import('@modules/catalog/routes/catalogRoutes.bundle').then((m) => ({ default: m.PromotionsPage })),
-)
-
-// ─── Lazy imports: IAM ───────────────────────────────────────────────────────
-const UsersPage = lazy(() =>
-  import('@modules/iam/routes/iamRoutes.bundle').then((m) => ({ default: m.UsersPage })),
-)
-const UserDetailPage = lazy(() =>
-  import('@modules/iam/routes/iamRoutes.bundle').then((m) => ({ default: m.UserDetailPage })),
-)
-const AssignmentsPage = lazy(() =>
-  import('@modules/iam/routes/iamRoutes.bundle').then((m) => ({ default: m.AssignmentsPage })),
-)
-const EffectiveAccessPage = lazy(() =>
-  import('@modules/iam/routes/iamRoutes.bundle').then((m) => ({ default: m.EffectiveAccessPage })),
-)
-
-// ─── Lazy imports: Audit ─────────────────────────────────────────────────────
-const AuditEventsPage = lazy(() =>
-  import('@modules/audit/routes/auditRoutes.bundle').then((m) => ({ default: m.AuditEventsPage })),
-)
-const AuditEventDetailPage = lazy(() =>
-  import('@modules/audit/routes/auditRoutes.bundle').then((m) => ({ default: m.AuditEventDetailPage })),
-)
-const SecurityEventsPage = lazy(() =>
-  import('@modules/audit/routes/auditRoutes.bundle').then((m) => ({ default: m.SecurityEventsPage })),
-)
-const RequestTracesPage = lazy(() =>
-  import('@modules/audit/routes/auditRoutes.bundle').then((m) => ({ default: m.RequestTracesPage })),
-)
-const RequestTraceDetailPage = lazy(() =>
-  import('@modules/audit/routes/auditRoutes.bundle').then((m) => ({ default: m.RequestTraceDetailPage })),
-)
-
-// ─── Lazy imports: Regional Ops ──────────────────────────────────────────────
-const RegionalDashboardPage = lazy(() =>
-  import('@modules/regional-ops/routes/regionalOpsRoutes.bundle').then((m) => ({ default: m.RegionalDashboardPage })),
-)
-const RegionalOutletSummaryPage = lazy(() =>
-  import('@modules/regional-ops/routes/regionalOpsRoutes.bundle').then((m) => ({ default: m.OutletSummaryPage })),
-)
-const RegionalOutletDetailPage = lazy(() =>
-  import('@modules/regional-ops/routes/regionalOpsRoutes.bundle').then((m) => ({ default: m.OutletDetailPage })),
-)
-const ExchangeRateManagementPage = lazy(() =>
-  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.ExchangeRateManagementPage })),
-)
-const OrgRegionsPage = lazy(() =>
-  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.RegionsPage })),
-)
-const OrgRegionDetailPage = lazy(() =>
-  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.RegionDetailPage })),
-)
-const OrgRegionCreatePage = lazy(() =>
-  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.RegionCreatePage })),
-)
-const OrgRegionEditPage = lazy(() =>
-  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.RegionEditPage })),
-)
-const OrgOutletsPage = lazy(() =>
-  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletsPage })),
-)
-const OrgOutletDetailPage = lazy(() =>
-  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletDetailPage })),
-)
-const OrgOutletCreatePage = lazy(() =>
-  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletCreatePage })),
-)
-const OrgOutletEditPage = lazy(() =>
-  import('@modules/org/routes/orgRoutes.bundle').then((m) => ({ default: m.OutletEditPage })),
-)
-
-// ─── Lazy imports: HR ────────────────────────────────────────────────────────
-const EmployeesPage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.EmployeesPage })),
-)
-const EmployeeCreatePage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.EmployeeCreatePage })),
-)
-const EmployeeDetailPage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.EmployeeDetailPage })),
-)
-const ContractsPage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.ContractsPage })),
-)
-const ContractCreatePage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.ContractCreatePage })),
-)
-const ContractDetailPage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.ContractDetailPage })),
-)
-const AssignmentCreatePage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.AssignmentCreatePage })),
-)
-const AttendanceSummaryPage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.AttendanceSummaryPage })),
-)
-const PayrollPreparationPage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.PayrollPreparationPage })),
-)
-const PayrollDraftReviewPage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.PayrollDraftReviewPage })),
-)
-const ShiftSchedulingPage = lazy(() =>
-  import('@modules/hr/routes/hrRoutes.bundle').then((m) => ({ default: m.ShiftSchedulingPage })),
-)
-
-// ─── Lazy imports: Finance ───────────────────────────────────────────────────
-const SuppliersPage = lazy(() =>
-  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.SuppliersPage })),
-)
-const SupplierDetailPage = lazy(() =>
-  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.SupplierDetailPage })),
-)
-const PaymentRequestsPage = lazy(() =>
-  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.PaymentRequestsPage })),
-)
-const PayrollApprovalPage = lazy(() =>
-  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.PayrollApprovalPage })),
-)
-const PayrollApprovalDetailPage = lazy(() =>
-  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.PayrollApprovalDetailPage })),
-)
-const PayrollPaidPage = lazy(() =>
-  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.PayrollPaidPage })),
-)
-const FinanceConfigPage = lazy(() =>
-  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.FinanceConfigPage })),
-)
-const PayrollPeriodsPage = lazy(() =>
-  import('@modules/finance/routes/financeRoutes.bundle').then((m) => ({ default: m.PayrollPeriodsPage })),
-)
-
-// ─── Lazy imports: Reports ────────────────────────────────────────────────────
-const ReportsDashboardPage = lazy(() =>
-  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.ReportsDashboardPage })),
-)
-const RevenueReportPage = lazy(() =>
-  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.RevenueReportPage })),
-)
-const InventoryReportPage = lazy(() =>
-  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.InventoryReportPage })),
-)
-const PayrollReportPage = lazy(() =>
-  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.PayrollReportPage })),
-)
-const ExportJobsPage = lazy(() =>
-  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.ExportJobsPage })),
-)
-const ExportJobDetailPage = lazy(() =>
-  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.ExportJobDetailPage })),
-)
-const ExportPreviewPage = lazy(() =>
-  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.ExportPreviewPage })),
-)
-const ExportDownloadPage = lazy(() =>
-  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.ExportDownloadPage })),
-)
-const OutletRevenueReportPage = lazy(() =>
-  import('@modules/reports/routes/reportsRoutes.bundle').then((m) => ({ default: m.OutletRevenueReportPage })),
-)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function AuthPageFrame({ children }: { children: ReactNode }) {
@@ -1013,6 +794,14 @@ export const router = createBrowserRouter([
                 element: <ProcurementLandingRedirect />,
               },
               {
+                path: 'suppliers',
+                element: <SupplierListPage />,
+              },
+              {
+                path: 'suppliers/new',
+                element: <SupplierCreatePage />,
+              },
+              {
                 path: 'purchase-orders',
                 element: <PurchaseOrderListPage />,
               },
@@ -1105,8 +894,16 @@ export const router = createBrowserRouter([
                 element: <WasteRecordCreatePage />,
               },
               {
+                path: 'stock-count-sessions',
+                element: <StockCountSessionsPage />,
+              },
+              {
                 path: 'stock-count-sessions/new',
                 element: <StockCountSessionCreatePage />,
+              },
+              {
+                path: 'stock-count-sessions/:sessionId',
+                element: <StockCountSessionDetailPage />,
               },
             ],
           },

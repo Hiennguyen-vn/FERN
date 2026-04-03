@@ -96,10 +96,10 @@ function createOrder(overrides: Partial<SaleOrder> = {}): SaleOrder {
     orderType: overrides.orderType ?? 'DINE_IN',
     status: overrides.status ?? 'OPEN',
     paymentStatus: overrides.paymentStatus ?? 'UNPAID',
-    subtotal: overrides.subtotal ?? '150000',
-    discountAmount: overrides.discountAmount ?? '0',
-    taxAmount: overrides.taxAmount ?? '0',
-    totalAmount: overrides.totalAmount ?? '150000',
+    subtotal: overrides.subtotal ?? 150000,
+    discountAmount: overrides.discountAmount ?? 0,
+    taxAmount: overrides.taxAmount ?? 0,
+    totalAmount: overrides.totalAmount ?? 150000,
     note: overrides.note ?? 'Front counter order',
     createdAt: overrides.createdAt ?? '2026-03-30T09:15:00.000Z',
     completedAt: overrides.completedAt ?? null,
@@ -109,11 +109,11 @@ function createOrder(overrides: Partial<SaleOrder> = {}): SaleOrder {
         productId: 301,
         productCode: 'ICED-TEA',
         productNameSnapshot: 'Iced Tea',
-        unitPrice: '150000',
-        qty: '1',
-        discountAmount: '0',
-        taxAmount: '0',
-        lineTotal: '150000',
+        unitPrice: 150000,
+        qty: 1,
+        discountAmount: 0,
+        taxAmount: 0,
+        lineTotal: 150000,
         note: null,
       },
     ],
@@ -195,7 +195,7 @@ describe('POS order workflows', () => {
         scopeId: 101,
         priceType: 'DINE_IN',
         currencyCode: 'VND',
-        priceValue: '150000',
+        priceValue: 150000,
         effectiveFrom: '2026-01-01T00:00:00.000Z',
         effectiveTo: null,
       },
@@ -219,11 +219,11 @@ describe('POS order workflows', () => {
           productId: line.productId,
           productCode: 'ICED-TEA',
           productNameSnapshot: 'Iced Tea',
-          unitPrice: '150000',
-          qty: String(line.qty),
-          discountAmount: '0',
-          taxAmount: '0',
-          lineTotal: '150000',
+          unitPrice: 150000,
+          qty: line.qty,
+          discountAmount: 0,
+          taxAmount: 0,
+          lineTotal: 150000,
           note: line.note ?? null,
         })),
       })
@@ -240,7 +240,7 @@ describe('POS order workflows', () => {
           ...orderState.lines[index],
           lineNumber: index + 1,
           productId: line.productId,
-          qty: String(line.qty),
+          qty: line.qty,
           note: line.note ?? null,
         })),
       }
@@ -249,19 +249,19 @@ describe('POS order workflows', () => {
     })
     posApi.addSalePayment.mockImplementation(async (orderId, payload) => {
       const totalPaid =
-        orderState.payments.reduce((sum, payment) => sum + Number(payment.amount), 0) +
+        orderState.payments.reduce((sum, payment) => sum + payment.amount, 0) +
         (payload.status === 'SUCCESS' ? payload.amount : 0)
 
       orderState = {
         ...orderState,
         id: orderId,
-        paymentStatus: totalPaid >= Number(orderState.totalAmount) ? 'PAID' : 'PARTIALLY_PAID',
+        paymentStatus: totalPaid >= orderState.totalAmount ? 'PAID' : 'PARTIALLY_PAID',
         payments: [
           ...orderState.payments,
           {
             id: nextPaymentId++,
             paymentMethod: payload.paymentMethod,
-            amount: String(payload.amount),
+            amount: payload.amount,
             status: payload.status ?? 'SUCCESS',
             paymentTime: payload.paymentTime ?? '2026-03-30T09:30:00.000Z',
             transactionRef: payload.transactionRef ?? null,

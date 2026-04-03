@@ -1,6 +1,6 @@
 import type {
   HrAttendanceApproval,
-  HrAttendanceEvent,
+  HrAttendanceEventListItem,
   HrContract,
   HrEmployee,
   PayrollRun,
@@ -74,7 +74,7 @@ export function buildContractLabel(contract: HrContract) {
   return `#${contract.id} · ${contract.employmentType}`
 }
 
-export function buildAttendanceSummary(events: HrAttendanceEvent[], approvals: HrAttendanceApproval[]) {
+export function buildAttendanceSummary(events: HrAttendanceEventListItem[], approvals: HrAttendanceApproval[]) {
   const uniqueEmployees = new Set(events.map((event) => event.employeeId)).size
   const pendingApprovals = approvals.filter((approval) => approval.status.toUpperCase() === 'PENDING').length
   const exceptions = approvals.filter((approval) => isAttendanceException(approval)).length

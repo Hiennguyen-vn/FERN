@@ -9,6 +9,8 @@ import {
   createWasteRecord,
   getInventoryTransactions,
   getStockBalances,
+  getStockCountSession,
+  listStockCountSessions,
   postStockAdjustment,
   postStockCountSession,
   postWasteRecord,
@@ -29,6 +31,22 @@ describe('inventory.api', () => {
 
     expect(getSpy).toHaveBeenNthCalledWith(1, '/stock-balances', { params: { outletId: 101, page: 0, size: 20 } })
     expect(getSpy).toHaveBeenNthCalledWith(2, '/inventory-transactions', { params: { outletId: 101, page: 0, size: 20 } })
+  })
+
+  it('lists and reads stock count sessions with correct paths', async () => {
+    const getSpy = vi.spyOn(gatewayClient, 'get').mockResolvedValue({ data: { items: [] } } as any)
+
+    await listStockCountSessions({ outletId: 101, page: 0, size: 20 })
+    expect(getSpy).toHaveBeenCalledWith('/stock-count-sessions', { params: { outletId: 101, page: 0, size: 20 } })
+
+    await listStockCountSessions({ outletId: 101, status: 'DRAFT', page: 1, size: 10 })
+    expect(getSpy).toHaveBeenCalledWith('/stock-count-sessions', {
+      params: { outletId: 101, status: 'DRAFT', page: 1, size: 10 },
+    })
+
+    getSpy.mockResolvedValueOnce({ data: { id: 5, status: 'DRAFT', lines: [] } } as any)
+    await getStockCountSession(5)
+    expect(getSpy).toHaveBeenCalledWith('/stock-count-sessions/5')
   })
 
   it('calls correct paths for stock adjustment lifecycle', async () => {

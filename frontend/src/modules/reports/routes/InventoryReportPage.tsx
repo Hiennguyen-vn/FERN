@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import {
@@ -10,6 +10,7 @@ import {
   ErrorState,
   FilterBar,
   Input,
+  Pagination,
   PermissionDeniedInline,
   ReadonlyBanner,
   Select,
@@ -66,20 +67,44 @@ export function InventoryReportPage() {
   const [fromDate, setFromDate] = useState(defaultFromIso())
   const [toDate, setToDate] = useState(todayIso())
   const [txnType, setTxnType] = useState('ALL')
+  const [page, setPage] = useState(0)
   const appliedOutletId = outletFilter.trim() ? Number(outletFilter) : undefined
   const appliedIngredientId = ingredientFilter.trim() ? Number(ingredientFilter) : undefined
+
+  useEffect(() => {
+    setPage(0)
+  }, [appliedOutletId, appliedIngredientId, fromDate, toDate, txnType])
+
   const inventoryReport = useInventoryReport(
     {
       from: fromDate || undefined,
       ingredientId: Number.isFinite(appliedIngredientId) ? appliedIngredientId : undefined,
       outletId: Number.isFinite(appliedOutletId) ? appliedOutletId : undefined,
-      page: 0,
+      page,
       size: 25,
       to: toDate || undefined,
       txnType: txnType === 'ALL' ? undefined : txnType,
     },
     { enabled: canRead && Boolean(appliedOutletId) },
   )
+
+  const balancePage = inventoryReport.balanceQuery.data
+  const transactionPage = inventoryReport.transactionQuery.data
+  const inventoryCanNext =
+    (typeof balancePage?.totalPages === 'number' ? page + 1 < balancePage.totalPages : Boolean(balancePage?.hasMore)) ||
+    (typeof transactionPage?.totalPages === 'number'
+      ? page + 1 < transactionPage.totalPages
+      : Boolean(transactionPage?.hasMore))
+  const inventoryCanPrevious = page > 0
+  const inventoryHasRows =
+    (balancePage?.items?.length ?? 0) > 0 || (transactionPage?.items?.length ?? 0) > 0
+  const showInventoryPagination =
+    Boolean(appliedOutletId) &&
+    !inventoryReport.balanceQuery.isLoading &&
+    !inventoryReport.transactionQuery.isLoading &&
+    !inventoryReport.balanceQuery.error &&
+    !inventoryReport.transactionQuery.error &&
+    (inventoryCanPrevious || inventoryCanNext || inventoryHasRows)
 
   const balanceColumns = useMemo<Array<DataTableColumn<ReportStockBalance>>>(
     () => [
@@ -359,6 +384,15 @@ export function InventoryReportPage() {
           rowKey={(row) => row.id}
           rows={inventoryReport.transactionQuery.data?.items ?? []}
         />
+        {showInventoryPagination ? (
+          <Pagination
+            canNext={inventoryCanNext}
+            canPrevious={inventoryCanPrevious}
+            currentPage={page}
+            onNext={() => setPage((p) => p + 1)}
+            onPrevious={() => setPage((p) => Math.max(0, p - 1))}
+          />
+        ) : null}
       </section>
     </DashboardLayout>
   )

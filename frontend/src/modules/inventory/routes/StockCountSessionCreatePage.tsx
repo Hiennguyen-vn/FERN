@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import {
@@ -127,9 +127,14 @@ export function StockCountSessionCreatePage() {
       title="Stock Count Session"
       description="Stock count workflow được publish trực tiếp theo backend public API."
       actions={
-        <Button asChild size="sm" variant="secondary">
-          <Link to="/inventory/stock-balances">Back to stock overview</Link>
-        </Button>
+        <div className="form-actions align-start">
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/inventory/stock-balances">Stock overview</Link>
+          </Button>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/inventory/stock-count-sessions">All sessions</Link>
+          </Button>
+        </div>
       }
     >
       {error ? <p className="error-text">{error}</p> : null}
@@ -177,7 +182,7 @@ export function StockCountSessionCreatePage() {
 
           <FormActions
             primaryAction={
-              result.status === 'OPEN' ? (
+              result.status === 'DRAFT' ? (
                 <Button
                   loading={startMutation.isPending}
                   onClick={() =>
@@ -190,7 +195,7 @@ export function StockCountSessionCreatePage() {
                 >
                   Start count session
                 </Button>
-              ) : result.status === 'IN_PROGRESS' ? (
+              ) : result.status === 'COUNTING' ? (
                 <Button
                   loading={updateLinesMutation.isPending}
                   onClick={() => void handleSaveLines()}
@@ -201,7 +206,7 @@ export function StockCountSessionCreatePage() {
               ) : null
             }
             secondaryAction={
-              result.status === 'OPEN' || result.status === 'IN_PROGRESS' ? (
+              result.status === 'DRAFT' || result.status === 'COUNTING' ? (
                 <Button
                   loading={cancelMutation.isPending}
                   onClick={() =>
@@ -216,7 +221,7 @@ export function StockCountSessionCreatePage() {
             }
           />
 
-          {result.status === 'IN_PROGRESS' ? (
+          {result.status === 'COUNTING' ? (
             <div className="page-stack">
               <h3>Count lines</h3>
               <div className="field-grid">

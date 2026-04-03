@@ -16,6 +16,7 @@ import com.fern.auditservice.service.AuditAuthorizer;
 import com.fern.auditservice.service.AuditQueryService;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ScopeRoots;
+import com.fern.platform.web.FernGlobalExceptionHandler;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -46,7 +47,7 @@ class AuditControllerTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(new com.fern.auditservice.controller.AuditController(auditAuthorizer, auditQueryService))
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new FernGlobalExceptionHandler("audit-service", List.of()))
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
         principal = new FernPrincipal(1L, "bootstrap-admin", Set.of("bootstrap_admin"), Set.of("audit.read"), new ScopeRoots(List.of(1L), List.of()), 1L, 1L, "jti");

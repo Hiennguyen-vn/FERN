@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createPurchaseOrder, getPurchaseOrder, listPurchaseOrders, purchaseOrderAction } from '../api/procurement.api'
-import type { CreatePurchaseOrderPayload } from '../model/procurement.types'
+import { createPurchaseOrder, getPurchaseOrder, listPurchaseOrders, purchaseOrderAction, updatePurchaseOrder } from '../api/procurement.api'
+import type { CreatePurchaseOrderPayload, UpdatePurchaseOrderPayload } from '../model/procurement.types'
 
 export function usePurchaseOrders(params?: { outletId?: number; supplierId?: number; status?: string; limit?: number }) {
   return useQuery({
@@ -21,6 +21,24 @@ export function useCreatePurchaseOrder() {
   return useMutation({
     mutationKey: ['procurement', 'purchase-orders', 'create'],
     mutationFn: (payload: CreatePurchaseOrderPayload) => createPurchaseOrder(payload),
+  })
+}
+
+export function useUpdatePurchaseOrder() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationKey: ['procurement', 'purchase-orders', 'update'],
+    mutationFn: ({ id, payload }: { id: number; payload: UpdatePurchaseOrderPayload }) =>
+      updatePurchaseOrder(id, payload),
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['procurement', 'purchase-orders', data.id],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: ['procurement', 'purchase-orders', 'list'],
+      })
+    },
   })
 }
 

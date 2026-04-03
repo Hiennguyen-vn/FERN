@@ -227,9 +227,9 @@ export function PosOrderDetailPage() {
                 <QuantityInput
                   label="Qty"
                   min="0.0001"
-                  onChange={(event) =>
+                  onChange={(value) =>
                     setDraftLines((current) =>
-                      current.map((item, itemIndex) => (itemIndex === index ? { ...item, qty: event.target.value } : item)),
+                      current.map((item, itemIndex) => (itemIndex === index ? { ...item, qty: String(value) } : item)),
                     )
                   }
                   readOnly={!canUpdateCurrentOrder}
@@ -353,7 +353,7 @@ export function PosOrderDetailPage() {
             disabled={!canAddPaymentForOrder}
             label="Amount"
             min="0.01"
-            onChange={(event) => setPaymentAmount(event.target.value)}
+            onChange={(value) => setPaymentAmount(value)}
             value={paymentAmount}
           />
           <Input

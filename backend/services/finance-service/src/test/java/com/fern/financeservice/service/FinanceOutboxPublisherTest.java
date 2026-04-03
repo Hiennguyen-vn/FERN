@@ -3,6 +3,7 @@ package com.fern.financeservice.service;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -25,6 +26,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.core.KafkaTemplate;
 
 class FinanceOutboxPublisherTest {
@@ -59,10 +61,13 @@ class FinanceOutboxPublisherTest {
         JdbcOutboxPublisherSupport.ClaimedOutboxEvent nextEvent = claimedEvent(0, "8802");
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(failedEvent, nextEvent));
-        when(kafkaTemplate.send(failedEvent.eventType(), failedEvent.partitionKey(), failedEvent.payload()))
-                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("kafka unavailable")));
-        when(kafkaTemplate.send(nextEvent.eventType(), nextEvent.partitionKey(), nextEvent.payload()))
-                .thenReturn(CompletableFuture.completedFuture(null));
+        when(kafkaTemplate.send(any(ProducerRecord.class))).thenAnswer(invocation -> {
+            ProducerRecord<String, String> record = invocation.getArgument(0);
+            if (record.topic().equals(failedEvent.eventType()) && record.value().equals(failedEvent.payload())) {
+                return CompletableFuture.failedFuture(new RuntimeException("kafka unavailable"));
+            }
+            return CompletableFuture.completedFuture(null);
+        });
         doThrow(new RuntimeException("alert unavailable")).when(operationalAlertPublisher).publish(
                 anyString(),
                 anyString(),
@@ -77,7 +82,10 @@ class FinanceOutboxPublisherTest {
 
         publisher.publishPending();
 
-        verify(kafkaTemplate).send(nextEvent.eventType(), nextEvent.partitionKey(), nextEvent.payload());
+        verify(kafkaTemplate).send(argThat((ProducerRecord<String, String> r) ->
+                r.topic().equals(nextEvent.eventType())
+                        && r.key().equals(nextEvent.partitionKey())
+                        && r.value().equals(nextEvent.payload())));
         verify(jdbcTemplate, times(2)).update(anyString(), any(MapSqlParameterSource.class));
     }
 

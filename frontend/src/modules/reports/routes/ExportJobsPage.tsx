@@ -1,8 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
-import { Button, Card, EmptyState, ErrorState, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Pagination,
+  PermissionDeniedInline,
+  ReadonlyBanner,
+} from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { useCreateExportJob } from '../hooks/useCreateExportJob'
 import { useExportJobs } from '../hooks/useExportJobs'
@@ -25,8 +33,9 @@ export function ExportJobsPage() {
   const canQueueExports = canCreateExport(principal)
   const allowedDatasets = getCreatableExportDatasets(principal)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
   const createExport = useCreateExportJob()
-  const exportJobs = useExportJobs({ enabled: canInspectJobs })
+  const exportJobs = useExportJobs({ enabled: canInspectJobs, filters: { page, size: 20 } })
 
   if (!canOpenPage) {
     return (
@@ -125,6 +134,19 @@ export function ExportJobsPage() {
                 />
               ))}
             </div>
+          ) : null}
+          {!exportJobs.isLoading && !exportJobs.error && (exportJobs.jobs.length > 0 || page > 0) ? (
+            <Pagination
+              canNext={
+                typeof exportJobs.totalPages === 'number'
+                  ? page + 1 < exportJobs.totalPages
+                  : Boolean(exportJobs.hasMore)
+              }
+              canPrevious={page > 0}
+              currentPage={page}
+              onNext={() => setPage((p) => p + 1)}
+              onPrevious={() => setPage((p) => Math.max(0, p - 1))}
+            />
           ) : null}
         </section>
       ) : (

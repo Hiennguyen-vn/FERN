@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import {
   Button,
   Card,

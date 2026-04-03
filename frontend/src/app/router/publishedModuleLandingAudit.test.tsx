@@ -111,7 +111,9 @@ function InventoryHarness() {
         <Route path="transactions" element={<h1>transactions</h1>} />
         <Route path="stock-adjustments/new" element={<h1>stock-adjustment-create</h1>} />
         <Route path="waste-records/new" element={<h1>waste-record-create</h1>} />
+        <Route path="stock-count-sessions" element={<h1>stock-count-sessions</h1>} />
         <Route path="stock-count-sessions/new" element={<h1>stock-count-create</h1>} />
+        <Route path="stock-count-sessions/:sessionId" element={<h1>stock-count-detail</h1>} />
       </Route>
       <Route path="/unauthorized" element={<h1>unauthorized</h1>} />
       <Route path="*" element={<h1>not-found</h1>} />

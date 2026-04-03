@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import {
@@ -17,7 +17,7 @@ import {
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { useHrAttendanceApprovals, useHrAttendanceEvents } from '../hooks/useHr'
-import type { HrAttendanceApproval, HrAttendanceEvent } from '../model/hr.types'
+import type { HrAttendanceApproval, HrAttendanceEventListItem } from '../model/hr.types'
 import { getHrErrorMessage } from '../services/hrError.service'
 import {
   buildAttendanceSummary,
@@ -106,7 +106,7 @@ export function AttendanceSummaryPage() {
     [],
   )
 
-  const eventColumns = useMemo<Array<DataTableColumn<HrAttendanceEvent>>>(
+  const eventColumns = useMemo<Array<DataTableColumn<HrAttendanceEventListItem>>>(
     () => [
       { key: 'eventId', header: 'Event ID', render: (event) => `#${event.id}` },
       {

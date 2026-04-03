@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
+import com.fern.platform.common.DownstreamUnavailableException;
 import java.io.IOException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientResponseException;
@@ -19,17 +20,17 @@ public class PosDownstreamErrorHandler {
     public RuntimeException translateResponse(String serviceName, RestClientResponseException exception) {
         String message = extractMessage(exception);
         if (exception.getStatusCode().is5xxServerError()) {
-            return new DownstreamServiceUnavailableException(serviceName + " is unavailable", exception);
+            return new DownstreamUnavailableException(serviceName + " is unavailable", exception);
         }
         return switch (exception.getStatusCode().value()) {
             case 400 -> new BadRequestException(message);
             case 404, 409 -> new ConflictException(message);
-            default -> new DownstreamServiceUnavailableException(serviceName + " is unavailable", exception);
+            default -> new DownstreamUnavailableException(serviceName + " is unavailable", exception);
         };
     }
 
-    public DownstreamServiceUnavailableException serviceUnavailable(String serviceName, Exception exception) {
-        return new DownstreamServiceUnavailableException(serviceName + " is unavailable", exception);
+    public DownstreamUnavailableException serviceUnavailable(String serviceName, Exception exception) {
+        return new DownstreamUnavailableException(serviceName + " is unavailable", exception);
     }
 
     private String extractMessage(RestClientResponseException exception) {

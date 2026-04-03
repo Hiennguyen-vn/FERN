@@ -23,7 +23,7 @@ import { formatDate } from '@shared/formatters'
 import { PosCatalogGrid } from '../components/PosCatalogGrid'
 import { PosCartPanel } from '../components/PosCartPanel'
 import { PosSessionSummaryCard } from '../components/PosSessionSummaryCard'
-import { useRegion } from '@modules/org/hooks/useOrg'
+import { useOutlet, useRegion } from '@modules/org/hooks/useOrg'
 import { usePosCatalog } from '../hooks/usePosCatalog'
 import { useCreatePosOrder } from '../hooks/usePosOrder'
 import { useClosePosSession, useOpenPosSession, usePosSessions } from '../hooks/usePosSession'
@@ -91,11 +91,6 @@ export function PosHomePage() {
     previousOutletId.current = selectedOutletId
   }, [clearOutletDrafts, clearOutletUi, selectedOutletId])
 
-  const regionQuery = useRegion(selectedRegionId ?? 0, { enabled: !!selectedRegionId })
-  // Use the region's configured currency code; fall back to 'VND' only while the
-  // region is still loading, so the payload is always a valid non-empty string.
-  const regionCurrencyCode = regionQuery.data?.currencyCode ?? 'VND'
-
   const canReadSessionsPermission = canReadSessions(principal)
   const canReadCatalogPermission = canReadCatalog(principal)
   const canOpenSessionPermission = canOpenSession(principal, isOnline)
@@ -111,7 +106,17 @@ export function PosHomePage() {
     canReadSessionsPermission,
   )
   const currentSession = openSessionsQuery.data?.[0] ?? null
-  const effectiveRegionId = selectedRegionId ?? currentSession?.regionId ?? null
+
+  /** Outlet-only IAM scope has no region in the shell; infer region from org outlet master data. */
+  const outletDetailQuery = useOutlet(selectedOutletId ?? 0, {
+    enabled: Boolean(selectedOutletId && !selectedRegionId && !currentSession?.regionId),
+  })
+
+  const effectiveRegionId =
+    selectedRegionId ?? currentSession?.regionId ?? outletDetailQuery.data?.regionId ?? null
+
+  const regionQuery = useRegion(effectiveRegionId ?? 0, { enabled: Boolean(effectiveRegionId && effectiveRegionId > 0) })
+  const regionCurrencyCode = regionQuery.data?.currencyCode ?? 'VND'
 
   // Normalize BackendDate ([year,month,day] or ISO string) → 'YYYY-MM-DD' string for API
   const sessionBusinessDateStr = (() => {
@@ -151,7 +156,13 @@ export function PosHomePage() {
   })
   const categories = Array.from(new Set((catalogQuery.data ?? []).map((item) => item.categoryCode))).sort()
 
-  if (!selectedOutletId || !effectiveRegionId) {
+  const resolvingOutletRegion =
+    Boolean(selectedOutletId) &&
+    !selectedRegionId &&
+    !currentSession?.regionId &&
+    outletDetailQuery.isLoading
+
+  if (!selectedOutletId) {
     return (
       <section className="page-stack pos-home-page">
         <ReadonlyBanner message="POS needs an outlet context to resolve sessions and create orders. Choose an outlet below or from the shell." />
@@ -178,6 +189,43 @@ export function PosHomePage() {
               This account has not been assigned an outlet scope. Contact a system administrator to continue.
             </p>
           )}
+        </EmptyState>
+      </section>
+    )
+  }
+
+  if (resolvingOutletRegion) {
+    return (
+      <section className="page-stack pos-home-page">
+        <ReadonlyBanner message="POS needs an outlet context to resolve sessions and create orders. Choose an outlet below or from the shell." />
+        <EmptyState description="Resolving region for the selected outlet from organization data." title="Loading outlet context" />
+      </section>
+    )
+  }
+
+  if (!effectiveRegionId) {
+    return (
+      <section className="page-stack pos-home-page">
+        <ReadonlyBanner message="POS needs an outlet context to resolve sessions and create orders. Choose an outlet below or from the shell." />
+        <EmptyState
+          description="Could not resolve a region for this outlet. Verify org data or contact an administrator."
+          title="Region context missing"
+        >
+          {outletIds.length > 0 ? (
+            <div style={{ marginTop: '1rem', maxWidth: '320px' }}>
+              <Select
+                label="Choose operating outlet"
+                onChange={(event) => {
+                  if (event.target.value) {
+                    setSelectedOutletId(Number(event.target.value))
+                  }
+                }}
+                options={outletIds.map((id) => ({ label: `Outlet #${id}`, value: String(id) }))}
+                placeholder="-- Choose outlet --"
+                value={selectedOutletId ? String(selectedOutletId) : ''}
+              />
+            </div>
+          ) : null}
         </EmptyState>
       </section>
     )

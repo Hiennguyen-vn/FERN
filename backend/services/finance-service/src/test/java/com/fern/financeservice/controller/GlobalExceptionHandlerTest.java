@@ -11,6 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.observability.CorrelationId;
+import com.fern.platform.web.FernGlobalExceptionHandler;
+import com.fern.financeservice.observability.FinanceUnhandledExceptionListener;
+import java.util.List;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -32,7 +35,9 @@ class GlobalExceptionHandlerTest {
     void setUp() {
         operationalAlertPublisher = new RecordingAlertPublisher();
         mockMvc = MockMvcBuilders.standaloneSetup(new ThrowingController())
-                .setControllerAdvice(new GlobalExceptionHandler(new SimpleMeterRegistry(), operationalAlertPublisher))
+                .setControllerAdvice(new FernGlobalExceptionHandler(
+                        "finance-service",
+                        List.of(new FinanceUnhandledExceptionListener(new SimpleMeterRegistry(), operationalAlertPublisher))))
                 .build();
     }
 

@@ -75,6 +75,13 @@ export async function getPayrollRunReport(runId: number) {
   return data
 }
 
+/**
+ * Cross-service dependency: calls `/payroll-runs` (hr-service via gateway) directly
+ * rather than going through report-service. This is intentional -- the report module
+ * needs the payroll run list for its summary views, and report-service does not
+ * duplicate this endpoint. Changes to hr-service's PayrollRunResponse DTO will
+ * require updating ReportPayrollRunListItem in this module.
+ */
 export async function listPayrollRuns(regionId?: number) {
   const { data } = await gatewayClient.get<ReportPayrollRunListItem[]>('/payroll-runs', {
     params: regionId ? { regionId } : undefined,

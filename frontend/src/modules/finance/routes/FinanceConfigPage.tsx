@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import {
   Badge,
   Button,
   Card,
+  EmptyState,
+  ErrorState,
   FormActions,
   Input,
   PermissionDeniedInline,
@@ -19,6 +21,7 @@ import {
   usePutSystemPolicy,
 } from '../hooks/useFinance'
 import type { NumberingRule, SystemPolicy } from '../model/finance.types'
+import { getFinanceErrorMessage } from '../services/financeError.service'
 
 // Known document types from backend
 const DOCUMENT_TYPES = ['PAYROLL_RUN', 'SUPPLIER_INVOICE', 'PURCHASE_ORDER', 'GOODS_RECEIPT']
@@ -80,11 +83,32 @@ function NumberingRuleRow({
     )
   }
 
-  if (query.error || !query.data) {
+  if (query.error) {
     return (
       <tr>
-        <td colSpan={6} style={{ padding: '0.5rem 1rem', color: 'var(--color-error)' }}>
-          {documentType}: {query.error instanceof Error ? query.error.message : 'Not configured'}
+        <td colSpan={6} style={{ padding: '1rem', verticalAlign: 'top' }}>
+          <ErrorState
+            actionLabel="Retry"
+            message={getFinanceErrorMessage(
+              query.error,
+              `Không thể tải numbering rule cho loại chứng từ ${documentType}.`,
+            )}
+            onAction={() => void query.refetch()}
+            title={`Unable to load ${documentType}`}
+          />
+        </td>
+      </tr>
+    )
+  }
+
+  if (!query.data) {
+    return (
+      <tr>
+        <td colSpan={6} style={{ padding: '1rem', verticalAlign: 'top' }}>
+          <EmptyState
+            description={`Chưa có cấu hình numbering cho loại chứng từ ${documentType}.`}
+            title="Not configured"
+          />
         </td>
       </tr>
     )
@@ -204,11 +228,32 @@ function SystemPolicyRow({ policyKey, canWrite }: { policyKey: string; canWrite:
     )
   }
 
-  if (query.error || !query.data) {
+  if (query.error) {
     return (
       <tr>
-        <td colSpan={4} style={{ padding: '0.5rem 1rem', color: 'var(--color-error)' }}>
-          {policyKey}: {query.error instanceof Error ? query.error.message : 'Not configured'}
+        <td colSpan={4} style={{ padding: '1rem', verticalAlign: 'top' }}>
+          <ErrorState
+            actionLabel="Retry"
+            message={getFinanceErrorMessage(
+              query.error,
+              `Không thể tải system policy ${policyKey}.`,
+            )}
+            onAction={() => void query.refetch()}
+            title={`Unable to load ${policyKey}`}
+          />
+        </td>
+      </tr>
+    )
+  }
+
+  if (!query.data) {
+    return (
+      <tr>
+        <td colSpan={4} style={{ padding: '1rem', verticalAlign: 'top' }}>
+          <EmptyState
+            description={`Chưa có giá trị policy cho khóa ${policyKey}.`}
+            title="Not configured"
+          />
         </td>
       </tr>
     )

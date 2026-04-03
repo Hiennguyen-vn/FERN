@@ -10,10 +10,27 @@ import type {
   Supplier,
   SupplierInvoice,
   SupplierPayment,
+  SupplierUpsertPayload,
+  UpdatePurchaseOrderPayload,
 } from '../model/procurement.types'
 
 export async function listSuppliers() {
   const { data } = await gatewayClient.get<Supplier[]>('/suppliers')
+  return data
+}
+
+export async function createSupplier(payload: SupplierUpsertPayload) {
+  const { data } = await gatewayClient.post<Supplier>('/suppliers', payload)
+  return data
+}
+
+export async function updateSupplier(id: number, payload: SupplierUpsertPayload) {
+  const { data } = await gatewayClient.patch<Supplier>(`/suppliers/${id}`, payload)
+  return data
+}
+
+export async function activateSupplier(id: number) {
+  const { data } = await gatewayClient.post<Supplier>(`/suppliers/${id}/activate`)
   return data
 }
 
@@ -29,6 +46,11 @@ export async function listPurchaseOrders(params?: { outletId?: number; supplierI
 
 export async function getPurchaseOrder(id: number) {
   const { data } = await gatewayClient.get<PurchaseOrder>(`/purchase-orders/${id}`)
+  return data
+}
+
+export async function updatePurchaseOrder(id: number, payload: UpdatePurchaseOrderPayload) {
+  const { data } = await gatewayClient.patch<PurchaseOrder>(`/purchase-orders/${id}`, payload)
   return data
 }
 

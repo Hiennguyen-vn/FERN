@@ -138,7 +138,7 @@ describe('POS resilience', () => {
       completedAt: null,
       createdAt: '2026-03-30T12:00:00.000Z',
       currencyCode: 'VND',
-      discountAmount: '0',
+      discountAmount: 0,
       id: 903,
       lines: [],
       note: null,
@@ -150,9 +150,9 @@ describe('POS resilience', () => {
       posSessionId: 501,
       regionId: 1,
       status: 'OPEN',
-      subtotal: '150000',
-      taxAmount: '0',
-      totalAmount: '150000',
+      subtotal: 150000,
+      taxAmount: 0,
+      totalAmount: 150000,
     })
 
     const summary = await syncPendingPosActions()

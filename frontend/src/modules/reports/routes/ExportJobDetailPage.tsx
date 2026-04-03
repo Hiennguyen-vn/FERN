@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { AsyncJobProgress, Button, Card, EmptyState, ErrorState, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'

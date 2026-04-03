@@ -4,7 +4,9 @@ import com.fern.inventoryservice.dto.InventoryCommands.CreateStockAdjustmentRequ
 import com.fern.inventoryservice.dto.InventoryResponses.StockAdjustmentResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
+import com.fern.platform.common.DownstreamUnavailableException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.ForbiddenException;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.contracts.InventoryAdjustmentPostedEvent;
@@ -19,6 +21,8 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.MDC;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -32,6 +36,7 @@ public class StockAdjustmentService {
     private final InventoryOutboxService inventoryOutboxService;
     private final InventoryOrgClient inventoryOrgClient;
     private final Clock clock;
+    private final Counter inventoryAdjustmentFailureCounter;
 
     public StockAdjustmentService(
             NamedParameterJdbcTemplate jdbcTemplate,
@@ -39,7 +44,8 @@ public class StockAdjustmentService {
             InventoryRepository inventoryRepository,
             InventoryOutboxService inventoryOutboxService,
             InventoryOrgClient inventoryOrgClient,
-            Clock clock
+            Clock clock,
+            MeterRegistry meterRegistry
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.inventoryAuthorizer = inventoryAuthorizer;
@@ -47,6 +53,7 @@ public class StockAdjustmentService {
         this.inventoryOutboxService = inventoryOutboxService;
         this.inventoryOrgClient = inventoryOrgClient;
         this.clock = clock;
+        this.inventoryAdjustmentFailureCounter = Counter.builder("fern_inventory_adjustment_failures_total").register(meterRegistry);
     }
 
     @Transactional
@@ -82,6 +89,21 @@ public class StockAdjustmentService {
 
     @Transactional
     public StockAdjustmentResponse postStockAdjustment(FernPrincipal principal, Long id, String idempotencyKey) {
+        try {
+            return postStockAdjustmentInternal(principal, id, idempotencyKey);
+        } catch (ConflictException
+                | ResourceNotFoundException
+                | BadRequestException
+                | ForbiddenException
+                | DownstreamUnavailableException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            inventoryAdjustmentFailureCounter.increment();
+            throw exception;
+        }
+    }
+
+    private StockAdjustmentResponse postStockAdjustmentInternal(FernPrincipal principal, Long id, String idempotencyKey) {
         requireIdempotencyKey(idempotencyKey);
         StockAdjustmentRecord record = requireStockAdjustmentRecordForUpdate(id);
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_ADJUSTMENT_WRITE);

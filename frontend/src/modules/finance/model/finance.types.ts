@@ -1,15 +1,10 @@
-export interface FinanceSupplier {
-  id: number
-  supplierCode: string
-  name: string
-  taxCode: string | null
-  email: string | null
-  phone: string | null
-  address: string | null
-  defaultRegionId: number | null
-  status: string
-  approvedAt: string | null
-}
+import type { Supplier } from '@modules/procurement/model/procurement.types'
+
+/**
+ * Finance module views suppliers via the same `/suppliers` endpoint as procurement.
+ * Re-exporting the canonical type prevents silent drift between modules.
+ */
+export type FinanceSupplier = Supplier
 
 export interface FinancePaymentRequestLine {
   id: number

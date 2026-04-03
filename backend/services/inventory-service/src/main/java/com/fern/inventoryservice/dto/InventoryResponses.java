@@ -89,4 +89,17 @@ public final class InventoryResponses {
             List<StockCountLineResponse> lines
     ) {
     }
+
+    /** List view without line items (lighter payload for outlet session history). */
+    public record StockCountSessionSummaryResponse(
+            Long id,
+            String status,
+            Long regionId,
+            Long outletId,
+            LocalDate countDate,
+            String note,
+            Instant startedAt,
+            Instant postedAt
+    ) {
+    }
 }

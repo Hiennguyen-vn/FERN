@@ -44,6 +44,34 @@ vi.mock('@shared/hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => true,
 }))
 
+const minimalOutlet = {
+  id: 101,
+  regionId: 1,
+  code: 'T',
+  name: 'Test Outlet',
+  status: 'ACTIVE' as const,
+  address: null,
+  phone: null,
+  email: null,
+  openedAt: null,
+  closedAt: null,
+  createdAt: '',
+  updatedAt: '',
+}
+
+vi.mock('@modules/org/hooks/useOrg', () => ({
+  useRegion: (regionId: number, options?: { enabled?: boolean }) => ({
+    data: options?.enabled && regionId ? { currencyCode: 'VND' } : undefined,
+    isLoading: false,
+    error: null,
+  }),
+  useOutlet: (outletId: number, options?: { enabled?: boolean }) => ({
+    data: options?.enabled && outletId === 101 ? minimalOutlet : undefined,
+    isLoading: false,
+    error: null,
+  }),
+}))
+
 vi.mock('../hooks/usePosSession', () => ({
   usePosSessions: (...args: unknown[]) => usePosSessionsMock(...args),
   useOpenPosSession: () => ({
@@ -154,5 +182,23 @@ describe('PosHomePage', () => {
     expect(screen.getByText('POS-001')).toBeInTheDocument()
     expect(screen.getByText('Region #14')).toBeInTheDocument()
     expect(screen.queryByText('No outlet selected')).not.toBeInTheDocument()
+  })
+
+  it('resolves region from outlet master when shell has outlet scope only and no open session', () => {
+    mockScopeContext.selectedRegionId = null
+    mockScopeContext.regionIds = []
+    mockScopeContext.selectedOutletId = 101
+    mockScopeContext.outletIds = [101]
+    usePosSessionsMock.mockReturnValue({
+      data: [],
+      error: null,
+      isLoading: false,
+    })
+
+    renderWithProviders(<PosHomePage />)
+
+    expect(screen.queryByText('No outlet selected')).not.toBeInTheDocument()
+    expect(screen.getByText('Open POS session')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Region ID/i)).toHaveValue('1')
   })
 })

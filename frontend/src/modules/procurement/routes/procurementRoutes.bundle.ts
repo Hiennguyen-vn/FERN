@@ -1,3 +1,5 @@
+export { SupplierListPage } from './SupplierListPage'
+export { SupplierCreatePage } from './SupplierCreatePage'
 export { GoodsReceiptCreatePage } from './GoodsReceiptCreatePage'
 export { GoodsReceiptDetailPage } from './GoodsReceiptDetailPage'
 export { GoodsReceiptListPage } from './GoodsReceiptListPage'

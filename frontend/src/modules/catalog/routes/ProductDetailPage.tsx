@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AppIcon } from '@app/components/AppIcon'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import {
@@ -18,7 +18,7 @@ import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { ProductStatusBadge } from '../components/ProductStatusBadge'
 import { RecipeVersionStatusBadge } from '../components/RecipeVersionStatusBadge'
-import { useProduct } from '../hooks/useProducts'
+import { useProduct, useDeactivateProduct } from '../hooks/useProducts'
 import { useProductPrices, useAvailability } from '../hooks/usePricing'
 import { useRecipes, useRecipeVersions } from '../hooks/useRecipes'
 import type { ProductAvailability, ProductPrice, RecipeVersion } from '../model/catalog.types'
@@ -63,6 +63,7 @@ export function ProductDetailPage() {
   const canWriteProduct = canWriteProducts(principal) && principal?.scopeRoots?.system === true
 
   const productQuery = useProduct(productId, { enabled: canViewProduct && Number.isFinite(productId) })
+  const deactivateMutation = useDeactivateProduct(productId)
   const recipesQuery = useRecipes({ enabled: canViewProduct && canViewRecipes })
   const productRecipe = useMemo(
     () => recipesQuery.data?.find((recipe) => recipe.productId === productId) ?? null,
@@ -271,9 +272,25 @@ export function ProductDetailPage() {
             <Link to="/catalog/products">Back to product master</Link>
           </Button>
           {canWriteProduct ? (
-            <Button asChild size="sm">
-              <Link to={`/catalog/products/${productId}/edit`}>Edit product</Link>
-            </Button>
+            <>
+              <Button asChild size="sm">
+                <Link to={`/catalog/products/${productId}/edit`}>Edit product</Link>
+              </Button>
+              {product?.status === 'ACTIVE' ? (
+                <Button
+                  loading={deactivateMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm('Deactivate this product? It will no longer be available in POS and catalog listings.')) {
+                      deactivateMutation.mutate()
+                    }
+                  }}
+                  size="sm"
+                  variant="danger"
+                >
+                  Deactivate
+                </Button>
+              ) : null}
+            </>
           ) : null}
         </div>
       }

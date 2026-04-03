@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { listSuppliers } from '../api/procurement.api'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { activateSupplier, createSupplier, listSuppliers, updateSupplier } from '../api/procurement.api'
+import type { SupplierUpsertPayload } from '../model/procurement.types'
 
 interface QueryOptions {
   enabled?: boolean
@@ -10,5 +11,30 @@ export function useSuppliers(options: QueryOptions = {}) {
     enabled: options.enabled ?? true,
     queryKey: ['procurement', 'suppliers'],
     queryFn: listSuppliers,
+  })
+}
+
+export function useCreateSupplier() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: SupplierUpsertPayload) => createSupplier(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['procurement', 'suppliers'] }),
+  })
+}
+
+export function useUpdateSupplier() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: SupplierUpsertPayload }) =>
+      updateSupplier(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['procurement', 'suppliers'] }),
+  })
+}
+
+export function useActivateSupplier() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => activateSupplier(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['procurement', 'suppliers'] }),
   })
 }

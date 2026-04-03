@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fern.platform.common.DownstreamUnavailableException;
 import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.observability.CorrelationId;
+import com.fern.platform.web.FernGlobalExceptionHandler;
+import java.util.List;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +30,7 @@ class GlobalExceptionHandlerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new ThrowingController())
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new FernGlobalExceptionHandler("hr-service", List.of()))
                 .build();
     }
 

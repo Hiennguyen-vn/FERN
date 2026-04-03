@@ -27,6 +27,9 @@ export function useExportJobs(options: UseExportJobsOptions = {}) {
     restrictedJobCount: 0,
     restrictedJobIds: [] as number[],
     hasMore: query.data?.hasMore ?? false,
+    totalPages: query.data?.totalPages,
+    totalItems: query.data?.totalItems,
+    page: query.data?.page ?? filters.page,
     isLoading: query.isLoading,
     error: query.error ?? null,
     refresh: async () => {

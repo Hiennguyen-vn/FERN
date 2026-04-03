@@ -12,65 +12,108 @@ import type {
   SystemPolicy,
 } from '../model/finance.types'
 
+/** Named functions (preferred); `financeApi` groups the same calls for query hooks. */
+export async function listFinanceSuppliers() {
+  const { data } = await gatewayClient.get<FinanceSupplier[]>('/suppliers')
+  return data
+}
+
+export async function listFinancePaymentRequests(params?: {
+  supplierId?: number
+  outletId?: number
+  status?: string
+  limit?: number
+}) {
+  const { data } = await gatewayClient.get<FinancePaymentRequest[]>('/supplier-invoices', { params })
+  return data
+}
+
+export async function getFinancePaymentRequest(invoiceId: number) {
+  const { data } = await gatewayClient.get<FinancePaymentRequest>(`/supplier-invoices/${invoiceId}`)
+  return data
+}
+
+export async function listFinancePayrollRuns(filters: FinancePayrollFilters = {}) {
+  const { data } = await gatewayClient.get<FinancePayrollRun[]>('/payroll-runs', {
+    params: filters.regionId ? { regionId: filters.regionId } : undefined,
+  })
+  return data
+}
+
+export async function getFinancePayrollRun(runId: number) {
+  const { data } = await gatewayClient.get<FinancePayrollRun>(`/payroll-runs/${runId}`)
+  return data
+}
+
+export async function submitFinancePayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
+  const { data } = await gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/submit`, payload)
+  return data
+}
+
+export async function approveFinancePayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
+  const { data } = await gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/approve`, payload)
+  return data
+}
+
+export async function rejectFinancePayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
+  const { data } = await gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/reject`, payload)
+  return data
+}
+
+export async function cancelFinancePayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
+  const { data } = await gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/cancel`, payload)
+  return data
+}
+
+export async function markFinancePayrollPaid(runId: number, payload: MarkPayrollPaidPayload) {
+  const { data } = await gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/mark-paid`, payload)
+  return data
+}
+
+export async function getFinanceNumberingRule(documentType: string) {
+  const { data } = await gatewayClient.get<NumberingRule>(
+    `/finance-config/numbering-rules/${encodeURIComponent(documentType)}`,
+  )
+  return data
+}
+
+export async function putFinanceNumberingRule(documentType: string, payload: PutNumberingRulePayload) {
+  const { data } = await gatewayClient.put<NumberingRule>(
+    `/finance-config/numbering-rules/${encodeURIComponent(documentType)}`,
+    payload,
+  )
+  return data
+}
+
+export async function getFinanceSystemPolicy(policyKey: string) {
+  const { data } = await gatewayClient.get<SystemPolicy>(
+    `/finance-config/system-policies/${encodeURIComponent(policyKey)}`,
+  )
+  return data
+}
+
+export async function putFinanceSystemPolicy(policyKey: string, payload: PutSystemPolicyPayload) {
+  const { data } = await gatewayClient.put<SystemPolicy>(
+    `/finance-config/system-policies/${encodeURIComponent(policyKey)}`,
+    payload,
+  )
+  return data
+}
+
+/** Stable object surface for React Query `queryFn` / `mutationFn` registration. */
 export const financeApi = {
-  listSuppliers() {
-    return gatewayClient.get<FinanceSupplier[]>('/suppliers').then((response) => response.data)
-  },
-
-  listPaymentRequests(params?: { supplierId?: number; outletId?: number; status?: string; limit?: number }) {
-    return gatewayClient.get<FinancePaymentRequest[]>('/supplier-invoices', { params }).then((response) => response.data)
-  },
-
-  getPaymentRequest(invoiceId: number) {
-    return gatewayClient.get<FinancePaymentRequest>(`/supplier-invoices/${invoiceId}`).then((response) => response.data)
-  },
-
-  listPayrollRuns(filters: FinancePayrollFilters = {}) {
-    return gatewayClient
-      .get<FinancePayrollRun[]>('/payroll-runs', {
-        params: filters.regionId ? { regionId: filters.regionId } : undefined,
-      })
-      .then((response) => response.data)
-  },
-
-  getPayrollRun(runId: number) {
-    return gatewayClient.get<FinancePayrollRun>(`/payroll-runs/${runId}`).then((response) => response.data)
-  },
-
-  submitPayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
-    return gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/submit`, payload).then((response) => response.data)
-  },
-
-  approvePayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
-    return gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/approve`, payload).then((response) => response.data)
-  },
-
-  rejectPayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
-    return gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/reject`, payload).then((response) => response.data)
-  },
-
-  cancelPayrollRun(runId: number, payload: ReviewPayrollRunPayload = {}) {
-    return gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/cancel`, payload).then((response) => response.data)
-  },
-
-  markPayrollPaid(runId: number, payload: MarkPayrollPaidPayload) {
-    return gatewayClient.post<FinancePayrollRun>(`/payroll-runs/${runId}/mark-paid`, payload).then((response) => response.data)
-  },
-
-  // ── Finance Config ─────────────────────────────────────────────────────────
-  getNumberingRule(documentType: string) {
-    return gatewayClient.get<NumberingRule>(`/finance-config/numbering-rules/${encodeURIComponent(documentType)}`).then((r) => r.data)
-  },
-
-  putNumberingRule(documentType: string, payload: PutNumberingRulePayload) {
-    return gatewayClient.put<NumberingRule>(`/finance-config/numbering-rules/${encodeURIComponent(documentType)}`, payload).then((r) => r.data)
-  },
-
-  getSystemPolicy(policyKey: string) {
-    return gatewayClient.get<SystemPolicy>(`/finance-config/system-policies/${encodeURIComponent(policyKey)}`).then((r) => r.data)
-  },
-
-  putSystemPolicy(policyKey: string, payload: PutSystemPolicyPayload) {
-    return gatewayClient.put<SystemPolicy>(`/finance-config/system-policies/${encodeURIComponent(policyKey)}`, payload).then((r) => r.data)
-  },
+  listSuppliers: listFinanceSuppliers,
+  listPaymentRequests: listFinancePaymentRequests,
+  getPaymentRequest: getFinancePaymentRequest,
+  listPayrollRuns: listFinancePayrollRuns,
+  getPayrollRun: getFinancePayrollRun,
+  submitPayrollRun: submitFinancePayrollRun,
+  approvePayrollRun: approveFinancePayrollRun,
+  rejectPayrollRun: rejectFinancePayrollRun,
+  cancelPayrollRun: cancelFinancePayrollRun,
+  markPayrollPaid: markFinancePayrollPaid,
+  getNumberingRule: getFinanceNumberingRule,
+  putNumberingRule: putFinanceNumberingRule,
+  getSystemPolicy: getFinanceSystemPolicy,
+  putSystemPolicy: putFinanceSystemPolicy,
 }

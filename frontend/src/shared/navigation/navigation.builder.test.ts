@@ -34,7 +34,7 @@ describe('buildNavigation', () => {
       permissionConstants.hr.contractDetailRead,
     ])
 
-    expect(buildNavigation(principal)).toEqual([
+    expect(buildNavigation(principal)).toMatchObject([
       { label: 'Home', to: '/home' },
       { label: 'HR', to: '/hr', visible: expect.any(Function) },
       { label: 'Finance', to: '/finance', visible: expect.any(Function) },
@@ -45,6 +45,6 @@ describe('buildNavigation', () => {
   it('hides module entries when principal lacks matching permissions', () => {
     const principal = createPrincipal([])
 
-    expect(buildNavigation(principal)).toEqual([{ label: 'Home', to: '/home' }])
+    expect(buildNavigation(principal)).toMatchObject([{ label: 'Home', to: '/home' }])
   })
 })

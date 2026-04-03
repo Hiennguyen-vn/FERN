@@ -1,6 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { AppIcon } from '@app/components/AppIcon'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import {
   Button,
   Card,
@@ -26,13 +25,12 @@ import {
 } from '../services/purchaseOrderUiPolicy.service'
 import { canReadPurchaseOrders, canReadSuppliers } from '../services/procurementPermission.service'
 
-function formatAmount(value: string | null) {
-  const amount = Number(value ?? 0)
-  if (!Number.isFinite(amount)) {
-    return value ?? '—'
+function formatAmount(value: number | null) {
+  if (value == null || !Number.isFinite(value)) {
+    return '—'
   }
 
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount)
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)
 }
 
 export function PurchaseOrderDetailPage() {

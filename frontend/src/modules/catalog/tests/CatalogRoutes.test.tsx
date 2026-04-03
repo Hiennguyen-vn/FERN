@@ -17,6 +17,7 @@ import {
 const mocks = vi.hoisted(() => ({
   useProducts: vi.fn(),
   useProduct: vi.fn(),
+  useDeactivateProduct: vi.fn(),
   useProductCategories: vi.fn(),
   useIngredientCategories: vi.fn(),
   useIngredients: vi.fn(),
@@ -29,6 +30,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../hooks/useProducts', () => ({
   useProducts: mocks.useProducts,
   useProduct: mocks.useProduct,
+  useDeactivateProduct: mocks.useDeactivateProduct,
   useProductCategories: mocks.useProductCategories,
   useIngredientCategories: mocks.useIngredientCategories,
 }))
@@ -87,6 +89,12 @@ describe('Catalog route group', () => {
       error: null,
       isLoading: false,
       refetch: vi.fn(),
+    })
+    mocks.useDeactivateProduct.mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      error: null,
     })
     mocks.useProductCategories.mockReturnValue({ data: [], error: null })
     mocks.useIngredientCategories.mockReturnValue({ data: [], error: null })

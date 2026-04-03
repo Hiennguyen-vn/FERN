@@ -32,11 +32,16 @@ management:
         include: health,info,metrics,prometheus
 
 fern:
+  cors:
+    # Comma-separated origin patterns (Spring CorsConfiguration). Default * for local dev.
+    allowed-origin-patterns: ${FERN_CORS_ALLOWED_ORIGIN_PATTERNS:*}
+    allow-credentials: ${FERN_CORS_ALLOW_CREDENTIALS:true}
   outbox:
     enabled: ${FERN_OUTBOX_ENABLED:true}
     publish-delay-ms: 5000
   security:
     jwt:
+      # Required at runtime: FernJwtService fails startup if blank (see platform-security).
       secret: ${FERN_JWT_SECRET:}
       access-token-ttl-seconds: 900
       refresh-token-ttl-seconds: 604800
@@ -51,3 +56,4 @@ fern:
     hr: ${FERN_HR_ROUTE_URI:http://localhost:8089}
     report: ${FERN_REPORT_ROUTE_URI:http://localhost:8090}
     finance: ${FERN_FINANCE_ROUTE_URI:http://localhost:8091}
+    notification: ${FERN_NOTIFICATION_ROUTE_URI:http://localhost:8092}

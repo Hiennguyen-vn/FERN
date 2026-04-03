@@ -27,6 +27,11 @@
         </dependency>
         <dependency>
             <groupId>com.fern</groupId>
+            <artifactId>platform-web</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fern</groupId>
             <artifactId>platform-security</artifactId>
             <version>${project.version}</version>
         </dependency>

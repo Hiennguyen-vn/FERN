@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { Card, EmptyState, ErrorState, PermissionDeniedInline } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { getExportPreview } from '../api/reports.api'

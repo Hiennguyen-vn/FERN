@@ -57,7 +57,7 @@ export const useCartStore = create<CartState>((set) => ({
                     productName: item.name,
                     categoryCode: item.categoryCode,
                     currencyCode: item.currencyCode,
-                    unitPrice: item.priceValue,
+                    unitPrice: String(item.priceValue),
                     qty: '1',
                     note: '',
                   },

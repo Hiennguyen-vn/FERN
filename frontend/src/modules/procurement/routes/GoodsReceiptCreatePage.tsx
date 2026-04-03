@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { Button, Card, EmptyState, ErrorState, FormActions, FormSection, Input, PermissionDeniedInline } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { usePrincipal } from '@core/auth/auth.selectors'
@@ -42,8 +42,8 @@ export function GoodsReceiptCreatePage() {
         purchaseOrderLineId: String(line.id),
         ingredientId: String(line.ingredientId),
         uomCode: line.uomCode,
-        qtyReceived: line.qtyOrdered,
-        unitCost: line.expectedUnitPrice ?? '',
+        qtyReceived: String(line.qtyOrdered),
+        unitCost: line.expectedUnitPrice != null ? String(line.expectedUnitPrice) : '',
         note: line.note ?? '',
       })),
     )

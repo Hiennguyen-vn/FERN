@@ -73,17 +73,23 @@ export interface CreateAssignmentPayload {
   status?: string | null
 }
 
-export interface HrAttendanceEvent {
+export interface HrAttendanceEventDetail {
   id: number
   employeeId: number
-  regionId: number
-  outletId: number
   shiftAssignmentId: number
-  shiftDate: string
   eventType: string
   eventTime: string
   sourceSystem: string | null
 }
+
+export interface HrAttendanceEventListItem extends HrAttendanceEventDetail {
+  regionId: number
+  outletId: number
+  shiftDate: string
+}
+
+/** @deprecated Use HrAttendanceEventListItem or HrAttendanceEventDetail */
+export type HrAttendanceEvent = HrAttendanceEventListItem
 
 export interface HrAttendanceApproval {
   id: number | null
@@ -110,7 +116,7 @@ export interface HrAttendanceFilters {
   toDate?: string
 }
 
-export type HrAttendanceEventPage = PageResponse<HrAttendanceEvent>
+export type HrAttendanceEventPage = PageResponse<HrAttendanceEventListItem>
 
 export interface PayrollPeriod {
   id: number
@@ -229,4 +235,51 @@ export interface CreateShiftAssignmentPayload {
   employeeId: number
   assignedRole?: string
   note?: string
+}
+
+export type AttendanceEventType = 'CLOCK_IN' | 'CLOCK_OUT' | 'BREAK_START' | 'BREAK_END'
+
+export interface RecordAttendanceEventPayload {
+  employeeId: number
+  regionId: number
+  outletId: number
+  shiftAssignmentId: number
+  eventType: AttendanceEventType
+  eventTime: string
+  sourceSystem?: string | null
+}
+
+export interface ReviewAttendancePayload {
+  comments?: string | null
+}
+
+// ─── Missing backend response types ──────────────────────────────────────────
+
+export interface EffectiveContractResponse {
+  contractId: number
+  employeeId: number
+  regionId: number | null
+  employmentType: string
+  salaryType: string
+  baseSalary: number
+  taxCode: string | null
+  startDate: string
+  endDate: string | null
+}
+
+export interface ApprovedAttendanceResponse {
+  approvalId: number
+  shiftAssignmentId: number
+  employeeId: number
+  regionId: number
+  outletId: number
+  contractId: number
+  businessDate: string
+  attendanceStatus: string
+  workHours: number
+  overtimeHours: number
+}
+
+export interface AttendanceApprovalListResponse {
+  items: ApprovedAttendanceResponse[]
 }

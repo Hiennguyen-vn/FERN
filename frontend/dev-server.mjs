@@ -51,6 +51,8 @@ const gatewayProxyPrefixes = [
   '/stock-count-sessions',
   '/outlets',
   '/catalog/promotions',
+  '/ui',
+  '/ws',
 ]
 
 const hopByHopRequestHeaders = new Set([

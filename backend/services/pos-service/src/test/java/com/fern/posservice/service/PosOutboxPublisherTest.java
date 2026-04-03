@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
@@ -28,6 +29,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.core.KafkaTemplate;
 
 class PosOutboxPublisherTest {
@@ -70,7 +72,7 @@ class PosOutboxPublisherTest {
         );
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(event));
-        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
         publisher.publishPending();
@@ -94,7 +96,7 @@ class PosOutboxPublisherTest {
         RuntimeException failure = new RuntimeException("kafka unavailable");
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(event));
-        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.failedFuture(failure));
 
         publisher.publishPending();
@@ -119,7 +121,7 @@ class PosOutboxPublisherTest {
         RuntimeException failure = new RuntimeException("kafka unavailable");
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(event));
-        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.failedFuture(failure));
 
         publisher.publishPending();
@@ -143,7 +145,7 @@ class PosOutboxPublisherTest {
         );
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(event));
-        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
         when(jdbcTemplate.update(anyString(), any(MapSqlParameterSource.class)))
                 .thenAnswer(invocation -> {
@@ -176,7 +178,7 @@ class PosOutboxPublisherTest {
         );
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(event));
-        when(kafkaTemplate.send(event.eventType(), event.partitionKey(), event.payload()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("kafka unavailable")));
 
         publisher.publishPending();
@@ -216,10 +218,13 @@ class PosOutboxPublisherTest {
         );
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class)))
                 .thenReturn((List) List.of(failedEvent, nextEvent));
-        when(kafkaTemplate.send(failedEvent.eventType(), failedEvent.partitionKey(), failedEvent.payload()))
-                .thenReturn(CompletableFuture.failedFuture(new RuntimeException("kafka unavailable")));
-        when(kafkaTemplate.send(nextEvent.eventType(), nextEvent.partitionKey(), nextEvent.payload()))
-                .thenReturn(CompletableFuture.completedFuture(null));
+        when(kafkaTemplate.send(any(ProducerRecord.class))).thenAnswer(invocation -> {
+            ProducerRecord<String, String> record = invocation.getArgument(0);
+            if (record.topic().equals(failedEvent.eventType()) && record.value().equals(failedEvent.payload())) {
+                return CompletableFuture.failedFuture(new RuntimeException("kafka unavailable"));
+            }
+            return CompletableFuture.completedFuture(null);
+        });
         doThrow(new RuntimeException("alert unavailable")).when(operationalAlertPublisher).publish(
                 anyString(),
                 anyString(),
@@ -234,7 +239,10 @@ class PosOutboxPublisherTest {
 
         publisher.publishPending();
 
-        verify(kafkaTemplate).send(nextEvent.eventType(), nextEvent.partitionKey(), nextEvent.payload());
+        verify(kafkaTemplate).send(argThat((ProducerRecord<String, String> r) ->
+                r.topic().equals(nextEvent.eventType())
+                        && r.key().equals(nextEvent.partitionKey())
+                        && r.value().equals(nextEvent.payload())));
         verify(jdbcTemplate, times(2)).update(anyString(), any(MapSqlParameterSource.class));
     }
 }

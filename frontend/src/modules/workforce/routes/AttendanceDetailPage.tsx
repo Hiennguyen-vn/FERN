@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { DashboardLayout } from '@app/layouts/DashboardLayout'
+import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { Button, Card, EmptyState, ErrorState, ReadonlyBanner, StatusBadge, Textarea } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { useAttendanceApproval } from '../hooks/useAttendanceApprovals'

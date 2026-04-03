@@ -1,7 +1,10 @@
 package com.fern.apigateway.security;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.SecurityEvent;
+import com.fern.platform.common.ApiErrorResponse;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.observability.CorrelationId;
@@ -26,6 +29,7 @@ import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -55,6 +59,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
     private final String expectedPublicUserIssuer;
     private final GatewayRouteTargetServiceResolver routeTargetServiceResolver;
     private final GatewayUserRelayTokenSupport relayTokenSupport;
+    private final ObjectMapper objectMapper;
 
     public GatewaySecurityFilter(
             FernJwtService jwtService,
@@ -64,6 +69,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
             FernJwtProperties jwtProperties,
             GatewayRouteTargetServiceResolver routeTargetServiceResolver,
             GatewayUserRelayTokenSupport relayTokenSupport,
+            ObjectMapper objectMapper,
             @org.springframework.beans.factory.annotation.Value("${spring.application.name}") String currentServiceName,
             @org.springframework.beans.factory.annotation.Value("${fern.security.trusted-proxy-count:0}") int trustedProxyCount
     ) {
@@ -80,6 +86,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
         this.expectedPublicUserIssuer = jwtProperties.getUserTokenIssuer();
         this.routeTargetServiceResolver = routeTargetServiceResolver;
         this.relayTokenSupport = relayTokenSupport;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -93,7 +100,12 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                     "gateway.auth.internal_path_blocked",
                     "Access to internal paths is forbidden",
                     Map.of("path", path)
-            ).then(writeError(exchange, HttpStatus.FORBIDDEN, "Forbidden"));
+            ).then(writeError(
+                    exchange,
+                    HttpStatus.FORBIDDEN,
+                    "gateway.auth.internal_path_blocked",
+                    "Access to internal paths is forbidden",
+                    Map.of("path", path)));
         }
         if (PUBLIC_PATHS.contains(path)) {
             return checkRateLimit("gateway:public:" + path + ":" + clientKey(exchange), 10).flatMap(allowed -> {
@@ -105,7 +117,12 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                             "gateway.auth.rate_limited",
                             "Rate limit exceeded",
                             Map.of("path", path, "scope", "public")
-                    ).then(writeError(exchange, HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded"));
+                    ).then(writeError(
+                            exchange,
+                            HttpStatus.TOO_MANY_REQUESTS,
+                            "gateway.auth.rate_limited",
+                            "Rate limit exceeded",
+                            Map.of("path", path, "scope", "public")));
                 }
                 return chain.filter(exchange);
             });
@@ -120,7 +137,12 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                     "gateway.auth.missing_bearer_token",
                     "Missing bearer token",
                     Map.of("path", path)
-            ).then(writeError(exchange, HttpStatus.UNAUTHORIZED, "Missing bearer token"));
+            ).then(writeError(
+                    exchange,
+                    HttpStatus.UNAUTHORIZED,
+                    "gateway.auth.missing_bearer_token",
+                    "Missing bearer token",
+                    Map.of("path", path)));
         }
 
         FernJwtClaims claims;
@@ -135,7 +157,12 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                     "gateway.auth.invalid_bearer_token",
                     "Invalid bearer token",
                     Map.of("path", path)
-            ).then(writeError(exchange, HttpStatus.UNAUTHORIZED, "Invalid bearer token"));
+            ).then(writeError(
+                    exchange,
+                    HttpStatus.UNAUTHORIZED,
+                    "gateway.auth.invalid_bearer_token",
+                    "Invalid bearer token",
+                    Map.of("path", path)));
         }
 
         FernPrincipal principal = claims.toPrincipal();
@@ -149,7 +176,12 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                                 "gateway.auth.token_rejected",
                                 "Token is revoked or stale",
                                 Map.of("path", path, "username", principal.username())
-                        ).then(writeError(exchange, HttpStatus.UNAUTHORIZED, "Token is revoked or stale"));
+                        ).then(writeError(
+                                exchange,
+                                HttpStatus.UNAUTHORIZED,
+                                "gateway.auth.token_rejected",
+                                "Token is revoked or stale",
+                                Map.of("path", path, "username", principal.username())));
                     }
                     return checkRateLimit("gateway:user:" + principal.username(), 120)
                             .flatMap(allowed -> {
@@ -161,7 +193,12 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                                             "gateway.auth.rate_limited",
                                             "Rate limit exceeded",
                                             Map.of("path", path, "scope", "user", "username", principal.username())
-                                    ).then(writeError(exchange, HttpStatus.TOO_MANY_REQUESTS, "Rate limit exceeded"));
+                                    ).then(writeError(
+                                            exchange,
+                                            HttpStatus.TOO_MANY_REQUESTS,
+                                            "gateway.auth.rate_limited",
+                                            "Rate limit exceeded",
+                                            Map.of("path", path, "scope", "user", "username", principal.username())));
                                 }
                                 String forwardedAuthorization = authorization;
                                 boolean localUiRequest = path.equals("/ui") || path.startsWith(UI_PATH_PREFIX);
@@ -175,7 +212,12 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                                                 "gateway.auth.unmapped_downstream_route",
                                                 "Unable to determine downstream route target",
                                                 Map.of("path", path)
-                                        ).then(writeError(exchange, HttpStatus.BAD_GATEWAY, "Unable to determine downstream route target"));
+                                        ).then(writeError(
+                                                exchange,
+                                                HttpStatus.BAD_GATEWAY,
+                                                "gateway.auth.unmapped_downstream_route",
+                                                "Unable to determine downstream route target",
+                                                Map.of("path", path)));
                                     }
                                     forwardedAuthorization = "Bearer " + relayTokenSupport.issueRelayToken(claims, targetService);
                                 }
@@ -295,10 +337,29 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
         return exchange.getRequest().getId();
     }
 
-    private Mono<Void> writeError(ServerWebExchange exchange, HttpStatus status, String message) {
+    private Mono<Void> writeError(
+            ServerWebExchange exchange,
+            HttpStatus status,
+            String code,
+            String message,
+            Map<String, Object> details
+    ) {
         exchange.getResponse().setStatusCode(status);
-        byte[] body = ("{\"message\":\"" + message + "\"}").getBytes();
-        return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(body)));
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        ApiErrorResponse body = new ApiErrorResponse(
+                code,
+                message,
+                Instant.now(),
+                correlationId(exchange),
+                details == null || details.isEmpty() ? Map.of() : Map.copyOf(details));
+        byte[] bytes;
+        try {
+            bytes = objectMapper.writeValueAsBytes(body);
+        } catch (JsonProcessingException exception) {
+            LOGGER.error("gateway_error_serialization_failed code={}", code, exception);
+            bytes = "{\"code\":\"internal_error\",\"message\":\"Unable to serialize error response\"}".getBytes();
+        }
+        return exchange.getResponse().writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(bytes)));
     }
 
     @Override

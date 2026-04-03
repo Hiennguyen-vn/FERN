@@ -23,4 +23,8 @@ export interface PageResponse<T> {
   page: number
   size: number
   hasMore: boolean
+  /** Present when the API returns total page count */
+  totalPages?: number
+  /** Present when the API returns total row count */
+  totalItems?: number
 }

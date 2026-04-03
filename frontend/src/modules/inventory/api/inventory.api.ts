@@ -9,6 +9,8 @@ import type {
   StockBalanceFilters,
   StockBalancePage,
   StockCountSession,
+  StockCountSessionListFilters,
+  StockCountSessionSummaryPage,
   UpdateStockCountLinesRequest,
   WasteRecord,
 } from '../model/inventory.types'
@@ -23,6 +25,18 @@ export async function getInventoryTransactions(filters: InventoryTransactionFilt
   const { data } = await gatewayClient.get<InventoryTransactionPage>('/inventory-transactions', {
     params: filters,
   })
+  return data
+}
+
+export async function listStockCountSessions(filters: StockCountSessionListFilters) {
+  const { data } = await gatewayClient.get<StockCountSessionSummaryPage>('/stock-count-sessions', {
+    params: filters,
+  })
+  return data
+}
+
+export async function getStockCountSession(id: number) {
+  const { data } = await gatewayClient.get<StockCountSession>(`/stock-count-sessions/${id}`)
   return data
 }
 

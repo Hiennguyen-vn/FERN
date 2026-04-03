@@ -16,10 +16,10 @@ export interface PurchaseOrderLine {
   lineNumber: number
   ingredientId: number
   uomCode: string
-  qtyOrdered: string
-  qtyReceived: string
-  expectedUnitPrice: string | null
-  taxPercent: string | null
+  qtyOrdered: number
+  qtyReceived: number
+  expectedUnitPrice: number | null
+  taxPercent: number | null
   status: string
   note: string | null
 }
@@ -33,9 +33,9 @@ export interface PurchaseOrder {
   orderDate: string
   expectedDeliveryDate: string | null
   status: string
-  subtotalAmount: string
-  taxAmount: string
-  totalAmount: string
+  subtotalAmount: number
+  taxAmount: number
+  totalAmount: number
   note: string | null
   approvedAt: string | null
   issuedAt: string | null
@@ -47,9 +47,9 @@ export interface GoodsReceiptLine {
   purchaseOrderLineId: number | null
   ingredientId: number
   uomCode: string
-  qtyReceived: string
-  unitCost: string
-  lineTotal: string
+  qtyReceived: number
+  unitCost: number
+  lineTotal: number
   note: string | null
 }
 
@@ -63,7 +63,7 @@ export interface GoodsReceipt {
   receiptTime: string
   businessDate: string
   status: string
-  totalAmount: string
+  totalAmount: number
   supplierLotNumber: string | null
   note: string | null
   receivedAt: string | null
@@ -71,11 +71,37 @@ export interface GoodsReceipt {
   lines: GoodsReceiptLine[]
 }
 
+export type SupplierStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED'
+
+export interface SupplierUpsertPayload {
+  supplierCode: string
+  name: string
+  taxCode?: string | null
+  email?: string | null
+  phone?: string | null
+  address?: string | null
+  defaultRegionId?: number | null
+  status?: SupplierStatus
+}
+
 export interface CreatePurchaseOrderPayload {
   regionId: number
   outletId: number
   supplierId: number
   orderDate: string
+  expectedDeliveryDate?: string
+  note?: string
+  lines: Array<{
+    ingredientId: number
+    uomCode: string
+    qtyOrdered: number
+    expectedUnitPrice?: number
+    taxPercent?: number
+    note?: string
+  }>
+}
+
+export interface UpdatePurchaseOrderPayload {
   expectedDeliveryDate?: string
   note?: string
   lines: Array<{
@@ -116,11 +142,11 @@ export interface SupplierInvoiceLine {
   lineType: InvoiceLineType
   goodsReceiptLineId: number | null
   description: string | null
-  qtyInvoiced: string | null
-  unitPrice: string | null
-  taxPercent: string | null
-  taxAmount: string | null
-  lineTotal: string
+  qtyInvoiced: number | null
+  unitPrice: number | null
+  taxPercent: number | null
+  taxAmount: number | null
+  lineTotal: number
   note: string | null
 }
 
@@ -133,9 +159,9 @@ export interface SupplierInvoice {
   invoiceNumber: string
   invoiceDate: string
   dueDate: string | null
-  subtotal: string
-  taxAmount: string
-  totalAmount: string
+  subtotal: number
+  taxAmount: number
+  totalAmount: number
   status: SupplierInvoiceStatus
   note: string | null
   approvedAt: string | null
@@ -169,7 +195,7 @@ export type PaymentMethod = 'CASH' | 'CARD' | 'EWALLET' | 'BANK_TRANSFER' | 'CHE
 
 export interface SupplierPaymentAllocationResponse {
   supplierInvoiceId: number
-  allocatedAmount: string
+  allocatedAmount: number
   note: string | null
 }
 
@@ -179,7 +205,7 @@ export interface SupplierPayment {
   supplierId: number
   currencyCode: string
   paymentMethod: PaymentMethod
-  amount: string
+  amount: number
   paymentTime: string
   transactionRef: string | null
   note: string | null

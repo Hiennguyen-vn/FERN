@@ -77,3 +77,14 @@ export function useUpdateProduct(id: number) {
     },
   })
 }
+
+export function useDeactivateProduct(id: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => catalogApi.deactivateProduct(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.product(id) })
+      qc.invalidateQueries({ queryKey: KEYS.products })
+    },
+  })
+}
