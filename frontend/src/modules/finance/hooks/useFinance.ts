@@ -101,6 +101,9 @@ export function usePayrollRun(runId: number, options: QueryOptions = {}) {
 function invalidatePayrollRunQueries(queryClient: ReturnType<typeof useQueryClient>, runId: number) {
   void queryClient.invalidateQueries({ queryKey: ['finance', 'payroll-runs'] })
   void queryClient.invalidateQueries({ queryKey: KEYS.payrollRun(runId) })
+  void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll-runs'] })
+  void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll-runs', runId] })
+  void queryClient.invalidateQueries({ queryKey: ['reports', 'payroll'] })
 }
 
 export function useApprovePayrollRun() {

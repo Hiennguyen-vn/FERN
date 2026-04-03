@@ -397,7 +397,8 @@ class OrgServiceIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CLOSED"));
+                .andExpect(jsonPath("$.status").value("CLOSED"))
+                .andExpect(jsonPath("$.closedAt").value("2026-04-03"));
 
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM org.outlet WHERE id = ?", String.class, outletId))
                 .isEqualTo("CLOSED");
@@ -412,6 +413,7 @@ class OrgServiceIntegrationTest {
         assertThat(lastProcurementCorrelationId).isEqualTo("corr-org-close-2");
         assertThat(lastFinanceQuery).contains("outletId=" + outletId);
         assertThat(lastFinanceCorrelationId).isEqualTo("corr-org-close-2");
+        assertThat(outletChangedStatuses(outletId)).endsWith("CLOSING", "CLOSED");
     }
 
     @Test
@@ -449,6 +451,7 @@ class OrgServiceIntegrationTest {
         assertThat(lastProcurementActorUserId).isEqualTo(actorClaims.userId().toString());
         assertThat(lastProcurementActorUsername).isEqualTo(actorClaims.username());
         assertThat(lastProcurementAuthorization).isNotBlank().isNotEqualTo("Bearer " + token);
+        assertThat(outletChangedStatuses(outletId)).endsWith("CLOSING", "ACTIVE");
 
         FernJwtClaims serviceClaims = jwtService.decode(lastProcurementAuthorization.substring("Bearer ".length()));
         assertThat(serviceClaims.principalType()).isEqualTo(FernPrincipalType.SERVICE);
@@ -729,6 +732,17 @@ class OrgServiceIntegrationTest {
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         properties.setAllowInsecureDefaultSecret(true);
         return new FernJwtService(properties, Clock.systemUTC());
+    }
+
+    private List<String> outletChangedStatuses(Long outletId) {
+        return jdbcTemplate.query("""
+                SELECT CAST(payload AS jsonb) ->> 'status'
+                FROM org.outbox_event
+                WHERE aggregate_type = 'outlet'
+                  AND aggregate_id = ?
+                  AND event_type = 'org.outlet.changed'
+                ORDER BY created_at, id
+                """, (rs, rowNum) -> rs.getString(1), outletId.toString());
     }
 
     private static synchronized void ensurePosServerStarted() {

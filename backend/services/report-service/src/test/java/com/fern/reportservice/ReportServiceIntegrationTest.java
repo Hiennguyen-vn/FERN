@@ -14,9 +14,15 @@ import com.fern.platform.observability.CorrelationId;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.contracts.ExpensePostedEvent;
+import com.fern.platform.contracts.GoodsReceiptPostedLine;
 import com.fern.platform.contracts.InventoryAdjustmentPostedEvent;
 import com.fern.platform.contracts.PosSaleCompletedEvent;
+import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
 import com.fern.platform.contracts.SalePaymentSnapshot;
+import com.fern.platform.contracts.SupplierInvoiceApprovedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedLine;
+import com.fern.platform.contracts.SupplierPaymentAllocation;
+import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
@@ -180,6 +186,7 @@ class ReportServiceIntegrationTest {
                     report.export_job,
                     report.projection_watermark,
                     report.inventory_stock_snapshot,
+                    report.payables_fact,
                     report.company_daily_summary,
                     report.region_daily_summary,
                     report.expense_fact,
@@ -401,6 +408,227 @@ class ReportServiceIntegrationTest {
                 .andExpect(jsonPath("$.items[1].sourceEventId").value("evt-1"))
                 .andExpect(jsonPath("$.items[1].movementType").value("PURCHASE_IN"))
                 .andExpect(jsonPath("$.hasMore").value(false));
+    }
+
+    @Test
+    void shouldProjectInventorySnapshotsOnlyFromInventoryOwnedEvents() throws Exception {
+        ProcurementGoodsReceiptPostedEvent goodsReceiptEvent = new ProcurementGoodsReceiptPostedEvent(
+                "report-gr-1",
+                "procurement.goods_receipt.posted",
+                Instant.parse("2026-03-27T08:00:00Z"),
+                "procurement-service",
+                "corr-report-gr-1",
+                "idem-report-gr-1",
+                91001L,
+                81001L,
+                1L,
+                101L,
+                LocalDate.parse("2026-03-27"),
+                Instant.parse("2026-03-27T08:00:00Z"),
+                3L,
+                List.of(new GoodsReceiptPostedLine(501L, new BigDecimal("10.0000"), new BigDecimal("7.00"), 3001L))
+        );
+        reportService.ingestGoodsReceiptPosted(objectMapper.writeValueAsString(goodsReceiptEvent), goodsReceiptEvent);
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM report.procurement_fact", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM report.inventory_movement_fact", Integer.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM report.inventory_stock_snapshot", Integer.class)).isZero();
+
+        InventoryAdjustmentPostedEvent purchaseInEvent = new InventoryAdjustmentPostedEvent(
+                "inventory-purchase-in-1",
+                "inventory.adjustment.posted",
+                Instant.parse("2026-03-27T08:05:00Z"),
+                "inventory-service",
+                "corr-inventory-purchase-in-1",
+                "inventory-purchase-in-idem-1",
+                null,
+                1L,
+                101L,
+                501L,
+                LocalDate.parse("2026-03-27"),
+                Instant.parse("2026-03-27T08:05:00Z"),
+                3L,
+                "IN",
+                "PURCHASE_IN",
+                new BigDecimal("10.0000"),
+                new BigDecimal("7.00"),
+                "GOODS_RECEIPT_LINE",
+                "3001"
+        );
+        reportService.ingestInventoryAdjustmentPosted(objectMapper.writeValueAsString(purchaseInEvent), purchaseInEvent);
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM report.inventory_movement_fact", Integer.class)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM report.inventory_stock_snapshot
+                WHERE outlet_id = 101 AND ingredient_id = 501
+                """, BigDecimal.class)).isEqualByComparingTo("10.0000");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT inventory_value
+                FROM report.inventory_stock_snapshot
+                WHERE outlet_id = 101 AND ingredient_id = 501
+                """, BigDecimal.class)).isEqualByComparingTo("70.00");
+    }
+
+    @Test
+    void shouldApplyWeightedAverageInventoryValuationAcrossInboundAndOutboundMovements() throws Exception {
+        InventoryAdjustmentPostedEvent firstInbound = new InventoryAdjustmentPostedEvent(
+                "inventory-weighted-1",
+                "inventory.adjustment.posted",
+                Instant.parse("2026-03-27T09:00:00Z"),
+                "inventory-service",
+                "corr-inventory-weighted-1",
+                "inventory-weighted-idem-1",
+                99011L,
+                1L,
+                101L,
+                501L,
+                LocalDate.parse("2026-03-27"),
+                Instant.parse("2026-03-27T09:00:00Z"),
+                7L,
+                "IN",
+                "PURCHASE_IN",
+                new BigDecimal("10.0000"),
+                new BigDecimal("7.00"),
+                "GOODS_RECEIPT_LINE",
+                "3001"
+        );
+        InventoryAdjustmentPostedEvent secondInbound = new InventoryAdjustmentPostedEvent(
+                "inventory-weighted-2",
+                "inventory.adjustment.posted",
+                Instant.parse("2026-03-27T09:10:00Z"),
+                "inventory-service",
+                "corr-inventory-weighted-2",
+                "inventory-weighted-idem-2",
+                99012L,
+                1L,
+                101L,
+                501L,
+                LocalDate.parse("2026-03-27"),
+                Instant.parse("2026-03-27T09:10:00Z"),
+                7L,
+                "IN",
+                "PURCHASE_IN",
+                new BigDecimal("5.0000"),
+                new BigDecimal("10.00"),
+                "GOODS_RECEIPT_LINE",
+                "3002"
+        );
+        InventoryAdjustmentPostedEvent outbound = new InventoryAdjustmentPostedEvent(
+                "inventory-weighted-3",
+                "inventory.adjustment.posted",
+                Instant.parse("2026-03-27T09:20:00Z"),
+                "inventory-service",
+                "corr-inventory-weighted-3",
+                "inventory-weighted-idem-3",
+                99013L,
+                1L,
+                101L,
+                501L,
+                LocalDate.parse("2026-03-27"),
+                Instant.parse("2026-03-27T09:20:00Z"),
+                7L,
+                "OUT",
+                "CORRECTION",
+                new BigDecimal("-6.0000"),
+                null,
+                "STOCK_ADJUSTMENT",
+                "99013"
+        );
+
+        reportService.ingestInventoryAdjustmentPosted(objectMapper.writeValueAsString(firstInbound), firstInbound);
+        reportService.ingestInventoryAdjustmentPosted(objectMapper.writeValueAsString(secondInbound), secondInbound);
+        reportService.ingestInventoryAdjustmentPosted(objectMapper.writeValueAsString(outbound), outbound);
+
+        BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM report.inventory_stock_snapshot
+                WHERE outlet_id = 101 AND ingredient_id = 501
+                """, BigDecimal.class);
+        BigDecimal inventoryValue = jdbcTemplate.queryForObject("""
+                SELECT inventory_value
+                FROM report.inventory_stock_snapshot
+                WHERE outlet_id = 101 AND ingredient_id = 501
+                """, BigDecimal.class);
+        BigDecimal unitCost = jdbcTemplate.queryForObject("""
+                SELECT unit_cost
+                FROM report.inventory_stock_snapshot
+                WHERE outlet_id = 101 AND ingredient_id = 501
+                """, BigDecimal.class);
+
+        assertThat(qtyOnHand).isEqualByComparingTo("9.0000");
+        assertThat(inventoryValue).isEqualByComparingTo("72.00");
+        assertThat(unitCost).isEqualByComparingTo("8.00");
+    }
+
+    @Test
+    void shouldProjectSupplierInvoiceApprovalAndPaymentAllocationsIntoPayablesFact() throws Exception {
+        SupplierInvoiceApprovedEvent invoiceApprovedEvent = new SupplierInvoiceApprovedEvent(
+                "supplier-invoice-report-1",
+                "procurement.supplier_invoice.approved",
+                Instant.parse("2026-03-27T10:00:00Z"),
+                "procurement-service",
+                "corr-supplier-invoice-report-1",
+                "supplier-invoice-report-idem-1",
+                8801L,
+                7001L,
+                1L,
+                101L,
+                "VND",
+                "INV-8801",
+                LocalDate.parse("2026-03-27"),
+                LocalDate.parse("2026-04-10"),
+                new BigDecimal("36.25"),
+                new BigDecimal("5.00"),
+                new BigDecimal("41.25"),
+                new BigDecimal("36.25"),
+                new BigDecimal("5.00"),
+                Instant.parse("2026-03-27T10:00:00Z"),
+                9L,
+                List.of(new SupplierInvoiceApprovedLine(
+                        501L,
+                        1,
+                        "STOCK",
+                        3001L,
+                        "Milk delivery",
+                        new BigDecimal("3.0000"),
+                        new BigDecimal("12.0833"),
+                        new BigDecimal("5.00"),
+                        new BigDecimal("41.25")
+                ))
+        );
+        SupplierPaymentRecordedEvent paymentRecordedEvent = new SupplierPaymentRecordedEvent(
+                "supplier-payment-report-1",
+                "procurement.supplier.payment.recorded",
+                Instant.parse("2026-03-27T11:00:00Z"),
+                "procurement-service",
+                "corr-supplier-payment-report-1",
+                "supplier-payment-report-idem-1",
+                9901L,
+                7001L,
+                Instant.parse("2026-03-27T11:00:00Z"),
+                new BigDecimal("41.25"),
+                "VND",
+                List.of(new SupplierPaymentAllocation(8801L, new BigDecimal("41.25"))),
+                9L
+        );
+
+        reportService.ingestSupplierInvoiceApproved(objectMapper.writeValueAsString(invoiceApprovedEvent), invoiceApprovedEvent);
+        reportService.ingestSupplierPaymentRecorded(objectMapper.writeValueAsString(paymentRecordedEvent), paymentRecordedEvent);
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM report.payables_fact", Integer.class)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT variance_amount
+                FROM report.payables_fact
+                WHERE supplier_invoice_id = 8801
+                  AND fact_type = 'SUPPLIER_INVOICE_APPROVED'
+                """, BigDecimal.class)).isEqualByComparingTo("5.00");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT amount
+                FROM report.payables_fact
+                WHERE supplier_payment_id = 9901
+                  AND fact_type = 'SUPPLIER_PAYMENT_ALLOCATION'
+                """, BigDecimal.class)).isEqualByComparingTo("41.25");
     }
 
     @Test

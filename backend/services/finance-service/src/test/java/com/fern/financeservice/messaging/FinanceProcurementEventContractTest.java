@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedEvent;
 import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import com.fern.platform.testsupport.KafkaContractFixtures;
 import java.math.BigDecimal;
@@ -19,6 +20,7 @@ class FinanceProcurementEventContractTest {
     static java.util.stream.Stream<Arguments> eventPayloads() {
         return java.util.stream.Stream.of(
                 Arguments.of("procurement.goods_receipt.posted.json", ProcurementGoodsReceiptPostedEvent.class),
+                Arguments.of("procurement.supplier_invoice.approved.json", SupplierInvoiceApprovedEvent.class),
                 Arguments.of("procurement.supplier.payment.recorded.json", SupplierPaymentRecordedEvent.class)
         );
     }
@@ -56,5 +58,21 @@ class FinanceProcurementEventContractTest {
         assertThat(event.invoiceAllocations()).hasSize(2);
         assertThat(event.invoiceAllocations().getFirst().allocatedAmount()).isEqualByComparingTo(new BigDecimal("50.00"));
         assertThat(event.amount()).isEqualByComparingTo(new BigDecimal("75.00"));
+    }
+
+    @Test
+    void shouldPreserveSupplierInvoicePayloadIntegrityForFinanceConsumer() throws Exception {
+        SupplierInvoiceApprovedEvent event = objectMapper.readValue(
+                KafkaContractFixtures.load("procurement.supplier_invoice.approved.json"),
+                SupplierInvoiceApprovedEvent.class
+        );
+
+        assertThat(event.supplierInvoiceId()).isEqualTo(88L);
+        assertThat(event.supplierId()).isEqualTo(22L);
+        assertThat(event.currencyCode()).isEqualTo("VND");
+        assertThat(event.totalAmount()).isEqualByComparingTo(new BigDecimal("75.00"));
+        assertThat(event.matchedReceiptAmount()).isEqualByComparingTo(new BigDecimal("70.00"));
+        assertThat(event.varianceAmount()).isEqualByComparingTo(new BigDecimal("5.00"));
+        assertThat(event.lines()).hasSize(1);
     }
 }

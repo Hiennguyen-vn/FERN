@@ -124,6 +124,7 @@ export function useCreatePayrollPeriod() {
     onSuccess: (period) => {
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll-periods'] })
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll-runs', period.regionId] })
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'payrollPeriods'] })
     },
   })
 }
@@ -178,6 +179,8 @@ export function useCreatePayrollRun() {
     onSuccess: (run) => {
       void queryClient.invalidateQueries({ queryKey: ['hr', 'payroll-runs'] })
       void queryClient.invalidateQueries({ queryKey: KEYS.payrollRun(run.id) })
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'payroll-runs'] })
+      void queryClient.invalidateQueries({ queryKey: ['reports', 'payroll'] })
     },
   })
 }
@@ -187,6 +190,7 @@ function invalidatePayrollRunQueries(queryClient: ReturnType<typeof useQueryClie
   void queryClient.invalidateQueries({ queryKey: KEYS.payrollRun(runId) })
   void queryClient.invalidateQueries({ queryKey: ['finance', 'payroll-runs'] })
   void queryClient.invalidateQueries({ queryKey: ['finance', 'payroll-runs', runId] })
+  void queryClient.invalidateQueries({ queryKey: ['reports', 'payroll'] })
 }
 
 export function useSubmitPayrollRun() {

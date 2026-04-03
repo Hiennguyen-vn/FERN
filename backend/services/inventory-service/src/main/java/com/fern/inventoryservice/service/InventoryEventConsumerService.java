@@ -3,6 +3,7 @@ package com.fern.inventoryservice.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.contracts.GoodsReceiptPostedLine;
+import com.fern.platform.contracts.InventoryAdjustmentPostedEvent;
 import com.fern.platform.contracts.PosSaleCompletedEvent;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
 import java.math.BigDecimal;
@@ -10,9 +11,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
@@ -24,6 +27,7 @@ public class InventoryEventConsumerService {
 
     private final InventoryRepository inventoryRepository;
     private final StockReservationService stockReservationService;
+    private final InventoryOutboxService inventoryOutboxService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final TransactionOperations transactionOperations;
@@ -31,12 +35,14 @@ public class InventoryEventConsumerService {
     public InventoryEventConsumerService(
             InventoryRepository inventoryRepository,
             StockReservationService stockReservationService,
+            InventoryOutboxService inventoryOutboxService,
             ObjectMapper objectMapper,
             Clock clock,
             TransactionOperations transactionOperations
     ) {
         this.inventoryRepository = inventoryRepository;
         this.stockReservationService = stockReservationService;
+        this.inventoryOutboxService = inventoryOutboxService;
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.transactionOperations = transactionOperations;
@@ -142,6 +148,7 @@ public class InventoryEventConsumerService {
                             line.unitCost(),
                             false
                     );
+                    enqueuePurchaseInEvent(event, line);
                 }
                 inventoryRepository.markInboxProcessed(sourceEventId);
             });
@@ -263,6 +270,42 @@ public class InventoryEventConsumerService {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize inventory event payload", exception);
         }
+    }
+
+    private void enqueuePurchaseInEvent(ProcurementGoodsReceiptPostedEvent event, GoodsReceiptPostedLine line) {
+        Instant occurredAt = event.postedAt() == null ? clock.instant() : event.postedAt();
+        InventoryAdjustmentPostedEvent purchaseInEvent = new InventoryAdjustmentPostedEvent(
+                UUID.randomUUID().toString(),
+                "inventory.adjustment.posted",
+                occurredAt,
+                INVENTORY_SERVICE,
+                event.correlationId(),
+                purchaseInIdempotencyKey(event.goodsReceiptId(), line.sourceLineId()),
+                null,
+                event.regionId(),
+                event.outletId(),
+                line.ingredientId(),
+                event.businessDate(),
+                occurredAt,
+                event.postedByUserId(),
+                "IN",
+                InventoryTxnType.PURCHASE_IN.name(),
+                line.qtyReceived(),
+                line.unitCost(),
+                "GOODS_RECEIPT_LINE",
+                line.sourceLineId().toString()
+        );
+        inventoryOutboxService.enqueueOutbox(
+                "GOODS_RECEIPT_LINE",
+                line.sourceLineId().toString(),
+                purchaseInEvent.eventType(),
+                event.outletId().toString(),
+                purchaseInEvent
+        );
+    }
+
+    private String purchaseInIdempotencyKey(Long goodsReceiptId, Long goodsReceiptLineId) {
+        return "inventory.adjustment.posted:goods-receipt:" + goodsReceiptId + ":line:" + goodsReceiptLineId;
     }
 
     private void requireNonBlank(String value, String message) {

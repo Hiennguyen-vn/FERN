@@ -1,6 +1,7 @@
 package com.fern.auditservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
@@ -32,6 +33,8 @@ public class AuditServiceBeans {
 
     @Bean
     ObjectMapper objectMapper() {
-        return new ObjectMapper().findAndRegisterModules();
+        return new ObjectMapper()
+                .findAndRegisterModules()
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 }

@@ -13,12 +13,15 @@ import com.fern.orgservice.dto.UpdateOutletRequest;
 import com.fern.orgservice.repository.OutletRepository;
 import com.fern.orgservice.repository.RegionRepository;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class OutletService {
@@ -34,6 +37,7 @@ public class OutletService {
     private final OrgFinanceClient orgFinanceClient;
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final Clock clock;
+    private final TransactionTemplate transactionTemplate;
 
     public OutletService(
             OutletRepository outletRepository,
@@ -47,7 +51,8 @@ public class OutletService {
             OrgProcurementClient orgProcurementClient,
             OrgFinanceClient orgFinanceClient,
             NamedParameterJdbcTemplate jdbcTemplate,
-            Clock clock
+            Clock clock,
+            TransactionTemplate transactionTemplate
     ) {
         this.outletRepository = outletRepository;
         this.regionRepository = regionRepository;
@@ -61,6 +66,7 @@ public class OutletService {
         this.orgFinanceClient = orgFinanceClient;
         this.jdbcTemplate = jdbcTemplate;
         this.clock = clock;
+        this.transactionTemplate = transactionTemplate;
     }
 
     @Transactional
@@ -170,13 +176,73 @@ public class OutletService {
                 .orElseThrow(() -> new ResourceNotFoundException("Outlet not found: " + id)));
     }
 
-    @Transactional
     public OutletResponse update(FernPrincipal principal, Long id, UpdateOutletRequest request) {
         OutletEntity entity = outletRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Outlet not found: " + id));
         orgAuthorizer.requireOutletAccess(principal, id, "org.outlet.write");
-        ensureOutletCanBeClosed(principal, entity, request);
+        if (request.status() == OutletStatus.CLOSED) {
+            if (entity.getStatus() == OutletStatus.CLOSED) {
+                return toResponse(entity);
+            }
+            if (entity.getStatus() == OutletStatus.CLOSING) {
+                throw new ConflictException("Outlet closure is already in progress");
+            }
+            return closeOutlet(principal, id, request, entity.getStatus(), entity.getClosedAt());
+        }
+        return Objects.requireNonNull(transactionTemplate.execute(status -> applyStandardUpdate(principal, id, request)));
+    }
 
+    private OutletResponse closeOutlet(
+            FernPrincipal principal,
+            Long outletId,
+            UpdateOutletRequest request,
+            OutletStatus originalStatus,
+            LocalDate originalClosedAt
+    ) {
+        transactionTemplate.executeWithoutResult(status -> transitionOutletStatus(outletId, OutletStatus.CLOSING, originalClosedAt));
+        try {
+            ensureOutletCanBeClosed(principal, outletId);
+            return Objects.requireNonNull(transactionTemplate.execute(status -> applyClosingUpdate(principal, outletId, request)));
+        } catch (RuntimeException exception) {
+            transactionTemplate.executeWithoutResult(status -> transitionOutletStatus(outletId, originalStatus, originalClosedAt));
+            throw exception;
+        }
+    }
+
+    @Transactional
+    protected OutletResponse applyStandardUpdate(FernPrincipal principal, Long id, UpdateOutletRequest request) {
+        OutletEntity entity = outletRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Outlet not found: " + id));
+        applyMutableFields(principal, entity, request);
+        long newVersion = scopeVersionService.bump();
+        outboxService.enqueue("outlet", entity.getId().toString(), "org.outlet.changed", entity.getId().toString(), toResponse(entity));
+        return withVersion(entity, newVersion);
+    }
+
+    @Transactional
+    protected OutletResponse applyClosingUpdate(FernPrincipal principal, Long id, UpdateOutletRequest request) {
+        OutletEntity entity = outletRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Outlet not found: " + id));
+        applyMutableFields(principal, entity, request);
+        entity.setStatus(OutletStatus.CLOSED);
+        entity.setUpdatedAt(clock.instant());
+        long newVersion = scopeVersionService.bump();
+        outboxService.enqueue("outlet", entity.getId().toString(), "org.outlet.changed", entity.getId().toString(), toResponse(entity));
+        return withVersion(entity, newVersion);
+    }
+
+    @Transactional
+    protected void transitionOutletStatus(Long outletId, OutletStatus status, LocalDate closedAt) {
+        OutletEntity entity = outletRepository.findById(outletId)
+                .orElseThrow(() -> new ResourceNotFoundException("Outlet not found: " + outletId));
+        entity.setStatus(status);
+        entity.setClosedAt(closedAt);
+        entity.setUpdatedAt(clock.instant());
+        scopeVersionService.bump();
+        outboxService.enqueue("outlet", entity.getId().toString(), "org.outlet.changed", entity.getId().toString(), toResponse(entity));
+    }
+
+    private void applyMutableFields(FernPrincipal principal, OutletEntity entity, UpdateOutletRequest request) {
         if (request.regionId() != null) {
             orgAuthorizer.requireRegionAccess(principal, request.regionId(), "org.outlet.write");
             regionRepository.findById(request.regionId())
@@ -186,7 +252,7 @@ public class OutletService {
         if (request.name() != null) {
             entity.setName(request.name());
         }
-        if (request.status() != null) {
+        if (request.status() != null && request.status() != OutletStatus.CLOSED) {
             entity.setStatus(request.status());
         }
         if (request.address() != null) {
@@ -205,20 +271,13 @@ public class OutletService {
             entity.setClosedAt(request.closedAt());
         }
         entity.setUpdatedAt(clock.instant());
-
-        long newVersion = scopeVersionService.bump();
-        outboxService.enqueue("outlet", entity.getId().toString(), "org.outlet.changed", entity.getId().toString(), toResponse(entity));
-        return withVersion(entity, newVersion);
     }
 
-    private void ensureOutletCanBeClosed(FernPrincipal principal, OutletEntity entity, UpdateOutletRequest request) {
-        if (request.status() != OutletStatus.CLOSED || entity.getStatus() == OutletStatus.CLOSED) {
-            return;
-        }
-        if (orgPosClient.hasOpenSessions(entity.getId(), principal)) {
+    private void ensureOutletCanBeClosed(FernPrincipal principal, Long outletId) {
+        if (orgPosClient.hasOpenSessions(outletId, principal)) {
             throw new ConflictException("Cannot close outlet while open POS sessions still exist");
         }
-        OrgInventoryClient.OutletCloseCheck inventoryCheck = orgInventoryClient.getOutletCloseCheck(entity.getId(), principal);
+        OrgInventoryClient.OutletCloseCheck inventoryCheck = orgInventoryClient.getOutletCloseCheck(outletId, principal);
         if (inventoryCheck.hasBlockingOperations()) {
             throw new ConflictException(
                     "Cannot close outlet while inventory workflows remain open: "
@@ -226,7 +285,7 @@ public class OutletService {
                             + ", stockCountSessions=" + inventoryCheck.blockingStockCountSessions()
             );
         }
-        OrgProcurementClient.OutletCloseCheck procurementCheck = orgProcurementClient.getOutletCloseCheck(entity.getId(), principal);
+        OrgProcurementClient.OutletCloseCheck procurementCheck = orgProcurementClient.getOutletCloseCheck(outletId, principal);
         if (procurementCheck.hasBlockingDocuments()) {
             throw new ConflictException(
                     "Cannot close outlet while procurement documents remain open: "
@@ -235,7 +294,7 @@ public class OutletService {
                             + ", supplierInvoices=" + procurementCheck.blockingSupplierInvoices()
             );
         }
-        OrgFinanceClient.OutletCloseCheck financeCheck = orgFinanceClient.getOutletCloseCheck(entity.getId(), principal);
+        OrgFinanceClient.OutletCloseCheck financeCheck = orgFinanceClient.getOutletCloseCheck(outletId, principal);
         if (financeCheck.hasBlockingObligations()) {
             throw new ConflictException(
                     "Cannot close outlet while finance obligations remain open: payrollRuns=" + financeCheck.blockingPayrollRuns()

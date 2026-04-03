@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedEvent;
 import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -32,6 +33,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class FinanceProcurementConsumer {
     private static final String GOODS_RECEIPT_TOPIC = "procurement.goods_receipt.posted";
+    private static final String SUPPLIER_INVOICE_APPROVED_TOPIC = "procurement.supplier_invoice.approved";
     private static final String SUPPLIER_PAYMENT_TOPIC = "procurement.supplier.payment.recorded";
     private static final String FINANCE_SERVICE = "finance-service";
 
@@ -112,6 +114,32 @@ public class FinanceProcurementConsumer {
         }
     }
 
+    @KafkaListener(topics = SUPPLIER_INVOICE_APPROVED_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
+    public void consumeSupplierInvoiceApproved(String payload) throws Exception {
+        SupplierInvoiceApprovedEvent event;
+        try {
+            event = objectMapper.readValue(payload, SupplierInvoiceApprovedEvent.class);
+        } catch (JsonProcessingException exception) {
+            recordDeserializationFailure(SUPPLIER_INVOICE_APPROVED_TOPIC, payload, SupplierInvoiceApprovedEvent.class, exception);
+            throw exception;
+        }
+        String sourceEventId = resolveSourceEventId(event.eventId(), SUPPLIER_INVOICE_APPROVED_TOPIC, payload, "validation");
+        String eventType = resolveEventType(event.eventType(), SUPPLIER_INVOICE_APPROVED_TOPIC);
+        String idempotencyKey = resolveIdempotencyKey(event.idempotencyKey(), eventType, sourceEventId, payload);
+        if (!transactionTemplate.execute(status ->
+                beginIntegrationEvent(sourceEventId, eventType, idempotencyKey, payload))) {
+            return;
+        }
+        try {
+            validateSupplierInvoiceApprovedEvent(event);
+            transactionTemplate.executeWithoutResult(status ->
+                    processSupplierInvoiceApproved(event, payload, sourceEventId));
+        } catch (RuntimeException exception) {
+            transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
+            throw exception;
+        }
+    }
+
     private void recordDeserializationFailure(
             String topic,
             String payload,
@@ -159,6 +187,23 @@ public class FinanceProcurementConsumer {
         if (allocatedTotal.compareTo(event.amount()) > 0) {
             throw new IllegalArgumentException("Supplier payment allocations cannot exceed the payment amount");
         }
+    }
+
+    private void validateSupplierInvoiceApprovedEvent(SupplierInvoiceApprovedEvent event) {
+        requireNonBlank(event.eventId(), "Supplier invoice event id is required");
+        requireNonBlank(event.eventType(), "Supplier invoice event type is required");
+        requireNonBlank(event.idempotencyKey(), "Supplier invoice idempotency key is required");
+        requireNonBlank(event.currencyCode(), "Supplier invoice currency code is required");
+        requireNonBlank(event.invoiceNumber(), "Supplier invoice number is required");
+        requireNonNull(event.supplierInvoiceId(), "Supplier invoice id is required");
+        requireNonNull(event.supplierId(), "Supplier invoice supplier id is required");
+        requireNonNull(event.regionId(), "Supplier invoice region id is required");
+        requireNonNull(event.outletId(), "Supplier invoice outlet id is required");
+        requireNonNull(event.invoiceDate(), "Supplier invoice date is required");
+        requireNonNull(event.approvedAt(), "Supplier invoice approved time is required");
+        requirePositive(event.totalAmount(), "Supplier invoice total amount must be positive");
+        requireNonNegative(event.taxAmount(), "Supplier invoice tax amount cannot be negative");
+        requireNonNegative(event.matchedReceiptAmount(), "Supplier invoice matched receipt amount cannot be negative");
     }
 
     private void validateGoodsReceiptPostedEvent(ProcurementGoodsReceiptPostedEvent event) {
@@ -394,6 +439,61 @@ public class FinanceProcurementConsumer {
         markIntegrationProcessed(sourceEventId);
     }
 
+    private void processSupplierInvoiceApproved(
+            SupplierInvoiceApprovedEvent event,
+            String payload,
+            String sourceEventId
+    ) {
+        projectionTransactionTemplate.executeWithoutResult(status -> {
+            projectionJdbcTemplate.update("""
+                    INSERT INTO finance_projection.accounting_posting_projection (
+                        posting_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                        region_id, outlet_id, account_code, debit_amount, credit_amount, currency_code, reference_type, reference_id, payload
+                    ) VALUES (
+                        :postingId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                        :regionId, :outletId, 'SUPPLIER_INVOICE_APPROVED', 0, :creditAmount, :currencyCode, 'SUPPLIER_INVOICE', :referenceId, CAST(:payload AS jsonb)
+                    )
+                    ON CONFLICT (source_event_id) DO NOTHING
+                    """, params(
+                    "postingId", snowflakeIdGenerator.nextId(),
+                    "sourceEventId", sourceEventId,
+                    "sourceService", event.sourceService(),
+                    "eventType", event.eventType(),
+                    "occurredAt", event.occurredAt(),
+                    "idempotencyKey", event.idempotencyKey(),
+                    "regionId", event.regionId(),
+                    "outletId", event.outletId(),
+                    "creditAmount", event.totalAmount(),
+                    "currencyCode", event.currencyCode(),
+                    "referenceId", event.supplierInvoiceId().toString(),
+                    "payload", payload
+            ));
+            projectionJdbcTemplate.update("""
+                    INSERT INTO finance_projection.reconciliation_snapshot (
+                        snapshot_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
+                        region_id, outlet_id, business_date, snapshot_type, snapshot_value, snapshot_payload
+                    ) VALUES (
+                        :snapshotId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
+                        :regionId, :outletId, :businessDate, 'SUPPLIER_INVOICE_APPROVED', :snapshotValue, CAST(:snapshotPayload AS jsonb)
+                    )
+                    ON CONFLICT (source_event_id) DO NOTHING
+                    """, params(
+                    "snapshotId", snowflakeIdGenerator.nextId(),
+                    "sourceEventId", sourceEventId,
+                    "sourceService", event.sourceService(),
+                    "eventType", event.eventType(),
+                    "occurredAt", event.occurredAt(),
+                    "idempotencyKey", event.idempotencyKey(),
+                    "regionId", event.regionId(),
+                    "outletId", event.outletId(),
+                    "businessDate", event.invoiceDate(),
+                    "snapshotValue", event.totalAmount(),
+                    "snapshotPayload", payload
+            ));
+        });
+        markIntegrationProcessed(sourceEventId);
+    }
+
     private Long insertForId(String sql, MapSqlParameterSource parameters) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(sql, parameters, keyHolder, new String[]{"id"});
@@ -505,6 +605,12 @@ public class FinanceProcurementConsumer {
 
     private void requirePositive(BigDecimal value, String message) {
         if (value == null || value.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(message);
+        }
+    }
+
+    private void requireNonNegative(BigDecimal value, String message) {
+        if (value != null && value.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException(message);
         }
     }

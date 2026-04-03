@@ -7,16 +7,12 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 /**
- * Projects goods-receipt-posted events into {@code inventory_movement_fact}
- * and {@code procurement_fact} tables, then updates daily summaries.
+ * Projects goods-receipt-posted events into {@code procurement_fact},
+ * while inventory movements/snapshots are sourced from inventory-owned events.
  */
 @Component
 public class ProcurementEventProjector {
-    private static final List<String> PROCUREMENT_DATASETS = List.of(
-            "inventory_movement_fact",
-            "inventory_stock_snapshot",
-            "procurement_fact"
-    );
+    private static final List<String> PROCUREMENT_DATASETS = List.of("procurement_fact");
 
     private final ReportIngestionSupport support;
     private final DailySummaryProjector dailySummaryProjector;
@@ -41,42 +37,6 @@ public class ProcurementEventProjector {
                     for (var line : event.lines()) {
                         BigDecimal lineAmount = line.qtyReceived().multiply(line.unitCost());
                         totalAmount = totalAmount.add(lineAmount);
-                        support.jdbcTemplate().update("""
-                                INSERT INTO report.inventory_movement_fact (
-                                    fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
-                                    region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost, payload, source_reference_type, source_reference_id
-                                ) VALUES (
-                                    :factId, :sourceEventId, :sourceService, :eventType, :occurredAt, CURRENT_TIMESTAMP, :idempotencyKey,
-                                    :regionId, :outletId, :ingredientId, :businessDate, :movementType, :qtyChange, :unitCost, CAST(:payload AS jsonb), :sourceReferenceType, :sourceReferenceId
-                                )
-                                ON CONFLICT DO NOTHING
-                                """, support.params(
-                                "factId", support.idGenerator().nextId(),
-                                "sourceEventId", event.eventId(),
-                                "sourceService", event.sourceService(),
-                                "eventType", event.eventType(),
-                                "occurredAt", event.occurredAt(),
-                                "idempotencyKey", event.idempotencyKey() + ":movement:" + line.sourceLineId(),
-                                "regionId", event.regionId(),
-                                "outletId", event.outletId(),
-                                "ingredientId", line.ingredientId(),
-                                "businessDate", event.businessDate(),
-                                "movementType", "PURCHASE_IN",
-                                "qtyChange", line.qtyReceived(),
-                                "unitCost", line.unitCost(),
-                                "payload", support.toJson(line),
-                                "sourceReferenceType", "GOODS_RECEIPT_LINE",
-                                "sourceReferenceId", String.valueOf(line.sourceLineId())
-                        ));
-                        support.upsertInventoryStockSnapshot(
-                                event.regionId(),
-                                event.outletId(),
-                                line.ingredientId(),
-                                line.qtyReceived(),
-                                line.unitCost(),
-                                null,
-                                event.occurredAt()
-                        );
                     }
                     support.jdbcTemplate().update("""
                             INSERT INTO report.procurement_fact (

@@ -2120,6 +2120,25 @@ class PosServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectSessionOpenForClosingOutlet() throws Exception {
+        putOutletRoute(101L, 1L, "CLOSING", null);
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Outlet is inactive or closed for POS transactions"));
+    }
+
+    @Test
     void shouldRejectSessionOpenForOutletClosedOnBusinessDate() throws Exception {
         String closedOutletToken = issueToken(
                 Set.of("pos.session.open"),
@@ -2182,6 +2201,27 @@ class PosServiceIntegrationTest {
                                 }
                                 """.formatted(sessionId)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldRejectOrderCreationWhenOutletBecomesClosingAfterSessionOpened() throws Exception {
+        Long sessionId = openSession(bearer(), 1L, 101L);
+        putOutletRoute(101L, 1L, "CLOSING", null);
+
+        mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Outlet is inactive or closed for POS transactions"));
     }
 
     @Test

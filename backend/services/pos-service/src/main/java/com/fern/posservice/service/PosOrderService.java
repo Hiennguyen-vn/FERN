@@ -24,6 +24,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.EnumSet;
@@ -33,12 +34,18 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class PosOrderService {
+    private static final Logger log = LoggerFactory.getLogger(PosOrderService.class);
+
     private final PosAuthorizer posAuthorizer;
     private final PosStore store;
     private final PosOrgClient posOrgClient;
@@ -50,8 +57,11 @@ public class PosOrderService {
     private final OperationalAlertPublisher operationalAlertPublisher;
     private final PosAuditService posAuditService;
     private final Counter paymentFailureCounter;
+    private final Counter completionRecoveryCounter;
     private final OperationalShardRegistry operationalShardRegistry;
     private final ShardResolver shardResolver;
+    private final Duration completionRecoveryAge;
+    private final int completionRecoveryBatchSize;
 
     public PosOrderService(
             PosAuthorizer posAuthorizer,
@@ -66,7 +76,9 @@ public class PosOrderService {
             PosAuditService posAuditService,
             MeterRegistry meterRegistry,
             OperationalShardRegistry operationalShardRegistry,
-            ShardResolver shardResolver
+            ShardResolver shardResolver,
+            @Value("${fern.pos.completion-recovery.age:PT2M}") Duration completionRecoveryAge,
+            @Value("${fern.pos.completion-recovery.batch-size:50}") int completionRecoveryBatchSize
     ) {
         this.posAuthorizer = posAuthorizer;
         this.store = store;
@@ -79,8 +91,11 @@ public class PosOrderService {
         this.operationalAlertPublisher = operationalAlertPublisher;
         this.posAuditService = posAuditService;
         this.paymentFailureCounter = Counter.builder("fern_payment_failures_total").register(meterRegistry);
+        this.completionRecoveryCounter = Counter.builder("fern_pos_completion_recoveries_total").register(meterRegistry);
         this.operationalShardRegistry = operationalShardRegistry;
         this.shardResolver = shardResolver;
+        this.completionRecoveryAge = completionRecoveryAge;
+        this.completionRecoveryBatchSize = completionRecoveryBatchSize;
     }
 
     public SaleOrderResponse createOrder(FernPrincipal principal, CreateSaleOrderRequest request) {
@@ -430,6 +445,30 @@ public class PosOrderService {
         return getOrder(principal, id);
     }
 
+    @Scheduled(fixedDelayString = "${fern.pos.completion-recovery.delay-ms:30000}")
+    public void recoverStaleCompletions() {
+        Instant cutoff = clock.instant().minus(completionRecoveryAge);
+        List<StaleCompletingOrder> staleOrders = rootJdbcTemplate().query("""
+                SELECT id, region_id, outlet_id
+                FROM pos.sale_order
+                WHERE status = :status
+                  AND updated_at <= :cutoff
+                ORDER BY updated_at ASC, id ASC
+                LIMIT :limit
+                """, PosSql.params(
+                "status", SaleOrderStatus.COMPLETING.name(),
+                "cutoff", cutoff,
+                "limit", completionRecoveryBatchSize
+        ), (rs, rowNum) -> new StaleCompletingOrder(
+                rs.getLong("id"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id")
+        ));
+        for (StaleCompletingOrder staleOrder : staleOrders) {
+            recoverStaleCompletion(staleOrder);
+        }
+    }
+
     public SaleOrderResponse cancelOrder(FernPrincipal principal, Long id) {
         OrderRecord order = store.requireOrder(id);
         NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
@@ -616,6 +655,32 @@ public class PosOrderService {
         });
     }
 
+    private void recoverStaleCompletion(StaleCompletingOrder staleOrder) {
+        try {
+            inventoryClient.releaseInventoryReservationBySourceOrderId(null, staleOrder.orderId());
+            revertCompletingOrder(staleOrder.regionId(), staleOrder.outletId(), staleOrder.orderId());
+            completionRecoveryCounter.increment();
+            log.warn(
+                    "Recovered stale POS order completion orderId={} regionId={} outletId={}",
+                    staleOrder.orderId(),
+                    staleOrder.regionId(),
+                    staleOrder.outletId()
+            );
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Failed to recover stale POS order completion orderId={} regionId={} outletId={}",
+                    staleOrder.orderId(),
+                    staleOrder.regionId(),
+                    staleOrder.outletId(),
+                    exception
+            );
+        }
+    }
+
+    private NamedParameterJdbcTemplate rootJdbcTemplate() {
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(0L, 0L))).jdbc();
+    }
+
     private NamedParameterJdbcTemplate jdbcTemplate(Long regionId, Long outletId) {
         return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).jdbc();
     }
@@ -750,5 +815,12 @@ public class PosOrderService {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new BadRequestException("Idempotency-Key header is required");
         }
+    }
+
+    private record StaleCompletingOrder(
+            Long orderId,
+            Long regionId,
+            Long outletId
+    ) {
     }
 }

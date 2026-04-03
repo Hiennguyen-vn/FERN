@@ -60,7 +60,7 @@ public class InventoryEventProjector {
                             "outletId", event.outletId(),
                             "ingredientId", event.ingredientId(),
                             "businessDate", event.businessDate(),
-                            "movementType", event.qtyChange().signum() >= 0 ? "STOCK_ADJUSTMENT_IN" : "STOCK_ADJUSTMENT_OUT",
+                            "movementType", resolveAdjustmentMovementType(event),
                             "qtyChange", event.qtyChange(),
                             "unitCost", event.unitCost(),
                             "payload", payload,
@@ -144,6 +144,16 @@ public class InventoryEventProjector {
                 "saleOrderId", saleOrderId,
                 "cogsContribution", cogsContribution
         ));
+    }
+
+    private String resolveAdjustmentMovementType(InventoryAdjustmentPostedEvent event) {
+        if ("SALE_ORDER".equals(event.sourceReferenceType()) && "SALE_USAGE".equals(event.reason())) {
+            return "SALE_USAGE";
+        }
+        if ("GOODS_RECEIPT_LINE".equals(event.sourceReferenceType()) || "PURCHASE_IN".equals(event.reason())) {
+            return "PURCHASE_IN";
+        }
+        return event.qtyChange().signum() >= 0 ? "STOCK_ADJUSTMENT_IN" : "STOCK_ADJUSTMENT_OUT";
     }
 
     public void ingestWaste(String payload, WasteRecordPostedEvent event) {

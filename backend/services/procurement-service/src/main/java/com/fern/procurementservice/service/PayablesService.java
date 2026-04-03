@@ -58,6 +58,7 @@ public class PayablesService {
         if (!outlet.regionId().equals(request.regionId())) {
             throw new ConflictException("Outlet route does not match requested region");
         }
+        ensureOutletOperational(outlet, request.invoiceDate());
         return transactionTemplate.execute(status -> createSupplierInvoiceTx(principal, request));
     }
 
@@ -148,6 +149,7 @@ public class PayablesService {
         if (updated != 1) {
             throw new ConflictException("Only received or matched supplier invoices can be approved");
         }
+        procurementEventPublisher.enqueueSupplierInvoiceApprovedEvent(id, principal, null);
         return getSupplierInvoice(principal, id);
     }
 
@@ -355,6 +357,12 @@ public class PayablesService {
             return left == right;
         }
         return left.compareTo(right) == 0;
+    }
+
+    private void ensureOutletOperational(ProcurementOrgClient.OutletRoute outlet, java.time.LocalDate businessDate) {
+        if (!outlet.isActive() || outlet.isClosedOn(businessDate)) {
+            throw new ConflictException("Outlet is inactive or closed for procurement workflows");
+        }
     }
 
     private NamedParameterJdbcTemplate jdbcTemplate() {

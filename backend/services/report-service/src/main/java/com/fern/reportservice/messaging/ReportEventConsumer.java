@@ -10,6 +10,8 @@ import com.fern.platform.contracts.PayrollPostedEvent;
 import com.fern.platform.contracts.PosSaleCompletedEvent;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
 import com.fern.platform.contracts.StockCountPostedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedEvent;
+import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import com.fern.platform.contracts.WasteRecordPostedEvent;
 import com.fern.reportservice.service.ReportDeserializationFailureRecorder;
 import com.fern.reportservice.service.ReportService;
@@ -40,6 +42,16 @@ public class ReportEventConsumer {
     @KafkaListener(topics = "procurement.goods_receipt.posted")
     public void consumeGoodsReceiptPosted(String payload) {
         reportService.ingestGoodsReceiptPosted(payload, read("procurement.goods_receipt.posted", payload, ProcurementGoodsReceiptPostedEvent.class));
+    }
+
+    @KafkaListener(topics = "procurement.supplier_invoice.approved")
+    public void consumeSupplierInvoiceApproved(String payload) {
+        reportService.ingestSupplierInvoiceApproved(payload, read("procurement.supplier_invoice.approved", payload, SupplierInvoiceApprovedEvent.class));
+    }
+
+    @KafkaListener(topics = "procurement.supplier.payment.recorded")
+    public void consumeSupplierPaymentRecorded(String payload) {
+        reportService.ingestSupplierPaymentRecorded(payload, read("procurement.supplier.payment.recorded", payload, SupplierPaymentRecordedEvent.class));
     }
 
     @KafkaListener(topics = "attendance.approved")

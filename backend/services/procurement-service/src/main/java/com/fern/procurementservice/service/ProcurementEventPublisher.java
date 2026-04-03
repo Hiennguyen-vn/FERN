@@ -2,12 +2,18 @@ package com.fern.procurementservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.contracts.GoodsReceiptPostedLine;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedLine;
 import com.fern.platform.contracts.SupplierPaymentAllocation;
 import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
+import com.fern.procurementservice.dto.ProcurementResponses.SupplierInvoiceResponse;
 import com.fern.procurementservice.dto.ProcurementResponses.SupplierPaymentResponse;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
@@ -18,6 +24,7 @@ import org.springframework.stereotype.Component;
 class ProcurementEventPublisher {
     private final ProcurementJdbcRepository procurementJdbcRepository;
     private final ObjectMapper objectMapper;
+    private final ObjectWriter eventPayloadWriter;
     private final Clock clock;
 
     ProcurementEventPublisher(
@@ -27,6 +34,9 @@ class ProcurementEventPublisher {
     ) {
         this.procurementJdbcRepository = procurementJdbcRepository;
         this.objectMapper = objectMapper;
+        this.eventPayloadWriter = objectMapper.copy()
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .writer();
         this.clock = clock;
     }
 
@@ -84,8 +94,52 @@ class ProcurementEventPublisher {
         enqueueOutbox("SUPPLIER_PAYMENT", payment.id().toString(), "procurement.supplier.payment.recorded", payment.supplierId().toString(), event);
     }
 
+    void enqueueSupplierInvoiceApprovedEvent(Long supplierInvoiceId, FernPrincipal principal, String correlationId) {
+        SupplierInvoiceResponse invoice = procurementJdbcRepository.mapSupplierInvoice(procurementJdbcRepository.requireSupplierInvoice(supplierInvoiceId));
+        BigDecimal matchedReceiptAmount = procurementJdbcRepository.matchedGoodsReceiptAmount(supplierInvoiceId);
+        BigDecimal varianceAmount = invoice.totalAmount().subtract(matchedReceiptAmount);
+        Instant approvedAt = invoice.approvedAt() == null ? Instant.now(clock) : invoice.approvedAt();
+        SupplierInvoiceApprovedEvent event = new SupplierInvoiceApprovedEvent(
+                UUID.randomUUID().toString(),
+                "procurement.supplier_invoice.approved",
+                approvedAt,
+                "procurement-service",
+                correlationId,
+                supplierInvoiceApprovedIdempotencyKey(invoice.id()),
+                invoice.id(),
+                invoice.supplierId(),
+                invoice.regionId(),
+                invoice.outletId(),
+                invoice.currencyCode(),
+                invoice.invoiceNumber(),
+                invoice.invoiceDate(),
+                invoice.dueDate(),
+                invoice.subtotal(),
+                invoice.taxAmount(),
+                invoice.totalAmount(),
+                matchedReceiptAmount,
+                varianceAmount,
+                approvedAt,
+                principal.userId(),
+                invoice.lines().stream()
+                        .map(line -> new SupplierInvoiceApprovedLine(
+                                line.id(),
+                                line.lineNumber(),
+                                line.lineType(),
+                                line.goodsReceiptLineId(),
+                                line.description(),
+                                line.qtyInvoiced(),
+                                line.unitPrice(),
+                                line.taxAmount(),
+                                line.lineTotal()
+                        ))
+                        .toList()
+        );
+        enqueueOutbox("SUPPLIER_INVOICE", invoice.id().toString(), "procurement.supplier_invoice.approved", invoice.supplierId().toString(), event);
+    }
+
     private void enqueueOutbox(String aggregateType, String aggregateId, String eventType, String partitionKey, Object payload) {
-        String payloadJson = procurementJdbcRepository.toJson(payload);
+        String payloadJson = toEventPayloadJson(payload);
         lockOutboxKey(aggregateType, aggregateId, eventType);
         OutboxEventRecord existing = findOutboxEvent(aggregateType, aggregateId, eventType);
         if (existing != null) {
@@ -109,6 +163,14 @@ class ProcurementEventPublisher {
                 "partitionKey", partitionKey,
                 "payload", payloadJson
         ));
+    }
+
+    private String toEventPayloadJson(Object payload) {
+        try {
+            return eventPayloadWriter.writeValueAsString(payload);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to serialize procurement event payload", exception);
+        }
     }
 
     private void lockOutboxKey(String aggregateType, String aggregateId, String eventType) {
@@ -214,6 +276,10 @@ class ProcurementEventPublisher {
 
     private String supplierPaymentRecordedIdempotencyKey(Long supplierPaymentId) {
         return "procurement.supplier.payment.recorded:payment:" + supplierPaymentId;
+    }
+
+    private String supplierInvoiceApprovedIdempotencyKey(Long supplierInvoiceId) {
+        return "procurement.supplier_invoice.approved:invoice:" + supplierInvoiceId;
     }
 
     private record OutboxEventRecord(

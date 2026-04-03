@@ -18,9 +18,15 @@ export function usePurchaseOrder(id: number | null) {
 }
 
 export function useCreatePurchaseOrder() {
+  const queryClient = useQueryClient()
+
   return useMutation({
     mutationKey: ['procurement', 'purchase-orders', 'create'],
     mutationFn: (payload: CreatePurchaseOrderPayload) => createPurchaseOrder(payload),
+    onSuccess: (purchaseOrder) => {
+      void queryClient.invalidateQueries({ queryKey: ['procurement', 'purchase-orders', 'list'] })
+      queryClient.setQueryData(['procurement', 'purchase-orders', purchaseOrder.id], purchaseOrder)
+    },
   })
 }
 
@@ -52,6 +58,9 @@ export function usePurchaseOrderAction() {
     onSuccess: (data) => {
       void queryClient.invalidateQueries({
         queryKey: ['procurement', 'purchase-orders', data.id],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: ['procurement', 'purchase-orders', 'list'],
       })
     },
   })

@@ -4,56 +4,6 @@ import { createServer as createViteServer } from 'vite'
 const host = '127.0.0.1'
 const port = 3000
 const gatewayTarget = 'http://127.0.0.1:8080'
-const gatewayProxyPrefixes = [
-  '/actuator',
-  '/auth',
-  '/attendance-approvals',
-  '/attendance-events',
-  '/audit',
-  '/employee-assignments',
-  '/employee-contracts',
-  '/employees',
-  '/exchange-rates',
-  '/finance-config',
-  '/goods-receipts',
-  '/ingredient-categories',
-  '/ingredients',
-  '/inventory-transactions',
-  '/permissions',
-  '/pos-sessions',
-  '/payroll-periods',
-  '/payroll-runs',
-  '/product-categories',
-  '/product-availability',
-  '/product-prices',
-  '/products',
-  '/purchase-orders',
-  '/regions',
-  '/recipe-versions',
-  '/recipes',
-  '/reports/exports',
-  '/reports/payroll/summary',
-  '/reports/payroll/runs',
-  '/roles',
-  '/sale-orders',
-  '/shift-assignments',
-  '/shift-schedules',
-  '/stock-balances',
-  '/stock-adjustments',
-  '/suppliers',
-  '/supplier-invoices',
-  '/supplier-payments',
-  '/tax-rates',
-  '/units-of-measure',
-  '/uom-conversions',
-  '/users',
-  '/waste-records',
-  '/stock-count-sessions',
-  '/outlets',
-  '/catalog/promotions',
-  '/ui',
-  '/ws',
-]
 
 const hopByHopRequestHeaders = new Set([
   'connection',
@@ -81,25 +31,17 @@ function normalizeUrl(url) {
   }
 }
 
-function matchesGatewayPrefix(pathname) {
-  return gatewayProxyPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
-}
-
 function resolveGatewayPath(url) {
   const normalizedUrl = normalizeUrl(url)
   const [pathname, search = ''] = normalizedUrl.split('?')
-  const normalizedPath =
-    pathname === '/api'
-      ? '/'
-      : pathname.startsWith('/api/')
-        ? pathname.slice(4)
-        : pathname
-
-  if (!matchesGatewayPrefix(normalizedPath)) {
-    return null
+  if (pathname === '/api' || pathname.startsWith('/api/')) {
+    const normalizedPath = pathname === '/api' ? '/' : pathname.slice(4)
+    return search ? `${normalizedPath}?${search}` : normalizedPath
   }
-
-  return search ? `${normalizedPath}?${search}` : normalizedPath
+  if (pathname === '/ws' || pathname.startsWith('/ws/')) {
+    return search ? `${pathname}?${search}` : pathname
+  }
+  return null
 }
 
 function collectRequestBody(request) {

@@ -5,6 +5,7 @@ import com.fern.platform.security.FernJwtService;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,8 +38,13 @@ public class UiSurfaceController {
     }
 
     @GetMapping("/action-hub")
-    public Mono<ActionHubResponse> actionHub(ServerWebExchange exchange) {
+    public Mono<ActionHubResponse> actionHub(
+            ServerWebExchange exchange,
+            @RequestParam(required = false) Long selectedRegionId,
+            @RequestParam(required = false) Long selectedOutletId
+    ) {
         UiPrincipal principal = UiPrincipal.from(exchange, jwtService);
+        UiSelection selection = resolveSelection(principal, selectedRegionId, selectedOutletId);
         UiPersona persona = resolvePersona(principal);
         List<UiModuleEntry> visibleModules = visibleModules(principal);
         List<UiQuickAction> quickActions = quickActions(principal);
@@ -46,11 +52,13 @@ public class UiSurfaceController {
         return Mono.just(new ActionHubResponse(
                 persona.name().toLowerCase(),
                 new UiScopeSummary(
-                        principal.systemScope() ? "Full enterprise coverage" : "Scoped operating context",
-                        principal.systemScope()
-                                ? "System-wide action surfaces are available to the current role."
-                                : "Select the correct region or outlet in the frontend shell before executing live workflows.",
-                        scopeChips(principal)
+                        selection.hasFocusedScope() ? "Focused operating context" : principal.systemScope() ? "Full enterprise coverage" : "Scoped operating context",
+                        selection.hasFocusedScope()
+                                ? "Action surfaces are aligned to the currently selected frontend scope."
+                                : principal.systemScope()
+                                        ? "System-wide action surfaces are available to the current role."
+                                        : "Select the correct region or outlet in the frontend shell before executing live workflows.",
+                        scopeChips(principal, selection)
                 ),
                 List.of(
                         new UiKpiCard("coverage", "Coverage", principal.systemScope() ? "Enterprise" : visibleModules.size() + " modules", "primary", "Published workspaces available now"),
@@ -66,14 +74,19 @@ public class UiSurfaceController {
     }
 
     @GetMapping("/shell-context")
-    public Mono<ShellContextResponse> shellContext(ServerWebExchange exchange) {
+    public Mono<ShellContextResponse> shellContext(
+            ServerWebExchange exchange,
+            @RequestParam(required = false) Long selectedRegionId,
+            @RequestParam(required = false) Long selectedOutletId
+    ) {
         UiPrincipal principal = UiPrincipal.from(exchange, jwtService);
+        UiSelection selection = resolveSelection(principal, selectedRegionId, selectedOutletId);
         UiPersona persona = resolvePersona(principal);
 
         return Mono.just(new ShellContextResponse(
                 principal.username(),
                 roleLabel(principal, persona),
-                scopeChips(principal),
+                scopeChips(principal, selection),
                 principal.regions().stream().map(regionId -> new UiScopeOption(regionId, "Region #" + regionId)).toList(),
                 principal.outlets().stream().map(outletId -> new UiScopeOption(outletId, "Outlet #" + outletId)).toList()
         ));
@@ -108,13 +121,31 @@ public class UiSurfaceController {
         };
     }
 
-    private List<String> scopeChips(UiPrincipal principal) {
+    private UiSelection resolveSelection(UiPrincipal principal, Long selectedRegionId, Long selectedOutletId) {
+        Long resolvedRegionId = inRegionScope(principal, selectedRegionId) ? selectedRegionId : null;
+        Long resolvedOutletId = inOutletScope(principal, selectedOutletId) ? selectedOutletId : null;
+        return new UiSelection(resolvedRegionId, resolvedOutletId);
+    }
+
+    private boolean inRegionScope(UiPrincipal principal, Long regionId) {
+        return regionId != null && (principal.systemScope() || principal.regions().contains(regionId));
+    }
+
+    private boolean inOutletScope(UiPrincipal principal, Long outletId) {
+        return outletId != null && (principal.systemScope() || principal.outlets().contains(outletId));
+    }
+
+    private List<String> scopeChips(UiPrincipal principal, UiSelection selection) {
         List<String> chips = new ArrayList<>();
         if (principal.systemScope()) {
             chips.add("Enterprise");
         }
-        chips.add(principal.regions().isEmpty() ? "No region" : principal.regions().size() + " regions");
-        chips.add(principal.outlets().isEmpty() ? "No outlet" : principal.outlets().size() + " outlets");
+        chips.add(selection.selectedRegionId() != null
+                ? "Region #" + selection.selectedRegionId()
+                : principal.regions().isEmpty() ? "No region" : principal.regions().size() + " regions");
+        chips.add(selection.selectedOutletId() != null
+                ? "Outlet #" + selection.selectedOutletId()
+                : principal.outlets().isEmpty() ? "No outlet" : principal.outlets().size() + " outlets");
         return chips;
     }
 
@@ -280,6 +311,12 @@ public class UiSurfaceController {
     }
 
     record UiScopeOption(Long value, String label) {
+    }
+
+    record UiSelection(Long selectedRegionId, Long selectedOutletId) {
+        boolean hasFocusedScope() {
+            return selectedRegionId != null || selectedOutletId != null;
+        }
     }
 
     enum UiPersona {

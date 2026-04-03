@@ -73,6 +73,7 @@ public class StockCountService {
         if (!outlet.regionId().equals(request.regionId())) {
             throw new BadRequestException("Region does not match the outlet route");
         }
+        ensureOutletOperational(outlet, request.countDate());
         Long id = inventoryRepository.insertForId("""
                 INSERT INTO inventory.stock_count_session (
                     region_id, outlet_id, count_date, status, note, counted_by_user_id, approved_by_user_id, created_at, updated_at,
@@ -421,6 +422,12 @@ public class StockCountService {
         BigDecimal effectiveProjected = (qtyOnHand == null ? BigDecimal.ZERO : qtyOnHand).add(delta);
         if (effectiveProjected.compareTo(BigDecimal.ZERO) < 0) {
             throw new ConflictException("Inventory would become negative for ingredient " + ingredientId);
+        }
+    }
+
+    private void ensureOutletOperational(InventoryOrgClient.OutletRoute outlet, LocalDate businessDate) {
+        if (!outlet.isActive() || outlet.isClosedOn(businessDate)) {
+            throw new ConflictException("Outlet is inactive or closed for inventory workflows");
         }
     }
 

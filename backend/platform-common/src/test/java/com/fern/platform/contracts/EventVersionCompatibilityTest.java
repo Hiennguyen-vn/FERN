@@ -94,6 +94,10 @@ class EventVersionCompatibilityTest {
                 new SupplierPaymentRecordedEvent("payment-1", "procurement.supplier.payment.recorded", instant(), "procurement-service", "corr-10", "procurement.supplier.payment.recorded:payment:1",
                         1L, 2L, instant(), decimal("10"), "USD",
                         List.of(new SupplierPaymentAllocation(77L, decimal("10"))), 9L),
+                new SupplierInvoiceApprovedEvent("invoice-1", "procurement.supplier_invoice.approved", instant(), "procurement-service", "corr-10b", "procurement.supplier_invoice.approved:invoice:1",
+                        1L, 2L, 3L, 4L, "USD", "INV-001", date(), date().plusDays(30),
+                        decimal("9"), decimal("1"), decimal("10"), decimal("8"), decimal("2"), instant(), 9L,
+                        List.of(new SupplierInvoiceApprovedLine(501L, 1, "STOCK", 601L, "Milk", decimal("2"), decimal("4"), decimal("1"), decimal("9")))),
                 new WasteRecordPostedEvent("waste-1", "inventory.waste.posted", instant(), "inventory-service", "corr-11", "inventory.waste.posted:waste:1",
                         1L, 2L, 3L, 4L, date(), instant(), 7L, "expired", decimal("-1"), decimal("2"), "WASTE_RECORD", "1")
         );

@@ -105,6 +105,25 @@ public class PosInventoryClient {
         });
     }
 
+    public void releaseInventoryReservationBySourceOrderId(FernPrincipal principal, Long sourceOrderId) {
+        execute(() -> {
+            restClient.post()
+                    .uri("/internal/inventory/sale-reservations/by-source-order/{sourceOrderId}/cancel", sourceOrderId)
+                    .headers(FernDownstreamHeadersContributor.bearerToken(
+                            serviceTokenSupport.issueToken(
+                                    PosServiceNames.POS_SERVICE,
+                                    PosServiceNames.INVENTORY_SERVICE,
+                                    Set.of(PermissionCodes.INVENTORY_INTERNAL_RELEASE)
+                            ),
+                            principal,
+                            MDC.get(CorrelationId.MDC_KEY)
+                    )::contribute)
+                    .retrieve()
+                    .toBodilessEntity();
+            return null;
+        });
+    }
+
     private <T> T execute(Supplier<T> supplier) {
         return downstreamClientFactory.execute(operation("inventory"), circuitBreaker, supplier, errorMapper);
     }

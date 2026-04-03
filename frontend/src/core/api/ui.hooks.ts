@@ -12,7 +12,7 @@ export function useActionHub() {
     queryKey: ['ui', 'action-hub', principal?.username ?? 'guest', selectedRegionId ?? 'none', selectedOutletId ?? 'none'],
     queryFn: async () => {
       try {
-        return await uiApi.getActionHub()
+        return await uiApi.getActionHub({ selectedOutletId, selectedRegionId })
       } catch {
         return fallback
       }
@@ -32,7 +32,7 @@ export function useShellContext() {
     queryKey: ['ui', 'shell-context', principal?.username ?? 'guest', selectedRegionId ?? 'none', selectedOutletId ?? 'none'],
     queryFn: async () => {
       try {
-        return await uiApi.getShellContext()
+        return await uiApi.getShellContext({ selectedOutletId, selectedRegionId })
       } catch {
         return fallback
       }

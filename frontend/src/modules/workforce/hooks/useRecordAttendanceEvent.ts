@@ -9,6 +9,8 @@ export function useRecordAttendanceEvent() {
     mutationFn: recordAttendanceEvent,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['workforce', 'attendance-events'] })
+      void queryClient.invalidateQueries({ queryKey: ['hr', 'attendance-events'] })
+      void queryClient.invalidateQueries({ queryKey: ['hr', 'attendance-approvals'] })
     },
   })
 }

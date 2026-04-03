@@ -56,6 +56,15 @@ public class InternalInventoryController {
         stockReservationService.releaseSaleReservation(principal, reservationId);
     }
 
+    @Operation(summary = "Create or execute Inventory — Internal")
+    @PostMapping("/sale-reservations/by-source-order/{sourceOrderId}/cancel")
+    public void releaseSaleReservationBySourceOrderId(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @PathVariable Long sourceOrderId
+    ) {
+        stockReservationService.releaseSaleReservationBySourceOrderId(principal, sourceOrderId);
+    }
+
     @Operation(summary = "Get Inventory — Internal")
     @GetMapping("/outlet-close-check")
     public OutletCloseCheckResponse outletCloseCheck(

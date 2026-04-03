@@ -20,6 +20,8 @@ export function useReviewAttendance() {
       void queryClient.invalidateQueries({
         queryKey: ['workforce', 'attendance-approvals', variables.shiftAssignmentId],
       })
+      void queryClient.invalidateQueries({ queryKey: ['hr', 'attendance-approvals'] })
+      void queryClient.invalidateQueries({ queryKey: ['hr', 'attendance-events'] })
     },
   })
 }

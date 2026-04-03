@@ -167,6 +167,52 @@ class PayrollRunOrchestratorIntegrationTest {
     }
 
     @Test
+    void shouldFailFastWhenApprovedAttendanceExistsWithoutEffectiveContract() {
+        FernPrincipal principal = payrollPrincipal();
+        when(payrollHrClient.fetchEffectiveContracts(anyLong(), any(), any(), anyString(), any()))
+                .thenReturn(List.of());
+        when(payrollHrClient.fetchApprovedAttendance(anyLong(), any(), any(), anyString(), any()))
+                .thenReturn(List.of(new ApprovedAttendance(
+                        802L,
+                        902L,
+                        502L,
+                        1L,
+                        301L,
+                        null,
+                        LocalDate.of(2026, 3, 18),
+                        "PRESENT",
+                        new BigDecimal("8.00"),
+                        BigDecimal.ZERO
+                )));
+
+        Long payrollPeriodId = financePayrollService.createPayrollPeriod(
+                principal,
+                new CreatePayrollPeriodRequest(
+                        1L,
+                        "March 2026",
+                        LocalDate.of(2026, 3, 1),
+                        LocalDate.of(2026, 3, 31),
+                        LocalDate.of(2026, 4, 5),
+                        null
+                ),
+                "corr-payroll-period-missing-contract"
+        ).id();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> financePayrollService.createPayrollRun(
+                        principal,
+                        new CreatePayrollRunRequest(payrollPeriodId, LocalDate.of(2026, 4, 1), null),
+                        "corr-payroll-run-missing-contract"
+                ))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("employee 502")
+                .hasMessageContaining("2026-03-18 to 2026-03-18");
+
+        assertThat(jdbcTemplate.getJdbcTemplate().queryForObject("SELECT COUNT(*) FROM finance.payroll_run", Integer.class)).isZero();
+        assertThat(jdbcTemplate.getJdbcTemplate().queryForObject("SELECT COUNT(*) FROM finance.payroll_contract_snapshot", Integer.class)).isZero();
+        assertThat(jdbcTemplate.getJdbcTemplate().queryForObject("SELECT COUNT(*) FROM finance.payroll_employee_result", Integer.class)).isZero();
+    }
+
+    @Test
     void shouldEmitDeterministicPayrollCalculatedEnvelopeOnApproval() {
         FernPrincipal principal = payrollWorkflowPrincipal();
         when(payrollHrClient.fetchEffectiveContracts(anyLong(), any(), any(), anyString(), any()))

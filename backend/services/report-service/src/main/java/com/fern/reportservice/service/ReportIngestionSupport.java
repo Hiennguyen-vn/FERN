@@ -7,6 +7,7 @@ import com.fern.platform.common.ExceptionSummaries;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.Types;
 import java.time.Clock;
@@ -135,32 +136,81 @@ public class ReportIngestionSupport {
             java.time.LocalDate lastCountDate,
             Instant occurredAt
     ) {
-        jdbcTemplate.update("""
-                INSERT INTO report.inventory_stock_snapshot (
-                    snapshot_id, region_id, outlet_id, ingredient_id, qty_on_hand, unit_cost, last_count_date, last_movement_at, updated_at
-                ) VALUES (
-                    :snapshotId, :regionId, :outletId, :ingredientId, :qtyOnHand, :unitCost, :lastCountDate, :lastMovementAt, CURRENT_TIMESTAMP
+        BigDecimal normalizedQtyDelta = qtyDelta == null
+                ? BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP)
+                : qtyDelta.setScale(4, RoundingMode.HALF_UP);
+        InventorySnapshotRow existing = jdbcTemplate.query("""
+                SELECT snapshot_id, qty_on_hand, unit_cost, inventory_value, last_count_date, last_movement_at
+                FROM report.inventory_stock_snapshot
+                WHERE outlet_id = :outletId AND ingredient_id = :ingredientId
+                FOR UPDATE
+                """, params(
+                "outletId", outletId,
+                "ingredientId", ingredientId
+        ), rs -> rs.next()
+                ? new InventorySnapshotRow(
+                        rs.getLong("snapshot_id"),
+                        defaultDecimal(rs.getBigDecimal("qty_on_hand"), 4),
+                        rs.getBigDecimal("unit_cost"),
+                        defaultDecimal(rs.getBigDecimal("inventory_value"), 2),
+                        rs.getObject("last_count_date", java.time.LocalDate.class),
+                        instant(rs, "last_movement_at")
                 )
-                ON CONFLICT (outlet_id, ingredient_id) DO UPDATE
-                SET region_id = EXCLUDED.region_id,
-                    qty_on_hand = report.inventory_stock_snapshot.qty_on_hand + EXCLUDED.qty_on_hand,
-                    unit_cost = COALESCE(EXCLUDED.unit_cost, report.inventory_stock_snapshot.unit_cost),
-                    last_count_date = COALESCE(EXCLUDED.last_count_date, report.inventory_stock_snapshot.last_count_date),
+                : null);
+
+        if (existing == null) {
+            BigDecimal initialInventoryValue = inventoryValueDelta(normalizedQtyDelta, unitCost, null);
+            jdbcTemplate.update("""
+                    INSERT INTO report.inventory_stock_snapshot (
+                        snapshot_id, region_id, outlet_id, ingredient_id, qty_on_hand, unit_cost, inventory_value,
+                        last_count_date, last_movement_at, updated_at
+                    ) VALUES (
+                        :snapshotId, :regionId, :outletId, :ingredientId, :qtyOnHand, :unitCost, :inventoryValue,
+                        :lastCountDate, :lastMovementAt, CURRENT_TIMESTAMP
+                    )
+                    """, params(
+                    "snapshotId", idGenerator.nextId(),
+                    "regionId", regionId,
+                    "outletId", outletId,
+                    "ingredientId", ingredientId,
+                    "qtyOnHand", normalizedQtyDelta,
+                    "unitCost", deriveUnitCost(normalizedQtyDelta, initialInventoryValue, unitCost),
+                    "inventoryValue", initialInventoryValue,
+                    "lastCountDate", lastCountDate,
+                    "lastMovementAt", occurredAt
+            ));
+            return;
+        }
+
+        BigDecimal newQtyOnHand = existing.qtyOnHand().add(normalizedQtyDelta).setScale(4, RoundingMode.HALF_UP);
+        BigDecimal newInventoryValue = existing.inventoryValue()
+                .add(inventoryValueDelta(normalizedQtyDelta, unitCost, existing.unitCost()))
+                .setScale(2, RoundingMode.HALF_UP);
+        if (newQtyOnHand.compareTo(BigDecimal.ZERO) == 0) {
+            newInventoryValue = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        jdbcTemplate.update("""
+                UPDATE report.inventory_stock_snapshot
+                SET region_id = :regionId,
+                    qty_on_hand = :qtyOnHand,
+                    unit_cost = :unitCost,
+                    inventory_value = :inventoryValue,
+                    last_count_date = COALESCE(:lastCountDate, last_count_date),
                     last_movement_at = CASE
-                        WHEN report.inventory_stock_snapshot.last_movement_at IS NULL THEN EXCLUDED.last_movement_at
-                        WHEN EXCLUDED.last_movement_at IS NULL THEN report.inventory_stock_snapshot.last_movement_at
-                        ELSE GREATEST(report.inventory_stock_snapshot.last_movement_at, EXCLUDED.last_movement_at)
+                        WHEN last_movement_at IS NULL THEN :lastMovementAt
+                        WHEN :lastMovementAt IS NULL THEN last_movement_at
+                        ELSE GREATEST(last_movement_at, :lastMovementAt)
                     END,
                     updated_at = CURRENT_TIMESTAMP
+                WHERE snapshot_id = :snapshotId
                 """, params(
-                "snapshotId", idGenerator.nextId(),
                 "regionId", regionId,
-                "outletId", outletId,
-                "ingredientId", ingredientId,
-                "qtyOnHand", qtyDelta == null ? BigDecimal.ZERO : qtyDelta,
-                "unitCost", unitCost,
+                "qtyOnHand", newQtyOnHand,
+                "unitCost", deriveUnitCost(newQtyOnHand, newInventoryValue, unitCost),
+                "inventoryValue", newInventoryValue,
                 "lastCountDate", lastCountDate,
-                "lastMovementAt", occurredAt
+                "lastMovementAt", occurredAt,
+                "snapshotId", existing.snapshotId()
         ));
     }
 
@@ -212,6 +262,27 @@ public class ReportIngestionSupport {
     public Instant instant(ResultSet rs, String column) throws java.sql.SQLException {
         OffsetDateTime value = rs.getObject(column, OffsetDateTime.class);
         return value == null ? null : value.toInstant();
+    }
+
+    private BigDecimal inventoryValueDelta(BigDecimal qtyDelta, BigDecimal unitCost, BigDecimal currentUnitCost) {
+        BigDecimal effectiveUnitCost = unitCost != null ? unitCost : currentUnitCost;
+        if (effectiveUnitCost == null) {
+            effectiveUnitCost = BigDecimal.ZERO;
+        }
+        return qtyDelta.multiply(effectiveUnitCost).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal deriveUnitCost(BigDecimal qtyOnHand, BigDecimal inventoryValue, BigDecimal fallbackUnitCost) {
+        if (qtyOnHand == null || qtyOnHand.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+        BigDecimal derived = inventoryValue.divide(qtyOnHand, 2, RoundingMode.HALF_UP);
+        return derived.compareTo(BigDecimal.ZERO) == 0 && fallbackUnitCost != null ? fallbackUnitCost : derived;
+    }
+
+    private BigDecimal defaultDecimal(BigDecimal value, int scale) {
+        BigDecimal effective = value == null ? BigDecimal.ZERO : value;
+        return effective.setScale(scale, RoundingMode.HALF_UP);
     }
 
     private void markProjectionSuccess(List<String> datasets, Instant occurredAt) {
@@ -460,6 +531,16 @@ public class ReportIngestionSupport {
             String kafkaTopic,
             String payload,
             String status
+    ) {
+    }
+
+    private record InventorySnapshotRow(
+            Long snapshotId,
+            BigDecimal qtyOnHand,
+            BigDecimal unitCost,
+            BigDecimal inventoryValue,
+            java.time.LocalDate lastCountDate,
+            Instant lastMovementAt
     ) {
     }
 }

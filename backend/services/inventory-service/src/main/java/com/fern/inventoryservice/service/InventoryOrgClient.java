@@ -10,6 +10,7 @@ import com.fern.platform.web.FernDownstreamClientSpec;
 import com.fern.platform.web.FernDownstreamErrorMapper;
 import com.fern.platform.web.FernDownstreamHeadersContributor;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Set;
 import org.slf4j.MDC;
@@ -97,10 +98,18 @@ public class InventoryOrgClient {
         return new FernDownstreamClientSpec(clientSpec.callerService(), clientSpec.targetService(), operation, clientSpec.properties());
     }
 
-    public record OutletRoute(Long id, Long regionId) {
+    public record OutletRoute(Long id, Long regionId, String status, LocalDate closedAt) {
         public OutletRoute {
             Objects.requireNonNull(id, "id");
             Objects.requireNonNull(regionId, "regionId");
+        }
+
+        public boolean isActive() {
+            return status == null || "ACTIVE".equalsIgnoreCase(status);
+        }
+
+        public boolean isClosedOn(LocalDate businessDate) {
+            return businessDate != null && closedAt != null && !closedAt.isAfter(businessDate);
         }
     }
 }

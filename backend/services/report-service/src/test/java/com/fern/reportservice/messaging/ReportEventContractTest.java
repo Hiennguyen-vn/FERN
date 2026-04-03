@@ -13,6 +13,8 @@ import com.fern.platform.contracts.PayrollPostedEvent;
 import com.fern.platform.contracts.PosSaleCompletedEvent;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
 import com.fern.platform.contracts.StockCountPostedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedEvent;
+import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import com.fern.platform.contracts.WasteRecordPostedEvent;
 import com.fern.platform.testsupport.KafkaContractFixtures;
 import java.math.BigDecimal;
@@ -36,6 +38,8 @@ class ReportEventContractTest {
         return java.util.stream.Stream.of(
                 Arguments.of("PosSaleCompletedEvent", KafkaContractFixtures.load("pos.sale.completed.json"), PosSaleCompletedEvent.class),
                 Arguments.of("ProcurementGoodsReceiptPostedEvent", KafkaContractFixtures.load("procurement.goods_receipt.posted.json"), ProcurementGoodsReceiptPostedEvent.class),
+                Arguments.of("SupplierInvoiceApprovedEvent", KafkaContractFixtures.load("procurement.supplier_invoice.approved.json"), SupplierInvoiceApprovedEvent.class),
+                Arguments.of("SupplierPaymentRecordedEvent", KafkaContractFixtures.load("procurement.supplier.payment.recorded.json"), SupplierPaymentRecordedEvent.class),
                 Arguments.of("AttendanceApprovedEvent", """
                         {
                           "eventId": "att-1", "eventType": "attendance.approved",

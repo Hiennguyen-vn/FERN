@@ -1,0 +1,37 @@
+{
+  "eventId": "invoice-approved-1",
+  "eventType": "procurement.supplier_invoice.approved",
+  "occurredAt": "2026-03-27T15:30:00Z",
+  "sourceService": "procurement-service",
+  "correlationId": "corr-invoice-approved-1",
+  "idempotencyKey": "procurement.supplier_invoice.approved:invoice:88",
+  "eventVersion": 1,
+  "supplierInvoiceId": 88,
+  "supplierId": 22,
+  "regionId": 1,
+  "outletId": 101,
+  "currencyCode": "VND",
+  "invoiceNumber": "INV-2026-088",
+  "invoiceDate": "2026-03-27",
+  "dueDate": "2026-04-10",
+  "subtotalAmount": 70.00,
+  "taxAmount": 5.00,
+  "totalAmount": 75.00,
+  "matchedReceiptAmount": 70.00,
+  "varianceAmount": 5.00,
+  "approvedAt": "2026-03-27T15:30:00Z",
+  "approvedByUserId": 9,
+  "lines": [
+    {
+      "lineId": 501,
+      "lineNumber": 1,
+      "lineType": "STOCK",
+      "goodsReceiptLineId": 3001,
+      "description": "Milk crate",
+      "qtyInvoiced": 10.00,
+      "unitPrice": 7.00,
+      "taxAmount": 5.00,
+      "lineTotal": 75.00
+    }
+  ]
+}

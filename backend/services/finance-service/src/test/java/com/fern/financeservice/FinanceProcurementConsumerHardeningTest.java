@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.financeservice.service.FinanceProcurementConsumer;
 import com.fern.platform.contracts.GoodsReceiptPostedLine;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedLine;
 import com.fern.platform.contracts.SupplierPaymentAllocation;
 import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import com.fern.platform.testsupport.FernIntegrationContainers;
@@ -181,6 +183,34 @@ class FinanceProcurementConsumerHardeningTest {
                 """)).isEqualTo(1);
         assertThat(count("""
                 SELECT COUNT(*) FROM finance.integration_event WHERE source_event_id = 'payment-race-1' AND status = 'PROCESSED'
+                """)).isEqualTo(1);
+    }
+
+    @Test
+    void shouldProcessSupplierInvoiceApprovedReplayConcurrentlyOnlyOnce() throws Exception {
+        SupplierInvoiceApprovedEvent event = supplierInvoiceApprovedEvent(
+                "invoice-race-1",
+                "idem-invoice-race-1",
+                9301L,
+                Instant.parse("2026-03-27T12:30:00Z")
+        );
+        String payload = objectMapper.writeValueAsString(event);
+
+        runConcurrently(() -> consumer.consumeSupplierInvoiceApproved(payload));
+
+        assertThat(countProjection("""
+                SELECT COUNT(*) FROM finance_projection.accounting_posting_projection WHERE source_event_id = 'invoice-race-1'
+                """)).isEqualTo(1);
+        assertThat(countProjection("""
+                SELECT COUNT(*) FROM finance_projection.reconciliation_snapshot WHERE source_event_id = 'invoice-race-1'
+                """)).isEqualTo(1);
+        assertThat(projectionJdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT account_code
+                FROM finance_projection.accounting_posting_projection
+                WHERE source_event_id = 'invoice-race-1'
+                """, String.class)).isEqualTo("SUPPLIER_INVOICE_APPROVED");
+        assertThat(count("""
+                SELECT COUNT(*) FROM finance.integration_event WHERE source_event_id = 'invoice-race-1' AND status = 'PROCESSED'
                 """)).isEqualTo(1);
     }
 
@@ -514,6 +544,48 @@ class FinanceProcurementConsumerHardeningTest {
                 "VND",
                 List.of(new SupplierPaymentAllocation(8201L, amount)),
                 3L
+        );
+    }
+
+    private SupplierInvoiceApprovedEvent supplierInvoiceApprovedEvent(
+            String eventId,
+            String idempotencyKey,
+            Long supplierInvoiceId,
+            Instant approvedAt
+    ) {
+        return new SupplierInvoiceApprovedEvent(
+                eventId,
+                "procurement.supplier_invoice.approved",
+                approvedAt,
+                "procurement-service",
+                "corr-" + eventId,
+                idempotencyKey,
+                supplierInvoiceId,
+                7001L,
+                1L,
+                101L,
+                "VND",
+                "INV-" + supplierInvoiceId,
+                LocalDate.of(2026, 3, 27),
+                LocalDate.of(2026, 4, 10),
+                new BigDecimal("36.25"),
+                new BigDecimal("5.00"),
+                new BigDecimal("41.25"),
+                new BigDecimal("36.25"),
+                new BigDecimal("5.00"),
+                approvedAt,
+                3L,
+                List.of(new SupplierInvoiceApprovedLine(
+                        5101L,
+                        1,
+                        "STOCK",
+                        3001L,
+                        "Milk delivery",
+                        new BigDecimal("3.0000"),
+                        new BigDecimal("12.0833"),
+                        new BigDecimal("5.00"),
+                        new BigDecimal("41.25")
+                ))
         );
     }
 

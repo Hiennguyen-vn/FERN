@@ -18,9 +18,17 @@ export function useGoodsReceipt(id: number | null) {
 }
 
 export function useCreateGoodsReceipt() {
+  const queryClient = useQueryClient()
+
   return useMutation({
     mutationKey: ['procurement', 'goods-receipts', 'create'],
     mutationFn: (payload: CreateGoodsReceiptPayload) => createGoodsReceipt(payload),
+    onSuccess: (goodsReceipt) => {
+      void queryClient.invalidateQueries({ queryKey: ['procurement', 'goods-receipts', 'list'] })
+      void queryClient.invalidateQueries({ queryKey: ['procurement', 'purchase-orders', goodsReceipt.purchaseOrderId] })
+      void queryClient.invalidateQueries({ queryKey: ['procurement', 'purchase-orders', 'list'] })
+      queryClient.setQueryData(['procurement', 'goods-receipts', goodsReceipt.id], goodsReceipt)
+    },
   })
 }
 
@@ -35,6 +43,17 @@ export function useGoodsReceiptAction() {
       void queryClient.invalidateQueries({
         queryKey: ['procurement', 'goods-receipts', data.id],
       })
+      void queryClient.invalidateQueries({
+        queryKey: ['procurement', 'goods-receipts', 'list'],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: ['procurement', 'purchase-orders', data.purchaseOrderId],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: ['procurement', 'purchase-orders', 'list'],
+      })
+      void queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      void queryClient.invalidateQueries({ queryKey: ['reports', 'inventory'] })
     },
   })
 }

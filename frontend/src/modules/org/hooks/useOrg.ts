@@ -75,8 +75,11 @@ export function useCreateOutlet() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: CreateOutletPayload) => orgApi.createOutlet(payload),
-    onSuccess: () => {
+    onSuccess: (outlet) => {
       void queryClient.invalidateQueries({ queryKey: ['org', 'outlets'] })
+      void queryClient.invalidateQueries({ queryKey: ['regional-ops', 'outlets'] })
+      void queryClient.invalidateQueries({ queryKey: ['ui'] })
+      void queryClient.invalidateQueries({ queryKey: orgQueryKeys.outletDetail(outlet.id) })
     },
   })
 }
@@ -85,8 +88,11 @@ export function useCreateRegion() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: CreateRegionPayload) => orgApi.createRegion(payload),
-    onSuccess: () => {
+    onSuccess: (region) => {
       void queryClient.invalidateQueries({ queryKey: ['org', 'regions'] })
+      void queryClient.invalidateQueries({ queryKey: ['regional-ops', 'regions'] })
+      void queryClient.invalidateQueries({ queryKey: ['ui'] })
+      void queryClient.invalidateQueries({ queryKey: orgQueryKeys.regionDetail(region.id) })
     },
   })
 }
@@ -98,6 +104,8 @@ export function useUpdateRegion(regionId: number) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orgQueryKeys.regionDetail(regionId) })
       void queryClient.invalidateQueries({ queryKey: ['org', 'regions'] })
+      void queryClient.invalidateQueries({ queryKey: ['regional-ops', 'regions'] })
+      void queryClient.invalidateQueries({ queryKey: ['ui'] })
     },
   })
 }
@@ -109,6 +117,8 @@ export function useUpdateOutlet(outletId: number) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: orgQueryKeys.outletDetail(outletId) })
       void queryClient.invalidateQueries({ queryKey: ['org', 'outlets'] })
+      void queryClient.invalidateQueries({ queryKey: ['regional-ops', 'outlets'] })
+      void queryClient.invalidateQueries({ queryKey: ['ui'] })
     },
   })
 }

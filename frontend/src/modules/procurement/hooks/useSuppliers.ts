@@ -18,7 +18,10 @@ export function useCreateSupplier() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (payload: SupplierUpsertPayload) => createSupplier(payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['procurement', 'suppliers'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['procurement', 'suppliers'] })
+      void qc.invalidateQueries({ queryKey: ['finance', 'suppliers'] })
+    },
   })
 }
 
@@ -27,7 +30,10 @@ export function useUpdateSupplier() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: SupplierUpsertPayload }) =>
       updateSupplier(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['procurement', 'suppliers'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['procurement', 'suppliers'] })
+      void qc.invalidateQueries({ queryKey: ['finance', 'suppliers'] })
+    },
   })
 }
 
@@ -35,6 +41,9 @@ export function useActivateSupplier() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => activateSupplier(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['procurement', 'suppliers'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['procurement', 'suppliers'] })
+      void qc.invalidateQueries({ queryKey: ['finance', 'suppliers'] })
+    },
   })
 }

@@ -56,6 +56,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 class InventoryServiceIntegrationTest {
     private static HttpServer orgServer;
+    private static volatile String outletStatus;
+    private static volatile LocalDate outletClosedAt;
 
     @DynamicPropertySource
     static void configure(DynamicPropertyRegistry registry) {
@@ -101,12 +103,15 @@ class InventoryServiceIntegrationTest {
             byte[] body = "{}".getBytes();
             if ("/outlets/101".equals(path)) {
                 status = 200;
+                String closedAtJson = outletClosedAt == null ? "null" : "\"" + outletClosedAt + "\"";
                 body = """
                         {
                           "id": 101,
-                          "regionId": 1
+                          "regionId": 1,
+                          "status": "%s",
+                          "closedAt": %s
                         }
-                        """.getBytes();
+                        """.formatted(outletStatus, closedAtJson).getBytes();
             }
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(status, body.length);
@@ -126,6 +131,7 @@ class InventoryServiceIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        setOutletRoute("ACTIVE", null);
         jdbcTemplate.execute("""
                 TRUNCATE TABLE
                     inventory.stock_reservation_line,
@@ -363,6 +369,68 @@ class InventoryServiceIntegrationTest {
 
         Integer adjustmentCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM inventory.stock_adjustment", Integer.class);
         assertThat(adjustmentCount).isZero();
+    }
+
+    @Test
+    void shouldRejectStockAdjustmentCreationForClosingOutlet() throws Exception {
+        setOutletRoute("CLOSING", null);
+
+        mockMvc.perform(post("/stock-adjustments")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "ingredientId": 200,
+                                  "adjustmentDirection": "IN",
+                                  "qty": 5.0000,
+                                  "businessDate": "2026-03-27",
+                                  "reason": "CORRECTION"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Outlet is inactive or closed for inventory workflows"));
+    }
+
+    @Test
+    void shouldRejectWasteRecordCreationForClosingOutlet() throws Exception {
+        setOutletRoute("CLOSING", null);
+
+        mockMvc.perform(post("/waste-records")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "ingredientId": 200,
+                                  "qty": 2.0000,
+                                  "businessDate": "2026-03-27",
+                                  "reason": "SPILL"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Outlet is inactive or closed for inventory workflows"));
+    }
+
+    @Test
+    void shouldRejectStockCountSessionCreationForClosingOutlet() throws Exception {
+        setOutletRoute("CLOSING", null);
+
+        mockMvc.perform(post("/stock-count-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "countDate": "2026-03-27",
+                                  "ingredientIds": [200]
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Outlet is inactive or closed for inventory workflows"));
     }
 
     @Test
@@ -2048,6 +2116,11 @@ class InventoryServiceIntegrationTest {
 
     private String bearer() {
         return "Bearer " + token;
+    }
+
+    private static void setOutletRoute(String status, LocalDate closedAt) {
+        outletStatus = status;
+        outletClosedAt = closedAt;
     }
 
     private String bearerForOutlets(List<Long> outletIds) {

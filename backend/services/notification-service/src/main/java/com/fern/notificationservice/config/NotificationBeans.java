@@ -1,6 +1,7 @@
 package com.fern.notificationservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.zaxxer.hikari.HikariDataSource;
 import java.time.Clock;
@@ -33,7 +34,9 @@ public class NotificationBeans {
 
     @Bean
     ObjectMapper objectMapper() {
-        return new ObjectMapper().findAndRegisterModules();
+        return new ObjectMapper()
+                .findAndRegisterModules()
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @Bean

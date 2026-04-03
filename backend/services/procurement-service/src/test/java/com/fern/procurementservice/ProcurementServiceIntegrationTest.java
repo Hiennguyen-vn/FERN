@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
@@ -47,6 +48,8 @@ import org.springframework.test.web.servlet.MockMvc;
 class ProcurementServiceIntegrationTest {
     private static HttpServer orgServer;
     private static volatile String lastOrgAuthorization;
+    private static volatile String outletStatus;
+    private static volatile LocalDate outletClosedAt;
 
     @DynamicPropertySource
     static void configure(DynamicPropertyRegistry registry) {
@@ -89,12 +92,15 @@ class ProcurementServiceIntegrationTest {
             byte[] body = "{}".getBytes();
             if ("/outlets/101".equals(path)) {
                 status = 200;
+                String closedAtJson = outletClosedAt == null ? "null" : "\"" + outletClosedAt + "\"";
                 body = """
                         {
                           "id": 101,
-                          "regionId": 1
+                          "regionId": 1,
+                          "status": "%s",
+                          "closedAt": %s
                         }
-                        """.getBytes();
+                        """.formatted(outletStatus, closedAtJson).getBytes();
             }
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(status, body.length);
@@ -115,6 +121,7 @@ class ProcurementServiceIntegrationTest {
     @BeforeEach
     void setUp() {
         lastOrgAuthorization = null;
+        setOutletRoute("ACTIVE", null);
         jdbcTemplate.execute("""
                 TRUNCATE TABLE
                     procurement.supplier_payment_allocation,
@@ -574,6 +581,34 @@ class ProcurementServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectPurchaseOrderCreationForClosingOutlet() throws Exception {
+        Long supplierId = createActiveSupplier("SUP-CLOSING-PO", "Closing Outlet Supplier");
+        setOutletRoute("CLOSING", null);
+
+        mockMvc.perform(post("/purchase-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "supplierId": %d,
+                                  "orderDate": "2026-03-27",
+                                  "expectedDeliveryDate": "2026-03-29",
+                                  "lines": [
+                                    {
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyOrdered": 5.0000
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Outlet is inactive or closed for procurement workflows"));
+    }
+
+    @Test
     void shouldRejectUpdatingSubmittedPurchaseOrder() throws Exception {
         Long supplierId = createActiveSupplier("SUP-003", "Workflow Supplier");
         String poJson = mockMvc.perform(post("/purchase-orders")
@@ -675,6 +710,35 @@ class ProcurementServiceIntegrationTest {
                                 }
                                 """.formatted(supplierId)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldRejectSupplierInvoiceCreationForClosingOutlet() throws Exception {
+        Long supplierId = createActiveSupplier("SUP-CLOSING-INV", "Closing Invoice Supplier");
+        setOutletRoute("CLOSING", null);
+
+        mockMvc.perform(post("/supplier-invoices")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "supplierId": %d,
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "currencyCode": "VND",
+                                  "invoiceNumber": "INV-CLOSING-1",
+                                  "invoiceDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "lineType": "NON_STOCK",
+                                      "description": "Closing guard",
+                                      "lineTotal": 100.00
+                                    }
+                                  ]
+                                }
+                                """.formatted(supplierId)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Outlet is inactive or closed for procurement workflows"));
     }
 
     @Test
@@ -954,6 +1018,38 @@ class ProcurementServiceIntegrationTest {
                                 """.formatted(purchaseOrderId, poLineId)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Goods receipts can only be created from ordered or partially received purchase orders"));
+    }
+
+    @Test
+    void shouldRejectGoodsReceiptCreationForClosingOutlet() throws Exception {
+        IssuedPurchaseOrderFixture fixture = createIssuedPurchaseOrderFixture(
+                "SUP-CLOSING-GR",
+                "Closing Receipt Supplier",
+                "5.0000"
+        );
+        setOutletRoute("CLOSING", null);
+
+        mockMvc.perform(post("/goods-receipts")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "purchaseOrderId": %d,
+                                  "receiptTime": "2026-03-27T10:00:00Z",
+                                  "businessDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "purchaseOrderLineId": %d,
+                                      "ingredientId": 200,
+                                      "uomCode": "KG",
+                                      "qtyReceived": 3.0000,
+                                      "unitCost": 12.50
+                                    }
+                                  ]
+                                }
+                                """.formatted(fixture.purchaseOrderId(), fixture.purchaseOrderLineId())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Outlet is inactive or closed for procurement workflows"));
     }
 
     @Test
@@ -2039,6 +2135,11 @@ class ProcurementServiceIntegrationTest {
 
     private String bearer() {
         return "Bearer " + token;
+    }
+
+    private static void setOutletRoute(String status, LocalDate closedAt) {
+        outletStatus = status;
+        outletClosedAt = closedAt;
     }
 
     private String serviceBearer(Set<String> permissions, Set<String> audience) {

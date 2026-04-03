@@ -23,9 +23,16 @@ export function useSupplierInvoice(id: number | null) {
 }
 
 export function useCreateSupplierInvoice() {
+  const queryClient = useQueryClient()
+
   return useMutation({
     mutationKey: ['procurement', 'supplier-invoices', 'create'],
     mutationFn: (payload: CreateSupplierInvoicePayload) => createSupplierInvoice(payload),
+    onSuccess: (invoice) => {
+      void queryClient.invalidateQueries({ queryKey: ['procurement', 'supplier-invoices', 'list'] })
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'payment-requests'] })
+      queryClient.setQueryData(['procurement', 'supplier-invoices', invoice.id], invoice)
+    },
   })
 }
 
@@ -40,6 +47,11 @@ export function useSupplierInvoiceAction() {
       void queryClient.invalidateQueries({
         queryKey: ['procurement', 'supplier-invoices', data.id],
       })
+      void queryClient.invalidateQueries({
+        queryKey: ['procurement', 'supplier-invoices', 'list'],
+      })
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'payment-requests'] })
+      void queryClient.invalidateQueries({ queryKey: ['finance', 'payment-requests', data.id] })
     },
   })
 }

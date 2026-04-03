@@ -55,6 +55,7 @@ public class PurchaseFlowService {
         if (!outlet.regionId().equals(request.regionId())) {
             throw new BadRequestException("Region does not match the outlet route");
         }
+        ensureOutletOperational(outlet, request.orderDate());
         return transactionTemplate.execute(status -> createPurchaseOrderTx(principal, request, outlet));
     }
 
@@ -219,6 +220,7 @@ public class PurchaseFlowService {
         if (!List.of("ORDERED", "PARTIALLY_RECEIVED").contains(purchaseOrder.status())) {
             throw new ConflictException("Goods receipts can only be created from ordered or partially received purchase orders");
         }
+        ensureOutletOperational(procurementOrgClient.requireOutlet(purchaseOrder.outletId()), request.businessDate());
         procurementJdbcRepository.validateGoodsReceiptLines(purchaseOrder.id(), request.lines());
         BigDecimal totalAmount = calculateGoodsReceiptTotal(request.lines());
         Long id = insertForId(jdbcTemplate(), """
@@ -409,6 +411,12 @@ public class PurchaseFlowService {
 
     private String nextReferenceNumber(String prefix) {
         return prefix + "-" + UUID.randomUUID();
+    }
+
+    private void ensureOutletOperational(ProcurementOrgClient.OutletRoute outlet, java.time.LocalDate businessDate) {
+        if (!outlet.isActive() || outlet.isClosedOn(businessDate)) {
+            throw new ConflictException("Outlet is inactive or closed for procurement workflows");
+        }
     }
 
     private MapSqlParameterSource params(Object... values) {

@@ -30,6 +30,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.jdbc.core.ResultSetExtractor;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.TransactionStatus;
@@ -111,7 +113,9 @@ class PosOrderServiceTest {
                 posAuditService,
                 new SimpleMeterRegistry(),
                 operationalShardRegistry,
-                shardResolver
+                shardResolver,
+                java.time.Duration.ofMinutes(2),
+                50
         );
         principal = new FernPrincipal(
                 99L,
@@ -212,6 +216,25 @@ class PosOrderServiceTest {
                 .hasMessage("Unsupported payment status");
 
         verify(store, never()).refreshPaymentStatus(10L);
+    }
+
+    @Test
+    void shouldRecoverStaleCompletingOrdersByReleasingReservationAndReopeningOrder() throws Exception {
+        when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(RowMapper.class))).thenAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            RowMapper<Object> rowMapper = invocation.getArgument(2);
+            ResultSet resultSet = org.mockito.Mockito.mock(ResultSet.class);
+            when(resultSet.getLong("id")).thenReturn(55L);
+            when(resultSet.getLong("region_id")).thenReturn(1L);
+            when(resultSet.getLong("outlet_id")).thenReturn(2L);
+            return List.of(rowMapper.mapRow(resultSet, 0));
+        });
+        when(jdbcTemplate.update(anyString(), any(MapSqlParameterSource.class))).thenReturn(1);
+
+        service.recoverStaleCompletions();
+
+        verify(inventoryClient).releaseInventoryReservationBySourceOrderId(null, 55L);
+        verify(store).refreshPaymentStatus(55L);
     }
 
     private OrderRecord order(String status, BigDecimal totalAmount, Long reservationId) {

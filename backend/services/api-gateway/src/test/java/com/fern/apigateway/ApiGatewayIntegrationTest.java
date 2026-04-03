@@ -285,14 +285,15 @@ class ApiGatewayIntegrationTest {
         );
 
         webTestClient.get()
-                .uri("/ui/action-hub")
+                .uri(uriBuilder -> uriBuilder.path("/ui/action-hub").queryParam("selectedRegionId", 1).build())
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(JsonNode.class)
                 .value(body -> {
                     assertThat(body.at("/persona").asText()).isEqualTo("system_admin");
-                    assertThat(body.at("/scopeSummary/title").asText()).isEqualTo("Scoped operating context");
+                    assertThat(body.at("/scopeSummary/title").asText()).isEqualTo("Focused operating context");
+                    assertThat(body.at("/scopeSummary/chips/0").asText()).isEqualTo("Region #1");
                     assertThat(body.at("/modules/0/href").asText()).isEqualTo("/home");
                     assertThat(body.toString()).contains("Prepare payroll draft");
                     assertThat(body.toString()).contains("Review payroll approvals");
@@ -310,7 +311,7 @@ class ApiGatewayIntegrationTest {
         );
 
         webTestClient.get()
-                .uri("/ui/shell-context")
+                .uri(uriBuilder -> uriBuilder.path("/ui/shell-context").queryParam("selectedRegionId", 1).build())
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                 .exchange()
                 .expectStatus().isOk()
@@ -318,6 +319,7 @@ class ApiGatewayIntegrationTest {
                 .value(body -> {
                     assertThat(body.at("/principalLabel").asText()).isEqualTo("bootstrap-admin");
                     assertThat(body.at("/roleLabel").asText()).isEqualTo("Bootstrap Admin");
+                    assertThat(body.at("/scopeChips/0").asText()).isEqualTo("Region #1");
                     assertThat(body.at("/availableRegions/0/label").asText()).isEqualTo("Region #1");
                 });
     }

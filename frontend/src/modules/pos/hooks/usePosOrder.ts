@@ -39,6 +39,7 @@ export function useCreatePosOrder() {
     onSuccess: (order) => {
       queryClient.setQueryData(posQueryKeys.order(order.id), order)
       void queryClient.invalidateQueries({ queryKey: ['pos', 'sessions'] })
+      void queryClient.invalidateQueries({ queryKey: ['pos', 'session-orders', order.posSessionId] })
     },
   })
 }
@@ -52,6 +53,7 @@ export function useUpdatePosOrder() {
       updateSaleOrder(orderId, payload),
     onSuccess: (order) => {
       queryClient.setQueryData(posQueryKeys.order(order.id), order)
+      void queryClient.invalidateQueries({ queryKey: ['pos', 'session-orders', order.posSessionId] })
     },
   })
 }
@@ -71,6 +73,7 @@ export function useAddSalePayment() {
     onSuccess: (result) => {
       if (result.kind === 'success') {
         queryClient.setQueryData(posQueryKeys.order(result.order.id), result.order)
+        void queryClient.invalidateQueries({ queryKey: ['pos', 'session-orders', result.order.posSessionId] })
       }
     },
   })
@@ -90,6 +93,8 @@ export function useCompletePosOrder() {
       queryClient.setQueryData(posQueryKeys.order(order.id), order)
       void queryClient.invalidateQueries({ queryKey: ['pos', 'sessions'] })
       void queryClient.invalidateQueries({ queryKey: ['pos', 'session-orders', order.posSessionId] })
+      void queryClient.invalidateQueries({ queryKey: ['reports', 'revenue'] })
+      void queryClient.invalidateQueries({ queryKey: ['reports', 'dashboard'] })
     },
   })
 }

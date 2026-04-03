@@ -4,5 +4,6 @@ public enum OutletStatus {
     DRAFT,
     ACTIVE,
     INACTIVE,
+    CLOSING,
     CLOSED
 }

@@ -65,6 +65,7 @@ public class WasteRecordService {
         if (!outlet.regionId().equals(request.regionId())) {
             throw new BadRequestException("Region does not match the outlet route");
         }
+        ensureOutletOperational(outlet, request.businessDate());
         Long id = inventoryRepository.insertForId("""
                 INSERT INTO inventory.waste_record (
                     inventory_transaction_id, status, reason, submitted_by_user_id, approved_by_user_id, created_at, updated_at,
@@ -315,6 +316,12 @@ public class WasteRecordService {
 
     private String wastePostedIdempotencyKey(Long wasteRecordId) {
         return "inventory.waste.posted:waste:" + wasteRecordId;
+    }
+
+    private void ensureOutletOperational(InventoryOrgClient.OutletRoute outlet, LocalDate businessDate) {
+        if (!outlet.isActive() || outlet.isClosedOn(businessDate)) {
+            throw new ConflictException("Outlet is inactive or closed for inventory workflows");
+        }
     }
 
     private NamedParameterJdbcTemplate jdbcTemplate(Long regionId, Long outletId) {

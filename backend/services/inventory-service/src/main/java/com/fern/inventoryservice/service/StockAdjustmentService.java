@@ -69,6 +69,7 @@ public class StockAdjustmentService {
         if (!outlet.regionId().equals(request.regionId())) {
             throw new BadRequestException("Region does not match the outlet route");
         }
+        ensureOutletOperational(outlet, request.businessDate());
         validateDirection(request.adjustmentDirection());
         Long id = inventoryRepository.insertForId("""
                 INSERT INTO inventory.stock_adjustment (
@@ -241,6 +242,12 @@ public class StockAdjustmentService {
     private void ensureStatus(String actualStatus, String expectedStatus, String message) {
         if (!expectedStatus.equals(actualStatus)) {
             throw new ConflictException(message);
+        }
+    }
+
+    private void ensureOutletOperational(InventoryOrgClient.OutletRoute outlet, LocalDate businessDate) {
+        if (!outlet.isActive() || outlet.isClosedOn(businessDate)) {
+            throw new ConflictException("Outlet is inactive or closed for inventory workflows");
         }
     }
 

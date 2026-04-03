@@ -1,6 +1,7 @@
 package com.fern.catalogservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fern.platform.alerts.KafkaOperationalAlertPublisher;
 import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.alerts.OperationalAlertPublisher;
@@ -29,7 +30,9 @@ public class CatalogBeans {
 
     @Bean
     ObjectMapper objectMapper() {
-        return new ObjectMapper().findAndRegisterModules();
+        return new ObjectMapper()
+                .findAndRegisterModules()
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @Bean

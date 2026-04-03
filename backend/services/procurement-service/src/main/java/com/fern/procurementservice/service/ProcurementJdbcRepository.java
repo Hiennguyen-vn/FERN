@@ -281,6 +281,16 @@ class ProcurementJdbcRepository {
                 """, params("supplierInvoiceId", supplierInvoiceId), BigDecimal.class);
     }
 
+    BigDecimal matchedGoodsReceiptAmount(Long supplierInvoiceId) {
+        return jdbcTemplate.queryForObject("""
+                SELECT COALESCE(SUM(goods_receipt_line.line_total), 0)
+                FROM procurement.supplier_invoice_line supplier_invoice_line
+                JOIN procurement.goods_receipt_line goods_receipt_line
+                  ON goods_receipt_line.id = supplier_invoice_line.goods_receipt_line_id
+                WHERE supplier_invoice_line.supplier_invoice_id = :supplierInvoiceId
+                """, params("supplierInvoiceId", supplierInvoiceId), BigDecimal.class);
+    }
+
     PurchaseOrderResponse mapPurchaseOrder(PurchaseOrderRecord record) {
         List<PurchaseOrderLineResponse> lines = jdbcTemplate.query("""
                 SELECT id, line_number, ingredient_id, uom_code, qty_ordered, qty_received, expected_unit_price, tax_percent, status, note

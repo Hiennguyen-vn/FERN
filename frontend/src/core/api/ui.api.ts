@@ -18,6 +18,11 @@ interface UiContextInput {
   selectedRegionId?: number | null
 }
 
+interface UiScopeRequest {
+  selectedOutletId?: number | null
+  selectedRegionId?: number | null
+}
+
 const MODULE_DESCRIPTIONS: Record<string, string> = {
   '/pos': 'Live selling, session control, payment capture, and terminal operations.',
   '/catalog': 'Products, ingredients, recipes, pricing, and availability controls.',
@@ -386,12 +391,22 @@ export function buildFallbackShellContext(input: UiContextInput): ShellContextRe
 }
 
 export const uiApi = {
-  async getActionHub(): Promise<ActionHubResponse> {
-    const response = await httpClient.get<ActionHubResponse>('/ui/action-hub')
+  async getActionHub(scope?: UiScopeRequest): Promise<ActionHubResponse> {
+    const response = await httpClient.get<ActionHubResponse>('/ui/action-hub', {
+      params: {
+        selectedOutletId: scope?.selectedOutletId ?? undefined,
+        selectedRegionId: scope?.selectedRegionId ?? undefined,
+      },
+    })
     return response.data
   },
-  async getShellContext(): Promise<ShellContextResponse> {
-    const response = await httpClient.get<ShellContextResponse>('/ui/shell-context')
+  async getShellContext(scope?: UiScopeRequest): Promise<ShellContextResponse> {
+    const response = await httpClient.get<ShellContextResponse>('/ui/shell-context', {
+      params: {
+        selectedOutletId: scope?.selectedOutletId ?? undefined,
+        selectedRegionId: scope?.selectedRegionId ?? undefined,
+      },
+    })
     return response.data
   },
 }

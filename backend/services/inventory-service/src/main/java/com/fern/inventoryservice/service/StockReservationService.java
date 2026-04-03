@@ -140,6 +140,18 @@ public class StockReservationService {
         releaseReservation(reservation);
     }
 
+    @Transactional
+    public void releaseSaleReservationBySourceOrderId(FernPrincipal principal, Long sourceOrderId) {
+        inventoryAuthorizer.requireInternalPermission(principal, PermissionCodes.INVENTORY_INTERNAL_RELEASE);
+        ReservationRecord reservation = findReservationBySourceOrderIdForUpdate(sourceOrderId);
+        if (reservation == null
+                || StockReservationStatus.COMMITTED.name().equals(reservation.status())
+                || StockReservationStatus.CANCELLED.name().equals(reservation.status())) {
+            return;
+        }
+        releaseReservation(reservation);
+    }
+
     void commitSaleCompletion(PosSaleCompletedEvent event) {
         Long reservationId = event.reservationId();
         if (reservationId == null) {

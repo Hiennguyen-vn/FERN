@@ -105,6 +105,45 @@ class ProcurementEventPublisherIntegrationTest {
     }
 
     @Test
+    void shouldPersistSupplierInvoiceApprovedPayloadToSharedFixtureContract() throws Exception {
+        seedSupplierInvoiceApprovedFixture();
+
+        procurementEventPublisher.enqueueSupplierInvoiceApprovedEvent(88L, principal(9L), "corr-invoice-approved-1");
+
+        String payload = outboxPayload("SUPPLIER_INVOICE", "88", "procurement.supplier_invoice.approved");
+        JsonNode actual = objectMapper.readTree(payload);
+        JsonNode expected = objectMapper.readTree(loadFixture("procurement.supplier_invoice.approved.json"));
+
+        assertThat(actual.path("eventType").asText()).isEqualTo(expected.path("eventType").asText());
+        assertThat(actual.path("sourceService").asText()).isEqualTo(expected.path("sourceService").asText());
+        assertThat(actual.path("correlationId").asText()).isEqualTo(expected.path("correlationId").asText());
+        assertThat(actual.path("idempotencyKey").asText()).isEqualTo(expected.path("idempotencyKey").asText());
+        assertThat(actual.path("supplierInvoiceId").asLong()).isEqualTo(expected.path("supplierInvoiceId").asLong());
+        assertThat(actual.path("supplierId").asLong()).isEqualTo(expected.path("supplierId").asLong());
+        assertThat(actual.path("regionId").asLong()).isEqualTo(expected.path("regionId").asLong());
+        assertThat(actual.path("outletId").asLong()).isEqualTo(expected.path("outletId").asLong());
+        assertThat(actual.path("currencyCode").asText()).isEqualTo(expected.path("currencyCode").asText());
+        assertThat(actual.path("invoiceNumber").asText()).isEqualTo(expected.path("invoiceNumber").asText());
+        assertThat(actual.path("invoiceDate").asText()).isEqualTo(expected.path("invoiceDate").asText());
+        assertThat(actual.path("dueDate").asText()).isEqualTo(expected.path("dueDate").asText());
+        assertThat(actual.path("subtotalAmount").decimalValue()).isEqualByComparingTo(expected.path("subtotalAmount").decimalValue());
+        assertThat(actual.path("taxAmount").decimalValue()).isEqualByComparingTo(expected.path("taxAmount").decimalValue());
+        assertThat(actual.path("totalAmount").decimalValue()).isEqualByComparingTo(expected.path("totalAmount").decimalValue());
+        assertThat(actual.path("matchedReceiptAmount").decimalValue()).isEqualByComparingTo(expected.path("matchedReceiptAmount").decimalValue());
+        assertThat(actual.path("varianceAmount").decimalValue()).isEqualByComparingTo(expected.path("varianceAmount").decimalValue());
+        assertThat(actual.path("approvedByUserId").asLong()).isEqualTo(expected.path("approvedByUserId").asLong());
+        assertThat(actual.path("lines")).hasSize(1);
+        assertThat(actual.at("/lines/0/lineId").asLong()).isEqualTo(expected.at("/lines/0/lineId").asLong());
+        assertThat(actual.at("/lines/0/lineType").asText()).isEqualTo(expected.at("/lines/0/lineType").asText());
+        assertThat(actual.at("/lines/0/goodsReceiptLineId").asLong()).isEqualTo(expected.at("/lines/0/goodsReceiptLineId").asLong());
+        assertThat(actual.at("/lines/0/description").asText()).isEqualTo(expected.at("/lines/0/description").asText());
+        assertThat(actual.at("/lines/0/qtyInvoiced").decimalValue()).isEqualByComparingTo(expected.at("/lines/0/qtyInvoiced").decimalValue());
+        assertThat(actual.at("/lines/0/unitPrice").decimalValue()).isEqualByComparingTo(expected.at("/lines/0/unitPrice").decimalValue());
+        assertThat(actual.at("/lines/0/taxAmount").decimalValue()).isEqualByComparingTo(expected.at("/lines/0/taxAmount").decimalValue());
+        assertThat(actual.at("/lines/0/lineTotal").decimalValue()).isEqualByComparingTo(expected.at("/lines/0/lineTotal").decimalValue());
+    }
+
+    @Test
     void shouldDeduplicateGoodsReceiptOutboxAndUseDeterministicIdempotencyKey() {
         long purchaseOrderId = seedPurchaseOrder();
         long goodsReceiptId = seedGoodsReceipt(purchaseOrderId, new BigDecimal("3.0000"), new BigDecimal("12.5000"));
@@ -206,6 +245,26 @@ class ProcurementEventPublisherIntegrationTest {
                 .isEqualTo("procurement.supplier.payment.recorded:payment:" + supplierPaymentId);
         assertThat(outboxPayloadField("SUPPLIER_PAYMENT", Long.toString(supplierPaymentId), "procurement.supplier.payment.recorded", "occurredAt"))
                 .isEqualTo(outboxPayloadField("SUPPLIER_PAYMENT", Long.toString(supplierPaymentId), "procurement.supplier.payment.recorded", "paymentTime"));
+    }
+
+    @Test
+    void shouldDeduplicateSupplierInvoiceApprovedOutboxAndUseDeterministicIdempotencyKey() {
+        seedSupplierInvoiceApprovedFixture();
+
+        procurementEventPublisher.enqueueSupplierInvoiceApprovedEvent(88L, principal(9L), "corr-invoice-approved-1");
+        procurementEventPublisher.enqueueSupplierInvoiceApprovedEvent(88L, principal(9L), "corr-invoice-approved-2");
+
+        assertThat(count("""
+                SELECT COUNT(*)
+                FROM procurement.outbox_event
+                WHERE aggregate_type = 'SUPPLIER_INVOICE'
+                  AND aggregate_id = '88'
+                  AND event_type = 'procurement.supplier_invoice.approved'
+                """)).isEqualTo(1);
+        assertThat(outboxPayloadField("SUPPLIER_INVOICE", "88", "procurement.supplier_invoice.approved", "idempotencyKey"))
+                .isEqualTo("procurement.supplier_invoice.approved:invoice:88");
+        assertThat(outboxPayloadField("SUPPLIER_INVOICE", "88", "procurement.supplier_invoice.approved", "varianceAmount"))
+                .isEqualTo("5.00");
     }
 
     @Test
@@ -359,6 +418,53 @@ class ProcurementEventPublisherIntegrationTest {
                 ) VALUES
                     (71, 501, 50.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
                     (71, 502, 25.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """);
+    }
+
+    private void seedSupplierInvoiceApprovedFixture() {
+        jdbcTemplate.update("""
+                INSERT INTO procurement.purchase_order (
+                    id, po_number, region_id, outlet_id, supplier_id, order_date, expected_delivery_date, status,
+                    subtotal_amount, tax_amount, total_amount, created_at, updated_at
+                ) VALUES (
+                    77, 'PO-FIXTURE-077', 1, 101, 22, DATE '2026-03-27', DATE '2026-03-28', 'PARTIALLY_RECEIVED',
+                    70.00, 0, 70.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO procurement.goods_receipt (
+                    id, receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date,
+                    status, total_amount, created_at, updated_at, received_at, posted_at
+                ) VALUES (
+                    66, 'GR-FIXTURE-066', 77, 1, 101, 22, TIMESTAMPTZ '2026-03-27T12:00:00Z', DATE '2026-03-27',
+                    'POSTED', 70.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, TIMESTAMPTZ '2026-03-27T12:30:00Z',
+                    TIMESTAMPTZ '2026-03-27T13:00:00Z'
+                )
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO procurement.goods_receipt_line (
+                    id, goods_receipt_id, purchase_order_line_id, ingredient_id, uom_code, qty_received, unit_cost,
+                    line_total, created_at, updated_at
+                ) VALUES (
+                    3001, 66, NULL, 200, 'KG', 10.0000, 7.0000, 70.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO procurement.supplier_invoice (
+                    id, invoice_number, supplier_id, region_id, outlet_id, currency_code, invoice_date, due_date, subtotal, tax_amount,
+                    total_amount, status, created_at, updated_at, approved_at, approved_by_user_id
+                ) VALUES (
+                    88, 'INV-2026-088', 22, 1, 101, 'VND', DATE '2026-03-27', DATE '2026-04-10', 70.00, 5.00,
+                    75.00, 'APPROVED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, TIMESTAMPTZ '2026-03-27T15:30:00Z', 9
+                )
+                """);
+        jdbcTemplate.update("""
+                INSERT INTO procurement.supplier_invoice_line (
+                    id, supplier_invoice_id, line_number, line_type, goods_receipt_line_id, description,
+                    qty_invoiced, unit_price, tax_percent, tax_amount, line_total, created_at, updated_at
+                ) VALUES (
+                    501, 88, 1, 'STOCK', 3001, 'Milk crate', 10.0000, 7.0000, 7.1429, 5.00, 75.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
                 """);
     }
 

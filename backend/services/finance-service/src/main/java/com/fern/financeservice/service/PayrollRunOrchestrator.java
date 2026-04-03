@@ -467,21 +467,42 @@ public class PayrollRunOrchestrator {
             Long employeeId = entry.getKey();
             List<ApprovedAttendance> employeeAttendance = entry.getValue();
             List<EffectiveContract> employeeContracts = contractsByEmployee.getOrDefault(employeeId, List.of());
+            LocalDate attendanceStart = employeeAttendance.stream()
+                    .map(ApprovedAttendance::businessDate)
+                    .min(LocalDate::compareTo)
+                    .orElse(prefetched.period().startDate());
+            LocalDate attendanceEnd = employeeAttendance.stream()
+                    .map(ApprovedAttendance::businessDate)
+                    .max(LocalDate::compareTo)
+                    .orElse(prefetched.period().endDate());
             if (employeeContracts.isEmpty()) {
-                continue;
+                throw new BadRequestException(
+                        "Approved attendance exists for employee " + employeeId
+                                + " but no effective contract was found for "
+                                + attendanceStart + " to " + attendanceEnd
+                );
             }
             employeeContracts = new ArrayList<>(employeeContracts);
             employeeContracts.sort(Comparator.comparing(EffectiveContract::startDate));
-            PayrollEmployeeComputation computation = payrollCalculationEngine.computeEmployeePayroll(
-                    prefetched.period(),
-                    employeeAttendance,
-                    employeeContracts,
-                    scale,
-                    prefetched.overtimePolicy(),
-                    prefetched.allowancePolicy(),
-                    prefetched.deductionPolicy(),
-                    prefetched.taxPolicy()
-            );
+            PayrollEmployeeComputation computation;
+            try {
+                computation = payrollCalculationEngine.computeEmployeePayroll(
+                        prefetched.period(),
+                        employeeAttendance,
+                        employeeContracts,
+                        scale,
+                        prefetched.overtimePolicy(),
+                        prefetched.allowancePolicy(),
+                        prefetched.deductionPolicy(),
+                        prefetched.taxPolicy()
+                );
+            } catch (BadRequestException exception) {
+                throw new BadRequestException(
+                        "Payroll recalculation failed for employee " + employeeId
+                                + " in attendance range " + attendanceStart + " to " + attendanceEnd
+                                + ": " + exception.getMessage()
+                );
+            }
             Long resultId = insertForId(jdbcTemplate, """
                     INSERT INTO finance.payroll_employee_result (
                         payroll_run_id, employee_id, contract_id, outlet_id, gross_pay, deduction_amount, tax_amount, net_pay,

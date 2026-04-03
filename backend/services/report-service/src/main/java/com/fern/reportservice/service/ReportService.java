@@ -10,6 +10,8 @@ import com.fern.platform.contracts.PayrollPostedEvent;
 import com.fern.platform.contracts.PosSaleCompletedEvent;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
 import com.fern.platform.contracts.StockCountPostedEvent;
+import com.fern.platform.contracts.SupplierInvoiceApprovedEvent;
+import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import com.fern.platform.contracts.WasteRecordPostedEvent;
 import com.fern.reportservice.dto.ReportCommands.CreateExportRequest;
 import com.fern.reportservice.dto.ReportCommands.CreatePayrollExportRequest;
@@ -48,6 +50,7 @@ public class ReportService {
     private final PayrollEventProjector payrollProjector;
     private final ExpenseEventProjector expenseProjector;
     private final InventoryEventProjector inventoryProjector;
+    private final PayablesEventProjector payablesEventProjector;
     private final ReportExportService reportExportService;
 
     public ReportService(
@@ -57,6 +60,7 @@ public class ReportService {
             PayrollEventProjector payrollProjector,
             ExpenseEventProjector expenseProjector,
             InventoryEventProjector inventoryProjector,
+            PayablesEventProjector payablesEventProjector,
             ReportExportService reportExportService
     ) {
         this.salesProjector = salesProjector;
@@ -65,6 +69,7 @@ public class ReportService {
         this.payrollProjector = payrollProjector;
         this.expenseProjector = expenseProjector;
         this.inventoryProjector = inventoryProjector;
+        this.payablesEventProjector = payablesEventProjector;
         this.reportExportService = reportExportService;
     }
 
@@ -104,6 +109,14 @@ public class ReportService {
 
     public void ingestStockCountPosted(String payload, StockCountPostedEvent event) {
         inventoryProjector.ingestStockCount(payload, event);
+    }
+
+    public void ingestSupplierInvoiceApproved(String payload, SupplierInvoiceApprovedEvent event) {
+        payablesEventProjector.ingestSupplierInvoiceApproved(payload, event);
+    }
+
+    public void ingestSupplierPaymentRecorded(String payload, SupplierPaymentRecordedEvent event) {
+        payablesEventProjector.ingestSupplierPaymentRecorded(payload, event);
     }
 
     // ── Export delegation ──────────────────────────────────────────────────────
