@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import {
   Button,
@@ -100,152 +101,189 @@ export function MyAttendancePage() {
 
       {selectedOutletId && selectedRegionId ? (
         <>
-      <FormSection description="Record a new attendance event using the live HR service endpoint." title="Record attendance event">
-        <div className="field-grid">
-          <Input
-            error={getRecordError('employeeId')}
-            label="Employee ID"
-            onChange={(event) => setForm((current) => ({ ...current, employeeId: event.target.value }))}
-            value={form.employeeId}
-          />
-          <Input
-            error={getRecordError('shiftAssignmentId')}
-            label="Shift Assignment ID"
-            onChange={(event) => setForm((current) => ({ ...current, shiftAssignmentId: event.target.value }))}
-            value={form.shiftAssignmentId}
-          />
-          <Select
-            label="Event Type"
-            onChange={(event) => setForm((current) => ({ ...current, eventType: event.target.value }))}
-            options={[
-              { label: 'Clock In', value: 'CLOCK_IN' },
-              { label: 'Clock Out', value: 'CLOCK_OUT' },
-              { label: 'Break Start', value: 'BREAK_START' },
-              { label: 'Break End', value: 'BREAK_END' },
-            ]}
-            value={form.eventType}
-          />
-          <Input
-            label="Event Time"
-            onChange={(event) => setForm((current) => ({ ...current, eventTime: event.target.value }))}
-            type="datetime-local"
-            value={form.eventTime}
-          />
-        </div>
-        <FormActions
-          primaryAction={
-            <Button
-              disabled={!selectedOutletId || !selectedRegionId}
-              loading={recordMutation.isPending}
-              onClick={() => {
-                if (!selectedOutletId || !selectedRegionId) {
-                  return
-                }
+          <div className="section-grid-2-1">
+            <div className="surface-panel">
+              <div className="panel-watermark">
+                <AppIcon className="panel-watermark-icon" name="schedule" />
+              </div>
+              <div className="compact-stack">
+                <p className="eyebrow">Today's Shift</p>
+                <div className="status-pill status-pill-success">
+                  <span className="status-dot status-dot-success status-dot-pulse" />
+                  Active Attendance
+                </div>
+                <div className="surface-stat-grid">
+                  <div className="surface-stat">
+                    <p className="surface-stat-label">Outlet</p>
+                    <p className="surface-stat-value">#{selectedOutletId}</p>
+                  </div>
+                  <div className="surface-stat">
+                    <p className="surface-stat-label">Region</p>
+                    <p className="surface-stat-value">#{selectedRegionId}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                const parsedEmployee = Number(form.employeeId)
-                const parsedShift = Number(form.shiftAssignmentId)
+            <div className="live-gradient-card">
+              <div>
+                <p className="live-gradient-eyebrow">Live Time</p>
+                <p className="clock-display">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+              <p className="live-gradient-note">Record attendance event below</p>
+              <div className="live-gradient-orb" aria-hidden="true" />
+            </div>
+          </div>
 
-                if (!form.employeeId || !Number.isFinite(parsedEmployee) || parsedEmployee <= 0) {
-                  setFormError('Employee ID phải là số nguyên dương.')
-                  return
-                }
-                if (!form.shiftAssignmentId || !Number.isFinite(parsedShift) || parsedShift <= 0) {
-                  setFormError('Shift Assignment ID phải là số nguyên dương.')
-                  return
-                }
-                if (!form.eventTime) {
-                  setFormError('Event time là bắt buộc.')
-                  return
-                }
+          <FormSection description="Record a new attendance event using the live HR service endpoint." title="Record attendance event">
+            <div className="field-grid">
+              <Input
+                error={getRecordError('employeeId')}
+                label="Employee ID"
+                onChange={(event) => setForm((current) => ({ ...current, employeeId: event.target.value }))}
+                value={form.employeeId}
+              />
+              <Input
+                error={getRecordError('shiftAssignmentId')}
+                label="Shift Assignment ID"
+                onChange={(event) => setForm((current) => ({ ...current, shiftAssignmentId: event.target.value }))}
+                value={form.shiftAssignmentId}
+              />
+              <Select
+                label="Event Type"
+                onChange={(event) => setForm((current) => ({ ...current, eventType: event.target.value }))}
+                options={[
+                  { label: 'Clock In', value: 'CLOCK_IN' },
+                  { label: 'Clock Out', value: 'CLOCK_OUT' },
+                  { label: 'Break Start', value: 'BREAK_START' },
+                  { label: 'Break End', value: 'BREAK_END' },
+                ]}
+                value={form.eventType}
+              />
+              <Input
+                label="Event Time"
+                onChange={(event) => setForm((current) => ({ ...current, eventTime: event.target.value }))}
+                type="datetime-local"
+                value={form.eventTime}
+              />
+            </div>
+            <FormActions
+              primaryAction={
+                <Button
+                  disabled={!selectedOutletId || !selectedRegionId}
+                  loading={recordMutation.isPending}
+                  onClick={() => {
+                    if (!selectedOutletId || !selectedRegionId) {
+                      return
+                    }
 
-                setFormError(null)
-                void recordMutation.mutateAsync({
-                  employeeId: parsedEmployee,
-                  shiftAssignmentId: parsedShift,
-                  eventType: form.eventType as 'CLOCK_IN' | 'CLOCK_OUT' | 'BREAK_START' | 'BREAK_END',
-                  eventTime: new Date(form.eventTime).toISOString(),
-                  outletId: selectedOutletId,
-                  regionId: selectedRegionId,
-                  sourceSystem: form.sourceSystem,
-                }).then(() => {
-                  setForm((current) => ({
-                    ...current,
-                    employeeId: '',
-                    shiftAssignmentId: '',
-                    eventTime: new Date().toISOString().slice(0, 16),
-                  }))
-                }).catch(() => {
-                  // error displayed via recordMutation.error below
-                })
-              }}
-            >
-              Record event
-            </Button>
-          }
-        />
-        {formError ? <p className="error-text">{formError}</p> : null}
-        {recordMutation.error ? (
-          <ErrorState
-            message={recordMutation.error instanceof Error ? recordMutation.error.message : 'Failed to record event'}
-            title="Không thể ghi nhận attendance event"
-          />
-        ) : null}
-      </FormSection>
+                    const parsedEmployee = Number(form.employeeId)
+                    const parsedShift = Number(form.shiftAssignmentId)
 
-      <Card title="Attendance event filters">
-        <div className="field-grid">
-          <Input
-            label="Employee ID"
-            onChange={(event) => {
-              setFilters((current) => ({ ...current, employeeId: event.target.value }))
-              setPage(0)
-            }}
-            value={filters.employeeId}
-          />
-          <Input
-            label="From date"
-            onChange={(event) => {
-              setFilters((current) => ({ ...current, fromDate: event.target.value }))
-              setPage(0)
-            }}
-            type="date"
-            value={filters.fromDate}
-          />
-          <Input
-            label="To date"
-            onChange={(event) => {
-              setFilters((current) => ({ ...current, toDate: event.target.value }))
-              setPage(0)
-            }}
-            type="date"
-            value={filters.toDate}
-          />
-        </div>
-      </Card>
+                    if (!form.employeeId || !Number.isFinite(parsedEmployee) || parsedEmployee <= 0) {
+                      setFormError('Employee ID phải là số nguyên dương.')
+                      return
+                    }
+                    if (!form.shiftAssignmentId || !Number.isFinite(parsedShift) || parsedShift <= 0) {
+                      setFormError('Shift Assignment ID phải là số nguyên dương.')
+                      return
+                    }
+                    if (!form.eventTime) {
+                      setFormError('Event time là bắt buộc.')
+                      return
+                    }
 
-      <DataTable
-        columns={columns}
-        emptyDescription={
-          filters.employeeId || filters.fromDate || filters.toDate
-            ? 'Không có attendance event nào khớp bộ lọc hiện tại.'
-            : 'Chưa có attendance event nào trong phạm vi đang xem.'
-        }
-        emptyTitle="No attendance events"
-        error={eventsQuery.error instanceof Error ? eventsQuery.error.message : null}
-        errorTitle="Không thể tải attendance events"
-        loading={eventsQuery.isLoading}
-        loadingDescription="Loading attendance events for the selected scope..."
-        loadingTitle="Loading attendance events"
-        onRetry={() => void eventsQuery.refetch()}
-        rows={eventsQuery.data?.items ?? []}
-      />
-      <Pagination
-        canNext={Boolean(eventsQuery.data?.hasMore)}
-        canPrevious={page > 0}
-        currentPage={page}
-        onNext={() => setPage((value) => value + 1)}
-        onPrevious={() => setPage((value) => Math.max(0, value - 1))}
-      />
+                    setFormError(null)
+                    void recordMutation
+                      .mutateAsync({
+                        employeeId: parsedEmployee,
+                        shiftAssignmentId: parsedShift,
+                        eventType: form.eventType as 'CLOCK_IN' | 'CLOCK_OUT' | 'BREAK_START' | 'BREAK_END',
+                        eventTime: new Date(form.eventTime).toISOString(),
+                        outletId: selectedOutletId,
+                        regionId: selectedRegionId,
+                        sourceSystem: form.sourceSystem,
+                      })
+                      .then(() => {
+                        setForm((current) => ({
+                          ...current,
+                          employeeId: '',
+                          shiftAssignmentId: '',
+                          eventTime: new Date().toISOString().slice(0, 16),
+                        }))
+                      })
+                      .catch(() => {
+                        // error displayed via recordMutation.error below
+                      })
+                  }}
+                >
+                  Record event
+                </Button>
+              }
+            />
+            {formError ? <p className="error-text">{formError}</p> : null}
+            {recordMutation.error ? (
+              <ErrorState
+                message={recordMutation.error instanceof Error ? recordMutation.error.message : 'Failed to record event'}
+                title="Không thể ghi nhận attendance event"
+              />
+            ) : null}
+          </FormSection>
+
+          <Card title="Attendance event filters">
+            <div className="field-grid">
+              <Input
+                label="Employee ID"
+                onChange={(event) => {
+                  setFilters((current) => ({ ...current, employeeId: event.target.value }))
+                  setPage(0)
+                }}
+                value={filters.employeeId}
+              />
+              <Input
+                label="From date"
+                onChange={(event) => {
+                  setFilters((current) => ({ ...current, fromDate: event.target.value }))
+                  setPage(0)
+                }}
+                type="date"
+                value={filters.fromDate}
+              />
+              <Input
+                label="To date"
+                onChange={(event) => {
+                  setFilters((current) => ({ ...current, toDate: event.target.value }))
+                  setPage(0)
+                }}
+                type="date"
+                value={filters.toDate}
+              />
+            </div>
+          </Card>
+
+          <DataTable
+            columns={columns}
+            emptyDescription={
+              filters.employeeId || filters.fromDate || filters.toDate
+                ? 'Không có attendance event nào khớp bộ lọc hiện tại.'
+                : 'Chưa có attendance event nào trong phạm vi đang xem.'
+            }
+            emptyTitle="No attendance events"
+            error={eventsQuery.error instanceof Error ? eventsQuery.error.message : null}
+            errorTitle="Không thể tải attendance events"
+            loading={eventsQuery.isLoading}
+            loadingDescription="Loading attendance events for the selected scope..."
+            loadingTitle="Loading attendance events"
+            onRetry={() => void eventsQuery.refetch()}
+            rows={eventsQuery.data?.items ?? []}
+          />
+          <Pagination
+            canNext={Boolean(eventsQuery.data?.hasMore)}
+            canPrevious={page > 0}
+            currentPage={page}
+            onNext={() => setPage((value) => value + 1)}
+            onPrevious={() => setPage((value) => Math.max(0, value - 1))}
+          />
         </>
       ) : null}
     </DashboardLayout>

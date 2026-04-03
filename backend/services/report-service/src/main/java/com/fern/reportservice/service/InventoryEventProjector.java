@@ -19,6 +19,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class InventoryEventProjector {
+    private static final List<String> INVENTORY_DATASETS = List.of("inventory_movement_fact", "inventory_stock_snapshot");
+
     private final ReportIngestionSupport support;
     private final DailySummaryProjector dailySummaryProjector;
 
@@ -29,6 +31,7 @@ public class InventoryEventProjector {
 
     public void ingestAdjustment(String payload, InventoryAdjustmentPostedEvent event) {
         support.ingestWithLanding(
+                INVENTORY_DATASETS,
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
@@ -64,6 +67,15 @@ public class InventoryEventProjector {
                             "sourceReferenceType", event.sourceReferenceType(),
                             "sourceReferenceId", event.sourceReferenceId()
                     ));
+                    support.upsertInventoryStockSnapshot(
+                            event.regionId(),
+                            event.outletId(),
+                            event.ingredientId(),
+                            event.qtyChange(),
+                            event.unitCost(),
+                            null,
+                            event.occurredAt()
+                    );
                     // Backfill COGS into sales_fact when this event is a SALE_USAGE
                     if ("SALE_ORDER".equals(event.sourceReferenceType())
                             && "SALE_USAGE".equals(event.reason())
@@ -99,6 +111,7 @@ public class InventoryEventProjector {
 
     public void ingestWaste(String payload, WasteRecordPostedEvent event) {
         support.ingestWithLanding(
+                INVENTORY_DATASETS,
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
@@ -134,6 +147,15 @@ public class InventoryEventProjector {
                             "sourceReferenceType", event.sourceReferenceType(),
                             "sourceReferenceId", event.sourceReferenceId()
                     ));
+                    support.upsertInventoryStockSnapshot(
+                            event.regionId(),
+                            event.outletId(),
+                            event.ingredientId(),
+                            event.qtyChange(),
+                            event.unitCost(),
+                            null,
+                            event.occurredAt()
+                    );
                     dailySummaryProjector.applyDelta(
                             event.eventId(),
                             event.sourceService(),
@@ -153,6 +175,7 @@ public class InventoryEventProjector {
 
     public void ingestStockCount(String payload, StockCountPostedEvent event) {
         support.ingestWithLanding(
+                INVENTORY_DATASETS,
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
@@ -189,6 +212,15 @@ public class InventoryEventProjector {
                                 "sourceReferenceType", "STOCK_COUNT_SESSION",
                                 "sourceReferenceId", String.valueOf(event.stockCountSessionId())
                         ));
+                        support.upsertInventoryStockSnapshot(
+                                event.regionId(),
+                                event.outletId(),
+                                line.ingredientId(),
+                                line.varianceQty(),
+                                line.unitCost(),
+                                event.businessDate(),
+                                event.occurredAt()
+                        );
                     }
                     dailySummaryProjector.applyDelta(
                             event.eventId(),

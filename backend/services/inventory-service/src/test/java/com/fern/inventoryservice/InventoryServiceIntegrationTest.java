@@ -519,6 +519,30 @@ class InventoryServiceIntegrationTest {
     }
 
     @Test
+    void shouldRequireActualQtyBeforePostingStockCountSession() throws Exception {
+        Long sessionId = createStockCountSession(List.of(200L, 201L));
+        startStockCountSession(sessionId);
+
+        mockMvc.perform(post("/stock-count-sessions/{id}/post", sessionId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "count-missing-actual"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("All stock count lines must have actual quantity before posting"));
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE source_reference_type = 'STOCK_COUNT_SESSION'
+                  AND source_reference_id = ?
+                """, Integer.class, sessionId.toString())).isZero();
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM inventory.stock_count_session
+                WHERE id = ?
+                """, String.class, sessionId)).isEqualTo("COUNTING");
+    }
+
+    @Test
     void shouldRejectUpdatingStockCountLinesAfterSessionPosted() throws Exception {
         String sessionResponse = mockMvc.perform(post("/stock-count-sessions")
                         .header("Authorization", bearer())

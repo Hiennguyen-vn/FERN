@@ -12,9 +12,14 @@ import {
 } from '../routes/regionalOpsRoutes.bundle'
 
 const mocks = vi.hoisted(() => ({
+  useOutletRevenueTodayStats: vi.fn(),
   useRegionalOutlet: vi.fn(),
   useRegionalOutlets: vi.fn(),
   useRegionalRegion: vi.fn(),
+}))
+
+vi.mock('../../reports/hooks/useOutletRevenueTodayStats', () => ({
+  useOutletRevenueTodayStats: mocks.useOutletRevenueTodayStats,
 }))
 
 vi.mock('../hooks/useRegionalOps', () => ({
@@ -113,6 +118,10 @@ describe('Regional Ops route group', () => {
       error: null,
       isLoading: false,
       refetch: vi.fn(),
+    })
+    mocks.useOutletRevenueTodayStats.mockReturnValue({
+      isLoading: false,
+      outletStats: [],
     })
   })
 

@@ -76,7 +76,7 @@ function NumberingRuleRow({
   if (query.isLoading) {
     return (
       <tr>
-        <td colSpan={6} style={{ padding: '0.5rem 1rem', color: 'var(--color-text-muted)' }}>
+        <td className="finance-config-cell finance-config-cell-loading" colSpan={6}>
           Loading {documentType}…
         </td>
       </tr>
@@ -86,7 +86,7 @@ function NumberingRuleRow({
   if (query.error) {
     return (
       <tr>
-        <td colSpan={6} style={{ padding: '1rem', verticalAlign: 'top' }}>
+        <td className="finance-config-editor-cell" colSpan={6}>
           <ErrorState
             actionLabel="Retry"
             message={getFinanceErrorMessage(
@@ -104,7 +104,7 @@ function NumberingRuleRow({
   if (!query.data) {
     return (
       <tr>
-        <td colSpan={6} style={{ padding: '1rem', verticalAlign: 'top' }}>
+        <td className="finance-config-editor-cell" colSpan={6}>
           <EmptyState
             description={`Chưa có cấu hình numbering cho loại chứng từ ${documentType}.`}
             title="Not configured"
@@ -117,15 +117,15 @@ function NumberingRuleRow({
   const rule = query.data
   return (
     <>
-      <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <td style={{ padding: '0.5rem 1rem', fontFamily: 'monospace' }}>{rule.documentType}</td>
-        <td style={{ padding: '0.5rem 1rem' }}>{rule.prefix ?? '—'}</td>
-        <td style={{ padding: '0.5rem 1rem' }}>{rule.nextNumber}</td>
-        <td style={{ padding: '0.5rem 1rem' }}>{rule.formatPattern ?? '—'}</td>
-        <td style={{ padding: '0.5rem 1rem' }}>
+      <tr className="finance-config-row">
+        <td className="finance-config-cell finance-config-cell-code">{rule.documentType}</td>
+        <td className="finance-config-cell">{rule.prefix ?? '—'}</td>
+        <td className="finance-config-cell">{rule.nextNumber}</td>
+        <td className="finance-config-cell">{rule.formatPattern ?? '—'}</td>
+        <td className="finance-config-cell">
           <Badge tone={rule.active ? 'success' : 'neutral'}>{rule.active ? 'Active' : 'Inactive'}</Badge>
         </td>
-        <td style={{ padding: '0.5rem 1rem' }}>
+        <td className="finance-config-cell">
           {canWrite && !editing && (
             <Button id={`btn-edit-rule-${rule.documentType}`} onClick={() => startEdit(rule)} size="sm" variant="secondary">
               Edit
@@ -135,8 +135,8 @@ function NumberingRuleRow({
       </tr>
       {editing && (
         <tr>
-          <td colSpan={6} style={{ padding: '1rem', background: 'var(--color-surface-raised)' }}>
-            <div className="field-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+          <td className="finance-config-editor-cell" colSpan={6}>
+            <div className="finance-config-editor-grid">
               <Input
                 label="Prefix"
                 onChange={(e) => setForm((p) => ({ ...p, prefix: e.target.value }))}
@@ -163,7 +163,7 @@ function NumberingRuleRow({
               />
             </div>
             {mutation.error && (
-              <p className="error-text" style={{ marginTop: '0.5rem' }}>
+              <p className="error-text field-hint">
                 {mutation.error instanceof Error ? mutation.error.message : 'Failed to save'}
               </p>
             )}
@@ -221,7 +221,7 @@ function SystemPolicyRow({ policyKey, canWrite }: { policyKey: string; canWrite:
   if (query.isLoading) {
     return (
       <tr>
-        <td colSpan={4} style={{ padding: '0.5rem 1rem', color: 'var(--color-text-muted)' }}>
+        <td className="finance-config-cell finance-config-cell-loading" colSpan={4}>
           Loading {policyKey}…
         </td>
       </tr>
@@ -231,7 +231,7 @@ function SystemPolicyRow({ policyKey, canWrite }: { policyKey: string; canWrite:
   if (query.error) {
     return (
       <tr>
-        <td colSpan={4} style={{ padding: '1rem', verticalAlign: 'top' }}>
+        <td className="finance-config-editor-cell" colSpan={4}>
           <ErrorState
             actionLabel="Retry"
             message={getFinanceErrorMessage(
@@ -249,7 +249,7 @@ function SystemPolicyRow({ policyKey, canWrite }: { policyKey: string; canWrite:
   if (!query.data) {
     return (
       <tr>
-        <td colSpan={4} style={{ padding: '1rem', verticalAlign: 'top' }}>
+        <td className="finance-config-editor-cell" colSpan={4}>
           <EmptyState
             description={`Chưa có giá trị policy cho khóa ${policyKey}.`}
             title="Not configured"
@@ -270,11 +270,11 @@ function SystemPolicyRow({ policyKey, canWrite }: { policyKey: string; canWrite:
 
   return (
     <>
-      <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-        <td style={{ padding: '0.5rem 1rem', fontFamily: 'monospace' }}>{policy.policyKey}</td>
-        <td style={{ padding: '0.5rem 1rem', fontFamily: 'monospace', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayValue}</td>
-        <td style={{ padding: '0.5rem 1rem', color: 'var(--color-text-muted)' }}>{policy.description ?? '—'}</td>
-        <td style={{ padding: '0.5rem 1rem' }}>
+      <tr className="finance-config-row">
+        <td className="finance-config-cell finance-config-cell-code">{policy.policyKey}</td>
+        <td className="finance-config-cell finance-config-cell-code finance-config-cell-truncate">{displayValue}</td>
+        <td className="finance-config-cell finance-config-cell-muted">{policy.description ?? '—'}</td>
+        <td className="finance-config-cell">
           {canWrite && !editing && (
             <Button id={`btn-edit-policy-${policyKey}`} onClick={() => startEdit(policy)} size="sm" variant="secondary">
               Edit
@@ -284,25 +284,15 @@ function SystemPolicyRow({ policyKey, canWrite }: { policyKey: string; canWrite:
       </tr>
       {editing && (
         <tr>
-          <td colSpan={4} style={{ padding: '1rem', background: 'var(--color-surface-raised)' }}>
-            <div style={{ marginBottom: '0.5rem' }}>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.25rem', fontSize: '0.875rem' }}>
+          <td className="finance-config-editor-cell" colSpan={4}>
+            <div className="finance-config-editor-block">
+              <label className="finance-config-editor-label">
                 Policy Value (JSON)
               </label>
               <textarea
+                className="finance-config-editor-textarea"
                 onChange={(e) => setRawValue(e.target.value)}
                 rows={4}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  fontFamily: 'monospace',
-                  fontSize: '0.8125rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '0.375rem',
-                  background: 'var(--color-surface)',
-                  color: 'var(--color-text)',
-                  resize: 'vertical',
-                }}
                 value={rawValue}
               />
               {parseError && <p className="error-text">{parseError}</p>}
@@ -355,7 +345,7 @@ export function FinanceConfigPage() {
     >
       <div className="page-stack">
         {/* Tab navigation */}
-        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid var(--color-border)', paddingBottom: '0' }}>
+        <div className="finance-config-tabs">
           {(
             [
               { key: 'numbering-rules', label: 'Numbering Rules' },
@@ -363,21 +353,11 @@ export function FinanceConfigPage() {
             ] as { key: ConfigTab; label: string }[]
           ).map((tab) => (
             <button
+              className={`finance-config-tab ${activeTab === tab.key ? 'is-active' : ''}`}
               id={`tab-${tab.key}`}
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              style={{
-                padding: '0.5rem 1rem',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                fontWeight: activeTab === tab.key ? 700 : 400,
-                color: activeTab === tab.key ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                borderBottom: activeTab === tab.key ? '2px solid var(--color-primary)' : '2px solid transparent',
-                marginBottom: '-2px',
-                fontSize: '0.9375rem',
-                transition: 'color 0.15s, border-color 0.15s',
-              }}
+              type="button"
             >
               {tab.label}
             </button>
@@ -387,19 +367,19 @@ export function FinanceConfigPage() {
         {/* Numbering Rules Tab */}
         {activeTab === 'numbering-rules' && (
           <Card title="Document Numbering Rules">
-            <p className="muted-text" style={{ marginBottom: '1rem' }}>
+            <p className="muted-text finance-config-note">
               Configure prefix, sequence, and format patterns for document codes (payroll runs, invoices, etc.).
             </p>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <div className="finance-config-table-wrap">
+              <table className="finance-config-table">
                 <thead>
-                  <tr style={{ background: 'var(--color-surface-raised)', borderBottom: '2px solid var(--color-border)' }}>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Document Type</th>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Prefix</th>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Next #</th>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Format Pattern</th>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Status</th>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Actions</th>
+                  <tr className="finance-config-head">
+                    <th className="finance-config-header-cell">Document Type</th>
+                    <th className="finance-config-header-cell">Prefix</th>
+                    <th className="finance-config-header-cell">Next #</th>
+                    <th className="finance-config-header-cell">Format Pattern</th>
+                    <th className="finance-config-header-cell">Status</th>
+                    <th className="finance-config-header-cell">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -415,17 +395,17 @@ export function FinanceConfigPage() {
         {/* System Policies Tab */}
         {activeTab === 'system-policies' && (
           <Card title="System Policies">
-            <p className="muted-text" style={{ marginBottom: '1rem' }}>
+            <p className="muted-text finance-config-note">
               Manage system-wide policies. Policy values are stored as JSON.
             </p>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+            <div className="finance-config-table-wrap">
+              <table className="finance-config-table">
                 <thead>
-                  <tr style={{ background: 'var(--color-surface-raised)', borderBottom: '2px solid var(--color-border)' }}>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Policy Key</th>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Value</th>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Description</th>
-                    <th style={{ padding: '0.5rem 1rem', textAlign: 'left' }}>Actions</th>
+                  <tr className="finance-config-head">
+                    <th className="finance-config-header-cell">Policy Key</th>
+                    <th className="finance-config-header-cell">Value</th>
+                    <th className="finance-config-header-cell">Description</th>
+                    <th className="finance-config-header-cell">Actions</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -107,6 +107,10 @@ describe('PayrollPreparationPage', () => {
     const user = userEvent.setup()
     renderWithProviders(<PayrollPreparationPage />)
 
+    expect(screen.getByText('Estimated total payout')).toBeInTheDocument()
+    expect(screen.getByText('Latest draft')).toBeInTheDocument()
+    expect(screen.getByText('Open periods')).toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: 'Create payroll period' }))
 
     expect((await screen.findAllByText('Name, start date, and end date are required.')).length).toBeGreaterThan(0)

@@ -72,6 +72,8 @@ class ReportEventLandingReplayIntegrationTest {
                     report.company_daily_outlet,
                     report.region_daily_event,
                     report.export_job,
+                    report.projection_watermark,
+                    report.inventory_stock_snapshot,
                     report.company_daily_summary,
                     report.region_daily_summary,
                     report.expense_fact,

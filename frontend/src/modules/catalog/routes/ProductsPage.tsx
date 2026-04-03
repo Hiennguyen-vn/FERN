@@ -196,7 +196,7 @@ export function ProductsPage() {
             </span>
             <span className="workspace-stat-badge success">Live</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Total items</span>
             <strong className="workspace-stat-value">{products.length.toLocaleString('en-US')}</strong>
           </div>
@@ -208,7 +208,7 @@ export function ProductsPage() {
             </span>
             <span className="workspace-stat-badge success">Published</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Active products</span>
             <strong className="workspace-stat-value">{activeProducts.toLocaleString('en-US')}</strong>
           </div>
@@ -220,7 +220,7 @@ export function ProductsPage() {
             </span>
             <span className="workspace-stat-badge success">Reference</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Active ingredients</span>
             <strong className="workspace-stat-value">{activeIngredients.toLocaleString('en-US')}</strong>
           </div>
@@ -232,7 +232,7 @@ export function ProductsPage() {
             </span>
             <span className="workspace-stat-badge danger">Attention</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Discontinued</span>
             <strong className="workspace-stat-value">{discontinuedProducts.toLocaleString('en-US')}</strong>
           </div>

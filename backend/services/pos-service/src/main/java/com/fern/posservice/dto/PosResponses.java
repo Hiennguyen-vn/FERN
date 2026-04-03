@@ -29,6 +29,20 @@ public final class PosResponses {
                         BigDecimal discrepancyAmount) {
         }
 
+        public record OutletTodayStatResponse(
+                        Long outletId,
+                        Long sessionId,
+                        String sessionStatus,
+                        String currencyCode,
+                        Long totalOrders,
+                        Long completed,
+                        Long open,
+                        Long cancelled,
+                        BigDecimal totalRevenue,
+                        BigDecimal cashCollected,
+                        BigDecimal nonCashCollected) {
+        }
+
         public record SaleOrderLineResponse(
                         Integer lineNumber,
                         Long productId,

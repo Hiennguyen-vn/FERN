@@ -199,7 +199,7 @@ export function PurchaseOrderCreatePage() {
           ))}
         </div>
         {lineValidationError && (
-          <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{lineValidationError}</p>
+          <p className="error-text error-text-compact">{lineValidationError}</p>
         )}
         <FormActions
           primaryAction={

@@ -12,6 +12,12 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ProcurementEventProjector {
+    private static final List<String> PROCUREMENT_DATASETS = List.of(
+            "inventory_movement_fact",
+            "inventory_stock_snapshot",
+            "procurement_fact"
+    );
+
     private final ReportIngestionSupport support;
     private final DailySummaryProjector dailySummaryProjector;
 
@@ -22,6 +28,7 @@ public class ProcurementEventProjector {
 
     public void ingest(String payload, ProcurementGoodsReceiptPostedEvent event) {
         support.ingestWithLanding(
+                PROCUREMENT_DATASETS,
                 event.eventId(),
                 event.sourceService(),
                 event.eventType(),
@@ -61,6 +68,15 @@ public class ProcurementEventProjector {
                                 "sourceReferenceType", "GOODS_RECEIPT_LINE",
                                 "sourceReferenceId", String.valueOf(line.sourceLineId())
                         ));
+                        support.upsertInventoryStockSnapshot(
+                                event.regionId(),
+                                event.outletId(),
+                                line.ingredientId(),
+                                line.qtyReceived(),
+                                line.unitCost(),
+                                null,
+                                event.occurredAt()
+                        );
                     }
                     support.jdbcTemplate().update("""
                             INSERT INTO report.procurement_fact (

@@ -43,7 +43,7 @@ interface LineDraft {
 function buildLineDrafts(lines: StockCountLine[]): LineDraft[] {
   return lines.map((line) => ({
     ingredientId: line.ingredientId,
-    actualQty: line.actualQty ?? '',
+    actualQty: line.actualQty != null ? String(line.actualQty) : '',
     note: line.note ?? '',
   }))
 }

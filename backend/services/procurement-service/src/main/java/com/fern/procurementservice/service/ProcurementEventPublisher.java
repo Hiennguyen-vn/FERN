@@ -12,24 +12,19 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 class ProcurementEventPublisher {
-    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final ProcurementJdbcRepository procurementJdbcRepository;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
     ProcurementEventPublisher(
-            @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
             ProcurementJdbcRepository procurementJdbcRepository,
             ObjectMapper objectMapper,
             Clock clock
     ) {
-        this.jdbcTemplate = jdbcTemplate;
         this.procurementJdbcRepository = procurementJdbcRepository;
         this.objectMapper = objectMapper;
         this.clock = clock;
@@ -100,7 +95,7 @@ class ProcurementEventPublisher {
             }
             return;
         }
-        jdbcTemplate.update("""
+        procurementJdbcRepository.jdbcTemplate().update("""
                 INSERT INTO procurement.outbox_event (
                     id, aggregate_type, aggregate_id, event_type, partition_key, payload, status, created_at
                 ) VALUES (
@@ -118,7 +113,7 @@ class ProcurementEventPublisher {
 
     private void lockOutboxKey(String aggregateType, String aggregateId, String eventType) {
         String lockKey = aggregateType + ":" + aggregateId + ":" + eventType;
-        jdbcTemplate.query(
+        procurementJdbcRepository.jdbcTemplate().query(
                 "SELECT pg_advisory_xact_lock(hashtext(:lockKey))",
                 procurementJdbcRepository.params("lockKey", lockKey),
                 rs -> null
@@ -126,7 +121,7 @@ class ProcurementEventPublisher {
     }
 
     private OutboxEventRecord findOutboxEvent(String aggregateType, String aggregateId, String eventType) {
-        return jdbcTemplate.query("""
+        return procurementJdbcRepository.jdbcTemplate().query("""
                 SELECT id::text AS id,
                        aggregate_type,
                        aggregate_id,
@@ -157,7 +152,7 @@ class ProcurementEventPublisher {
     }
 
     private void reviveFailedOutboxEvent(String id) {
-        jdbcTemplate.update("""
+        procurementJdbcRepository.jdbcTemplate().update("""
                 UPDATE procurement.outbox_event
                 SET status = 'PENDING',
                     retry_count = 0,

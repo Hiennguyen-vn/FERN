@@ -120,7 +120,7 @@ export function SecurityEventsPage() {
         key: 'eventType',
         header: 'Event',
         render: (event) => (
-          <div className="page-stack" style={{ gap: '0.25rem' }}>
+          <div className="compact-stack-tight">
             <strong>{event.eventType}</strong>
             <span className="muted-text">{event.sourceService} · {event.module}</span>
           </div>

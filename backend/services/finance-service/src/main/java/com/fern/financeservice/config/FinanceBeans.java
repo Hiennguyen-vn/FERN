@@ -7,13 +7,13 @@ import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
 import com.fern.platform.common.SnowflakeIdGenerator;
+import com.fern.platform.web.FernDownstreamClientFactory;
+import com.fern.platform.web.FernDownstreamClientSpec;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import com.zaxxer.hikari.HikariDataSource;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
-import java.time.Duration;
 import java.time.Clock;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
@@ -41,23 +41,7 @@ public class FinanceBeans {
     @Value("${fern.datasource.min-idle:1}")
     private int minIdle;
 
-    @Value("${fern.clients.hr.connect-timeout-ms:5000}")
-    private int hrConnectTimeoutMs = 5000;
-
-    @Value("${fern.clients.hr.read-timeout-ms:10000}")
-    private int hrReadTimeoutMs = 10000;
-
-    @Value("${fern.clients.hr.circuit-breaker.failure-rate-threshold:50}")
-    private float hrFailureRateThreshold = 50;
-
-    @Value("${fern.clients.hr.circuit-breaker.sliding-window-size:10}")
-    private int hrSlidingWindowSize = 10;
-
-    @Value("${fern.clients.hr.circuit-breaker.minimum-number-of-calls:5}")
-    private int hrMinimumNumberOfCalls = 5;
-
-    @Value("${fern.clients.hr.circuit-breaker.wait-duration-open-seconds:30}")
-    private long hrWaitDurationOpenSeconds = 30;
+    private static final String CALLER_SERVICE = "finance-service";
 
     @Bean
     Clock clock() {
@@ -105,21 +89,27 @@ public class FinanceBeans {
     }
 
     @Bean
-    RestClient restClient() {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(hrConnectTimeoutMs);
-        requestFactory.setReadTimeout(hrReadTimeoutMs);
-        return RestClient.builder().requestFactory(requestFactory).build();
+    @Qualifier("hrRestClient")
+    RestClient restClient(@Qualifier("hrClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
     }
 
     @Bean
-    CircuitBreaker hrCircuitBreaker() {
-        return CircuitBreaker.of("hr-client", CircuitBreakerConfig.custom()
-                .failureRateThreshold(hrFailureRateThreshold)
-                .slidingWindowSize(hrSlidingWindowSize)
-                .minimumNumberOfCalls(hrMinimumNumberOfCalls)
-                .waitDurationInOpenState(Duration.ofSeconds(hrWaitDurationOpenSeconds))
-                .build());
+    @Qualifier("hrCircuitBreaker")
+    CircuitBreaker hrCircuitBreaker(@Qualifier("hrClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "fern.clients")
+    FinanceClientProperties financeClientProperties() {
+        return new FinanceClientProperties();
+    }
+
+    @Bean
+    @Qualifier("hrClientSpec")
+    FernDownstreamClientSpec hrClientSpec(FinanceClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "hr-service", "hr", properties.getHr());
     }
 
     @Bean

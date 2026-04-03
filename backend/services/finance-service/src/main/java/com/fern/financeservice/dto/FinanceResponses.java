@@ -93,4 +93,11 @@ public final class FinanceResponses {
             String description
     ) {
     }
+
+    public record OutletCloseCheckResponse(
+            Long outletId,
+            long blockingPayrollRuns,
+            boolean hasBlockingObligations
+    ) {
+    }
 }

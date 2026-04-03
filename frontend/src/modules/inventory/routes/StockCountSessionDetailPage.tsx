@@ -28,7 +28,7 @@ interface LineDraft {
 function buildLineDrafts(lines: StockCountLine[]): LineDraft[] {
   return lines.map((line) => ({
     ingredientId: line.ingredientId,
-    actualQty: line.actualQty ?? '',
+    actualQty: line.actualQty != null ? String(line.actualQty) : '',
     note: line.note ?? '',
   }))
 }
@@ -233,7 +233,7 @@ export function StockCountSessionDetailPage() {
         {session.lines.length > 0 && !(session.status === 'COUNTING' && canMutate) ? (
           <div className="page-stack">
             <h3>Lines</h3>
-            <div className="meta-grid" style={{ fontSize: '0.9rem' }}>
+            <div className="meta-grid meta-grid-compact">
               {session.lines.map((line) => (
                 <div key={line.ingredientId}>
                   #{line.ingredientId}: system {line.systemQty}, actual {line.actualQty ?? '—'}, variance{' '}

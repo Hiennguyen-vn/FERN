@@ -95,7 +95,6 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-        {/* Brand mark */}
         <div className="sidebar-brand">
           <div className="sidebar-brand-mark" aria-hidden="true">
             <AppIcon filled name="restaurant_menu" size="sm" />
@@ -108,10 +107,9 @@ export function AppShell() {
           ) : null}
           <button
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="icon-button"
+            className="icon-button sidebar-brand-toggle"
             onClick={toggleSidebar}
             type="button"
-            style={{ marginLeft: 'auto' }}
           >
             <AppIcon
               name={sidebarCollapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left'}
@@ -120,15 +118,14 @@ export function AppShell() {
           </button>
         </div>
 
-        {/* Scope summary */}
         {!sidebarCollapsed ? (
           <div className="shell-quick-summary">
             <p className="eyebrow">My scope</p>
-            <strong style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)' }}>{roleLabel}</strong>
+            <strong className="shell-summary-role">{roleLabel}</strong>
             {(shellContext?.scopeChips ?? []).length > 0 ? (
-              <div className="scope-summary-grid" style={{ marginTop: '0.4rem' }}>
+              <div className="scope-chip-list">
                 {(shellContext?.scopeChips ?? []).slice(0, 4).map((chip) => (
-                  <span className="meta-chip" key={chip} style={{ fontSize: '0.72rem' }}>
+                  <span className="meta-chip" key={chip}>
                     {chip}
                   </span>
                 ))}
@@ -137,7 +134,6 @@ export function AppShell() {
           </div>
         ) : null}
 
-        {/* Navigation */}
         <nav aria-label="Main navigation" className="nav-list">
           {navigation.map((item) => (
             <NavLink
@@ -152,7 +148,7 @@ export function AppShell() {
               {!sidebarCollapsed ? (
                 <span className="nav-link-copy">
                   <span className="nav-link-label">{item.label}</span>
-                  <span className="nav-link-kicker" style={{ fontSize: '0.7rem', color: 'var(--on-surface-variant)', opacity: 0.72 }}>
+                  <span className="nav-link-kicker">
                     {NAV_DESCRIPTIONS[item.to] ?? 'Workspace'}
                   </span>
                 </span>
@@ -164,7 +160,7 @@ export function AppShell() {
         {!sidebarCollapsed ? (
           <div className="shell-nav-footer">
             <p className="eyebrow">Guardrails active</p>
-            <p className="muted-text" style={{ fontSize: '0.75rem', lineHeight: 1.4 }}>
+            <p className="muted-text shell-guardrails">
               Read-only and permission states are enforced across all modules.
             </p>
           </div>
@@ -180,49 +176,51 @@ export function AppShell() {
             </div>
           </div>
           <div className="topbar-actions">
-            {regionIds.length > 0 || selectedRegionId !== null ? (
+            <div className="topbar-selects">
+              {regionIds.length > 0 || selectedRegionId !== null ? (
+                <div className="select-wrapper">
+                  <label htmlFor="topbar-region-select">Region</label>
+                  <select
+                    id="topbar-region-select"
+                    value={selectedRegionId ?? ''}
+                    onChange={(event) =>
+                      setSelectedRegionId(event.target.value ? Number(event.target.value) : null)
+                    }
+                  >
+                    <option value="">All regions</option>
+                    {(regionOptions.length > 0
+                      ? regionOptions
+                      : (regionIds.length > 0 ? regionIds : selectedRegionId ? [selectedRegionId] : []).map(
+                          (regionId) => ({ value: regionId, label: `Region #${regionId}` }),
+                        )
+                    ).map((region) => (
+                      <option key={region.value} value={region.value}>
+                        {region.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
               <div className="select-wrapper">
-                <label htmlFor="topbar-region-select">Region</label>
+                <label htmlFor="topbar-outlet-select">Outlet</label>
                 <select
-                  id="topbar-region-select"
-                  value={selectedRegionId ?? ''}
+                  id="topbar-outlet-select"
+                  value={selectedOutletId ?? ''}
                   onChange={(event) =>
-                    setSelectedRegionId(event.target.value ? Number(event.target.value) : null)
+                    setSelectedOutletId(event.target.value ? Number(event.target.value) : null)
                   }
                 >
-                  <option value="">All regions</option>
-                  {(regionOptions.length > 0
-                    ? regionOptions
-                    : (regionIds.length > 0 ? regionIds : selectedRegionId ? [selectedRegionId] : []).map(
-                        (regionId) => ({ value: regionId, label: `Region #${regionId}` }),
-                      )
-                  ).map((region) => (
-                    <option key={region.value} value={region.value}>
-                      {region.label}
+                  <option value="">All outlets</option>
+                  {(outletOptions.length > 0
+                    ? outletOptions
+                    : outletIds.map((outletId) => ({ value: outletId, label: `Outlet #${outletId}` }))
+                  ).map((outlet) => (
+                    <option key={outlet.value} value={outlet.value}>
+                      {outlet.label}
                     </option>
                   ))}
                 </select>
               </div>
-            ) : null}
-            <div className="select-wrapper">
-              <label htmlFor="topbar-outlet-select">Outlet</label>
-              <select
-                id="topbar-outlet-select"
-                value={selectedOutletId ?? ''}
-                onChange={(event) =>
-                  setSelectedOutletId(event.target.value ? Number(event.target.value) : null)
-                }
-              >
-                <option value="">All outlets</option>
-                {(outletOptions.length > 0
-                  ? outletOptions
-                  : outletIds.map((outletId) => ({ value: outletId, label: `Outlet #${outletId}` }))
-                ).map((outlet) => (
-                  <option key={outlet.value} value={outlet.value}>
-                    {outlet.label}
-                  </option>
-                ))}
-              </select>
             </div>
             <div aria-label="Utility actions" className="topbar-utility-buttons">
               <button className="icon-button" title="Notifications" type="button">
@@ -235,7 +233,7 @@ export function AppShell() {
             <div className="topbar-profile">
               <div className="topbar-profile-copy">
                 <strong title={principal?.username}>{principalLabel}</strong>
-                <span className="muted-text" style={{ fontSize: '0.72rem' }}>{roleLabel}</span>
+                <span className="topbar-profile-role">{roleLabel}</span>
               </div>
               <div className="topbar-avatar" aria-hidden="true">{principalInitials || 'G'}</div>
             </div>

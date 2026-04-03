@@ -837,6 +837,26 @@ class IamServiceIntegrationTest {
         assertThat(event.payload()).containsEntry("username", "bootstrap-admin");
     }
 
+    @Test
+    void shouldExposePublicJwksWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/.well-known/jwks.json"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.keys").isArray())
+                .andExpect(jsonPath("$.keys.length()").value(3))
+                .andExpect(jsonPath("$.keys[?(@.kid=='user-rs256-v1')]").exists())
+                .andExpect(jsonPath("$.keys[?(@.kid=='gateway-rs256-v1')]").exists())
+                .andExpect(jsonPath("$.keys[?(@.kid=='service-rs256-v1')]").exists());
+    }
+
+    @Test
+    void shouldExposeInternalJwksForAuthenticatedInternalCaller() throws Exception {
+        mockMvc.perform(get("/internal/security/jwks")
+                        .header("Authorization", "Bearer " + issueBootstrapAdminToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.keys").isArray())
+                .andExpect(jsonPath("$.keys.length()").value(3));
+    }
+
     private JsonNode loginAsBootstrapAdmin() throws Exception {
         MvcResult loginResult = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

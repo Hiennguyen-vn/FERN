@@ -2,7 +2,11 @@ package com.fern.financeservice.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fern.platform.web.FernDownstreamClientFactory;
+import com.fern.platform.web.FernDownstreamClientProperties;
+import com.fern.platform.web.FernDownstreamClientSpec;
 import java.lang.reflect.Field;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -14,7 +18,14 @@ class FinanceBeansTest {
 
     @Test
     void shouldConfigureRestClientTimeouts() throws Exception {
-        RestClient restClient = financeBeans.restClient();
+        FernDownstreamClientProperties properties = new FernDownstreamClientProperties();
+        properties.setBaseUrl("http://localhost:8085");
+        properties.setConnectTimeout(java.time.Duration.ofSeconds(5));
+        properties.setReadTimeout(java.time.Duration.ofSeconds(10));
+        RestClient restClient = financeBeans.restClient(
+                new FernDownstreamClientSpec("finance-service", "hr-service", "hr", properties),
+                new FernDownstreamClientFactory(new SimpleMeterRegistry())
+        );
 
         Object requestFactory = readField(restClient, "clientRequestFactory");
 

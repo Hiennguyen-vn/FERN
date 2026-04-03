@@ -1130,6 +1130,105 @@ class HrServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectOverlappingContractsForSameEmployee() {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_CONTRACT_WRITE
+        );
+        long employeeId = hrService.createEmployee(principal, new CreateEmployeeRequest(
+                "EMP-CONFLICT-001",
+                "Contract Conflict",
+                null,
+                null,
+                null,
+                null,
+                "ACTIVE",
+                LocalDate.of(2026, 1, 1),
+                null
+        )).id();
+
+        hrService.createContract(principal, new CreateContractRequest(
+                employeeId,
+                "FULL_TIME",
+                "MONTHLY",
+                new BigDecimal("12000000"),
+                1L,
+                "TAX-CONFLICT-001",
+                "ACTIVE",
+                LocalDate.of(2026, 3, 1),
+                LocalDate.of(2026, 3, 31)
+        ));
+
+        assertThatThrownBy(() -> hrService.createContract(principal, new CreateContractRequest(
+                employeeId,
+                "FULL_TIME",
+                "MONTHLY",
+                new BigDecimal("13000000"),
+                1L,
+                "TAX-CONFLICT-002",
+                "ACTIVE",
+                LocalDate.of(2026, 3, 15),
+                LocalDate.of(2026, 4, 15)
+        )))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Employee already has an overlapping contract");
+    }
+
+    @Test
+    void shouldRejectConflictingShiftAssignmentsForSameEmployee() {
+        FernPrincipal principal = systemPrincipal(
+                PermissionCodes.HR_EMPLOYEE_READ,
+                PermissionCodes.HR_EMPLOYEE_WRITE,
+                PermissionCodes.HR_SHIFT_WRITE
+        );
+        long employeeId = hrService.createEmployee(principal, new CreateEmployeeRequest(
+                "EMP-SHIFT-001",
+                "Shift Conflict",
+                null,
+                null,
+                null,
+                null,
+                "ACTIVE",
+                LocalDate.of(2026, 1, 1),
+                null
+        )).id();
+        long firstScheduleId = hrService.createShiftSchedule(principal, new CreateShiftScheduleRequest(
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                "Morning",
+                LocalTime.of(8, 0),
+                LocalTime.of(12, 0),
+                null
+        )).id();
+        hrService.createShiftAssignment(principal, new CreateShiftAssignmentRequest(
+                firstScheduleId,
+                employeeId,
+                "CASHIER",
+                null
+        ));
+        long secondScheduleId = hrService.createShiftSchedule(principal, new CreateShiftScheduleRequest(
+                1L,
+                201L,
+                LocalDate.of(2026, 3, 28),
+                "Overlap",
+                LocalTime.of(11, 0),
+                LocalTime.of(15, 0),
+                null
+        )).id();
+
+        assertThatThrownBy(() -> hrService.createShiftAssignment(principal, new CreateShiftAssignmentRequest(
+                secondScheduleId,
+                employeeId,
+                "BARISTA",
+                null
+        )))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("Employee already has a conflicting shift");
+    }
+
+    @Test
     @Tag("security-gap")
     void shouldRejectReadingShiftAssignmentAndApprovalOutsideOutletScopeById() throws Exception {
         FernPrincipal principal = systemPrincipal(

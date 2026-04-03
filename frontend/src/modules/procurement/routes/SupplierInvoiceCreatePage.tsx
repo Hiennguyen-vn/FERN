@@ -174,9 +174,9 @@ export function SupplierInvoiceCreatePage() {
         <div className="page-stack">
           {lines.map((line, index) => (
             <Card key={index} title={`Line ${index + 1}`}>
-              <div className="field-grid" style={{ marginBottom: lines.length > 1 ? '0.5rem' : undefined }}>
+              <div className={`field-grid ${lines.length > 1 ? 'field-grid-spaced' : ''}`}>
                 {lines.length > 1 ? (
-                  <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
+                  <div className="field-grid-actions">
                     <Button
                       onClick={() => setLines((l) => l.filter((_, i) => i !== index))}
                       size="sm"
@@ -246,7 +246,7 @@ export function SupplierInvoiceCreatePage() {
         </div>
 
         {validationError && (
-          <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{validationError}</p>
+          <p className="error-text error-text-compact">{validationError}</p>
         )}
         <FormActions
           primaryAction={

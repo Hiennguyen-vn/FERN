@@ -2,7 +2,10 @@ package com.fern.posservice.service;
 
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.OperationalShardRegistry;
 import com.fern.platform.common.PermissionCodes;
+import com.fern.platform.common.RouteKey;
+import com.fern.platform.common.ShardResolver;
 import com.fern.posservice.dto.PosCommands.OpenSessionRequest;
 import com.fern.posservice.dto.PosCommands.ReconcileSessionRequest;
 import com.fern.posservice.dto.PosResponses.PosSessionResponse;
@@ -20,30 +23,30 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class PosSessionService {
     private static final String PAYMENT_METHOD_CASH = "CASH";
 
-    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final PosAuthorizer posAuthorizer;
     private final PosStore store;
     private final PosOrgClient posOrgClient;
     private final PosReferenceCodeGenerator codeGenerator;
     private final Clock clock;
-    private final TransactionTemplate transactionTemplate;
+    private final OperationalShardRegistry operationalShardRegistry;
+    private final ShardResolver shardResolver;
 
     public PosSessionService(
-            NamedParameterJdbcTemplate jdbcTemplate,
             PosAuthorizer posAuthorizer,
             PosStore store,
             PosOrgClient posOrgClient,
             PosReferenceCodeGenerator codeGenerator,
             Clock clock,
-            TransactionTemplate transactionTemplate
+            OperationalShardRegistry operationalShardRegistry,
+            ShardResolver shardResolver
     ) {
-        this.jdbcTemplate = jdbcTemplate;
         this.posAuthorizer = posAuthorizer;
         this.store = store;
         this.posOrgClient = posOrgClient;
         this.codeGenerator = codeGenerator;
         this.clock = clock;
-        this.transactionTemplate = transactionTemplate;
+        this.operationalShardRegistry = operationalShardRegistry;
+        this.shardResolver = shardResolver;
     }
 
     public PosSessionOpenResult openSession(FernPrincipal principal, OpenSessionRequest request) {
@@ -52,6 +55,8 @@ public class PosSessionService {
         if (!outlet.regionId().equals(request.regionId())) {
             throw new ConflictException("Outlet route does not match requested region");
         }
+        ensureOutletOperational(outlet, request.businessDate());
+        TransactionTemplate transactionTemplate = transactionTemplate(outlet.regionId(), request.outletId());
         return transactionTemplate.execute(status -> openSessionTx(principal, request, outlet));
     }
 
@@ -60,8 +65,9 @@ public class PosSessionService {
             OpenSessionRequest request,
             PosOrgClient.OutletRoute outlet
     ) {
-        lockOpenSessionScope(request.outletId());
-        SessionRecord existingOpenSession = findOpenSession(request.outletId(), request.terminalId());
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(outlet.regionId(), request.outletId());
+        lockOpenSessionScope(jdbcTemplate, request.outletId());
+        SessionRecord existingOpenSession = findOpenSession(jdbcTemplate, request.outletId(), request.terminalId());
         if (existingOpenSession != null) {
             if (!java.util.Objects.equals(existingOpenSession.cashierUserId(), principal.userId())) {
                 throw new ConflictException("Another cashier already has an open session for this outlet and terminal");
@@ -108,6 +114,8 @@ public class PosSessionService {
             int limit
     ) {
         posAuthorizer.requireOutletPermission(principal, outletId, PermissionCodes.POS_SESSION_READ);
+        PosOrgClient.OutletRoute outlet = posOrgClient.requireOutlet(outletId);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(outlet.regionId(), outletId);
         StringBuilder sql = new StringBuilder("""
                 SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
                        status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
@@ -160,6 +168,7 @@ public class PosSessionService {
         SessionRecord session = store.requireSessionForUpdate(id);
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_SESSION_CLOSE);
         ensureSessionStatus(session, PosSessionStatus.OPEN, "Only open sessions can be closed");
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(session.regionId(), session.outletId());
         boolean openOrders = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
                 SELECT EXISTS (
                     SELECT 1
@@ -215,6 +224,7 @@ public class PosSessionService {
         SessionRecord session = store.requireSessionForUpdate(id);
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_SESSION_RECONCILE);
         ensureSessionStatus(session, PosSessionStatus.CLOSED, "Only closed sessions can be reconciled");
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(session.regionId(), session.outletId());
         BigDecimal expectedCash = jdbcTemplate.queryForObject("""
                 SELECT COALESCE(SUM(payment.amount), 0)
                 FROM pos.sale_payment payment
@@ -265,7 +275,13 @@ public class PosSessionService {
         }
     }
 
-    private SessionRecord findOpenSession(Long outletId, String terminalId) {
+    private void ensureOutletOperational(PosOrgClient.OutletRoute outlet, LocalDate businessDate) {
+        if (!outlet.isActive() || outlet.isClosedOn(businessDate)) {
+            throw new ConflictException("Outlet is inactive or closed for POS transactions");
+        }
+    }
+
+    private SessionRecord findOpenSession(NamedParameterJdbcTemplate jdbcTemplate, Long outletId, String terminalId) {
         return jdbcTemplate.query("""
                 SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
                        status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
@@ -303,9 +319,17 @@ public class PosSessionService {
         ) : null);
     }
 
-    private void lockOpenSessionScope(Long outletId) {
+    private void lockOpenSessionScope(NamedParameterJdbcTemplate jdbcTemplate, Long outletId) {
         jdbcTemplate.query("""
                 SELECT pg_advisory_xact_lock(:lockKey)
                 """, PosSql.params("lockKey", outletId), rs -> null);
+    }
+
+    private NamedParameterJdbcTemplate jdbcTemplate(Long regionId, Long outletId) {
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).jdbc();
+    }
+
+    private TransactionTemplate transactionTemplate(Long regionId, Long outletId) {
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).tx();
     }
 }

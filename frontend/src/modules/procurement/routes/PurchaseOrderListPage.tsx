@@ -58,6 +58,14 @@ function toAmount(value: number) {
   return Number.isFinite(value) ? value : 0
 }
 
+function clampPercent(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0
+  }
+
+  return Math.max(0, Math.min(100, Math.round(value)))
+}
+
 function getLeadDays(order: PurchaseOrder) {
   if (!order.expectedDeliveryDate) {
     return null
@@ -328,7 +336,7 @@ export function PurchaseOrderListPage() {
             </span>
             <span className="workspace-stat-badge success">Live view</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Total PO volume</span>
             <strong className="workspace-stat-value">{formatCompactAmount(dashboardMetrics.totalVolume)}</strong>
           </div>
@@ -340,7 +348,7 @@ export function PurchaseOrderListPage() {
             </span>
             <span className="workspace-stat-badge warning">Urgent</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Pending approvals</span>
             <strong className="workspace-stat-value">{dashboardMetrics.pendingApprovals}</strong>
           </div>
@@ -352,12 +360,29 @@ export function PurchaseOrderListPage() {
             </span>
             <span className="workspace-stat-badge success">Ops flow</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Approval throughput</span>
             <strong className="workspace-stat-value">{dashboardMetrics.throughputRate}%</strong>
           </div>
           <div className="metric-meter">
-            <div className="metric-meter-fill" style={{ width: `${dashboardMetrics.throughputRate}%` }} />
+            <svg className="metric-meter-svg" preserveAspectRatio="none" viewBox="0 0 100 6" aria-hidden="true">
+              <defs>
+                <linearGradient id="metric-meter-gradient" x1="0%" x2="100%" y1="0%" y2="0%">
+                  <stop offset="0%" stopColor="#006846" />
+                  <stop offset="100%" stopColor="#006846" stopOpacity="0.72" />
+                </linearGradient>
+              </defs>
+              <rect fill="rgba(224, 227, 229, 0.86)" height="6" rx="3" ry="3" width="100" x="0" y="0" />
+              <rect
+                fill="url(#metric-meter-gradient)"
+                height="6"
+                rx="3"
+                ry="3"
+                width={`${clampPercent(dashboardMetrics.throughputRate)}%`}
+                x="0"
+                y="0"
+              />
+            </svg>
           </div>
         </article>
         <article className="workspace-stat-card danger">
@@ -367,7 +392,7 @@ export function PurchaseOrderListPage() {
             </span>
             <span className="workspace-stat-badge danger">Action</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Late deliveries</span>
             <strong className="workspace-stat-value">{dashboardMetrics.lateDeliveries}</strong>
           </div>
@@ -375,7 +400,7 @@ export function PurchaseOrderListPage() {
       </section>
 
       <section className="workspace-filter-bar" aria-label="Procurement filters">
-        <div className="workspace-filter-field" style={{ flex: 1, minWidth: '13rem' }}>
+        <div className="workspace-filter-field workspace-filter-field-grow">
           <span className="eyebrow">Outlet</span>
           <input
             className="workspace-inline-select"
@@ -433,11 +458,34 @@ export function PurchaseOrderListPage() {
                   {trendBars.length > 0 ? (
                     trendBars.map((bar) => (
                       <div className="trend-bar-group" key={bar.key}>
-                        <div
+                        <svg
+                          aria-label={`${bar.label}: ${formatAmount(bar.total)}`}
                           className={`trend-bar ${bar.muted ? 'muted' : ''}`}
-                          style={{ height: `${bar.height}%` }}
-                          title={`${bar.label}: ${formatAmount(bar.total)}`}
-                        />
+                          preserveAspectRatio="none"
+                          role="img"
+                          viewBox="0 0 100 100"
+                        >
+                          <defs>
+                            <linearGradient id="trend-bar-gradient" x1="0%" x2="0%" y1="0%" y2="100%">
+                              <stop offset="0%" stopColor="rgba(69, 85, 183, 0.9)" />
+                              <stop offset="100%" stopColor="rgba(69, 85, 183, 0.45)" />
+                            </linearGradient>
+                            <linearGradient id="trend-bar-gradient-muted" x1="0%" x2="0%" y1="0%" y2="100%">
+                              <stop offset="0%" stopColor="rgba(224, 227, 229, 0.95)" />
+                              <stop offset="100%" stopColor="rgba(224, 227, 229, 0.6)" />
+                            </linearGradient>
+                          </defs>
+                          <title>{`${bar.label}: ${formatAmount(bar.total)}`}</title>
+                          <rect
+                            className="trend-bar-rect"
+                            height={bar.height}
+                            rx="18"
+                            ry="18"
+                            width="100"
+                            x="0"
+                            y={100 - bar.height}
+                          />
+                        </svg>
                         <span className="trend-bar-label">{bar.label}</span>
                       </div>
                     ))

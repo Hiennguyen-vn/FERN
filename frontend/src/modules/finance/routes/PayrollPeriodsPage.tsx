@@ -106,7 +106,7 @@ export function PayrollPeriodsPage() {
       title="Payroll Periods"
       description="Quản lý và tạo mới cấu hình kỳ lương cho các region."
     >
-      <div className="action-bar" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+      <div className="action-bar action-bar-end">
         <Button onClick={() => setIsCreating(!isCreating)} variant="primary">
           {isCreating ? 'Hủy tạo' : 'Tạo Payroll Period'}
         </Button>
@@ -170,12 +170,12 @@ export function PayrollPeriodsPage() {
             </div>
             
             {createMutation.error && (
-              <div style={{ color: 'red', marginTop: '1rem' }}>
+              <p className="error-text section-spacing-top">
                 {getFinanceErrorMessage(createMutation.error, 'Lỗi khi tạo kỳ lương')}
-              </div>
+              </p>
             )}
 
-            <div style={{ marginTop: '1rem' }}>
+            <div className="section-spacing-top">
               <Button type="submit" variant="primary" disabled={createMutation.isPending || !activeRegionId}>
                 {createMutation.isPending ? 'Đang tạo...' : 'Lưu lại'}
               </Button>

@@ -3,6 +3,9 @@ package com.fern.procurementservice.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.ConflictException;
+import com.fern.platform.common.OperationalShardRegistry;
+import com.fern.platform.common.RouteKey;
+import com.fern.platform.common.ShardResolver;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.procurementservice.dto.ProcurementCommands.GoodsReceiptLineInput;
 import com.fern.procurementservice.dto.ProcurementCommands.PurchaseOrderLineInput;
@@ -37,22 +40,25 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 class ProcurementJdbcRepository {
-    private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final OperationalShardRegistry operationalShardRegistry;
+    private final ShardResolver shardResolver;
     private final NamedParameterJdbcTemplate masterJdbcTemplate;
     private final ObjectMapper objectMapper;
 
     ProcurementJdbcRepository(
-            @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
+            OperationalShardRegistry operationalShardRegistry,
+            ShardResolver shardResolver,
             @Qualifier("masterJdbcTemplate") NamedParameterJdbcTemplate masterJdbcTemplate,
             ObjectMapper objectMapper
     ) {
-        this.jdbcTemplate = jdbcTemplate;
+        this.operationalShardRegistry = operationalShardRegistry;
+        this.shardResolver = shardResolver;
         this.masterJdbcTemplate = masterJdbcTemplate;
         this.objectMapper = objectMapper;
     }
 
     NamedParameterJdbcTemplate jdbcTemplate() {
-        return jdbcTemplate;
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(null, null))).jdbc();
     }
 
     NamedParameterJdbcTemplate masterJdbcTemplate() {
@@ -446,6 +452,39 @@ class ProcurementJdbcRepository {
                 ORDER BY payment_time DESC, id DESC
                 LIMIT :limit
                 """, params("supplierId", supplierId, "limit", limit), Long.class);
+    }
+
+    long countBlockingPurchaseOrders(Long outletId) {
+        return jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.purchase_order
+                WHERE outlet_id = :outletId
+                  AND status NOT IN ('COMPLETED', 'CLOSED', 'CANCELLED')
+                """, params("outletId", outletId), Long.class);
+    }
+
+    long countBlockingGoodsReceipts(Long outletId) {
+        return jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.goods_receipt
+                WHERE outlet_id = :outletId
+                  AND status IN ('DRAFT', 'RECEIVED')
+                """, params("outletId", outletId), Long.class);
+    }
+
+    long countBlockingSupplierInvoices(Long outletId) {
+        return jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM procurement.supplier_invoice invoice
+                LEFT JOIN (
+                    SELECT supplier_invoice_id, COALESCE(SUM(allocated_amount), 0) AS allocated_amount
+                    FROM procurement.supplier_payment_allocation
+                    GROUP BY supplier_invoice_id
+                ) allocation ON allocation.supplier_invoice_id = invoice.id
+                WHERE invoice.outlet_id = :outletId
+                  AND invoice.status <> 'CANCELLED'
+                  AND invoice.total_amount > COALESCE(allocation.allocated_amount, 0)
+                """, params("outletId", outletId), Long.class);
     }
 
     List<PurchaseOrderRecord> listPurchaseOrders(Long outletId, Long supplierId, String status, int limit) {

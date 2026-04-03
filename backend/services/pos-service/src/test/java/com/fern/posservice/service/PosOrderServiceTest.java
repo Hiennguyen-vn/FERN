@@ -49,6 +49,9 @@ class PosOrderServiceTest {
     private PosStore store;
 
     @Mock
+    private PosOrgClient posOrgClient;
+
+    @Mock
     private PosPricingService pricingService;
 
     @Mock
@@ -85,6 +88,7 @@ class PosOrderServiceTest {
                 jdbcTemplate,
                 posAuthorizer,
                 store,
+                posOrgClient,
                 pricingService,
                 inventoryClient,
                 codeGenerator,
@@ -162,6 +166,19 @@ class PosOrderServiceTest {
         assertThatThrownBy(() -> service.cancelOrder(principal, 10L))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("Orders with successful payments cannot be cancelled");
+    }
+
+    @Test
+    void shouldRejectCancellingCompletedOrder() {
+        OrderRecord completedOrder = order(SaleOrderStatus.COMPLETED.name(), new BigDecimal("10.00"), 555L);
+        when(store.requireOrder(10L)).thenReturn(completedOrder);
+
+        assertThatThrownBy(() -> service.cancelOrder(principal, 10L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Only open orders can be modified");
+
+        verify(store, never()).successfulPaymentTotal(10L);
+        verify(transactionTemplate, never()).executeWithoutResult(any());
     }
 
     @Test

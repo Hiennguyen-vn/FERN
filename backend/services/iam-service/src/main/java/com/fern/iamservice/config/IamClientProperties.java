@@ -1,52 +1,21 @@
 package com.fern.iamservice.config;
 
-import java.time.Duration;
+import com.fern.platform.web.FernDownstreamClientProperties;
 
 public class IamClientProperties {
-    private ClientProperties org = new ClientProperties("http://localhost:8082");
+    private FernDownstreamClientProperties org = defaults("http://localhost:8082");
 
-    public ClientProperties getOrg() {
+    public FernDownstreamClientProperties getOrg() {
         return org;
     }
 
-    public void setOrg(ClientProperties org) {
+    public void setOrg(FernDownstreamClientProperties org) {
         this.org = org;
     }
 
-    public static class ClientProperties {
-        private String baseUrl;
-        private Duration connectTimeout = Duration.ofSeconds(2);
-        private Duration readTimeout = Duration.ofSeconds(5);
-
-        public ClientProperties() {
-        }
-
-        public ClientProperties(String baseUrl) {
-            this.baseUrl = baseUrl;
-        }
-
-        public String getBaseUrl() {
-            return baseUrl;
-        }
-
-        public void setBaseUrl(String baseUrl) {
-            this.baseUrl = baseUrl;
-        }
-
-        public Duration getConnectTimeout() {
-            return connectTimeout;
-        }
-
-        public void setConnectTimeout(Duration connectTimeout) {
-            this.connectTimeout = connectTimeout;
-        }
-
-        public Duration getReadTimeout() {
-            return readTimeout;
-        }
-
-        public void setReadTimeout(Duration readTimeout) {
-            this.readTimeout = readTimeout;
-        }
+    private FernDownstreamClientProperties defaults(String baseUrl) {
+        FernDownstreamClientProperties properties = new FernDownstreamClientProperties();
+        properties.setBaseUrl(baseUrl);
+        return properties;
     }
 }

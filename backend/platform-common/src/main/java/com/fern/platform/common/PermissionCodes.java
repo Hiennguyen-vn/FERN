@@ -65,6 +65,7 @@ public final class PermissionCodes {
     public static final String PROCUREMENT_INVOICE_DISPUTE = "procurement.invoice.dispute";
     public static final String PROCUREMENT_PAYMENT_READ = "procurement.payment.read";
     public static final String PROCUREMENT_PAYMENT_RECORD = "procurement.payment.record";
+    public static final String PROCUREMENT_INTERNAL_READ = "procurement.internal.read";
     public static final String HR_EMPLOYEE_READ = "hr.employee.read";
     public static final String HR_EMPLOYEE_WRITE = "hr.employee.write";
     public static final String HR_CONTRACT_READ = "hr.contract.read";
@@ -83,6 +84,7 @@ public final class PermissionCodes {
     public static final String FINANCE_PAYROLL_PAY = "finance.payroll.pay";
     public static final String FINANCE_CONFIG_READ = "finance.config.read";
     public static final String FINANCE_CONFIG_WRITE = "finance.config.write";
+    public static final String FINANCE_INTERNAL_READ = "finance.internal.read";
     public static final String REPORT_READ = "report.read";
     public static final String REPORT_EXPORT = "report.export";
     public static final String REPORT_PAYROLL_READ = "report.payroll.read";

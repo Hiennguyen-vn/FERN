@@ -148,7 +148,7 @@ export function PaymentRequestsPage() {
             placeholder="Invoice number, supplier, status..."
             value={searchText}
           />
-          <p className="muted-text" style={{ fontSize: 'var(--text-xs)', marginTop: '0.25rem' }}>
+          <p className="muted-text field-hint">
             Lọc trên tập dữ liệu đã tải (tối đa 200 invoice). Backend không hỗ trợ server-side search.
           </p>
         </div>
@@ -159,7 +159,7 @@ export function PaymentRequestsPage() {
             options={statusOptions}
             value={statusFilter}
           />
-          <p className="muted-text" style={{ fontSize: 'var(--text-xs)', marginTop: '0.25rem' }}>
+          <p className="muted-text field-hint">
             Status filter được gửi lên backend — chỉ trả về invoices khớp status.
           </p>
         </div>

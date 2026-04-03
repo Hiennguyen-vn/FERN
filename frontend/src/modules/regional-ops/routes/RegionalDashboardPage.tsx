@@ -17,8 +17,8 @@ import {
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { formatMoney } from '@shared/formatters'
+import { useOutletRevenueTodayStats } from '../../reports/hooks/useOutletRevenueTodayStats'
 import { useRegionalOutlets, useRegionalRegion } from '../hooks/useRegionalOps'
-import { useOutletTodayStats } from '../../pos/hooks/useOutletStats'
 import type { RegionalOutlet } from '../model/regionalOps.types'
 import { getRegionalOpsErrorMessage } from '../services/regionalError.service'
 import {
@@ -42,7 +42,7 @@ export function RegionalDashboardPage() {
   const outletsQuery = useRegionalOutlets(outletIds, {
     enabled: canOpen && regionalContext.status === 'resolved',
   })
-  const outletStatsQuery = useOutletTodayStats(
+  const outletStatsQuery = useOutletRevenueTodayStats(
     outletIds,
     canOpen && regionalContext.status === 'resolved',
   )
@@ -51,6 +51,10 @@ export function RegionalDashboardPage() {
     () => outletsQuery.rows.filter((outlet) => outlet.regionId === regionalContext.resolvedRegionId),
     [outletsQuery.rows, regionalContext.resolvedRegionId],
   )
+  const visibleOutletStats = useMemo(
+    () => outletStatsQuery.outletStats.filter((row) => visibleOutlets.some((outlet) => outlet.id === row.outletId)),
+    [outletStatsQuery.outletStats, visibleOutlets],
+  )
 
   const columns = useMemo<Array<DataTableColumn<RegionalOutlet>>>(
     () => [
@@ -58,7 +62,7 @@ export function RegionalDashboardPage() {
         key: 'outlet',
         header: 'Outlet',
         render: (outlet) => (
-          <div className="page-stack" style={{ gap: '0.25rem' }}>
+          <div className="compact-stack-tight">
             <strong>{outlet.name}</strong>
             <span className="muted-text">{outlet.code}</span>
           </div>
@@ -171,7 +175,7 @@ export function RegionalDashboardPage() {
         rows={visibleOutlets}
       />
 
-      <Card title="📊 Thống kê cuối ca theo outlet (hôm nay)">
+      <Card title="Thống kê cuối ca theo outlet (hôm nay)">
         <DataTable
           columns={[
             {
@@ -180,7 +184,7 @@ export function RegionalDashboardPage() {
               render: (row) => {
                 const outlet = visibleOutlets.find((o) => o.id === row.outletId)
                 return (
-                  <div className="page-stack" style={{ gap: '0.25rem' }}>
+                  <div className="compact-stack-tight">
                     <strong>{outlet?.name ?? `#${row.outletId}`}</strong>
                     <span className="muted-text">{outlet?.code ?? ''}</span>
                   </div>
@@ -196,7 +200,7 @@ export function RegionalDashboardPage() {
               key: 'totalRevenue',
               header: 'Doanh thu',
               render: (row) => (
-                <strong style={{ color: 'var(--color-success, #16a34a)' }}>
+                <strong className="metric-value-positive">
                   {row.isLoading ? '...' : formatMoney(row.totalRevenue, row.currencyCode)}
                 </strong>
               ),
@@ -215,7 +219,7 @@ export function RegionalDashboardPage() {
               key: 'completed',
               header: 'Đơn xong',
               render: (row) => (
-                <strong style={{ color: row.completed > 0 ? 'var(--color-success, #16a34a)' : undefined }}>
+                <strong className={row.completed > 0 ? 'metric-value-positive' : undefined}>
                   {row.isLoading ? '...' : row.completed}
                 </strong>
               ),
@@ -223,9 +227,11 @@ export function RegionalDashboardPage() {
             {
               key: 'open',
               header: 'Đơn mở',
-              render: (row) => <span style={{ color: row.open > 0 ? 'var(--color-warning, #d97706)' : undefined }}>
-                {row.isLoading ? '...' : row.open}
-              </span>,
+              render: (row) => (
+                <span className={row.open > 0 ? 'metric-value-warning' : undefined}>
+                  {row.isLoading ? '...' : row.open}
+                </span>
+              ),
             },
           ]}
           emptyDescription="Không có outlet nào có session hôm nay."
@@ -233,7 +239,7 @@ export function RegionalDashboardPage() {
           loading={outletStatsQuery.isLoading}
           loadingTitle="Đang tải thống kê cuối ca..."
           rowKey={(row) => row.outletId}
-          rows={outletStatsQuery.outletStats}
+          rows={visibleOutletStats}
         />
       </Card>
     </DashboardLayout>

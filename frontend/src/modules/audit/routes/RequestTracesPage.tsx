@@ -126,7 +126,7 @@ export function RequestTracesPage() {
         key: 'request',
         header: 'Request',
         render: (trace) => (
-          <div className="page-stack" style={{ gap: '0.25rem' }}>
+          <div className="compact-stack-tight">
             <strong>{trace.method} {trace.endpoint}</strong>
             <span className="muted-text">{trace.requestId ?? 'No requestId'} · {trace.sourceService}</span>
           </div>

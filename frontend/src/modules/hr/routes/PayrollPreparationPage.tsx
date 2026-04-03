@@ -331,29 +331,29 @@ export function PayrollPreparationPage() {
         <article className="payroll-summary-card primary">
           <div className="payroll-summary-card-header">
             <div>
-              <p className="workspace-stat-label" style={{ color: 'rgba(202, 207, 255, 0.92)' }}>
+              <p className="workspace-stat-label">
                 Estimated total payout
               </p>
               <strong className="workspace-stat-value">{formatCurrencyAmount(estimatedPayout)}</strong>
             </div>
-            <span className="workspace-stat-icon" style={{ background: 'rgba(255, 255, 255, 0.12)', color: '#fff' }}>
+            <span className="workspace-stat-icon">
               <AppIcon filled name="account_balance_wallet" />
             </span>
           </div>
-          <div className="detail-kpi-grid" style={{ borderTopColor: 'rgba(255, 255, 255, 0.16)' }}>
+          <div className="detail-kpi-grid">
             <div className="detail-kpi">
-              <span className="detail-kpi-label" style={{ color: 'rgba(202, 207, 255, 0.88)' }}>
+              <span className="detail-kpi-label">
                 Latest draft
               </span>
-              <span className="detail-kpi-value" style={{ color: '#fff', fontSize: '1.2rem' }}>
+              <span className="detail-kpi-value">
                 {latestRun?.runCode ?? 'None'}
               </span>
             </div>
             <div className="detail-kpi">
-              <span className="detail-kpi-label" style={{ color: 'rgba(202, 207, 255, 0.88)' }}>
+              <span className="detail-kpi-label">
                 Awaiting finance
               </span>
-              <span className="detail-kpi-value" style={{ color: '#fff', fontSize: '1.2rem' }}>
+              <span className="detail-kpi-value">
                 {awaitingFinance}
               </span>
             </div>
@@ -362,7 +362,7 @@ export function PayrollPreparationPage() {
         <article className="payroll-summary-card danger">
           <div className="payroll-summary-card-header">
             <div>
-              <p className="workspace-stat-label" style={{ color: 'rgba(102, 13, 13, 0.72)' }}>
+              <p className="workspace-stat-label">
                 Missing inputs
               </p>
               <strong className="workspace-stat-value">{missingInputs}</strong>
@@ -378,16 +378,16 @@ export function PayrollPreparationPage() {
         <article className="payroll-summary-card success">
           <div className="payroll-summary-card-header">
             <div>
-              <p className="workspace-stat-label" style={{ color: 'rgba(111, 251, 190, 0.78)' }}>
+              <p className="workspace-stat-label">
                 Open periods
               </p>
               <strong className="workspace-stat-value">{openPeriods}</strong>
             </div>
-            <span className="workspace-stat-icon" style={{ background: 'rgba(255, 255, 255, 0.12)', color: '#fff' }}>
+            <span className="workspace-stat-icon">
               <AppIcon filled name="task_alt" />
             </span>
           </div>
-          <p className="muted-text" style={{ color: 'rgba(255, 255, 255, 0.86)' }}>
+          <p className="muted-text">
             {awaitingFinance} draft runs are waiting for the finance review chain.
           </p>
         </article>

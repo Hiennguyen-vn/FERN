@@ -47,6 +47,7 @@ export function SupplierListPage() {
         ) : null
       }
       description="Quản lý danh sách nhà cung cấp và thông tin liên hệ."
+      eyebrow="Procurement"
       title="Suppliers"
     >
       {!canRead ? (

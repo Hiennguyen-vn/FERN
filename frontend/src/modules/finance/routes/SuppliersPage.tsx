@@ -74,7 +74,7 @@ export function SuppliersPage() {
         key: 'supplier',
         header: 'Supplier',
         render: (supplier) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <strong>{supplier.name}</strong>
             <span className="muted-text">{supplier.supplierCode}</span>
           </div>

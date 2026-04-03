@@ -1,8 +1,8 @@
 package com.fern.procurementservice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,6 +17,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -79,12 +80,17 @@ class ProcurementOutboxPublisherIntegrationTest {
     @Test
     void shouldReclaimStaleInProgressProcurementOutboxEvent() {
         UUID eventId = insertOutbox("IN_PROGRESS", 1, NOW.minus(Duration.ofMinutes(2)));
-        when(kafkaTemplate.send(anyString(), anyString(), anyString()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
         publisher.publishPending();
 
-        verify(kafkaTemplate).send(eq("procurement.goods_receipt.posted"), eq("101"), anyString());
+        verify(kafkaTemplate).send(argThat((ProducerRecord<String, String> record) ->
+                com.fern.platform.testsupport.JsonTestSupport.matchesProducerRecord(
+                        record,
+                        "procurement.goods_receipt.posted",
+                        "101",
+                        "{\"id\":9901}")));
         assertThat(status(eventId)).isEqualTo("PUBLISHED");
         assertThat(publishedAt(eventId)).isEqualTo(OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC));
         assertThat(lastError(eventId)).isNull();
@@ -96,7 +102,7 @@ class ProcurementOutboxPublisherIntegrationTest {
 
         publisher.publishPending();
 
-        verify(kafkaTemplate, never()).send(anyString(), anyString(), anyString());
+        verify(kafkaTemplate, never()).send(any(ProducerRecord.class));
         assertThat(status(eventId)).isEqualTo("IN_PROGRESS");
         assertThat(publishedAt(eventId)).isNull();
     }
@@ -107,7 +113,7 @@ class ProcurementOutboxPublisherIntegrationTest {
 
         publisher.publishPending();
 
-        verify(kafkaTemplate, never()).send(anyString(), anyString(), anyString());
+        verify(kafkaTemplate, never()).send(any(ProducerRecord.class));
         assertThat(status(eventId)).isEqualTo("FAILED");
         assertThat(publishedAt(eventId)).isNull();
         assertThat(lastError(eventId)).isEqualTo("previous failure");

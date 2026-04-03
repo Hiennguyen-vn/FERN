@@ -14,7 +14,7 @@ import { login } from '@core/auth/auth.service'
 import { permissionConstants } from '@core/permissions/permission.constants'
 import { LazyRouteBoundary } from './LazyRouteBoundary'
 import { useAuthStore } from '@core/auth/auth.store'
-import { Button, Input } from '@design-system/index'
+import { Button } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { HomeActionHub } from '@app/surfaces/HomeActionHub'
 import {
@@ -121,6 +121,9 @@ import {
   OutletRevenueReportPage,
 } from './lazyRouteElements'
 
+const DEV_BOOTSTRAP_USERNAME = 'bootstrap-admin'
+const DEV_BOOTSTRAP_PASSWORD = 'Admin123!'
+
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function AuthPageFrame({ children }: { children: ReactNode }) {
@@ -166,10 +169,24 @@ function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const [username, setUsername] = useState(import.meta.env.DEV ? 'bootstrap-admin' : '')
-  const [password, setPassword] = useState(import.meta.env.DEV ? 'Admin123!' : '')
+  const [username, setUsername] = useState(import.meta.env.DEV ? DEV_BOOTSTRAP_USERNAME : '')
+  const [password, setPassword] = useState(import.meta.env.DEV ? DEV_BOOTSTRAP_PASSWORD : '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  async function authenticate(nextUsername: string, nextPassword: string) {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await login({ username: nextUsername, password: nextPassword })
+      const nextPath = (location.state as { from?: string } | null)?.from ?? '/home'
+      navigate(nextPath, { replace: true })
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Login failed')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (isAuthenticated) {
     return <Navigate replace to="/home" />
@@ -177,54 +194,101 @@ function LoginPage() {
 
   return (
     <AuthPageFrame>
-      <div className="page-stack">
-        <div>
-          <p className="eyebrow">Secure sign-in</p>
-          <h1>Welcome back</h1>
-          <p className="muted-text">Sign in to the operational shell for live F&amp;B command, control, and reporting.</p>
+      <div className="auth-form-header">
+        <p className="eyebrow">Secure sign-in</p>
+        <h2>Đăng nhập</h2>
+        <p className="muted-text">Đăng nhập vào shell vận hành để truy cập command center, POS và reporting theo đúng scope của bạn.</p>
+      </div>
+
+      <form
+        className="auth-form"
+        onSubmit={async (event) => {
+          event.preventDefault()
+          await authenticate(username, password)
+        }}
+      >
+        <label className="auth-form-field" htmlFor="username">
+          <span className="auth-form-label">Username</span>
+          <span className="auth-form-input-wrap">
+            <AppIcon className="auth-form-input-icon" name="person" size="sm" />
+            <input
+              autoComplete="username"
+              className="auth-form-input"
+              id="username"
+              name="username"
+              onChange={(event) => setUsername(event.target.value)}
+              placeholder="Enter your username"
+              type="text"
+              value={username}
+            />
+          </span>
+        </label>
+
+        <label className="auth-form-field" htmlFor="password">
+          <span className="auth-form-label-row">
+            <span className="auth-form-label">Password</span>
+            <span className="auth-form-link">Forgot password?</span>
+          </span>
+          <span className="auth-form-input-wrap">
+            <AppIcon className="auth-form-input-icon" name="lock" size="sm" />
+            <input
+              autoComplete="current-password"
+              className="auth-form-input"
+              id="password"
+              name="password"
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="••••••••"
+              type="password"
+              value={password}
+            />
+          </span>
+        </label>
+
+        {error ? <div className="auth-form-error">{error}</div> : null}
+
+        <button className="auth-submit-button" disabled={submitting} type="submit">
+          {submitting ? (
+            'Signing in...'
+          ) : (
+            <>
+              Sign In
+              <AppIcon name="login" size="sm" />
+            </>
+          )}
+        </button>
+      </form>
+
+      <div className="auth-divider">
+        <span>Credential Control</span>
+      </div>
+
+      {import.meta.env.DEV ? (
+        <div className="auth-dev-access">
+          <button
+            className="auth-submit-button auth-submit-button-secondary"
+            disabled={submitting}
+            onClick={() => {
+              setUsername(DEV_BOOTSTRAP_USERNAME)
+              setPassword(DEV_BOOTSTRAP_PASSWORD)
+              void authenticate(DEV_BOOTSTRAP_USERNAME, DEV_BOOTSTRAP_PASSWORD)
+            }}
+            type="button"
+          >
+            Use full-access dev account
+            <AppIcon name="bolt" size="sm" />
+          </button>
+          <p className="auth-dev-note">
+            Uses <strong>{DEV_BOOTSTRAP_USERNAME}</strong> with system scope and full module permissions.
+          </p>
         </div>
-        <form
-          className="page-stack"
-          onSubmit={async (event) => {
-            event.preventDefault()
-            setSubmitting(true)
-            setError(null)
-            try {
-              await login({ username, password })
-              const nextPath = (location.state as { from?: string } | null)?.from ?? '/home'
-              navigate(nextPath, { replace: true })
-            } catch (loginError) {
-              setError(loginError instanceof Error ? loginError.message : 'Login failed')
-            } finally {
-              setSubmitting(false)
-            }
-          }}
-        >
-          <Input
-            autoComplete="username"
-            label="Username"
-            onChange={(event) => setUsername(event.target.value)}
-            placeholder="Enter your username"
-            value={username}
-          />
-          <Input
-            autoComplete="current-password"
-            label="Password"
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter your password"
-            type="password"
-            value={password}
-          />
-          {error ? <p className="error-text">{error}</p> : null}
-          <Button loading={submitting} type="submit">
-            {!submitting ? <AppIcon name="login" size="sm" /> : null}
-            Sign in
-          </Button>
-        </form>
-        <div className="auth-footnote">
-          <span>Access rights are determined by your assigned role and scope.</span>
-          <span>Auth, refresh, and permission contracts remain unchanged.</span>
-        </div>
+      ) : null}
+
+      <div className="auth-role-note">
+        <p>
+          {import.meta.env.DEV
+            ? 'The dev shortcut still uses the real backend login, so route guards and permissions stay realistic.'
+            : 'Access rights are determined by your assigned role and data scope.'}
+        </p>
       </div>
     </AuthPageFrame>
   )

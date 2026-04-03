@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import {
   Button,
   DataTable,
-  Input,
   MaskedField,
   PermissionDeniedInline,
-  Select,
   StatusBadge,
 } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
@@ -61,7 +60,7 @@ export function ContractsPage() {
         key: 'contract',
         header: 'Contract',
         render: (contract) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <strong>#{contract.id}</strong>
             <span className="muted-text">{contract.employmentType}</span>
           </div>
@@ -110,7 +109,7 @@ export function ContractsPage() {
 
   if (!canReadContracts) {
     return (
-      <DashboardLayout title="HR Contracts" description="Contract browse cho module HR">
+      <DashboardLayout title="HR Contracts" description="Contract browse cho module HR" eyebrow="Human Resources">
         <PermissionDeniedInline message="Bạn cần quyền hr.contract.read để xem danh sách hợp đồng." />
       </DashboardLayout>
     )
@@ -120,6 +119,7 @@ export function ContractsPage() {
     <DashboardLayout
       title="Hợp đồng"
       description="Contract browse workspace cho HR và scope-aware contract review."
+      eyebrow="Human Resources"
       actions={
         canCreateContracts ? (
           <Button asChild size="sm">
@@ -128,27 +128,39 @@ export function ContractsPage() {
         ) : null
       }
     >
-      <div className="field-grid">
-        <Input
-          label="Employee ID"
-          onChange={(event) => { setEmployeeFilter(event.target.value); setPage(0) }}
-          placeholder="Lọc theo employee ID"
-          type="number"
-          value={employeeFilter}
-        />
-        <Input
-          label="Search contracts"
-          onChange={(event) => { setSearchText(event.target.value); setPage(0) }}
-          placeholder="Contract ID, employee, type..."
-          value={searchText}
-        />
-        <Select
-          label="Status filter"
-          onChange={(event) => { setStatusFilter(event.target.value); setPage(0) }}
-          options={statusOptions}
-          value={statusFilter}
-        />
-      </div>
+      <section className="workspace-filter-bar" aria-label="Contract filters">
+        <div className="workspace-inline-search">
+          <AppIcon name="search" size="sm" />
+          <input
+            className="workspace-inline-input"
+            onChange={(event) => { setSearchText(event.target.value); setPage(0) }}
+            placeholder="Contract ID, employee, type..."
+            value={searchText}
+          />
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Employee ID</span>
+          <input
+            className="workspace-inline-input"
+            onChange={(event) => { setEmployeeFilter(event.target.value); setPage(0) }}
+            placeholder="Lọc theo employee ID"
+            type="number"
+            value={employeeFilter}
+          />
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Status</span>
+          <select
+            className="workspace-inline-select"
+            onChange={(event) => { setStatusFilter(event.target.value); setPage(0) }}
+            value={statusFilter}
+          >
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+      </section>
 
       <DataTable
         canNext={hasMore}

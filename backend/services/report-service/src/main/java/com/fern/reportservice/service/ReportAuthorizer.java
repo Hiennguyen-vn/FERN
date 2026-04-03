@@ -32,6 +32,10 @@ public class ReportAuthorizer {
         requireSystemPermission(principal, PermissionCodes.REPORT_EXPORT, PermissionCodes.REPORT_PAYROLL_EXPORT);
     }
 
+    public void requireOutletReportRead(FernPrincipal principal, Long outletId) {
+        requireOutletPermission(principal, outletId, PermissionCodes.REPORT_READ, PermissionCodes.REPORT_PAYROLL_READ);
+    }
+
     private void requireRegionPermission(FernPrincipal principal, Long regionId, String primaryPermission, String secondaryPermission) {
         if (principal == null || !hasAnyPermission(principal, primaryPermission, secondaryPermission)) {
             throw new ForbiddenException("Missing permission");
@@ -50,6 +54,18 @@ public class ReportAuthorizer {
         }
         if (!ScopeAccess.isSystemScoped(principal)) {
             throw new ForbiddenException("System scope is required");
+        }
+    }
+
+    private void requireOutletPermission(FernPrincipal principal, Long outletId, String primaryPermission, String secondaryPermission) {
+        if (principal == null || !hasAnyPermission(principal, primaryPermission, secondaryPermission)) {
+            throw new ForbiddenException("Missing permission");
+        }
+        if (ScopeAccess.isSystemScoped(principal)) {
+            return;
+        }
+        if (!ScopeAccess.allowsOutlet(principal, outletId)) {
+            throw new ForbiddenException("Outlet is outside the current scope");
         }
     }
 

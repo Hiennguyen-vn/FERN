@@ -6,7 +6,10 @@ import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.OperationalShardRegistry;
 import com.fern.platform.common.PermissionCodes;
+import com.fern.platform.common.RouteKey;
+import com.fern.platform.common.ShardResolver;
 import com.fern.platform.contracts.PosSaleCompletedEvent;
 import com.fern.platform.contracts.RecipeUsageItem;
 import com.fern.platform.contracts.SalePaymentSnapshot;
@@ -22,6 +25,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,51 +39,57 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class PosOrderService {
-    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final PosAuthorizer posAuthorizer;
     private final PosStore store;
+    private final PosOrgClient posOrgClient;
     private final PosPricingService pricingService;
     private final PosInventoryClient inventoryClient;
     private final PosReferenceCodeGenerator codeGenerator;
-    private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final OperationalAlertPublisher operationalAlertPublisher;
     private final PosAuditService posAuditService;
     private final Counter paymentFailureCounter;
+    private final OperationalShardRegistry operationalShardRegistry;
+    private final ShardResolver shardResolver;
 
     public PosOrderService(
-            NamedParameterJdbcTemplate jdbcTemplate,
             PosAuthorizer posAuthorizer,
             PosStore store,
+            PosOrgClient posOrgClient,
             PosPricingService pricingService,
             PosInventoryClient inventoryClient,
             PosReferenceCodeGenerator codeGenerator,
-            TransactionTemplate transactionTemplate,
             ObjectMapper objectMapper,
             Clock clock,
             OperationalAlertPublisher operationalAlertPublisher,
             PosAuditService posAuditService,
-            MeterRegistry meterRegistry
+            MeterRegistry meterRegistry,
+            OperationalShardRegistry operationalShardRegistry,
+            ShardResolver shardResolver
     ) {
-        this.jdbcTemplate = jdbcTemplate;
         this.posAuthorizer = posAuthorizer;
         this.store = store;
+        this.posOrgClient = posOrgClient;
         this.pricingService = pricingService;
         this.inventoryClient = inventoryClient;
         this.codeGenerator = codeGenerator;
-        this.transactionTemplate = transactionTemplate;
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.operationalAlertPublisher = operationalAlertPublisher;
         this.posAuditService = posAuditService;
         this.paymentFailureCounter = Counter.builder("fern_payment_failures_total").register(meterRegistry);
+        this.operationalShardRegistry = operationalShardRegistry;
+        this.shardResolver = shardResolver;
     }
 
     public SaleOrderResponse createOrder(FernPrincipal principal, CreateSaleOrderRequest request) {
         SessionRecord session = store.requireSession(request.posSessionId());
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(session.regionId(), session.outletId());
+        TransactionTemplate transactionTemplate = transactionTemplate(session.regionId(), session.outletId());
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_ORDER_CREATE);
         ensureSessionOpen(session);
+        ensureOutletOperational(session.outletId(), session.businessDate());
         PricingSnapshot pricingSnapshot = pricingService.resolvePricingSnapshot(
                 principal,
                 session.outletId(),
@@ -89,6 +99,7 @@ public class PosOrderService {
         Long id = Objects.requireNonNull(transactionTemplate.execute(status -> {
             SessionRecord currentSession = store.requireSessionForUpdate(request.posSessionId());
             ensureSessionOpen(currentSession);
+            ensureOutletOperational(currentSession.outletId(), currentSession.businessDate());
             Long orderId = PosSql.insertForId(jdbcTemplate, """
                     INSERT INTO pos.sale_order (
                         order_number, region_id, outlet_id, pos_session_id, currency_code, order_type, status,
@@ -143,6 +154,8 @@ public class PosOrderService {
 
     public SaleOrderResponse updateOrder(FernPrincipal principal, Long id, UpdateSaleOrderRequest request) {
         OrderRecord order = store.requireOrder(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
+        TransactionTemplate transactionTemplate = transactionTemplate(order.regionId(), order.outletId());
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_UPDATE);
         ensureOrderOpen(order);
         ensureNoSuccessfulPayments(id);
@@ -187,6 +200,8 @@ public class PosOrderService {
     ) {
         requireIdempotencyKey(idempotencyKey);
         OrderRecord order = store.requireOrder(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
+        TransactionTemplate transactionTemplate = transactionTemplate(order.regionId(), order.outletId());
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_UPDATE);
         ensureOrderOpen(order);
         transactionTemplate.executeWithoutResult(status -> {
@@ -314,6 +329,8 @@ public class PosOrderService {
 
     public SaleOrderResponse completeOrder(FernPrincipal principal, Long id, String correlationId) {
         OrderRecord order = store.requireOrder(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
+        TransactionTemplate transactionTemplate = transactionTemplate(order.regionId(), order.outletId());
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_COMPLETE);
         if (isCompletionReplay(order)) {
             return getOrder(principal, id);
@@ -323,7 +340,7 @@ public class PosOrderService {
             throw new ConflictException("Order cannot be completed until payment covers the full total");
         }
         CompletionPreflight preflight = Objects.requireNonNull(
-                transactionTemplate.execute(status -> prepareCompletionPreflight(principal, id))
+                transactionTemplate.execute(status -> prepareCompletionPreflight(principal, id, jdbcTemplate))
         );
         SaleReservationResponse reservation = null;
         try {
@@ -390,6 +407,7 @@ public class PosOrderService {
                         "id", finalizedOrderId
                 ));
                 enqueueSaleCompletedEvent(
+                        jdbcTemplate,
                         currentOrder,
                         currentSession,
                         finalizedPreflight.pricingSnapshot(),
@@ -406,7 +424,7 @@ public class PosOrderService {
             if (reservation != null) {
                 releaseReservationAfterFailure(principal, reservation, exception);
             }
-            revertCompletingOrder(id);
+            revertCompletingOrder(order.regionId(), order.outletId(), id);
             throw exception;
         }
         return getOrder(principal, id);
@@ -414,6 +432,8 @@ public class PosOrderService {
 
     public SaleOrderResponse cancelOrder(FernPrincipal principal, Long id) {
         OrderRecord order = store.requireOrder(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
+        TransactionTemplate transactionTemplate = transactionTemplate(order.regionId(), order.outletId());
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_CANCEL);
         ensureOrderOpen(order);
         if (store.successfulPaymentTotal(id).compareTo(BigDecimal.ZERO) > 0) {
@@ -463,6 +483,7 @@ public class PosOrderService {
     }
 
     private void enqueueSaleCompletedEvent(
+            NamedParameterJdbcTemplate jdbcTemplate,
             OrderRecord order,
             SessionRecord session,
             PricingSnapshot pricingSnapshot,
@@ -528,7 +549,11 @@ public class PosOrderService {
         );
     }
 
-    private CompletionPreflight prepareCompletionPreflight(FernPrincipal principal, Long orderId) {
+    private CompletionPreflight prepareCompletionPreflight(
+            FernPrincipal principal,
+            Long orderId,
+            NamedParameterJdbcTemplate jdbcTemplate
+    ) {
         OrderRecord currentOrder = store.requireOrderForCompletionPreflight(orderId);
         if (isCompletionReplay(currentOrder)) {
             return new CompletionPreflight(
@@ -567,8 +592,9 @@ public class PosOrderService {
         return new CompletionPreflight(markedOrder, currentSession, pricingSnapshot, recipeSnapshots, usageItems);
     }
 
-    private void revertCompletingOrder(Long orderId) {
-        transactionTemplate.executeWithoutResult(status -> {
+    private void revertCompletingOrder(Long regionId, Long outletId, Long orderId) {
+        transactionTemplate(regionId, outletId).executeWithoutResult(status -> {
+            NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(regionId, outletId);
             int updated = jdbcTemplate.update("""
                     UPDATE pos.sale_order
                     SET status = :status,
@@ -584,6 +610,14 @@ public class PosOrderService {
                 store.refreshPaymentStatus(orderId);
             }
         });
+    }
+
+    private NamedParameterJdbcTemplate jdbcTemplate(Long regionId, Long outletId) {
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).jdbc();
+    }
+
+    private TransactionTemplate transactionTemplate(Long regionId, Long outletId) {
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).tx();
     }
 
     private boolean isCompletionReplay(OrderRecord order) {
@@ -654,6 +688,13 @@ public class PosOrderService {
     private void ensureSessionOpen(SessionRecord session) {
         if (!PosSessionStatus.OPEN.name().equals(session.status())) {
             throw new ConflictException("The POS session is not open");
+        }
+    }
+
+    private void ensureOutletOperational(Long outletId, LocalDate businessDate) {
+        PosOrgClient.OutletRoute outlet = posOrgClient.requireOutlet(outletId);
+        if (!outlet.isActive() || outlet.isClosedOn(businessDate)) {
+            throw new ConflictException("Outlet is inactive or closed for POS transactions");
         }
     }
 

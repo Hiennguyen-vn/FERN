@@ -203,7 +203,7 @@ export function GoodsReceiptCreatePage() {
           ))}
         </div>
         {validationError && (
-          <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{validationError}</p>
+          <p className="error-text error-text-compact">{validationError}</p>
         )}
         <FormActions
           primaryAction={

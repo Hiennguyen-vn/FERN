@@ -20,6 +20,20 @@ export interface RevenueReportSummary {
   totalRevenue: number | null
 }
 
+export interface OutletRevenueTodayStat {
+  outletId: number
+  sessionId: number | null
+  sessionStatus: string
+  currencyCode: string
+  totalOrders: number
+  completed: number
+  open: number
+  cancelled: number
+  totalRevenue: number
+  cashCollected: number
+  nonCashCollected: number
+}
+
 export interface RevenueReportState {
   filters: RevenueReportRunRequest | null
   job: ExportJob | null

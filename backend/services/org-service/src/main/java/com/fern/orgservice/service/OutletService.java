@@ -6,6 +6,7 @@ import com.fern.platform.common.ListQueryDefaults;
 import com.fern.platform.common.PageResponse;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.orgservice.domain.OutletEntity;
+import com.fern.orgservice.domain.OutletStatus;
 import com.fern.orgservice.dto.CreateOutletRequest;
 import com.fern.orgservice.dto.OutletResponse;
 import com.fern.orgservice.dto.UpdateOutletRequest;
@@ -27,6 +28,9 @@ public class OutletService {
     private final ScopeExpansionService scopeExpansionService;
     private final ScopeVersionService scopeVersionService;
     private final OrgOutboxService outboxService;
+    private final OrgPosClient orgPosClient;
+    private final OrgProcurementClient orgProcurementClient;
+    private final OrgFinanceClient orgFinanceClient;
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final Clock clock;
 
@@ -37,6 +41,9 @@ public class OutletService {
             ScopeExpansionService scopeExpansionService,
             ScopeVersionService scopeVersionService,
             OrgOutboxService outboxService,
+            OrgPosClient orgPosClient,
+            OrgProcurementClient orgProcurementClient,
+            OrgFinanceClient orgFinanceClient,
             NamedParameterJdbcTemplate jdbcTemplate,
             Clock clock
     ) {
@@ -46,6 +53,9 @@ public class OutletService {
         this.scopeExpansionService = scopeExpansionService;
         this.scopeVersionService = scopeVersionService;
         this.outboxService = outboxService;
+        this.orgPosClient = orgPosClient;
+        this.orgProcurementClient = orgProcurementClient;
+        this.orgFinanceClient = orgFinanceClient;
         this.jdbcTemplate = jdbcTemplate;
         this.clock = clock;
     }
@@ -162,6 +172,7 @@ public class OutletService {
         OutletEntity entity = outletRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Outlet not found: " + id));
         orgAuthorizer.requireOutletAccess(principal, id, "org.outlet.write");
+        ensureOutletCanBeClosed(principal, entity, request);
 
         if (request.regionId() != null) {
             orgAuthorizer.requireRegionAccess(principal, request.regionId(), "org.outlet.write");
@@ -195,6 +206,30 @@ public class OutletService {
         long newVersion = scopeVersionService.bump();
         outboxService.enqueue("outlet", entity.getId().toString(), "org.outlet.changed", entity.getId().toString(), toResponse(entity));
         return withVersion(entity, newVersion);
+    }
+
+    private void ensureOutletCanBeClosed(FernPrincipal principal, OutletEntity entity, UpdateOutletRequest request) {
+        if (request.status() != OutletStatus.CLOSED || entity.getStatus() == OutletStatus.CLOSED) {
+            return;
+        }
+        if (orgPosClient.hasOpenSessions(entity.getId(), principal)) {
+            throw new ConflictException("Cannot close outlet while open POS sessions still exist");
+        }
+        OrgProcurementClient.OutletCloseCheck procurementCheck = orgProcurementClient.getOutletCloseCheck(entity.getId(), principal);
+        if (procurementCheck.hasBlockingDocuments()) {
+            throw new ConflictException(
+                    "Cannot close outlet while procurement documents remain open: "
+                            + "purchaseOrders=" + procurementCheck.blockingPurchaseOrders()
+                            + ", goodsReceipts=" + procurementCheck.blockingGoodsReceipts()
+                            + ", supplierInvoices=" + procurementCheck.blockingSupplierInvoices()
+            );
+        }
+        OrgFinanceClient.OutletCloseCheck financeCheck = orgFinanceClient.getOutletCloseCheck(entity.getId(), principal);
+        if (financeCheck.hasBlockingObligations()) {
+            throw new ConflictException(
+                    "Cannot close outlet while finance obligations remain open: payrollRuns=" + financeCheck.blockingPayrollRuns()
+            );
+        }
     }
 
     private OutletResponse toResponse(OutletEntity entity) {

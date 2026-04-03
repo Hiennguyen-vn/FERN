@@ -14,9 +14,11 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -45,7 +47,7 @@ public class ReportIngestionSupport {
     private final AtomicLong projectionLagMillis;
 
     public ReportIngestionSupport(
-            NamedParameterJdbcTemplate jdbcTemplate,
+            @Qualifier("namedParameterJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
             ObjectMapper objectMapper,
             SnowflakeIdGenerator idGenerator,
             Clock clock,
@@ -77,6 +79,20 @@ public class ReportIngestionSupport {
             String payload,
             Runnable work
     ) {
+        ingestWithLanding(List.of(), sourceEventId, sourceService, eventType, occurredAt, idempotencyKey, topic, payload, work);
+    }
+
+    public void ingestWithLanding(
+            List<String> datasets,
+            String sourceEventId,
+            String sourceService,
+            String eventType,
+            Instant occurredAt,
+            String idempotencyKey,
+            String topic,
+            String payload,
+            Runnable work
+    ) {
         if (!Boolean.TRUE.equals(transactionTemplate.execute(status ->
                 beginLanding(sourceEventId, sourceService, eventType, occurredAt, idempotencyKey, topic, payload)))) {
             return;
@@ -85,9 +101,13 @@ public class ReportIngestionSupport {
             transactionTemplate.executeWithoutResult(status -> {
                 work.run();
                 markLandingProcessed(sourceEventId);
+                markProjectionSuccess(datasets, occurredAt);
             });
         } catch (RuntimeException exception) {
-            transactionTemplate.executeWithoutResult(status -> markLandingFailed(sourceEventId, exception));
+            transactionTemplate.executeWithoutResult(status -> {
+                markLandingFailed(sourceEventId, exception);
+                markProjectionFailure(datasets, occurredAt);
+            });
             throw exception;
         }
     }
@@ -104,6 +124,44 @@ public class ReportIngestionSupport {
 
     public SnowflakeIdGenerator idGenerator() {
         return idGenerator;
+    }
+
+    public void upsertInventoryStockSnapshot(
+            Long regionId,
+            Long outletId,
+            Long ingredientId,
+            BigDecimal qtyDelta,
+            BigDecimal unitCost,
+            java.time.LocalDate lastCountDate,
+            Instant occurredAt
+    ) {
+        jdbcTemplate.update("""
+                INSERT INTO report.inventory_stock_snapshot (
+                    snapshot_id, region_id, outlet_id, ingredient_id, qty_on_hand, unit_cost, last_count_date, last_movement_at, updated_at
+                ) VALUES (
+                    :snapshotId, :regionId, :outletId, :ingredientId, :qtyOnHand, :unitCost, :lastCountDate, :lastMovementAt, CURRENT_TIMESTAMP
+                )
+                ON CONFLICT (outlet_id, ingredient_id) DO UPDATE
+                SET region_id = EXCLUDED.region_id,
+                    qty_on_hand = report.inventory_stock_snapshot.qty_on_hand + EXCLUDED.qty_on_hand,
+                    unit_cost = COALESCE(EXCLUDED.unit_cost, report.inventory_stock_snapshot.unit_cost),
+                    last_count_date = COALESCE(EXCLUDED.last_count_date, report.inventory_stock_snapshot.last_count_date),
+                    last_movement_at = CASE
+                        WHEN report.inventory_stock_snapshot.last_movement_at IS NULL THEN EXCLUDED.last_movement_at
+                        WHEN EXCLUDED.last_movement_at IS NULL THEN report.inventory_stock_snapshot.last_movement_at
+                        ELSE GREATEST(report.inventory_stock_snapshot.last_movement_at, EXCLUDED.last_movement_at)
+                    END,
+                    updated_at = CURRENT_TIMESTAMP
+                """, params(
+                "snapshotId", idGenerator.nextId(),
+                "regionId", regionId,
+                "outletId", outletId,
+                "ingredientId", ingredientId,
+                "qtyOnHand", qtyDelta == null ? BigDecimal.ZERO : qtyDelta,
+                "unitCost", unitCost,
+                "lastCountDate", lastCountDate,
+                "lastMovementAt", occurredAt
+        ));
     }
 
     // ── Utility methods ───────────────────────────────────────────────────────
@@ -154,6 +212,64 @@ public class ReportIngestionSupport {
     public Instant instant(ResultSet rs, String column) throws java.sql.SQLException {
         OffsetDateTime value = rs.getObject(column, OffsetDateTime.class);
         return value == null ? null : value.toInstant();
+    }
+
+    private void markProjectionSuccess(List<String> datasets, Instant occurredAt) {
+        for (String dataset : distinctDatasets(datasets)) {
+            jdbcTemplate.update("""
+                    INSERT INTO report.projection_watermark (
+                        dataset, last_occurred_at, last_ingested_at, failed_landing_count, updated_at
+                    ) VALUES (
+                        :dataset, :lastOccurredAt, CURRENT_TIMESTAMP, 0, CURRENT_TIMESTAMP
+                    )
+                    ON CONFLICT (dataset) DO UPDATE
+                    SET last_occurred_at = CASE
+                            WHEN report.projection_watermark.last_occurred_at IS NULL THEN EXCLUDED.last_occurred_at
+                            ELSE GREATEST(report.projection_watermark.last_occurred_at, EXCLUDED.last_occurred_at)
+                        END,
+                        last_ingested_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    """, params(
+                    "dataset", dataset,
+                    "lastOccurredAt", occurredAt
+            ));
+        }
+    }
+
+    private void markProjectionFailure(List<String> datasets, Instant occurredAt) {
+        for (String dataset : distinctDatasets(datasets)) {
+            jdbcTemplate.update("""
+                    INSERT INTO report.projection_watermark (
+                        dataset, last_occurred_at, last_ingested_at, failed_landing_count, updated_at
+                    ) VALUES (
+                        :dataset, :lastOccurredAt, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP
+                    )
+                    ON CONFLICT (dataset) DO UPDATE
+                    SET last_occurred_at = CASE
+                            WHEN report.projection_watermark.last_occurred_at IS NULL THEN EXCLUDED.last_occurred_at
+                            ELSE GREATEST(report.projection_watermark.last_occurred_at, EXCLUDED.last_occurred_at)
+                        END,
+                        last_ingested_at = CURRENT_TIMESTAMP,
+                        failed_landing_count = report.projection_watermark.failed_landing_count + 1,
+                        updated_at = CURRENT_TIMESTAMP
+                    """, params(
+                    "dataset", dataset,
+                    "lastOccurredAt", occurredAt
+            ));
+        }
+    }
+
+    private List<String> distinctDatasets(List<String> datasets) {
+        if (datasets == null || datasets.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        for (String dataset : datasets) {
+            if (dataset != null && !dataset.isBlank()) {
+                normalized.add(dataset);
+            }
+        }
+        return List.copyOf(normalized);
     }
 
     // ── Landing zone internals ────────────────────────────────────────────────

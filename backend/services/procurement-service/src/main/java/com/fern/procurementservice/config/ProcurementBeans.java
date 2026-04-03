@@ -6,14 +6,20 @@ import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
+import com.fern.platform.common.OperationalShardAccess;
+import com.fern.platform.common.OperationalShardRegistry;
+import com.fern.platform.common.ShardId;
+import com.fern.platform.common.ShardResolver;
+import com.fern.platform.common.SingleOperationalShardRegistry;
+import com.fern.platform.common.SingleShardResolver;
+import com.fern.platform.web.FernDownstreamClientFactory;
+import com.fern.platform.web.FernDownstreamClientSpec;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import com.zaxxer.hikari.HikariDataSource;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import java.time.Clock;
-import java.time.Duration;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.ObjectProvider;
@@ -25,14 +31,16 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestClient;
 
 @Configuration
 public class ProcurementBeans {
+    private static final String CALLER_SERVICE = "procurement-service";
+
     @Value("${fern.datasource.max-pool-size:10}")
     private int maxPoolSize;
 
@@ -86,19 +94,14 @@ public class ProcurementBeans {
 
     @Bean
     @Qualifier("orgRestClient")
-    RestClient orgRestClient(ProcurementClientProperties properties) {
-        return buildRestClient(properties.getOrg());
+    RestClient orgRestClient(@Qualifier("orgClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
     }
 
     @Bean
     @Qualifier("orgCircuitBreaker")
-    CircuitBreaker orgCircuitBreaker(ProcurementClientProperties properties) {
-        return CircuitBreaker.of("procurement-org-client", CircuitBreakerConfig.custom()
-                .failureRateThreshold(properties.getOrg().getFailureRateThreshold())
-                .slidingWindowSize(properties.getOrg().getSlidingWindowSize())
-                .minimumNumberOfCalls(properties.getOrg().getMinimumNumberOfCalls())
-                .waitDurationInOpenState(Duration.ofSeconds(properties.getOrg().getWaitDurationOpenSeconds()))
-                .build());
+    CircuitBreaker orgCircuitBreaker(@Qualifier("orgClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
     }
 
     @Bean
@@ -130,6 +133,11 @@ public class ProcurementBeans {
     @Primary
     DataSourceTransactionManager transactionManager(@Qualifier("dataSource") DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean
+    TransactionTemplate transactionTemplate(@Qualifier("transactionManager") DataSourceTransactionManager transactionManager) {
+        return new TransactionTemplate(transactionManager);
     }
 
     @Bean
@@ -181,13 +189,28 @@ public class ProcurementBeans {
         return dataSource;
     }
 
-    private RestClient buildRestClient(ProcurementClientProperties.ClientProperties properties) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(properties.getConnectTimeout());
-        requestFactory.setReadTimeout(properties.getReadTimeout());
-        return RestClient.builder()
-                .baseUrl(properties.getBaseUrl())
-                .requestFactory(requestFactory)
-                .build();
+    @Bean
+    @Qualifier("orgClientSpec")
+    FernDownstreamClientSpec orgClientSpec(ProcurementClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "org-service", "org", properties.getOrg());
+    }
+
+    @Bean
+    ShardId defaultOperationalShardId(@Value("${fern.sharding.operational.default-shard:operational-0}") String value) {
+        return new ShardId(value);
+    }
+
+    @Bean
+    ShardResolver shardResolver(ShardId defaultOperationalShardId) {
+        return new SingleShardResolver(defaultOperationalShardId);
+    }
+
+    @Bean
+    OperationalShardRegistry operationalShardRegistry(
+            ShardId defaultOperationalShardId,
+            @Qualifier("operationalJdbcTemplate") NamedParameterJdbcTemplate jdbcTemplate,
+            TransactionTemplate transactionTemplate
+    ) {
+        return new SingleOperationalShardRegistry(new OperationalShardAccess(defaultOperationalShardId, jdbcTemplate, transactionTemplate));
     }
 }

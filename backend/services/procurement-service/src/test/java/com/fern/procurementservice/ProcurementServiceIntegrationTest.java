@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
@@ -956,6 +957,40 @@ class ProcurementServiceIntegrationTest {
     }
 
     @Test
+    void shouldEnforceGoodsReceiptLifecycleTransitions() throws Exception {
+        IssuedPurchaseOrderFixture fixture = createIssuedPurchaseOrderFixture(
+                "SUP-GR-LIFECYCLE",
+                "Lifecycle Supplier",
+                "5.0000"
+        );
+        Long goodsReceiptId = createGoodsReceipt(
+                fixture.purchaseOrderId(),
+                fixture.purchaseOrderLineId(),
+                "3.0000",
+                "2026-03-27T10:00:00Z"
+        );
+
+        mockMvc.perform(post("/goods-receipts/{id}/post", goodsReceiptId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "gr-post-before-receive"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Only received goods receipts can be posted"));
+
+        receiveGoodsReceipt(goodsReceiptId);
+        postGoodsReceipt(goodsReceiptId, "gr-post-after-receive");
+
+        mockMvc.perform(post("/goods-receipts/{id}/receive", goodsReceiptId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Only draft goods receipts can be received"));
+
+        mockMvc.perform(post("/goods-receipts/{id}/cancel", goodsReceiptId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Only draft or received goods receipts can be cancelled"));
+    }
+
+    @Test
     void shouldTrackPartialGoodsReceiptsAcrossMultipleBatchesForSamePurchaseOrder() throws Exception {
         IssuedPurchaseOrderFixture fixture = createIssuedPurchaseOrderFixture(
                 "SUP-013",
@@ -1528,6 +1563,77 @@ class ProcurementServiceIntegrationTest {
         assertThat(claims.audience()).containsExactly("org-service");
     }
 
+    @Test
+    void shouldReturnBlockingSummaryForOutletCloseCheck() throws Exception {
+        jdbcTemplate.update("""
+                INSERT INTO procurement.purchase_order (
+                    po_number, region_id, outlet_id, supplier_id, order_date, status,
+                    subtotal_amount, tax_amount, total_amount, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, "PO-CLOSE-CHECK-1", 1L, 101L, 1L, java.sql.Date.valueOf("2026-03-27"), "ORDERED",
+                new BigDecimal("100.00"), new BigDecimal("10.00"), new BigDecimal("110.00"));
+        jdbcTemplate.update("""
+                INSERT INTO procurement.purchase_order (
+                    po_number, region_id, outlet_id, supplier_id, order_date, status,
+                    subtotal_amount, tax_amount, total_amount, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, "PO-CLOSE-CHECK-CANCELLED", 1L, 101L, 1L, java.sql.Date.valueOf("2026-03-27"), "CANCELLED",
+                new BigDecimal("50.00"), BigDecimal.ZERO, new BigDecimal("50.00"));
+        jdbcTemplate.update("""
+                INSERT INTO procurement.purchase_order (
+                    po_number, region_id, outlet_id, supplier_id, order_date, status,
+                    subtotal_amount, tax_amount, total_amount, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, "PO-CLOSE-CHECK-OTHER-OUTLET", 1L, 102L, 1L, java.sql.Date.valueOf("2026-03-27"), "ORDERED",
+                new BigDecimal("70.00"), BigDecimal.ZERO, new BigDecimal("70.00"));
+        jdbcTemplate.update("""
+                INSERT INTO procurement.goods_receipt (
+                    receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date,
+                    status, total_amount, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, "GR-CLOSE-CHECK-1", null, 1L, 101L, 1L, java.sql.Timestamp.from(Instant.parse("2026-03-27T10:00:00Z")),
+                java.sql.Date.valueOf("2026-03-27"), "RECEIVED", new BigDecimal("110.00"));
+        jdbcTemplate.update("""
+                INSERT INTO procurement.goods_receipt (
+                    receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date,
+                    status, total_amount, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, "GR-CLOSE-CHECK-POSTED", null, 1L, 101L, 1L, java.sql.Timestamp.from(Instant.parse("2026-03-27T11:00:00Z")),
+                java.sql.Date.valueOf("2026-03-27"), "POSTED", new BigDecimal("40.00"));
+        jdbcTemplate.update("""
+                INSERT INTO procurement.supplier_invoice (
+                    invoice_number, supplier_id, region_id, outlet_id, currency_code, invoice_date, subtotal, tax_amount,
+                    total_amount, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, "INV-CLOSE-CHECK-1", 1L, 1L, 101L, "VND", java.sql.Date.valueOf("2026-03-27"),
+                new BigDecimal("100.00"), new BigDecimal("10.00"), new BigDecimal("110.00"), "APPROVED");
+        jdbcTemplate.update("""
+                INSERT INTO procurement.supplier_invoice (
+                    invoice_number, supplier_id, region_id, outlet_id, currency_code, invoice_date, subtotal, tax_amount,
+                    total_amount, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, "INV-CLOSE-CHECK-CANCELLED", 1L, 1L, 101L, "VND", java.sql.Date.valueOf("2026-03-27"),
+                new BigDecimal("20.00"), BigDecimal.ZERO, new BigDecimal("20.00"), "CANCELLED");
+
+        mockMvc.perform(get("/internal/procurement/outlet-close-check")
+                        .header("Authorization", serviceBearer(Set.of(PermissionCodes.PROCUREMENT_INTERNAL_READ), Set.of("procurement-service")))
+                        .param("outletId", "101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outletId").value(101))
+                .andExpect(jsonPath("$.blockingPurchaseOrders").value(1))
+                .andExpect(jsonPath("$.blockingGoodsReceipts").value(1))
+                .andExpect(jsonPath("$.blockingSupplierInvoices").value(1))
+                .andExpect(jsonPath("$.hasBlockingDocuments").value(true));
+    }
+
+    @Test
+    void shouldRejectOutletCloseCheckWithoutInternalPermission() throws Exception {
+        mockMvc.perform(get("/internal/procurement/outlet-close-check")
+                        .header("Authorization", bearer())
+                        .param("outletId", "101"))
+                .andExpect(status().isForbidden());
+    }
+
     private ApprovedSupplierInvoiceFixture createApprovedSupplierInvoiceFixture(
             String supplierCode,
             String supplierName,
@@ -1856,6 +1962,30 @@ class ProcurementServiceIntegrationTest {
 
     private String bearer() {
         return "Bearer " + token;
+    }
+
+    private String serviceBearer(Set<String> permissions, Set<String> audience) {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        Instant now = Instant.now();
+        String serviceToken = jwtService.encode(new FernJwtClaims(
+                null,
+                "org-service",
+                Set.of(),
+                permissions,
+                new ScopeRoots(true, List.of(), List.of()),
+                1L,
+                1L,
+                "procurement-test-service-jti-" + permissions.hashCode() + "-" + audience.hashCode(),
+                now,
+                now.plus(jwtService.serviceTokenTtl()),
+                com.fern.platform.common.FernPrincipalType.SERVICE,
+                "org-service",
+                audience
+        ), jwtService.serviceTokenTtl());
+        return "Bearer " + serviceToken;
     }
 
     private String issueToken(Set<String> permissions, List<Long> regions, List<Long> outlets) {

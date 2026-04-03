@@ -55,7 +55,7 @@ export function UserDetailPage() {
         key: 'name',
         header: 'Role',
         render: (role) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <strong>{role.name}</strong>
             <span className="muted-text">{role.description ?? 'No role description'}</span>
           </div>

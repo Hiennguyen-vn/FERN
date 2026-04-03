@@ -8,6 +8,7 @@ import { clearTestStorage, resetTestStores, setAuthenticatedSession } from '@sha
 import {
   ExportJobsPage,
   InventoryReportPage,
+  OutletRevenueReportPage,
   PayrollReportPage,
   ReportsDashboardPage,
   RevenueReportPage,
@@ -17,8 +18,10 @@ const mocks = vi.hoisted(() => ({
   useCreateExportJob: vi.fn(),
   useExportJobs: vi.fn(),
   useInventoryReport: vi.fn(),
+  useOutletRevenueTodayStats: vi.fn(),
   usePayrollReport: vi.fn(),
   useReportDashboard: vi.fn(),
+  useRegionalOutlets: vi.fn(),
   useRevenueReport: vi.fn(),
 }))
 
@@ -46,6 +49,14 @@ vi.mock('../hooks/usePayrollReport', () => ({
   usePayrollReport: mocks.usePayrollReport,
 }))
 
+vi.mock('../hooks/useOutletRevenueTodayStats', () => ({
+  useOutletRevenueTodayStats: mocks.useOutletRevenueTodayStats,
+}))
+
+vi.mock('../../regional-ops/hooks/useRegionalOps', () => ({
+  useRegionalOutlets: mocks.useRegionalOutlets,
+}))
+
 function ReportsRoutesHarness() {
   return (
     <Routes>
@@ -55,6 +66,7 @@ function ReportsRoutesHarness() {
         <Route path="inventory" element={<InventoryReportPage />} />
         <Route path="payroll" element={<PayrollReportPage />} />
         <Route path="export-jobs" element={<ExportJobsPage />} />
+        <Route path="outlet-revenue" element={<OutletRevenueReportPage />} />
       </Route>
     </Routes>
   )
@@ -107,6 +119,24 @@ describe('Reports route group', () => {
       runsQuery: { data: [], error: null, isLoading: false, refetch: vi.fn() },
       summaryQuery: { data: { regionId: 1, fromDate: '2026-03-01', toDate: '2026-03-31', totalGrossPay: 1, totalNetPay: 1, totalTax: 1, totalExpense: 1, runCount: 1 }, error: null, isLoading: false, refetch: vi.fn() },
     })
+    mocks.useRegionalOutlets.mockReturnValue({
+      rows: [{ id: 101, name: 'Outlet 101', code: 'OUT-101', regionId: 1 }],
+    })
+    mocks.useOutletRevenueTodayStats.mockReturnValue({
+      isLoading: false,
+      outletStats: [{
+        outletId: 101,
+        sessionStatus: 'OPEN',
+        currencyCode: 'VND',
+        totalRevenue: 1200000,
+        cashCollected: 600000,
+        nonCashCollected: 600000,
+        completed: 42,
+        cancelled: 1,
+        open: 3,
+        isLoading: false,
+      }],
+    })
   })
 
   it('allows a read-only user to open revenue and export jobs but not payroll', async () => {
@@ -149,6 +179,21 @@ describe('Reports route group', () => {
 
     expect(await screen.findByRole('heading', { name: 'Payroll Report' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Queue payroll export' })).toBeEnabled()
+  })
+
+  it('renders the outlet revenue dashboard surface for report readers', async () => {
+    setAuthenticatedSession({
+      principal: {
+        permissions: [permissionConstants.report.read],
+        scopeRoots: { system: false, regions: [1], outlets: [101] },
+      },
+    })
+
+    renderWithProviders(<ReportsRoutesHarness />, { route: '/reports/outlet-revenue' })
+
+    expect(await screen.findByRole('heading', { name: 'Outlet Revenue Summary' })).toBeInTheDocument()
+    expect(screen.getByText('Summary-first regional revenue view aligned with the main reports dashboard family.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Export CSV/i })).toBeEnabled()
   })
 
   it('blocks users with no report access from export jobs', async () => {

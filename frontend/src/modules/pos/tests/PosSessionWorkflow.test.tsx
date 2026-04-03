@@ -69,9 +69,9 @@ function createSession(overrides: Partial<PosSession> = {}): PosSession {
     openedAt: overrides.openedAt ?? '2026-03-30T08:00:00.000Z',
     closedAt: overrides.closedAt ?? null,
     reconciledAt: overrides.reconciledAt ?? null,
-    expectedCashAmount: overrides.expectedCashAmount ?? '120000',
-    countedCashAmount: overrides.countedCashAmount ?? '0',
-    discrepancyAmount: overrides.discrepancyAmount ?? '0',
+    expectedCashAmount: overrides.expectedCashAmount ?? 120000,
+    countedCashAmount: overrides.countedCashAmount ?? 0,
+    discrepancyAmount: overrides.discrepancyAmount ?? 0,
   }
 }
 
@@ -145,8 +145,8 @@ describe('POS session workflows', () => {
           ? {
               ...session,
               status: 'RECONCILED',
-              countedCashAmount: String(payload.countedCashAmount),
-              discrepancyAmount: String(payload.countedCashAmount - Number(session.expectedCashAmount)),
+              countedCashAmount: payload.countedCashAmount,
+              discrepancyAmount: payload.countedCashAmount - (session.expectedCashAmount ?? 0),
               reconciledAt: '2026-03-30T18:15:00.000Z',
               note: payload.note ?? null,
             }
@@ -230,7 +230,7 @@ describe('POS session workflows', () => {
         sessionCode: 'POS-777',
         status: 'CLOSED',
         closedAt: '2026-03-30T18:00:00.000Z',
-        expectedCashAmount: '120000',
+        expectedCashAmount: 120000,
       }),
     ]
 

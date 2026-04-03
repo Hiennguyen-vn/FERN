@@ -173,7 +173,7 @@ export function SupplierPaymentCreatePage() {
             <Card key={index} title={`Allocation ${index + 1}`}>
               <div className="field-grid">
                 {allocations.length > 1 ? (
-                  <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
+                  <div className="field-grid-actions">
                     <Button
                       onClick={() => setAllocations((a) => a.filter((_, i) => i !== index))}
                       size="sm"
@@ -207,7 +207,7 @@ export function SupplierPaymentCreatePage() {
         </div>
 
         {validationError && (
-          <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{validationError}</p>
+          <p className="error-text error-text-compact">{validationError}</p>
         )}
         <FormActions
           primaryAction={

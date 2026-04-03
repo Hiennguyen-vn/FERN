@@ -86,7 +86,7 @@ export function PayrollApprovalPage() {
         key: 'run',
         header: 'Run',
         render: (run) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <strong>{run.runCode}</strong>
             <span className="muted-text">Period #{run.payrollPeriodId}</span>
           </div>

@@ -341,7 +341,7 @@ export function EmployeeDetailPage() {
                     <strong>{formatDateRange(primaryContract.startDate, primaryContract.endDate)}</strong>
                   </div>
                 </div>
-                <div className="workspace-stats-grid" style={{ marginTop: '1rem' }}>
+                <div className="workspace-stats-grid section-spacing-top">
                   <MaskedField
                     helperText={canReadSensitiveContractFields ? 'Visible in read-only mode' : 'Masked by policy'}
                     label="Base salary"
@@ -391,7 +391,7 @@ export function EmployeeDetailPage() {
                   <AppIcon filled name="badge" />
                 </span>
               </div>
-              <div className="page-stack" style={{ gap: '0.35rem' }}>
+              <div className="compact-stack">
                 <span className="workspace-stat-label">Employee record</span>
                 <strong className="workspace-stat-value">{buildEmployeeLabel(employee)}</strong>
               </div>
@@ -402,7 +402,7 @@ export function EmployeeDetailPage() {
                   <AppIcon filled name="description" />
                 </span>
               </div>
-              <div className="page-stack" style={{ gap: '0.35rem' }}>
+              <div className="compact-stack">
                 <span className="workspace-stat-label">Contracts</span>
                 <strong className="workspace-stat-value">{contracts.length}</strong>
               </div>
@@ -413,7 +413,7 @@ export function EmployeeDetailPage() {
                   <AppIcon filled name="schedule" />
                 </span>
               </div>
-              <div className="page-stack" style={{ gap: '0.35rem' }}>
+              <div className="compact-stack">
                 <span className="workspace-stat-label">Assignments</span>
                 <strong className="workspace-stat-value">{assignments.length}</strong>
               </div>
@@ -424,7 +424,7 @@ export function EmployeeDetailPage() {
                   <AppIcon filled name="shield" />
                 </span>
               </div>
-              <div className="page-stack" style={{ gap: '0.35rem' }}>
+              <div className="compact-stack">
                 <span className="workspace-stat-label">Profile completeness</span>
                 <strong className="workspace-stat-value">{profileCompleteness}/3</strong>
               </div>

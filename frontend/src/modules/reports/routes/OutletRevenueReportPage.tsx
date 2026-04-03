@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import {
   Badge,
+  Button,
   Card,
   DataTable,
   EmptyState,
@@ -15,7 +17,7 @@ import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { formatMoney, formatDate } from '@shared/formatters'
 import { useRegionalOutlets } from '../../regional-ops/hooks/useRegionalOps'
-import { useOutletTodayStats } from '../../pos/hooks/useOutletStats'
+import { useOutletRevenueTodayStats } from '../hooks/useOutletRevenueTodayStats'
 import { canReadRevenueReport } from '../services/reportsUiPolicy.service'
 
 interface OutletRevenueStat {
@@ -96,7 +98,7 @@ export function OutletRevenueReportPage() {
   const [exportDate] = useState(today)
 
   const outletsQuery = useRegionalOutlets(outletIds, { enabled: canRead && outletIds.length > 0 })
-  const statsQuery = useOutletTodayStats(outletIds, canRead && outletIds.length > 0)
+  const statsQuery = useOutletRevenueTodayStats(outletIds, canRead && outletIds.length > 0)
 
   const rows = useMemo<OutletRevenueStat[]>(() => {
     return statsQuery.outletStats.map((stat) => {
@@ -125,7 +127,7 @@ export function OutletRevenueReportPage() {
       key: 'outlet',
       header: 'Outlet',
       render: (row) => (
-        <div className="page-stack" style={{ gap: '0.25rem' }}>
+        <div className="compact-stack-tight">
           <strong>{row.outletName}</strong>
           <span className="muted-text">{row.outletCode}</span>
         </div>
@@ -143,7 +145,7 @@ export function OutletRevenueReportPage() {
         row.isLoading ? (
           <span className="muted-text">Loading…</span>
         ) : (
-          <strong style={{ color: row.totalRevenue > 0 ? 'var(--color-success, #16a34a)' : undefined }}>
+          <strong className={row.totalRevenue > 0 ? 'metric-value-positive' : undefined}>
             {formatMoney(row.totalRevenue, row.currencyCode)}
           </strong>
         ),
@@ -162,7 +164,7 @@ export function OutletRevenueReportPage() {
       key: 'completed',
       header: 'Đơn xong',
       render: (row) => (
-        <span style={{ color: row.completed > 0 ? 'var(--color-success)' : undefined }}>
+        <span className={row.completed > 0 ? 'metric-value-positive' : undefined}>
           {row.isLoading ? '…' : row.completed}
         </span>
       ),
@@ -171,7 +173,7 @@ export function OutletRevenueReportPage() {
       key: 'open',
       header: 'Đơn mở',
       render: (row) => (
-        <span style={{ color: row.open > 0 ? 'var(--color-warning, #d97706)' : undefined }}>
+        <span className={row.open > 0 ? 'metric-value-warning' : undefined}>
           {row.isLoading ? '…' : row.open}
         </span>
       ),
@@ -212,19 +214,25 @@ export function OutletRevenueReportPage() {
   return (
     <DashboardLayout
       actions={
-        <button
-          className="button button--secondary button--sm"
+        <Button
+          size="sm"
+          variant="secondary"
           disabled={rows.length === 0}
           id="btn-export-outlet-revenue"
           onClick={() => exportRevenueCsv(rows, exportDate)}
-          type="button"
         >
-          ⬇ Export CSV
-        </button>
+          <AppIcon name="download" size="sm" />
+          Export CSV
+        </Button>
       }
       description={`Thống kê doanh thu theo outlet hôm nay (${formatDate(today)}). Dữ liệu thời gian thực từ POS sessions.`}
       title="Outlet Revenue Summary"
     >
+      <div className="report-toolbar-note">
+        <AppIcon name="insights" size="sm" />
+        Summary-first regional revenue view aligned with the main reports dashboard family.
+      </div>
+
       <Card title="Tổng hợp Region Manager">
         <div className="meta-grid">
           <span>Ngày: <strong>{formatDate(today)}</strong></span>

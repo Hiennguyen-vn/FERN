@@ -19,6 +19,11 @@ public class FernJwtProperties {
     private String userTokenIssuer = DEFAULT_USER_TOKEN_ISSUER;
     private String gatewayRelayUserIssuer = DEFAULT_GATEWAY_RELAY_USER_ISSUER;
     private List<String> userTokenAudiences = DEFAULT_USER_TOKEN_AUDIENCES;
+    private final Legacy legacy = new Legacy();
+    private final KeyRing user = new KeyRing("user-rs256-v1");
+    private final KeyRing gateway = new KeyRing("gateway-rs256-v1");
+    private final KeyRing service = new KeyRing("service-rs256-v1");
+    private final Jwks jwks = new Jwks();
 
     public String getSecret() {
         return secret;
@@ -90,5 +95,102 @@ public class FernJwtProperties {
 
     public void setUserTokenAudiences(List<String> userTokenAudiences) {
         this.userTokenAudiences = userTokenAudiences;
+    }
+
+    public Legacy getLegacy() {
+        return legacy;
+    }
+
+    public KeyRing getUser() {
+        return user;
+    }
+
+    public KeyRing getGateway() {
+        return gateway;
+    }
+
+    public KeyRing getService() {
+        return service;
+    }
+
+    public Jwks getJwks() {
+        return jwks;
+    }
+
+    String resolvedLegacySecret() {
+        if (legacy.secret != null && !legacy.secret.isBlank()) {
+            return legacy.secret;
+        }
+        return secret;
+    }
+
+    public static final class Legacy {
+        private boolean enabled = true;
+        private String secret;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getSecret() {
+            return secret;
+        }
+
+        public void setSecret(String secret) {
+            this.secret = secret;
+        }
+    }
+
+    public static final class KeyRing {
+        private String keyId;
+        private String privateKeyPem;
+        private String publicKeyPem;
+
+        private KeyRing(String defaultKeyId) {
+            this.keyId = defaultKeyId;
+        }
+
+        public KeyRing() {
+        }
+
+        public String getKeyId() {
+            return keyId;
+        }
+
+        public void setKeyId(String keyId) {
+            this.keyId = keyId;
+        }
+
+        public String getPrivateKeyPem() {
+            return privateKeyPem;
+        }
+
+        public void setPrivateKeyPem(String privateKeyPem) {
+            this.privateKeyPem = privateKeyPem;
+        }
+
+        public String getPublicKeyPem() {
+            return publicKeyPem;
+        }
+
+        public void setPublicKeyPem(String publicKeyPem) {
+            this.publicKeyPem = publicKeyPem;
+        }
+    }
+
+    public static final class Jwks {
+        private long refreshIntervalSeconds = 300;
+
+        public long getRefreshIntervalSeconds() {
+            return refreshIntervalSeconds;
+        }
+
+        public void setRefreshIntervalSeconds(long refreshIntervalSeconds) {
+            this.refreshIntervalSeconds = refreshIntervalSeconds;
+        }
     }
 }

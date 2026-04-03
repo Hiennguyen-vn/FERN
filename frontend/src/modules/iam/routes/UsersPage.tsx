@@ -85,7 +85,7 @@ export function UsersPage() {
         key: 'username',
         header: 'Username',
         render: (user) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <strong>{user.username}</strong>
             <span className="muted-text">#{user.id}</span>
           </div>

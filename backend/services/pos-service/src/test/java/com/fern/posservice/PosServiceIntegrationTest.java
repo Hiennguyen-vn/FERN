@@ -1,8 +1,10 @@
 package com.fern.posservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -29,7 +31,6 @@ import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
-import com.fern.posservice.config.PosOutboxProperties;
 import com.fern.posservice.service.PosOrgClient;
 import com.fern.posservice.service.PosOutboxPublisher;
 import com.fern.posservice.service.PosStore;
@@ -43,12 +44,16 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -66,6 +71,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -100,6 +106,7 @@ class PosServiceIntegrationTest {
     private static volatile Long lastReleasedReservationId;
     private static volatile boolean delayCatalogMenuResponse;
     private static volatile int recipeBatchRequestCount;
+    private static final Map<Long, OutletStub> outletRoutes = new ConcurrentHashMap<>();
 
     @DynamicPropertySource
     static void configure(DynamicPropertyRegistry registry) {
@@ -152,6 +159,7 @@ class PosServiceIntegrationTest {
 
     @BeforeAll
     static void startServers() throws IOException {
+        resetOutletRoutes();
         catalogServer = HttpServer.create(new InetSocketAddress(0), 0);
         catalogServer.createContext("/internal/catalog/menu", exchange -> {
             lastCatalogAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
@@ -327,20 +335,40 @@ class PosServiceIntegrationTest {
             String path = exchange.getRequestURI().getPath();
             int status = 404;
             byte[] body = "{}".getBytes();
-            if ("/outlets/101".equals(path)) {
+            String[] segments = path.split("/");
+            if (segments.length == 3) {
+                OutletStub outlet = outletRoutes.get(Long.parseLong(segments[2]));
+                if (outlet != null) {
+                    status = 200;
+                    body = outletJson(outlet).getBytes();
+                }
+            }
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, body.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(body);
+            }
+        });
+        orgServer.createContext("/regions", exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            int status = 404;
+            byte[] body = "{}".getBytes();
+            if ("/regions/1".equals(path)) {
                 status = 200;
                 body = """
                         {
-                          "id": 101,
-                          "regionId": 1
+                          "id": 1,
+                          "currencyCode": "VND",
+                          "timezoneName": "Asia/Ho_Chi_Minh"
                         }
                         """.getBytes();
-            } else if ("/outlets/102".equals(path)) {
+            } else if ("/regions/11".equals(path)) {
                 status = 200;
                 body = """
                         {
-                          "id": 102,
-                          "regionId": 11
+                          "id": 11,
+                          "currencyCode": "VND",
+                          "timezoneName": "Asia/Ho_Chi_Minh"
                         }
                         """.getBytes();
             }
@@ -399,6 +427,7 @@ class PosServiceIntegrationTest {
         lastReleasedReservationId = null;
         delayCatalogMenuResponse = false;
         recipeBatchRequestCount = 0;
+        resetOutletRoutes();
         catalogCircuitBreaker.reset();
         inventoryCircuitBreaker.reset();
         reset(posStore, posOrgClient, operationalAlertPublisher);
@@ -513,6 +542,107 @@ class PosServiceIntegrationTest {
                 .isEqualTo(FernPrincipalType.SERVICE);
         assertThat(jwtService.decode(lastInventoryAuthorization.substring("Bearer ".length())).principalType())
                 .isEqualTo(FernPrincipalType.SERVICE);
+    }
+
+    @Test
+    void shouldReturnTodayOutletStatsWithSplitPaymentsForCompletedOrder() throws Exception {
+        String today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString();
+        Long sessionId = openSessionForBusinessDate(bearer(), 1L, 101L, today);
+        Long orderId = createSimpleOrder(bearer(), sessionId, "today-stats-split");
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "today-stats-cash")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 20.00
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PARTIALLY_PAID"));
+
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "today-stats-card")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "paymentMethod": "CARD",
+                                  "amount": 35.00,
+                                  "transactionRef": "today-stats-card"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
+
+        mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
+                        .header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
+
+        mockMvc.perform(get("/pos-stats/today")
+                        .header("Authorization", bearer())
+                        .param("outletIds", "101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].outletId").value(101))
+                .andExpect(jsonPath("$[0].sessionId").value(sessionId))
+                .andExpect(jsonPath("$[0].sessionStatus").value("OPEN"))
+                .andExpect(jsonPath("$[0].currencyCode").value("VND"))
+                .andExpect(jsonPath("$[0].totalOrders").value(1))
+                .andExpect(jsonPath("$[0].completed").value(1))
+                .andExpect(jsonPath("$[0].open").value(0))
+                .andExpect(jsonPath("$[0].cancelled").value(0))
+                .andExpect(jsonPath("$[0].totalRevenue").value(55.0))
+                .andExpect(jsonPath("$[0].cashCollected").value(20.0))
+                .andExpect(jsonPath("$[0].nonCashCollected").value(35.0));
+    }
+
+    @Test
+    void shouldReturnZeroedStatsForTodaySessionWithoutCompletedOrders() throws Exception {
+        String today = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString();
+        Long sessionId = openSessionForBusinessDate(bearer(), 1L, 101L, today);
+        createSimpleOrder(bearer(), sessionId, "today-stats-open");
+
+        mockMvc.perform(get("/pos-stats/today")
+                        .header("Authorization", bearer())
+                        .param("outletIds", "101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].outletId").value(101))
+                .andExpect(jsonPath("$[0].sessionId").value(sessionId))
+                .andExpect(jsonPath("$[0].sessionStatus").value("OPEN"))
+                .andExpect(jsonPath("$[0].currencyCode").value("VND"))
+                .andExpect(jsonPath("$[0].totalOrders").value(1))
+                .andExpect(jsonPath("$[0].completed").value(0))
+                .andExpect(jsonPath("$[0].open").value(1))
+                .andExpect(jsonPath("$[0].cancelled").value(0))
+                .andExpect(jsonPath("$[0].totalRevenue").value(0))
+                .andExpect(jsonPath("$[0].cashCollected").value(0))
+                .andExpect(jsonPath("$[0].nonCashCollected").value(0));
+    }
+
+    @Test
+    void shouldReturnNoSessionRowWhenOutletHasNoSessionToday() throws Exception {
+        String accessToken = issueToken(POS_FULL_ACCESS_PERMISSIONS, List.of(1L, 11L), List.of(101L, 102L));
+        String yesterday = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).minusDays(1).toString();
+        openSessionForBusinessDate(bearer(accessToken), 11L, 102L, yesterday);
+
+        mockMvc.perform(get("/pos-stats/today")
+                        .header("Authorization", bearer(accessToken))
+                        .param("outletIds", "102"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].outletId").value(102))
+                .andExpect(jsonPath("$[0].sessionId").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$[0].sessionStatus").value("NO_SESSION"))
+                .andExpect(jsonPath("$[0].currencyCode").value("VND"))
+                .andExpect(jsonPath("$[0].totalOrders").value(0))
+                .andExpect(jsonPath("$[0].completed").value(0))
+                .andExpect(jsonPath("$[0].open").value(0))
+                .andExpect(jsonPath("$[0].cancelled").value(0))
+                .andExpect(jsonPath("$[0].totalRevenue").value(0))
+                .andExpect(jsonPath("$[0].cashCollected").value(0))
+                .andExpect(jsonPath("$[0].nonCashCollected").value(0));
     }
 
     @Test
@@ -1959,6 +2089,70 @@ class PosServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectSessionOpenForInactiveOutlet() throws Exception {
+        String inactiveOutletToken = issueToken(
+                Set.of("pos.session.open"),
+                List.of(1L),
+                List.of(103L)
+        );
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer(inactiveOutletToken))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 103,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldRejectSessionOpenForOutletClosedOnBusinessDate() throws Exception {
+        String closedOutletToken = issueToken(
+                Set.of("pos.session.open"),
+                List.of(1L),
+                List.of(104L)
+        );
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer(closedOutletToken))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 104,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldRejectOrderCreationWhenOutletBecomesInactiveAfterSessionOpened() throws Exception {
+        Long sessionId = openSession(bearer(), 1L, 101L);
+        putOutletRoute(101L, 1L, "INACTIVE", null);
+
+        mockMvc.perform(post("/sale-orders")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "posSessionId": %d,
+                                  "orderType": "DINE_IN",
+                                  "lines": [
+                                    {"productId": 10, "qty": 1.0000}
+                                  ]
+                                }
+                                """.formatted(sessionId)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void shouldRejectUpdatingOrderAfterSuccessfulPayment() throws Exception {
         String sessionJson = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())
@@ -2646,21 +2840,19 @@ class PosServiceIntegrationTest {
                 """, eventId, "{\"saleOrderId\":10,\"outletId\":101}");
 
         KafkaTemplate<String, String> kafkaTemplate = mock(KafkaTemplate.class);
-        PosOutboxProperties properties = new PosOutboxProperties();
-        properties.setMaxAttempts(3);
-        properties.setReclaimAfter(Duration.ofMinutes(1));
         PosOutboxPublisher publisher = new PosOutboxPublisher(
                 new NamedParameterJdbcTemplate(jdbcTemplate),
                 kafkaTemplate,
-                properties,
                 Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC),
+                3,
+                Duration.ofMinutes(1),
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );
 
         publisher.publishPending();
 
-        verify(kafkaTemplate, times(0)).send(anyString(), anyString(), anyString());
+        verify(kafkaTemplate, times(0)).send(any(ProducerRecord.class));
         String status = jdbcTemplate.queryForObject("""
                 SELECT status
                 FROM pos.outbox_event
@@ -2690,29 +2882,28 @@ class PosServiceIntegrationTest {
         KafkaTemplate<String, String> kafkaTemplate = mock(KafkaTemplate.class);
         CompletableFuture<Object> firstSend = new CompletableFuture<>();
         CountDownLatch sendStarted = new CountDownLatch(1);
-        when(kafkaTemplate.send(anyString(), anyString(), anyString())).thenAnswer(invocation -> {
+        when(kafkaTemplate.send(any(ProducerRecord.class))).thenAnswer(invocation -> {
             sendStarted.countDown();
             return firstSend;
         });
 
-        PosOutboxProperties properties = new PosOutboxProperties();
-        properties.setMaxAttempts(3);
-        properties.setReclaimAfter(Duration.ofMinutes(1));
         NamedParameterJdbcTemplate namedJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
         Clock fixedClock = Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC);
         PosOutboxPublisher firstPublisher = new PosOutboxPublisher(
                 namedJdbcTemplate,
                 kafkaTemplate,
-                properties,
                 fixedClock,
+                3,
+                Duration.ofMinutes(1),
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );
         PosOutboxPublisher secondPublisher = new PosOutboxPublisher(
                 namedJdbcTemplate,
                 kafkaTemplate,
-                properties,
                 fixedClock,
+                3,
+                Duration.ofMinutes(1),
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );
@@ -2723,7 +2914,7 @@ class PosServiceIntegrationTest {
             assertThat(sendStarted.await(5, TimeUnit.SECONDS)).isTrue();
 
             secondPublisher.publishPending();
-            verify(kafkaTemplate, times(1)).send(anyString(), anyString(), anyString());
+            verify(kafkaTemplate, times(1)).send(any(ProducerRecord.class));
 
             firstSend.complete(null);
             firstRun.get(5, TimeUnit.SECONDS);
@@ -2752,24 +2943,27 @@ class PosServiceIntegrationTest {
                 """, eventId, "{\"saleOrderId\":10,\"outletId\":101}");
 
         KafkaTemplate<String, String> kafkaTemplate = mock(KafkaTemplate.class);
-        when(kafkaTemplate.send(eq("pos.sale.completed"), eq("101"), anyString()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        PosOutboxProperties properties = new PosOutboxProperties();
-        properties.setMaxAttempts(3);
-        properties.setReclaimAfter(Duration.ofMinutes(1));
         PosOutboxPublisher publisher = new PosOutboxPublisher(
                 new NamedParameterJdbcTemplate(jdbcTemplate),
                 kafkaTemplate,
-                properties,
                 Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC),
+                3,
+                Duration.ofMinutes(1),
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );
 
         publisher.publishPending();
 
-        verify(kafkaTemplate).send(eq("pos.sale.completed"), eq("101"), anyString());
+        verify(kafkaTemplate).send(argThat((ProducerRecord<String, String> record) ->
+                com.fern.platform.testsupport.JsonTestSupport.matchesProducerRecord(
+                        record,
+                        "pos.sale.completed",
+                        "101",
+                        "{\"saleOrderId\":10,\"outletId\":101}")));
         String status = jdbcTemplate.queryForObject("""
                 SELECT status
                 FROM pos.outbox_event
@@ -2848,6 +3042,34 @@ class PosServiceIntegrationTest {
     }
 
     private Long openSession(String authorizationHeader, Long regionId, Long outletId) throws Exception {
+        return openSessionForBusinessDate(authorizationHeader, regionId, outletId, "2026-03-27");
+    }
+
+    private static void resetOutletRoutes() {
+        outletRoutes.clear();
+        putOutletRoute(101L, 1L, "ACTIVE", null);
+        putOutletRoute(102L, 11L, "ACTIVE", null);
+        putOutletRoute(103L, 1L, "INACTIVE", null);
+        putOutletRoute(104L, 1L, "ACTIVE", LocalDate.of(2026, 3, 26));
+    }
+
+    private static void putOutletRoute(Long id, Long regionId, String status, LocalDate closedAt) {
+        outletRoutes.put(id, new OutletStub(id, regionId, status, closedAt));
+    }
+
+    private static String outletJson(OutletStub outlet) {
+        String closedAtJson = outlet.closedAt() == null ? "null" : "\"" + outlet.closedAt() + "\"";
+        return """
+                {
+                  "id": %d,
+                  "regionId": %d,
+                  "status": "%s",
+                  "closedAt": %s
+                }
+                """.formatted(outlet.id(), outlet.regionId(), outlet.status(), closedAtJson);
+    }
+
+    private Long openSessionForBusinessDate(String authorizationHeader, Long regionId, Long outletId, String businessDate) throws Exception {
         String sessionJson = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", authorizationHeader)
                         .contentType("application/json")
@@ -2856,9 +3078,9 @@ class PosServiceIntegrationTest {
                                   "regionId": %d,
                                   "outletId": %d,
                                   "currencyCode": "VND",
-                                  "businessDate": "2026-03-27"
+                                  "businessDate": "%s"
                                 }
-                                """.formatted(regionId, outletId)))
+                                """.formatted(regionId, outletId, businessDate)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return readId(sessionJson);
@@ -2973,5 +3195,8 @@ class PosServiceIntegrationTest {
                 FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
                 Set.of("pos-service")
         ), jwtService.accessTokenTtl());
+    }
+
+    private record OutletStub(Long id, Long regionId, String status, LocalDate closedAt) {
     }
 }

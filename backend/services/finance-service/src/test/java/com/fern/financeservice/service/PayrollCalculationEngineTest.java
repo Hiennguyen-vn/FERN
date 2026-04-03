@@ -98,6 +98,44 @@ class PayrollCalculationEngineTest {
     }
 
     @Test
+    void shouldProratePayrollAcrossMidPeriodContractChange() throws Exception {
+        PayrollPeriodRecord period = new PayrollPeriodRecord(1L, 10L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), LocalDate.of(2026, 4, 5), "DRAFT");
+        List<EffectiveContract> contracts = List.of(
+                new EffectiveContract(701L, 501L, 10L, "FULL_TIME", "DAILY", new BigDecimal("100.00"), "TAX-001", LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 15)),
+                new EffectiveContract(702L, 501L, 10L, "FULL_TIME", "DAILY", new BigDecimal("200.00"), "TAX-001", LocalDate.of(2026, 3, 16), null)
+        );
+        List<ApprovedAttendance> attendance = List.of(
+                new ApprovedAttendance(11L, 21L, 501L, 10L, 301L, 701L, LocalDate.of(2026, 3, 10), "PRESENT", new BigDecimal("8.0"), BigDecimal.ZERO),
+                new ApprovedAttendance(12L, 22L, 501L, 10L, 301L, 702L, LocalDate.of(2026, 3, 20), "PRESENT", new BigDecimal("8.0"), BigDecimal.ZERO)
+        );
+
+        PayrollEmployeeComputation computation = payrollCalculationEngine.computeEmployeePayroll(
+                period,
+                attendance,
+                contracts,
+                2,
+                json("{\"defaultMultiplier\":1.5}"),
+                json("{}"),
+                json("{}"),
+                json("{\"rate\":0}")
+        );
+
+        assertThat(computation.primaryContractId()).isEqualTo(701L);
+        assertThat(computation.grossPay()).isEqualByComparingTo("300.00");
+        assertThat(computation.netPay()).isEqualByComparingTo("300.00");
+        assertThat(computation.workDays()).isEqualByComparingTo("2.00");
+        assertThat(computation.lines()).extracting(line -> line.lineType() + ":" + line.amount())
+                .containsExactly(
+                        "BASE:300.00",
+                        "OVERTIME:0.00",
+                        "ALLOWANCE:0.00",
+                        "DEDUCTION:0.00",
+                        "TAX:0.00",
+                        "NET:300.00"
+                );
+    }
+
+    @Test
     void shouldReturnZeroPayWhenAttendanceIsEmpty() throws Exception {
         PayrollPeriodRecord period = new PayrollPeriodRecord(1L, 10L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), LocalDate.of(2026, 4, 5), "DRAFT");
         EffectiveContract contract = new EffectiveContract(701L, 501L, 10L, "FULL_TIME", "MONTHLY", new BigDecimal("1000.00"), "TAX-001", LocalDate.of(2026, 1, 1), null);

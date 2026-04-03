@@ -1,10 +1,11 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [react()],
+    plugins: [tailwindcss(), react()],
     resolve: {
         alias: {
             '@app': resolve(__dirname, 'src/app'),
@@ -41,7 +42,7 @@ export default defineConfig({
             // Keep in sync with `dev-server.mjs` `gatewayProxyPrefixes` when adding new APIs.
             // Aligned with `dev-server.mjs` `gatewayProxyPrefixes` (+ `/exchange-rates` for org rates API).
             // Never use SPA-first segments here (`pos`, `finance`, `inventory`, `reports`, …) — those must serve `index.html`.
-            '^/(?:actuator|auth|attendance-approvals|attendance-events|audit|catalog/promotions|employee-assignments|employee-contracts|employees|exchange-rates|finance-config|goods-receipts|ingredient-categories|ingredients|inventory-transactions|outlets|payroll-periods|payroll-runs|permissions|pos-sessions|product-availability|product-categories|product-prices|products|purchase-orders|recipe-versions|recipes|regions|reports/exports|reports/payroll/runs|reports/payroll/summary|roles|sale-orders|shift-assignments|shift-schedules|stock-adjustments|stock-balances|stock-count-sessions|supplier-invoices|supplier-payments|suppliers|tax-rates|units-of-measure|uom-conversions|users|waste-records)': {
+            '^/(?:actuator|auth|attendance-approvals|attendance-events|audit|catalog/promotions|employee-assignments|employee-contracts|employees|exchange-rates|finance-config|goods-receipts|ingredient-categories|ingredients|inventory-transactions|outlets|payroll-periods|payroll-runs|permissions|pos-sessions|product-availability|product-categories|product-prices|products|purchase-orders|recipe-versions|recipes|regions|reports/exports|reports/payroll/runs|reports/payroll/summary|roles|sale-orders|shift-assignments|shift-schedules|stock-adjustments|stock-balances|stock-count-sessions|supplier-invoices|supplier-payments|suppliers|tax-rates|ui|units-of-measure|uom-conversions|users|waste-records|ws)': {
                 target: 'http://localhost:8080',
                 changeOrigin: true,
             },
@@ -59,7 +60,6 @@ export default defineConfig({
                 'src/shared/test-utils/',
                 '**/*.d.ts',
                 '**/*.config.*',
-                '**/index.ts',
             ],
         },
     },

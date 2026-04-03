@@ -98,7 +98,7 @@ export function IngredientsPage() {
         key: 'name',
         header: 'Nguyên liệu',
         render: (ingredient) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <strong>{ingredient.name}</strong>
             <span className="muted-text">ĐVT gốc: {ingredient.baseUomCode}</span>
           </div>

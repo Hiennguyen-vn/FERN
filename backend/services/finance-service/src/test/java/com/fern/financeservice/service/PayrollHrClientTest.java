@@ -12,14 +12,19 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import com.fern.financeservice.service.payroll.model.ApprovedAttendance;
 import com.fern.financeservice.service.payroll.model.EffectiveContract;
-import com.fern.platform.common.BadRequestException;
+import com.fern.platform.common.DownstreamUnavailableException;
 import com.fern.platform.common.FernRequestHeaders;
 import com.fern.platform.observability.CorrelationId;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.security.FernServiceTokenSupport;
+import com.fern.platform.web.FernDownstreamClientFactory;
+import com.fern.platform.web.FernDownstreamClientProperties;
+import com.fern.platform.web.FernDownstreamClientSpec;
+import com.fern.platform.web.FernDownstreamErrorMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -31,6 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.client.RestClient;
@@ -59,7 +65,14 @@ class PayrollHrClientTest {
                 """, capturedHeaders));
 
         FernJwtService jwtService = jwtService();
-        PayrollHrClient client = new PayrollHrClient(RestClient.builder().build(), CircuitBreaker.ofDefaults("hr-test"), tokenSupport(jwtService), baseUrl);
+        PayrollHrClient client = new PayrollHrClient(
+                RestClient.builder().baseUrl(baseUrl).build(),
+                CircuitBreaker.ofDefaults("hr-test"),
+                tokenSupport(jwtService),
+                hrClientSpec(),
+                downstreamClientFactory(),
+                errorMapper()
+        );
 
         List<EffectiveContract> response = client.fetchEffectiveContracts(3L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), "corr-123", 99L);
 
@@ -82,11 +95,32 @@ class PayrollHrClientTest {
             exchange.close();
         });
 
-        PayrollHrClient client = new PayrollHrClient(RestClient.builder().build(), CircuitBreaker.ofDefaults("hr-test"), tokenSupport(jwtService()), baseUrl);
+        PayrollHrClient client = new PayrollHrClient(
+                RestClient.builder().baseUrl(baseUrl).build(),
+                CircuitBreaker.ofDefaults("hr-test"),
+                tokenSupport(jwtService()),
+                hrClientSpec(),
+                downstreamClientFactory(),
+                errorMapper()
+        );
 
         assertThatThrownBy(() -> client.fetchApprovedAttendance(3L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31), "corr-456", 88L))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageStartingWith("Unable to fetch approved attendance from HR:");
+                .isInstanceOf(DownstreamUnavailableException.class)
+                .hasMessage("hr-service is unavailable");
+    }
+
+    private FernDownstreamClientSpec hrClientSpec() {
+        FernDownstreamClientProperties properties = new FernDownstreamClientProperties();
+        properties.setBaseUrl(baseUrl);
+        return new FernDownstreamClientSpec("finance-service", "hr-service", "hr", properties);
+    }
+
+    private FernDownstreamClientFactory downstreamClientFactory() {
+        return new FernDownstreamClientFactory(new SimpleMeterRegistry());
+    }
+
+    private FernDownstreamErrorMapper errorMapper() {
+        return new FernDownstreamErrorMapper(new ObjectMapper().findAndRegisterModules());
     }
 
     private FernJwtService jwtService() {

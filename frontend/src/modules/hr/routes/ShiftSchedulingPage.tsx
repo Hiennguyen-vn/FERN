@@ -159,7 +159,7 @@ export function ShiftSchedulingPage() {
               />
             </div>
             {scheduleFormError && (
-              <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{scheduleFormError}</p>
+              <p className="error-text error-text-compact">{scheduleFormError}</p>
             )}
             <FormActions
               primaryAction={
@@ -282,7 +282,7 @@ export function ShiftSchedulingPage() {
 
             {/* Create Assignment */}
             {canWrite && !showAssignForm && (
-              <div style={{ marginTop: '1rem' }}>
+              <div className="section-spacing-top">
                 <Button id="btn-show-assign-employee" onClick={() => setShowAssignForm(true)} size="sm" variant="primary">
                   + Assign employee
                 </Button>
@@ -313,7 +313,7 @@ export function ShiftSchedulingPage() {
                   />
                 </div>
                 {assignFormError && (
-                  <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{assignFormError}</p>
+                  <p className="error-text error-text-compact">{assignFormError}</p>
                 )}
                 <FormActions
                   primaryAction={

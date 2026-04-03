@@ -6,24 +6,29 @@ import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
+import com.fern.platform.web.FernDownstreamClientFactory;
+import com.fern.platform.web.FernDownstreamClientSpec;
 import com.fern.platform.security.FernJwtProperties;
+import com.fern.platform.security.FernJwksProvider;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.security.FernPasswordHasher;
 import java.time.Clock;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.client.RestClient;
 
 @Configuration
 public class IamBeans {
+    private static final String CALLER_SERVICE = "iam-service";
+
     @Bean
     Clock clock() {
         return Clock.systemUTC();
@@ -32,6 +37,11 @@ public class IamBeans {
     @Bean
     FernJwtService fernJwtService(FernJwtProperties properties, Clock clock) {
         return new FernJwtService(properties, clock);
+    }
+
+    @Bean
+    FernJwksProvider fernJwksProvider(FernJwtService jwtService) {
+        return jwtService.jwksProvider();
     }
 
     @Bean
@@ -76,19 +86,25 @@ public class IamBeans {
 
     @Bean
     @Qualifier("orgRestClient")
-    RestClient orgRestClient(IamClientProperties properties) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(properties.getOrg().getConnectTimeout());
-        requestFactory.setReadTimeout(properties.getOrg().getReadTimeout());
-        return RestClient.builder()
-                .baseUrl(properties.getOrg().getBaseUrl())
-                .requestFactory(requestFactory)
-                .build();
+    RestClient orgRestClient(@Qualifier("orgClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
+    }
+
+    @Bean
+    @Qualifier("orgCircuitBreaker")
+    CircuitBreaker orgCircuitBreaker(@Qualifier("orgClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
     }
 
     @Bean
     @ConfigurationProperties(prefix = "fern.clients")
     IamClientProperties iamClientProperties() {
         return new IamClientProperties();
+    }
+
+    @Bean
+    @Qualifier("orgClientSpec")
+    FernDownstreamClientSpec orgClientSpec(IamClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "org-service", "org", properties.getOrg());
     }
 }

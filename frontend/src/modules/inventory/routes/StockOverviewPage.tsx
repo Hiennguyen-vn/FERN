@@ -135,7 +135,7 @@ export function StockOverviewPage() {
             title="No outlet selected"
           >
             {outletIds.length > 0 ? (
-              <div style={{ marginTop: '1rem', maxWidth: '320px' }}>
+              <div className="context-picker">
                 <Select
                   label="Choose outlet"
                   onChange={(event) => {
@@ -149,7 +149,7 @@ export function StockOverviewPage() {
                 />
               </div>
             ) : (
-              <p className="muted-text" style={{ marginTop: '0.5rem' }}>
+              <p className="muted-text field-hint">
                 This account has not been assigned an outlet scope. Contact a system administrator to continue.
               </p>
             )}

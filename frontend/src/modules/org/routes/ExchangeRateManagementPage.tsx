@@ -129,7 +129,7 @@ export function ExchangeRateManagementPage() {
               />
             </div>
             {rateError && (
-              <p className="error-text" style={{ margin: '0 0 0.5rem' }}>{rateError}</p>
+              <p className="error-text error-text-compact">{rateError}</p>
             )}
             <FormActions
               primaryAction={
@@ -200,7 +200,7 @@ export function ExchangeRateManagementPage() {
                       const rowKey = `${row.fromCurrencyCode}-${row.toCurrencyCode}-${row.effectiveFrom}`
                       const isPendingDelete = confirmDeleteKey === rowKey
                       return (
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <div className="inline-action-row">
                           <Button
                             onClick={() => {
                               setForm({
@@ -219,7 +219,7 @@ export function ExchangeRateManagementPage() {
                           </Button>
                           {isPendingDelete ? (
                             <>
-                              <span className="muted-text" style={{ fontSize: '0.75rem' }}>Confirm?</span>
+                              <span className="muted-text muted-caption">Confirm?</span>
                               <Button
                                 loading={deleteMutation.isPending}
                                 onClick={async () => {

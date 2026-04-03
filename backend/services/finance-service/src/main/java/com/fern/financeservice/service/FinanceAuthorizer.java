@@ -32,4 +32,8 @@ public class FinanceAuthorizer {
     public void requireSystemOrPermission(FernPrincipal principal, String permission) {
         requireSystemPermission(principal, permission);
     }
+
+    public void requireInternalPermission(FernPrincipal principal, String permission) {
+        requireSystemPermission(principal, permission);
+    }
 }

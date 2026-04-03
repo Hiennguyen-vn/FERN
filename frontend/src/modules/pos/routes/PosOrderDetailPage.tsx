@@ -25,7 +25,7 @@ import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { PosPaymentHistoryTable } from '../components/PosPaymentHistoryTable'
 import { useAddSalePayment, useCancelPosOrder, useCompletePosOrder, usePosOrder, useUpdatePosOrder } from '../hooks/usePosOrder'
 import { selectPosQueueCounts, selectQueuedPaymentsForOrder, usePosQueueStore } from '../offline/posQueue.store'
-import type { OrderLineDraft } from '../model/pos.types'
+import type { OrderLineDraft, SaleOrderLine } from '../model/pos.types'
 import { buildUpdateOrderPayload } from '../services/orderPayload.mapper'
 import {
   canCancelOrder,
@@ -46,25 +46,16 @@ import {
   canReadOrders,
 } from '../services/posUiPolicy.service'
 
-function toEditableLines(lines: Array<{
-  productId: number
-  productCode: string
-  productNameSnapshot: string
-  qty: string
-  note: string | null
-  unitPrice: string
-  lineTotal: string
-  taxAmount: string
-}>): OrderLineDraft[] {
+function toEditableLines(lines: SaleOrderLine[]): OrderLineDraft[] {
   return lines.map((line) => ({
     productId: line.productId,
     productCode: line.productCode,
     productNameSnapshot: line.productNameSnapshot,
-    qty: line.qty,
+    qty: String(line.qty),
     note: line.note ?? '',
-    unitPrice: line.unitPrice,
-    lineTotal: line.lineTotal,
-    taxAmount: line.taxAmount,
+    unitPrice: String(line.unitPrice),
+    lineTotal: String(line.lineTotal),
+    taxAmount: String(line.taxAmount),
   }))
 }
 

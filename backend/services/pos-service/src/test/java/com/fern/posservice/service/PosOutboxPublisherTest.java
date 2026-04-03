@@ -13,9 +13,9 @@ import static org.mockito.Mockito.when;
 
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.outbox.JdbcOutboxPublisherSupport;
-import com.fern.posservice.config.PosOutboxProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -47,13 +47,12 @@ class PosOutboxPublisherTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        PosOutboxProperties properties = new PosOutboxProperties();
-        properties.setMaxAttempts(3);
         publisher = new PosOutboxPublisher(
                 jdbcTemplate,
                 kafkaTemplate,
-                properties,
                 Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), ZoneOffset.UTC),
+                3,
+                Duration.ofMinutes(1),
                 operationalAlertPublisher,
                 new SimpleMeterRegistry()
         );

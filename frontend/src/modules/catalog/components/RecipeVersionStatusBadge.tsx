@@ -1,16 +1,17 @@
+import clsx from 'clsx'
 import type { RecipeVersionStatus } from '../model/catalog.types'
 
-const VERSION_STATUS_STYLE: Record<RecipeVersionStatus, { color: string; label: string }> = {
-  DRAFT: { color: 'var(--color-warning-400)', label: 'Draft' },
-  ACTIVE: { color: 'var(--color-success-500)', label: 'Active' },
-  ARCHIVED: { color: 'var(--color-neutral-500)', label: 'Archived' },
+const VERSION_STATUS_STYLE: Record<RecipeVersionStatus, { className: string; label: string }> = {
+  DRAFT: { className: 'catalog-status-draft', label: 'Draft' },
+  ACTIVE: { className: 'catalog-status-active', label: 'Active' },
+  ARCHIVED: { className: 'catalog-status-archived', label: 'Archived' },
 }
 
 export function RecipeVersionStatusBadge({ status }: { status: RecipeVersionStatus }) {
-  const { color, label } = VERSION_STATUS_STYLE[status]
+  const { className, label } = VERSION_STATUS_STYLE[status]
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', fontSize: 'var(--text-xs)', color, fontWeight: 'var(--font-medium)' }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />
+    <span className={clsx('catalog-status-badge', className)}>
+      <span className="catalog-status-dot" />
       {label}
     </span>
   )

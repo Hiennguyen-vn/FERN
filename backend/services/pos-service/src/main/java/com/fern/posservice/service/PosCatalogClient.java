@@ -2,7 +2,12 @@ package com.fern.posservice.service;
 
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
-import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import com.fern.platform.observability.CorrelationId;
+import com.fern.platform.security.FernServiceTokenSupport;
+import com.fern.platform.web.FernDownstreamClientFactory;
+import com.fern.platform.web.FernDownstreamClientSpec;
+import com.fern.platform.web.FernDownstreamErrorMapper;
+import com.fern.platform.web.FernDownstreamHeadersContributor;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.time.LocalDate;
 import java.util.List;
@@ -10,12 +15,11 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestClientResponseException;
 
 @Component
 public class PosCatalogClient {
@@ -25,19 +29,25 @@ public class PosCatalogClient {
 
     private final RestClient restClient;
     private final CircuitBreaker circuitBreaker;
-    private final PosInternalClientSupport internalClientSupport;
-    private final PosDownstreamErrorHandler errorHandler;
+    private final FernServiceTokenSupport serviceTokenSupport;
+    private final FernDownstreamClientFactory downstreamClientFactory;
+    private final FernDownstreamErrorMapper errorMapper;
+    private final FernDownstreamClientSpec clientSpec;
 
     public PosCatalogClient(
             @Qualifier("catalogRestClient") RestClient restClient,
             @Qualifier("catalogCircuitBreaker") CircuitBreaker catalogCircuitBreaker,
-            PosInternalClientSupport internalClientSupport,
-            PosDownstreamErrorHandler errorHandler
+            @Qualifier("catalogClientSpec") FernDownstreamClientSpec clientSpec,
+            FernServiceTokenSupport serviceTokenSupport,
+            FernDownstreamClientFactory downstreamClientFactory,
+            FernDownstreamErrorMapper errorMapper
     ) {
         this.restClient = restClient;
         this.circuitBreaker = catalogCircuitBreaker;
-        this.internalClientSupport = internalClientSupport;
-        this.errorHandler = errorHandler;
+        this.clientSpec = clientSpec;
+        this.serviceTokenSupport = serviceTokenSupport;
+        this.downstreamClientFactory = downstreamClientFactory;
+        this.errorMapper = errorMapper;
     }
 
     public MenuResponse fetchMenu(FernPrincipal principal, Long outletId, LocalDate businessDate) {
@@ -47,12 +57,15 @@ public class PosCatalogClient {
                         .queryParam("outletId", outletId)
                         .queryParam("at", businessDate)
                         .build())
-                .headers(headers -> internalClientSupport.applyInternalHeaders(
-                        headers,
+                .headers(FernDownstreamHeadersContributor.bearerToken(
+                        serviceTokenSupport.issueToken(
+                                PosServiceNames.POS_SERVICE,
+                                PosServiceNames.CATALOG_SERVICE,
+                                Set.of(PermissionCodes.CATALOG_INTERNAL_RESOLVE)
+                        ),
                         principal,
-                        PosServiceNames.CATALOG_SERVICE,
-                        Set.of(PermissionCodes.CATALOG_INTERNAL_RESOLVE)
-                ))
+                        MDC.get(CorrelationId.MDC_KEY)
+                )::contribute)
                 .retrieve()
                 .body(MenuResponse.class)));
     }
@@ -68,25 +81,24 @@ public class PosCatalogClient {
                         .queryParam("productIds", joinedIds)
                         .queryParam("at", businessDate)
                         .build())
-                .headers(headers -> internalClientSupport.applyInternalHeaders(
-                        headers,
+                .headers(FernDownstreamHeadersContributor.bearerToken(
+                        serviceTokenSupport.issueToken(
+                                PosServiceNames.POS_SERVICE,
+                                PosServiceNames.CATALOG_SERVICE,
+                                Set.of(PermissionCodes.CATALOG_INTERNAL_RESOLVE)
+                        ),
                         principal,
-                        PosServiceNames.CATALOG_SERVICE,
-                        Set.of(PermissionCodes.CATALOG_INTERNAL_RESOLVE)
-                ))
+                        MDC.get(CorrelationId.MDC_KEY)
+                )::contribute)
                 .retrieve()
                 .body(RECIPE_LIST_TYPE)));
     }
 
     private <T> T execute(Supplier<T> supplier) {
-        try {
-            return circuitBreaker.executeSupplier(supplier);
-        } catch (CallNotPermittedException exception) {
-            throw errorHandler.serviceUnavailable(PosServiceNames.CATALOG_SERVICE, exception);
-        } catch (RestClientResponseException exception) {
-            throw errorHandler.translateResponse(PosServiceNames.CATALOG_SERVICE, exception);
-        } catch (RestClientException exception) {
-            throw errorHandler.serviceUnavailable(PosServiceNames.CATALOG_SERVICE, exception);
-        }
+        return downstreamClientFactory.execute(operation("catalog"), circuitBreaker, supplier, errorMapper);
+    }
+
+    private FernDownstreamClientSpec operation(String operation) {
+        return new FernDownstreamClientSpec(clientSpec.callerService(), clientSpec.targetService(), operation, clientSpec.properties());
     }
 }

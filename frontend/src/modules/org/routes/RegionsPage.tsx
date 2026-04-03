@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
-import { Button, DataTable, Input, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
+import { Button, DataTable, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
 import type { DataTableColumn } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { useRegionList } from '../hooks/useOrg'
@@ -40,7 +41,7 @@ export function RegionsPage() {
         key: 'region',
         header: 'Region',
         render: (region) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <strong>{region.name}</strong>
             <span className="muted-text">{region.code}</span>
           </div>
@@ -94,13 +95,19 @@ export function RegionsPage() {
           </Button>
         ) : null
       }
+      eyebrow="Organization"
     >
-      <Input
-        label="Search regions"
-        onChange={(event) => { setSearchText(event.target.value); setPage(0) }}
-        placeholder="Tên, mã, timezone, currency..."
-        value={searchText}
-      />
+      <section className="workspace-filter-bar" aria-label="Region filters">
+        <div className="workspace-inline-search">
+          <AppIcon name="search" size="sm" />
+          <input
+            className="workspace-inline-input"
+            onChange={(event) => { setSearchText(event.target.value); setPage(0) }}
+            placeholder="Search by name, code, timezone, currency..."
+            value={searchText}
+          />
+        </div>
+      </section>
       {!regionsQuery.isLoading && !regionsQuery.error && rows.length === 0 && searchText ? (
         <ReadonlyBanner message={`Không tìm thấy region nào khớp "${searchText}". Thử từ khoá khác hoặc xoá bộ lọc.`} />
       ) : canCreate ? (

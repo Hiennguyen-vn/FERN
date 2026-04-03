@@ -141,8 +141,8 @@ export function PosSessionsPage() {
           />
         ) : null}
         <div className="field-grid">
-          <Input label="Region ID" readOnly value={effectiveRegionId} />
-          <Input label="Outlet ID" readOnly value={selectedOutletId} />
+          <Input label="Region ID" readOnly value={effectiveRegionId ? String(effectiveRegionId) : ''} />
+          <Input label="Outlet ID" readOnly value={String(selectedOutletId)} />
           <Input label="Business date" onChange={(event) => setBusinessDate(event.target.value)} type="date" value={businessDate} />
           <Input label="Currency" readOnly value={currencyCode ?? (regionQuery.isLoading ? 'Loading...' : '—')} />
           <div>
@@ -152,7 +152,7 @@ export function PosSessionsPage() {
               placeholder="TILL-01"
               value={terminalId}
             />
-            <p className="muted-text" style={{ fontSize: 'var(--text-xs)', marginTop: '0.25rem' }}>
+            <p className="field-hint">
               Optional. Backend uses this for session affinity — same cashier+terminal replays the open session (X-Session-Existed). Max 64 chars, letters/numbers/_/- only.
             </p>
           </div>
@@ -204,7 +204,7 @@ export function PosSessionsPage() {
 
       <FormSection description="Lọc theo business date và status để kiểm tra lifecycle của outlet hiện tại." title="Session filters">
         <div className="field-grid">
-          <Input label="Outlet ID" readOnly value={selectedOutletId} />
+          <Input label="Outlet ID" readOnly value={String(selectedOutletId)} />
           <Input
             label="Business date"
             onChange={(event) => {

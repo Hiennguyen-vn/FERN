@@ -1,15 +1,14 @@
 package com.fern.posservice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.testsupport.FernIntegrationContainers;
-import com.fern.posservice.config.PosOutboxProperties;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
 import java.time.Duration;
@@ -18,6 +17,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -73,14 +73,12 @@ class PosOutboxPublisherIntegrationTest {
                 TRUNCATE TABLE pos.outbox_event
                 RESTART IDENTITY CASCADE
                 """);
-        PosOutboxProperties properties = new PosOutboxProperties();
-        properties.setMaxAttempts(3);
-        properties.setReclaimAfter(Duration.ofMinutes(1));
         publisher = new PosOutboxPublisher(
                 namedParameterJdbcTemplate,
                 kafkaTemplate,
-                properties,
                 Clock.fixed(NOW, ZoneOffset.UTC),
+                3,
+                Duration.ofMinutes(1),
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );
@@ -89,12 +87,17 @@ class PosOutboxPublisherIntegrationTest {
     @Test
     void shouldReclaimStaleInProgressPosOutboxEvent() {
         UUID eventId = insertOutbox("IN_PROGRESS", 1, NOW.minus(Duration.ofMinutes(2)));
-        when(kafkaTemplate.send(anyString(), anyString(), anyString()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
         publisher.publishPending();
 
-        verify(kafkaTemplate).send(eq("pos.sale.completed"), eq("101"), anyString());
+        verify(kafkaTemplate).send(argThat((ProducerRecord<String, String> record) ->
+                com.fern.platform.testsupport.JsonTestSupport.matchesProducerRecord(
+                        record,
+                        "pos.sale.completed",
+                        "101",
+                        "{\"saleOrderId\":8801,\"outletId\":101}")));
         assertThat(status(eventId)).isEqualTo("PUBLISHED");
         assertThat(publishedAt(eventId)).isEqualTo(OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC));
         assertThat(lastError(eventId)).isNull();
@@ -106,7 +109,7 @@ class PosOutboxPublisherIntegrationTest {
 
         publisher.publishPending();
 
-        verify(kafkaTemplate, never()).send(anyString(), anyString(), anyString());
+        verify(kafkaTemplate, never()).send(any(ProducerRecord.class));
         assertThat(status(eventId)).isEqualTo("IN_PROGRESS");
         assertThat(publishedAt(eventId)).isNull();
     }
@@ -117,7 +120,7 @@ class PosOutboxPublisherIntegrationTest {
 
         publisher.publishPending();
 
-        verify(kafkaTemplate, never()).send(anyString(), anyString(), anyString());
+        verify(kafkaTemplate, never()).send(any(ProducerRecord.class));
         assertThat(status(eventId)).isEqualTo("FAILED");
         assertThat(publishedAt(eventId)).isNull();
         assertThat(lastError(eventId)).isEqualTo("previous failure");

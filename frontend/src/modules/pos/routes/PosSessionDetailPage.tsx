@@ -149,7 +149,7 @@ export function PosSessionDetailPage() {
               key: 'orderNumber',
               header: 'Số đơn',
               render: (row) => (
-                <Link style={{ color: 'var(--color-accent)', fontWeight: 500 }} to={`/pos/orders/${row.id}`}>
+                <Link className="table-link" to={`/pos/orders/${row.id}`}>
                   {row.orderNumber}
                 </Link>
               ),

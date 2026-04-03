@@ -1,17 +1,16 @@
 package com.fern.reportservice.controller;
 
 import com.fern.platform.common.FernPrincipal;
-import jakarta.servlet.http.HttpServletRequest;
+import com.fern.platform.observability.CorrelationId;
+import com.fern.reportservice.dto.ReportRevenueResponses.OutletTodayStatResponse;
+import com.fern.reportservice.service.ReportRevenueService;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestClient;
-import org.springframework.http.HttpHeaders;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -19,34 +18,19 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequestMapping("/reports/revenue")
 @Tag(name = "Report Revenue")
 public class ReportRevenueController {
-    private final RestClient restClient;
-    private final String posBaseUrl;
+    private final ReportRevenueService reportRevenueService;
 
-    public ReportRevenueController(RestClient.Builder restClientBuilder, @Value("${fern.pos-base-url:http://localhost:8086}") String posBaseUrl) {
-        this.restClient = restClientBuilder.build();
-        this.posBaseUrl = posBaseUrl;
+    public ReportRevenueController(ReportRevenueService reportRevenueService) {
+        this.reportRevenueService = reportRevenueService;
     }
 
     @Operation(summary = "Get Report Revenue")
     @GetMapping("/outlet-stats/today")
-    public List<Object> todayStats(
+    public List<OutletTodayStatResponse> todayStats(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam List<Long> outletIds,
-            HttpServletRequest request
+            @RequestHeader(value = CorrelationId.HEADER, required = false) String correlationId
     ) {
-        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authHeader == null) authHeader = "";
-
-        return restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .scheme(java.net.URI.create(posBaseUrl).getScheme())
-                        .host(java.net.URI.create(posBaseUrl).getHost())
-                        .port(java.net.URI.create(posBaseUrl).getPort())
-                        .path("/pos-stats/today")
-                        .queryParam("outletIds", outletIds)
-                        .build())
-                .header(HttpHeaders.AUTHORIZATION, authHeader)
-                .retrieve()
-                .body(new ParameterizedTypeReference<>() {});
+        return reportRevenueService.listOutletTodayStats(principal, outletIds, correlationId);
     }
 }

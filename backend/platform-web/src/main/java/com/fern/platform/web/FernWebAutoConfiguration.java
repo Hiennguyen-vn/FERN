@@ -1,5 +1,7 @@
 package com.fern.platform.web;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -22,5 +24,17 @@ public class FernWebAutoConfiguration {
     ) {
         List<UnhandledExceptionListener> list = unhandledListeners.stream().toList();
         return new FernGlobalExceptionHandler(applicationName, list);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public FernDownstreamErrorMapper fernDownstreamErrorMapper(ObjectMapper objectMapper) {
+        return new FernDownstreamErrorMapper(objectMapper);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public FernDownstreamClientFactory fernDownstreamClientFactory(MeterRegistry meterRegistry) {
+        return new FernDownstreamClientFactory(meterRegistry);
     }
 }

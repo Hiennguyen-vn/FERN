@@ -12,6 +12,7 @@ import type {
   ReportPayrollSummaryFilters,
 } from '../model/payrollReport.types'
 import type { CreateExportPayload, ExportJob, ExportJobListFilters, ExportPreview } from '../model/reportExport.types'
+import type { OutletRevenueTodayStat } from '../model/revenueReport.types'
 import { normalizeExportPayload } from '../services/reportFilter.service'
 
 export async function createExportJob(payload: CreateExportPayload) {
@@ -72,6 +73,17 @@ export async function getPayrollSummary(filters: ReportPayrollSummaryFilters) {
 
 export async function getPayrollRunReport(runId: number) {
   const { data } = await gatewayClient.get<ReportPayrollRunDetail>(`/reports/payroll/runs/${runId}`)
+  return data
+}
+
+export async function getOutletRevenueTodayStats(outletIds: number[]) {
+  const params = new URLSearchParams()
+  outletIds.forEach((outletId) => {
+    params.append('outletIds', String(outletId))
+  })
+  const { data } = await gatewayClient.get<OutletRevenueTodayStat[]>('/reports/revenue/outlet-stats/today', {
+    params,
+  })
   return data
 }
 

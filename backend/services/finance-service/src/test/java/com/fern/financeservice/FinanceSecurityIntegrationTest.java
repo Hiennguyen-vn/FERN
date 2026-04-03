@@ -435,6 +435,43 @@ class FinanceSecurityIntegrationTest {
     }
 
     @Test
+    void shouldReturnFinanceOutletCloseCheckForInternalServiceToken() throws Exception {
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+        seedPayrollRunWithOutletAllocation("SUBMITTED", 301L);
+        seedPayrollRunWithOutletAllocation("APPROVED", 301L);
+        seedPayrollRunWithOutletAllocation("PAID", 301L);
+        seedPayrollRunWithOutletAllocation("APPROVED", 302L);
+
+        mockMvc.perform(get("/internal/finance/outlet-close-check")
+                        .queryParam("outletId", "301")
+                        .header("Authorization", "Bearer " + serviceTokenSupport.issueToken(
+                                "org-service",
+                                "finance-service",
+                                Set.of(PermissionCodes.FINANCE_INTERNAL_READ)
+                        )))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outletId").value(301))
+                .andExpect(jsonPath("$.blockingPayrollRuns").value(2))
+                .andExpect(jsonPath("$.hasBlockingObligations").value(true));
+    }
+
+    @Test
+    void shouldRejectFinanceOutletCloseCheckWithoutInternalPermission() throws Exception {
+        redisTemplate.opsForValue().set("fern:versions:policy", "1");
+        redisTemplate.opsForValue().set("fern:versions:scope", "1");
+
+        mockMvc.perform(get("/internal/finance/outlet-close-check")
+                        .queryParam("outletId", "301")
+                        .header("Authorization", "Bearer " + serviceTokenSupport.issueToken(
+                                "org-service",
+                                "finance-service",
+                                Set.of(PermissionCodes.FINANCE_PAYROLL_READ)
+                        )))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     @Tag("security-gap")
     void shouldRejectUserTokenWithWrongIssuerOverHttp() throws Exception {
         long periodId = seedPayrollPeriod(1L, "PP-WRONG-ISSUER-001");
@@ -717,32 +754,55 @@ class FinanceSecurityIntegrationTest {
     }
 
     private long seedPayrollRunWithEmployeeResult() {
+        return seedPayrollRunWithOutletAllocation("APPROVED", 301L);
+    }
+
+    private long seedPayrollRunWithOutletAllocation(String runStatus, long outletId) {
+        int dayOffset = Math.abs(UUID.randomUUID().hashCode() % 365);
+        LocalDate startDate = LocalDate.of(2026, 3, 1).plusDays(dayOffset);
+        LocalDate endDate = startDate.plusDays(30);
+        LocalDate payDate = endDate.plusDays(5);
         long periodId = jdbcTemplate.queryForObject("""
                 INSERT INTO finance.payroll_period (
                     region_id, reference_code, name, start_date, end_date, pay_date, status, created_at, updated_at
                 ) VALUES (
-                    1, 'PP-000001', 'March payroll', DATE '2026-03-01', DATE '2026-03-31', DATE '2026-04-05', 'DRAFT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    1, :referenceCode, 'March payroll', :startDate, :endDate, :payDate, 'DRAFT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
                 RETURNING id
-                """, new MapSqlParameterSource(), Long.class);
+                """, new MapSqlParameterSource()
+                .addValue("referenceCode", "PP-" + UUID.randomUUID())
+                .addValue("startDate", startDate)
+                .addValue("endDate", endDate)
+                .addValue("payDate", payDate), Long.class);
         long runId = jdbcTemplate.queryForObject("""
                 INSERT INTO finance.payroll_run (
                     payroll_period_id, run_code, run_date, status, total_amount, payment_ref, note, submitted_at, approved_at, paid_at, created_at, updated_at
                 ) VALUES (
-                    :periodId, 'RUN-000001', DATE '2026-04-01', 'APPROVED', 100.00, 'PAY-001', 'ready', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    :periodId, :runCode, DATE '2026-04-01', :status, 100.00, 'PAY-001', 'ready',
+                    CASE WHEN :status IN ('SUBMITTED', 'APPROVED', 'PAID') THEN CURRENT_TIMESTAMP ELSE NULL END,
+                    CASE WHEN :status IN ('APPROVED', 'PAID') THEN CURRENT_TIMESTAMP ELSE NULL END,
+                    CASE WHEN :status = 'PAID' THEN CURRENT_TIMESTAMP ELSE NULL END,
+                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
                 RETURNING id
-                """, new MapSqlParameterSource("periodId", periodId), Long.class);
+                """, new MapSqlParameterSource()
+                .addValue("periodId", periodId)
+                .addValue("runCode", "RUN-" + UUID.randomUUID())
+                .addValue("status", runStatus), Long.class);
         long resultId = jdbcTemplate.queryForObject("""
                 INSERT INTO finance.payroll_employee_result (
                     payroll_run_id, employee_id, contract_id, outlet_id, gross_pay, deduction_amount, tax_amount, net_pay,
                     payment_status, work_days, work_hours, overtime_hours, created_at, updated_at
                 ) VALUES (
-                    :runId, 501, 701, 301, 120.00, 10.00, 10.00, 100.00,
-                    'UNPAID', 20, 160, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                    :runId, :employeeId, 701, :outletId, 120.00, 10.00, 10.00, 100.00,
+                    :paymentStatus, 20, 160, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                 )
                 RETURNING id
-                """, new MapSqlParameterSource("runId", runId), Long.class);
+                """, new MapSqlParameterSource()
+                .addValue("runId", runId)
+                .addValue("employeeId", 500L + Math.abs(UUID.randomUUID().getMostSignificantBits() % 10_000))
+                .addValue("outletId", outletId)
+                .addValue("paymentStatus", "PAID".equals(runStatus) ? "PAID" : "UNPAID"), Long.class);
         jdbcTemplate.update("""
                 INSERT INTO finance.payroll_result_line (
                     payroll_employee_result_id, line_type, description, amount, created_at
@@ -754,9 +814,11 @@ class FinanceSecurityIntegrationTest {
                 INSERT INTO finance.payroll_result_allocation (
                     payroll_employee_result_id, outlet_id, work_hours, allocated_amount, created_at
                 ) VALUES (
-                    :resultId, 301, 160, 100.00, CURRENT_TIMESTAMP
+                    :resultId, :outletId, 160, 100.00, CURRENT_TIMESTAMP
                 )
-                """, new MapSqlParameterSource("resultId", resultId));
+                """, new MapSqlParameterSource()
+                .addValue("resultId", resultId)
+                .addValue("outletId", outletId));
         return runId;
     }
 }

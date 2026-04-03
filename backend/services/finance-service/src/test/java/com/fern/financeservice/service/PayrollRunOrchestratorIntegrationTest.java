@@ -124,6 +124,49 @@ class PayrollRunOrchestratorIntegrationTest {
     }
 
     @Test
+    void shouldProduceZeroAmountRunWhenApprovedAttendanceIsEmpty() {
+        FernPrincipal principal = payrollPrincipal();
+        when(payrollHrClient.fetchEffectiveContracts(anyLong(), any(), any(), anyString(), any()))
+                .thenReturn(List.of(new EffectiveContract(
+                        701L,
+                        501L,
+                        1L,
+                        "FULL_TIME",
+                        "MONTHLY",
+                        new BigDecimal("3000.00"),
+                        "TAX-001",
+                        LocalDate.of(2026, 1, 1),
+                        null
+                )));
+        when(payrollHrClient.fetchApprovedAttendance(anyLong(), any(), any(), anyString(), any()))
+                .thenReturn(List.of());
+
+        Long payrollPeriodId = financePayrollService.createPayrollPeriod(
+                principal,
+                new CreatePayrollPeriodRequest(
+                        1L,
+                        "March 2026",
+                        LocalDate.of(2026, 3, 1),
+                        LocalDate.of(2026, 3, 31),
+                        LocalDate.of(2026, 4, 5),
+                        null
+                ),
+                "corr-payroll-period-empty-attendance"
+        ).id();
+
+        var run = financePayrollService.createPayrollRun(
+                principal,
+                new CreatePayrollRunRequest(payrollPeriodId, LocalDate.of(2026, 4, 1), null),
+                "corr-payroll-run-empty-attendance"
+        );
+
+        assertThat(run.totalAmount()).isEqualByComparingTo("0.00");
+        assertThat(run.employees()).isEmpty();
+        assertThat(jdbcTemplate.getJdbcTemplate().queryForObject("SELECT COUNT(*) FROM finance.payroll_employee_result", Integer.class)).isZero();
+        assertThat(jdbcTemplate.getJdbcTemplate().queryForObject("SELECT COUNT(*) FROM finance.payroll_attendance_snapshot", Integer.class)).isZero();
+    }
+
+    @Test
     void shouldEmitDeterministicPayrollCalculatedEnvelopeOnApproval() {
         FernPrincipal principal = payrollWorkflowPrincipal();
         when(payrollHrClient.fetchEffectiveContracts(anyLong(), any(), any(), anyString(), any()))

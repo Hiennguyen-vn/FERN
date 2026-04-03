@@ -6,11 +6,18 @@ import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
+import com.fern.platform.common.OperationalShardAccess;
+import com.fern.platform.common.OperationalShardRegistry;
+import com.fern.platform.common.ShardId;
+import com.fern.platform.common.ShardResolver;
+import com.fern.platform.common.SingleOperationalShardRegistry;
+import com.fern.platform.common.SingleShardResolver;
+import com.fern.platform.web.FernDownstreamClientFactory;
+import com.fern.platform.web.FernDownstreamClientSpec;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import java.time.Clock;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
@@ -22,11 +29,13 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestClient;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 @Configuration
 public class PosBeans {
+    private static final String CALLER_SERVICE = "pos-service";
+
     @Bean
     Clock clock() {
         return Clock.systemUTC();
@@ -74,36 +83,26 @@ public class PosBeans {
 
     @Bean
     @Qualifier("catalogRestClient")
-    RestClient catalogRestClient(PosClientProperties properties) {
-        return buildRestClient(properties.getCatalog());
+    RestClient catalogRestClient(@Qualifier("catalogClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
     }
 
     @Bean
     @Qualifier("inventoryRestClient")
-    RestClient inventoryRestClient(PosClientProperties properties) {
-        return buildRestClient(properties.getInventory());
+    RestClient inventoryRestClient(@Qualifier("inventoryClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
     }
 
     @Bean
     @Qualifier("orgRestClient")
-    RestClient orgRestClient(PosClientProperties properties) {
-        return buildRestClient(properties.getOrg());
+    RestClient orgRestClient(@Qualifier("orgClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
     }
 
     @Bean
     @ConfigurationProperties(prefix = "fern.clients")
     PosClientProperties posClientProperties() {
         return new PosClientProperties();
-    }
-
-    @Bean
-    CircuitBreaker catalogCircuitBreaker(PosClientProperties properties) {
-        return CircuitBreaker.of("catalog-client", toCircuitBreakerConfig(properties.getCatalog().getCircuitBreaker()));
-    }
-
-    @Bean
-    CircuitBreaker inventoryCircuitBreaker(PosClientProperties properties) {
-        return CircuitBreaker.of("inventory-client", toCircuitBreakerConfig(properties.getInventory().getCircuitBreaker()));
     }
 
     @Bean
@@ -117,22 +116,58 @@ public class PosBeans {
         return new TransactionTemplate(transactionManager);
     }
 
-    private RestClient buildRestClient(PosClientProperties.ClientProperties properties) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(properties.getConnectTimeout());
-        requestFactory.setReadTimeout(properties.getReadTimeout());
-        return RestClient.builder()
-                .baseUrl(properties.getBaseUrl())
-                .requestFactory(requestFactory)
-                .build();
+    @Bean
+    ShardId defaultOperationalShardId(@Value("${fern.sharding.operational.default-shard:operational-0}") String value) {
+        return new ShardId(value);
     }
 
-    private CircuitBreakerConfig toCircuitBreakerConfig(PosClientProperties.CircuitBreakerProperties properties) {
-        return CircuitBreakerConfig.custom()
-                .failureRateThreshold(properties.getFailureRateThreshold())
-                .minimumNumberOfCalls(properties.getMinimumNumberOfCalls())
-                .slidingWindowSize(properties.getSlidingWindowSize())
-                .waitDurationInOpenState(properties.getWaitDurationInOpenState())
-                .build();
+    @Bean
+    ShardResolver shardResolver(ShardId defaultOperationalShardId) {
+        return new SingleShardResolver(defaultOperationalShardId);
+    }
+
+    @Bean
+    OperationalShardRegistry operationalShardRegistry(
+            ShardId defaultOperationalShardId,
+            NamedParameterJdbcTemplate jdbcTemplate,
+            TransactionTemplate transactionTemplate
+    ) {
+        return new SingleOperationalShardRegistry(new OperationalShardAccess(defaultOperationalShardId, jdbcTemplate, transactionTemplate));
+    }
+
+    @Bean
+    @Qualifier("catalogClientSpec")
+    FernDownstreamClientSpec catalogClientSpec(PosClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "catalog-service", "catalog", properties.getCatalog());
+    }
+
+    @Bean
+    @Qualifier("inventoryClientSpec")
+    FernDownstreamClientSpec inventoryClientSpec(PosClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "inventory-service", "inventory", properties.getInventory());
+    }
+
+    @Bean
+    @Qualifier("orgClientSpec")
+    FernDownstreamClientSpec orgClientSpec(PosClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "org-service", "org", properties.getOrg());
+    }
+
+    @Bean
+    @Qualifier("catalogCircuitBreaker")
+    CircuitBreaker catalogCircuitBreaker(@Qualifier("catalogClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
+    }
+
+    @Bean
+    @Qualifier("inventoryCircuitBreaker")
+    CircuitBreaker inventoryCircuitBreaker(@Qualifier("inventoryClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
+    }
+
+    @Bean
+    @Qualifier("orgCircuitBreaker")
+    CircuitBreaker orgCircuitBreaker(@Qualifier("orgClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
     }
 }

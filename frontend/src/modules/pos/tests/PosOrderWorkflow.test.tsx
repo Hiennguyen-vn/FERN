@@ -79,9 +79,9 @@ function createSession(overrides: Partial<PosSession> = {}): PosSession {
     openedAt: overrides.openedAt ?? '2026-03-30T09:00:00.000Z',
     closedAt: overrides.closedAt ?? null,
     reconciledAt: overrides.reconciledAt ?? null,
-    expectedCashAmount: overrides.expectedCashAmount ?? '0',
-    countedCashAmount: overrides.countedCashAmount ?? '0',
-    discrepancyAmount: overrides.discrepancyAmount ?? '0',
+    expectedCashAmount: overrides.expectedCashAmount ?? 0,
+    countedCashAmount: overrides.countedCashAmount ?? 0,
+    discrepancyAmount: overrides.discrepancyAmount ?? 0,
   }
 }
 

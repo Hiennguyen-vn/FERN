@@ -141,4 +141,13 @@ public final class ProcurementResponses {
             List<SupplierPaymentAllocationResponse> invoiceAllocations
     ) {
     }
+
+    public record OutletCloseCheckResponse(
+            Long outletId,
+            long blockingPurchaseOrders,
+            long blockingGoodsReceipts,
+            long blockingSupplierInvoices,
+            boolean hasBlockingDocuments
+    ) {
+    }
 }

@@ -33,4 +33,8 @@ public class ProcurementAuthorizer {
             throw new ForbiddenException("Resource is outside the current scope");
         }
     }
+
+    public void requireInternalPermission(FernPrincipal principal, String permission) {
+        requirePermission(principal, permission);
+    }
 }

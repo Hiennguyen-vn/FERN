@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(registry -> registry
-                        .requestMatchers("/actuator/health", "/auth/login", "/auth/refresh").permitAll()
+                        .requestMatchers("/actuator/health", "/auth/login", "/auth/refresh", "/.well-known/jwks.json").permitAll()
                         .anyRequest().authenticated()
                 )
                 // Rate limiting runs first — before correlation-id injection and JWT parsing

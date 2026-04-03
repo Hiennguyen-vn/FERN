@@ -124,7 +124,7 @@ export function StockCountSessionsPage() {
           <ReadonlyBanner message="Select an outlet to load stock count history." />
           <EmptyState title="No outlet selected" description="Choose an outlet from the shell or below.">
             {outletIds.length > 0 ? (
-              <div style={{ marginTop: '1rem', maxWidth: '320px' }}>
+              <div className="context-picker">
                 <Select
                   label="Choose outlet"
                   onChange={(event) => {
@@ -138,7 +138,7 @@ export function StockCountSessionsPage() {
                 />
               </div>
             ) : (
-              <p className="muted-text" style={{ marginTop: '0.5rem' }}>
+              <p className="muted-text field-hint">
                 This account has not been assigned an outlet scope.
               </p>
             )}
@@ -158,15 +158,21 @@ export function StockCountSessionsPage() {
       {selectedOutletId && !query.error ? (
         <>
           <section className="workspace-filter-bar" aria-label="Stock count filters">
-            <Select
-              label="Status"
-              onChange={(event) => {
-                setStatusFilter(event.target.value)
-                setPage(0)
-              }}
-              options={STATUS_FILTER_OPTIONS}
-              value={statusFilter}
-            />
+            <div className="workspace-filter-field">
+              <span className="eyebrow">Status</span>
+              <select
+                className="workspace-inline-select"
+                onChange={(event) => {
+                  setStatusFilter(event.target.value)
+                  setPage(0)
+                }}
+                value={statusFilter}
+              >
+                {STATUS_FILTER_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
             <div className="workspace-inline-actions">
               <div className="workspace-inline-pill">
                 <AppIcon name="storefront" size="sm" />

@@ -76,7 +76,7 @@ export function HomeActionHub() {
             >
               <Link to={action.href}>
                 <AppIcon name={index === 0 ? 'add' : 'arrow_forward'} size="sm" />
-                {index === 0 ? 'Open primary action' : 'Review next queue'}
+                {index === 0 ? `Open ${action.title}` : `Review ${action.title}`}
               </Link>
             </Button>
           ))}

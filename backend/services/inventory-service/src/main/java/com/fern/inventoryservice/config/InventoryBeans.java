@@ -6,26 +6,36 @@ import com.fern.platform.alerts.NoopOperationalAlertPublisher;
 import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
+import com.fern.platform.common.OperationalShardAccess;
+import com.fern.platform.common.OperationalShardRegistry;
+import com.fern.platform.common.ShardId;
+import com.fern.platform.common.ShardResolver;
+import com.fern.platform.common.SingleOperationalShardRegistry;
+import com.fern.platform.common.SingleShardResolver;
+import com.fern.platform.web.FernDownstreamClientFactory;
+import com.fern.platform.web.FernDownstreamClientSpec;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
 import java.time.Clock;
-import java.time.Duration;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.client.RestClient;
 
 @Configuration
 public class InventoryBeans {
+    private static final String CALLER_SERVICE = "inventory-service";
+
     @Bean
     Clock clock() {
         return Clock.systemUTC();
@@ -73,19 +83,14 @@ public class InventoryBeans {
 
     @Bean
     @Qualifier("orgRestClient")
-    RestClient orgRestClient(InventoryClientProperties properties) {
-        return buildRestClient(properties.getOrg());
+    RestClient orgRestClient(@Qualifier("orgClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
     }
 
     @Bean
     @Qualifier("orgCircuitBreaker")
-    CircuitBreaker orgCircuitBreaker(InventoryClientProperties properties) {
-        return CircuitBreaker.of("inventory-org-client", CircuitBreakerConfig.custom()
-                .failureRateThreshold(properties.getOrg().getFailureRateThreshold())
-                .slidingWindowSize(properties.getOrg().getSlidingWindowSize())
-                .minimumNumberOfCalls(properties.getOrg().getMinimumNumberOfCalls())
-                .waitDurationInOpenState(Duration.ofSeconds(properties.getOrg().getWaitDurationOpenSeconds()))
-                .build());
+    CircuitBreaker orgCircuitBreaker(@Qualifier("orgClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
     }
 
     @Bean
@@ -94,13 +99,33 @@ public class InventoryBeans {
         return new InventoryClientProperties();
     }
 
-    private RestClient buildRestClient(InventoryClientProperties.ClientProperties properties) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(properties.getConnectTimeout());
-        requestFactory.setReadTimeout(properties.getReadTimeout());
-        return RestClient.builder()
-                .baseUrl(properties.getBaseUrl())
-                .requestFactory(requestFactory)
-                .build();
+    @Bean
+    @Qualifier("orgClientSpec")
+    FernDownstreamClientSpec orgClientSpec(InventoryClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "org-service", "org", properties.getOrg());
+    }
+
+    @Bean
+    TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
+        return new TransactionTemplate(transactionManager);
+    }
+
+    @Bean
+    ShardId defaultOperationalShardId(@Value("${fern.sharding.operational.default-shard:operational-0}") String value) {
+        return new ShardId(value);
+    }
+
+    @Bean
+    ShardResolver shardResolver(ShardId defaultOperationalShardId) {
+        return new SingleShardResolver(defaultOperationalShardId);
+    }
+
+    @Bean
+    OperationalShardRegistry operationalShardRegistry(
+            ShardId defaultOperationalShardId,
+            NamedParameterJdbcTemplate jdbcTemplate,
+            TransactionTemplate transactionTemplate
+    ) {
+        return new SingleOperationalShardRegistry(new OperationalShardAccess(defaultOperationalShardId, jdbcTemplate, transactionTemplate));
     }
 }

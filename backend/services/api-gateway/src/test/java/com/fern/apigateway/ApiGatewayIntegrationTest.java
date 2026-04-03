@@ -39,6 +39,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -56,7 +57,8 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -240,7 +242,7 @@ class ApiGatewayIntegrationTest {
         redisTemplate.getConnectionFactory().getConnection().serverCommands().flushAll();
         jdbcTemplate.execute("TRUNCATE TABLE gateway.outbox_event");
         lastOrgAuthorizationHeader = null;
-        when(kafkaTemplate.send(anyString(), anyString(), anyString())).thenReturn(CompletableFuture.completedFuture((SendResult<String, String>) null));
+        when(kafkaTemplate.send(any(ProducerRecord.class))).thenReturn(CompletableFuture.completedFuture((SendResult<String, String>) null));
     }
 
     @Test
@@ -676,7 +678,7 @@ class ApiGatewayIntegrationTest {
                 "PENDING",
                 4
         );
-        when(kafkaTemplate.send(anyString(), anyString(), anyString()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenReturn(CompletableFuture.failedFuture(new RuntimeException("kafka down")));
 
         gatewayOutboxPublisher.publishPending();
@@ -703,7 +705,7 @@ class ApiGatewayIntegrationTest {
                 "PENDING",
                 0
         );
-        when(kafkaTemplate.send(anyString(), anyString(), anyString()))
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
                 .thenAnswer(invocation -> CompletableFuture.supplyAsync(() -> {
                     try {
                         Thread.sleep(200);
@@ -736,7 +738,12 @@ class ApiGatewayIntegrationTest {
         }
 
         verify(kafkaTemplate, timeout(1000).times(1))
-                .send(org.mockito.ArgumentMatchers.eq("request.trace"), org.mockito.ArgumentMatchers.eq("trace-concurrent"), anyString());
+                .send(argThat((ProducerRecord<String, String> record) ->
+                        com.fern.platform.testsupport.JsonTestSupport.matchesProducerRecord(
+                                record,
+                                "request.trace",
+                                "trace-concurrent",
+                                "{\"requestId\":\"trace-concurrent\"}")));
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT status FROM gateway.outbox_event WHERE aggregate_id = 'trace-concurrent'",
                 String.class
@@ -820,7 +827,7 @@ class ApiGatewayIntegrationTest {
                 "SELECT status FROM gateway.outbox_event WHERE aggregate_id = 'security-terminal'",
                 String.class
         )).isEqualTo("FAILED");
-        verify(kafkaTemplate, org.mockito.Mockito.never()).send("audit.security", "security-terminal", "{\"eventId\":\"security-terminal\"}");
+        verify(kafkaTemplate, org.mockito.Mockito.never()).send(any(ProducerRecord.class));
     }
 
     private void insertOutboxRow(

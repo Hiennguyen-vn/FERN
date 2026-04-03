@@ -85,7 +85,7 @@ export function AvailabilityPage() {
         key: 'outlet',
         header: 'Outlet',
         render: (row) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span>Outlet #{row.outletId}</span>
             {row.outletId === selectedOutletId ? <span className="badge badge-warning">Current outlet</span> : null}
           </div>

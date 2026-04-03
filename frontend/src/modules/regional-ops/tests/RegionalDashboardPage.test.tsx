@@ -6,8 +6,13 @@ import { clearTestStorage, resetTestStores, setAuthenticatedSession } from '@sha
 import { RegionalDashboardPage } from '../routes/RegionalDashboardPage'
 
 const mocks = vi.hoisted(() => ({
+  useOutletRevenueTodayStats: vi.fn(),
   useRegionalOutlets: vi.fn(),
   useRegionalRegion: vi.fn(),
+}))
+
+vi.mock('../../reports/hooks/useOutletRevenueTodayStats', () => ({
+  useOutletRevenueTodayStats: mocks.useOutletRevenueTodayStats,
 }))
 
 vi.mock('../hooks/useRegionalOps', () => ({
@@ -90,13 +95,32 @@ describe('RegionalDashboardPage', () => {
         },
       ],
     })
+    mocks.useOutletRevenueTodayStats.mockReturnValue({
+      isLoading: false,
+      outletStats: [
+        {
+          outletId: 101,
+          sessionId: 9001,
+          sessionStatus: 'OPEN',
+          currencyCode: 'VND',
+          totalOrders: 4,
+          completed: 3,
+          open: 1,
+          cancelled: 0,
+          totalRevenue: 125.5,
+          cashCollected: 40,
+          nonCashCollected: 85.5,
+          isLoading: false,
+        },
+      ],
+    })
 
     renderWithProviders(<RegionalDashboardPage />)
 
     expect(screen.getByRole('heading', { name: 'Regional Ops' })).toBeInTheDocument()
     expect(screen.getByText('Current regional context')).toBeInTheDocument()
     expect(screen.getByText('Open outlet summary')).toBeInTheDocument()
-    expect(screen.getByText('Central Plaza')).toBeInTheDocument()
+    expect(screen.getAllByText('Central Plaza')).toHaveLength(2)
   })
 
   it('shows explicit region-context message when scope does not resolve to a region', () => {
@@ -119,6 +143,7 @@ describe('RegionalDashboardPage', () => {
     })
     mocks.useRegionalRegion.mockReturnValue({ data: null, error: null, isLoading: false, refetch: vi.fn() })
     mocks.useRegionalOutlets.mockReturnValue({ error: null, isLoading: false, refresh: vi.fn(), rows: [] })
+    mocks.useOutletRevenueTodayStats.mockReturnValue({ isLoading: false, outletStats: [] })
 
     renderWithProviders(<RegionalDashboardPage />)
 

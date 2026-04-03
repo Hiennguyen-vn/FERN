@@ -160,7 +160,7 @@ export function EmployeesPage() {
             </span>
             <span className="workspace-stat-badge success">Current slice</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Loaded workforce</span>
             <strong className="workspace-stat-value">{rows.length.toLocaleString('en-US')}</strong>
           </div>
@@ -172,7 +172,7 @@ export function EmployeesPage() {
             </span>
             <span className="workspace-stat-badge success">Healthy</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Active staff</span>
             <strong className="workspace-stat-value">{activeEmployees.toLocaleString('en-US')}</strong>
           </div>
@@ -184,7 +184,7 @@ export function EmployeesPage() {
             </span>
             <span className="workspace-stat-badge warning">Monitor</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">On leave</span>
             <strong className="workspace-stat-value">{onLeaveEmployees.toLocaleString('en-US')}</strong>
           </div>
@@ -196,7 +196,7 @@ export function EmployeesPage() {
             </span>
             <span className="workspace-stat-badge danger">Action</span>
           </div>
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <span className="workspace-stat-label">Missing records</span>
             <strong className="workspace-stat-value">{missingRecords.toLocaleString('en-US')}</strong>
           </div>

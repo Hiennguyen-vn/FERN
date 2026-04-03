@@ -338,7 +338,9 @@
   top: 0;
   z-index: var(--z-sticky);
   padding: 0.75rem 1.25rem;
-  background: var(--surface-container-lowest);
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-bottom: none;
   box-shadow: var(--shadow-ambient);
   align-items: center;
@@ -776,13 +778,13 @@
   top: 0;
   z-index: 1;
   color: var(--on-surface-variant);
-  font-size: 0.72rem;
-  font-weight: var(--font-semibold);
+  font-size: 0.68rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  background: var(--surface-container);
-  padding-top: 0.9rem;
-  padding-bottom: 0.9rem;
+  letter-spacing: 0.15em;
+  background: rgba(236, 238, 240, 0.5);
+  padding-top: 1rem;
+  padding-bottom: 1rem;
 }
 
 .data-table tbody tr {
@@ -2075,12 +2077,16 @@
 .trend-bar {
   width: 100%;
   min-height: 2.5rem;
-  border-radius: 1rem 1rem 0.35rem 0.35rem;
-  background: linear-gradient(180deg, rgba(69, 85, 183, 0.9), rgba(69, 85, 183, 0.45));
+  height: 100%;
+  display: block;
 }
 
-.trend-bar.muted {
-  background: linear-gradient(180deg, rgba(224, 227, 229, 0.95), rgba(224, 227, 229, 0.6));
+.trend-bar-rect {
+  fill: url(#trend-bar-gradient);
+}
+
+.trend-bar.muted .trend-bar-rect {
+  fill: url(#trend-bar-gradient-muted);
 }
 
 .trend-bar-label {
@@ -2144,6 +2150,12 @@
   border-radius: 999px;
   overflow: hidden;
   background: rgba(224, 227, 229, 0.86);
+}
+
+.metric-meter-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .metric-meter-fill {
@@ -2667,4 +2679,355 @@
     padding-left: 0;
     border-left: 0;
   }
+}
+
+/* ============================================================
+ * Stitch Remix — Extended Design Patterns
+ * Missing patterns from HTML prototypes added below
+ * ============================================================ */
+
+/* ── Status Indicator Dots ─────────────────────────────────── */
+.status-dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.status-dot-success,
+.status-dot-active {
+  background: var(--tertiary);
+}
+
+.status-dot-warning {
+  background: #9f5a00;
+}
+
+.status-dot-danger,
+.status-dot-error {
+  background: var(--error);
+}
+
+.status-dot-neutral,
+.status-dot-pending {
+  background: var(--outline);
+}
+
+.status-dot-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── Extended Badge Variants ────────────────────────────────── */
+.badge-active {
+  background: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+}
+
+.badge-inactive {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+}
+
+.badge-pending,
+.badge-draft {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
+.badge-approved {
+  background: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+}
+
+.badge-rejected,
+.badge-cancelled {
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+.badge-info {
+  background: var(--primary-fixed);
+  color: var(--primary);
+}
+
+/* ── Card Accent Variants (border-left) ─────────────────────── */
+.card-accent-primary {
+  border-left: 4px solid var(--primary);
+}
+
+.card-accent-success {
+  border-left: 4px solid var(--tertiary);
+}
+
+.card-accent-warning {
+  border-left: 4px solid #9f5a00;
+}
+
+.card-accent-danger,
+.card-accent-error {
+  border-left: 4px solid var(--error);
+}
+
+/* ── Table Row State Overrides ──────────────────────────────── */
+.table-row-alert {
+  background: rgba(186, 26, 26, 0.04);
+}
+
+.table-row-alert:hover {
+  background: rgba(186, 26, 26, 0.08);
+}
+
+.table-row-warning {
+  background: rgba(159, 90, 0, 0.04);
+}
+
+.table-row-success {
+  background: rgba(0, 78, 51, 0.04);
+}
+
+/* ── Data Masking / PII Compliance ──────────────────────────── */
+.masked-text {
+  filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.masked-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.masked-field .masked-text {
+  filter: blur(3px);
+}
+
+/* ── Attendance / Clock UI ──────────────────────────────────── */
+.clock-display {
+  font-family: var(--font-display);
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--primary);
+}
+
+.attendance-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: 2rem;
+  border-radius: var(--radius-2xl);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-container) 100%);
+  color: var(--on-primary);
+  box-shadow: var(--shadow-brand);
+}
+
+.attendance-status-card .clock-display {
+  color: var(--on-primary);
+}
+
+/* ── Payroll / Financial Metrics ────────────────────────────── */
+.financial-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.financial-metric-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--on-surface-variant);
+}
+
+.financial-metric-value {
+  font-family: var(--font-display);
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary);
+}
+
+.financial-metric-delta {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--tertiary);
+}
+
+.financial-metric-delta.negative {
+  color: var(--error);
+}
+
+/* ── Readiness Checklist ─────────────────────────────────────── */
+.readiness-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.readiness-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface-container-low);
+}
+
+.readiness-item.ready {
+  background: rgba(0, 104, 70, 0.06);
+}
+
+.readiness-item.blocked {
+  background: rgba(186, 26, 26, 0.06);
+}
+
+.readiness-item-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+}
+
+.readiness-item.ready .readiness-item-icon {
+  background: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+}
+
+.readiness-item.blocked .readiness-item-icon {
+  background: var(--error-container);
+  color: var(--on-error-container);
+}
+
+/* ── Stock Level Indicators ─────────────────────────────────── */
+.stock-level-bar {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-high);
+  overflow: hidden;
+}
+
+.stock-level-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--tertiary);
+  transition: width var(--transition-normal);
+}
+
+.stock-level-fill.low {
+  background: #9f5a00;
+}
+
+.stock-level-fill.critical {
+  background: var(--error);
+}
+
+/* ── Glass Card Variant ─────────────────────────────────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* ── Progress Indicator ─────────────────────────────────────── */
+.progress-bar-wrap {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-high);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--signature-gradient);
+  transition: width var(--transition-normal);
+}
+
+/* ── Bento Data Grid ─────────────────────────────────────────── */
+.bento-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.bento-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.bento-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .bento-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bento-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .bento-grid-2,
+  .bento-grid-3,
+  .bento-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Supplier / Vendor Cards ─────────────────────────────────── */
+.vendor-avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-lg);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.9rem;
+  background: var(--primary-fixed);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+/* ── Signature gradient utility class ───────────────────────── */
+.signature-gradient {
+  background: var(--signature-gradient);
+}
+
+/* ── DashboardLayout header fix ─────────────────────────────── */
+.dashboard-layout-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: none;
+  margin-bottom: var(--space-4);
+}
+
+.workspace-breadcrumb {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--on-surface-variant);
+  opacity: 0.72;
 }

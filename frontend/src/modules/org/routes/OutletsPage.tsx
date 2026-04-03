@@ -1,14 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { useScopeContext } from '@core/scopes/useScopeContext'
 import {
   Button,
   DataTable,
-  Input,
   PermissionDeniedInline,
-  Select,
   StatusBadge,
 } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
@@ -89,7 +88,7 @@ export function OutletsPage() {
         key: 'outlet',
         header: 'Outlet',
         render: (outlet) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             <strong>{outlet.name}</strong>
             <span className="muted-text">{outlet.code}</span>
           </div>
@@ -138,27 +137,44 @@ export function OutletsPage() {
       }
       title="Outlets"
       description="Table-first outlet browse cho operational metadata, status và region context."
+      eyebrow="Organization"
     >
-      <div className="field-grid">
-        <Input
-          label="Search outlets"
-          onChange={(event) => { setSearch(event.target.value); setPage(0) }}
-          placeholder="Tên, mã hoặc contact..."
-          value={search}
-        />
-        <Select
-          label="Region filter"
-          onChange={(event) => { setRegionFilter(event.target.value); setPage(0) }}
-          options={regionOptions}
-          value={regionFilter}
-        />
-        <Select
-          label="Status filter"
-          onChange={(event) => { setStatusFilter(event.target.value); setPage(0) }}
-          options={STATUS_OPTIONS}
-          value={statusFilter}
-        />
-      </div>
+      <section className="workspace-filter-bar" aria-label="Outlet filters">
+        <div className="workspace-inline-search">
+          <AppIcon name="search" size="sm" />
+          <input
+            aria-label="Search outlets"
+            className="workspace-inline-input"
+            onChange={(event) => { setSearch(event.target.value); setPage(0) }}
+            placeholder="Search by name, code or contact..."
+            value={search}
+          />
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Region</span>
+          <select
+            className="workspace-inline-select"
+            onChange={(event) => { setRegionFilter(event.target.value); setPage(0) }}
+            value={regionFilter}
+          >
+            {regionOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Status</span>
+          <select
+            className="workspace-inline-select"
+            onChange={(event) => { setStatusFilter(event.target.value); setPage(0) }}
+            value={statusFilter}
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+      </section>
 
       <DataTable
         canNext={hasMore}

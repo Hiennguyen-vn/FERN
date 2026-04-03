@@ -68,7 +68,7 @@ export function EffectiveAccessPage() {
         key: 'source',
         header: 'Why',
         render: (row) => (
-          <div className="page-stack" style={{ gap: '0.35rem' }}>
+          <div className="compact-stack">
             {row.sourceLabels.length > 0 ? row.sourceLabels.map((label) => <span key={label}>{label}</span>) : <span>No source metadata</span>}
             {row.overrideReason ? <span className="muted-text">Reason: {row.overrideReason}</span> : null}
           </div>

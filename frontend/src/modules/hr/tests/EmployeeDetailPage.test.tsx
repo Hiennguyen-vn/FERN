@@ -101,6 +101,8 @@ describe('EmployeeDetailPage', () => {
     expect(screen.getByRole('heading', { name: 'Assignments' })).toBeInTheDocument()
     expect(screen.getAllByText('#200').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Area Trainer').length).toBeGreaterThan(0)
+    expect(screen.getByText('Profile completeness')).toBeInTheDocument()
+    expect(screen.getByText('Linked #5')).toBeInTheDocument()
   })
 
   it('shows section-level permission denial when contracts and assignments are unavailable', async () => {

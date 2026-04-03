@@ -7,6 +7,8 @@ import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.audit.AuditEventPublisher;
 import com.fern.platform.audit.JdbcAuditOutboxEventPublisher;
 import com.fern.platform.common.SnowflakeIdGenerator;
+import com.fern.platform.web.FernDownstreamClientFactory;
+import com.fern.platform.web.FernDownstreamClientSpec;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.reportservice.service.ExportArtifactStorage;
@@ -26,10 +28,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import com.fern.platform.security.FernServiceTokenSupport;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import org.springframework.web.client.RestClient;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -40,6 +46,8 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 
 @Configuration
 public class ReportBeans {
+    private static final String CALLER_SERVICE = "report-service";
+
     @Value("${fern.datasource.max-pool-size:10}")
     private int maxPoolSize;
 
@@ -54,6 +62,15 @@ public class ReportBeans {
     @Bean
     FernJwtService fernJwtService(FernJwtProperties properties, Clock clock) {
         return new FernJwtService(properties, clock);
+    }
+
+    @Bean
+    FernServiceTokenSupport fernServiceTokenSupport(
+            FernJwtService jwtService,
+            Clock clock,
+            ObjectProvider<StringRedisTemplate> redisTemplateProvider
+    ) {
+        return new FernServiceTokenSupport(jwtService, clock, redisTemplateProvider.getIfAvailable());
     }
 
     @Bean
@@ -94,19 +111,44 @@ public class ReportBeans {
     @Bean
     @Primary
     @ConfigurationProperties("spring.datasource")
-    DataSourceProperties dataSourceProperties() {
+    DataSourceProperties landingDataSourceProperties() {
         return new DataSourceProperties();
     }
 
     @Bean
     @Primary
-    DataSource dataSource(DataSourceProperties dataSourceProperties) {
-        return tunePool(dataSourceProperties.initializeDataSourceBuilder().build());
+    DataSource dataSource(DataSourceProperties landingDataSourceProperties) {
+        return tunePool(landingDataSourceProperties.initializeDataSourceBuilder().build());
     }
 
     @Bean
+    @Primary
     NamedParameterJdbcTemplate namedParameterJdbcTemplate(DataSource dataSource) {
         return new NamedParameterJdbcTemplate(dataSource);
+    }
+
+    @Bean
+    @ConfigurationProperties("fern.projection-datasource")
+    DataSourceProperties projectionDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean
+    DataSource projectionDataSource(
+            @org.springframework.beans.factory.annotation.Qualifier("projectionDataSourceProperties")
+            DataSourceProperties projectionDataSourceProperties,
+            @org.springframework.beans.factory.annotation.Qualifier("dataSource")
+            DataSource landingDataSource
+    ) {
+        if (!hasText(projectionDataSourceProperties.getUrl())) {
+            return landingDataSource;
+        }
+        return tunePool(projectionDataSourceProperties.initializeDataSourceBuilder().build());
+    }
+
+    @Bean
+    NamedParameterJdbcTemplate projectionJdbcTemplate(@org.springframework.beans.factory.annotation.Qualifier("projectionDataSource") DataSource projectionDataSource) {
+        return new NamedParameterJdbcTemplate(projectionDataSource);
     }
 
     @Bean
@@ -166,6 +208,48 @@ public class ReportBeans {
                 .defaultSchema("raw_events")
                 .locations("classpath:db/migration/postgresql/master")
                 .load();
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "fern.clients")
+    ReportClientProperties reportClientProperties() {
+        return new ReportClientProperties();
+    }
+
+    @Bean
+    @org.springframework.beans.factory.annotation.Qualifier("reportPosClientSpec")
+    FernDownstreamClientSpec reportPosClientSpec(ReportClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "pos-service", "pos", properties.getPos());
+    }
+
+    @Bean
+    @org.springframework.beans.factory.annotation.Qualifier("reportInventoryClientSpec")
+    FernDownstreamClientSpec reportInventoryClientSpec(ReportClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "inventory-service", "inventory", properties.getInventory());
+    }
+
+    @Bean
+    @org.springframework.beans.factory.annotation.Qualifier("reportPosRestClient")
+    RestClient reportPosRestClient(@org.springframework.beans.factory.annotation.Qualifier("reportPosClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
+    }
+
+    @Bean
+    @org.springframework.beans.factory.annotation.Qualifier("reportInventoryRestClient")
+    RestClient reportInventoryRestClient(@org.springframework.beans.factory.annotation.Qualifier("reportInventoryClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
+    }
+
+    @Bean
+    @org.springframework.beans.factory.annotation.Qualifier("reportPosCircuitBreaker")
+    CircuitBreaker reportPosCircuitBreaker(@org.springframework.beans.factory.annotation.Qualifier("reportPosClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
+    }
+
+    @Bean
+    @org.springframework.beans.factory.annotation.Qualifier("reportInventoryCircuitBreaker")
+    CircuitBreaker reportInventoryCircuitBreaker(@org.springframework.beans.factory.annotation.Qualifier("reportInventoryClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
     }
 
     private DataSource tunePool(DataSource dataSource) {

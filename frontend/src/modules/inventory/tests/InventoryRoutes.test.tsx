@@ -4,21 +4,40 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { permissionConstants } from '@core/permissions/permission.constants'
 import { renderWithProviders } from '@shared/test-utils/renderWithProviders'
 import { resetTestStores, setAuthenticatedSession } from '@shared/test-utils/scopeTestHelpers'
-import { StockAdjustmentCreatePage, StockOverviewPage } from '../routes/inventoryRoutes.bundle'
+import {
+  StockAdjustmentCreatePage,
+  StockCountSessionDetailPage,
+  StockCountSessionsPage,
+  StockOverviewPage,
+} from '../routes/inventoryRoutes.bundle'
 
 const mocks = vi.hoisted(() => {
   const createAdjustmentMutateAsync = vi.fn()
   const postAdjustmentMutateAsync = vi.fn()
   const cancelAdjustmentMutateAsync = vi.fn()
+  const startStockCountMutateAsync = vi.fn()
+  const postStockCountMutateAsync = vi.fn()
+  const cancelStockCountMutateAsync = vi.fn()
+  const updateStockCountLinesMutateAsync = vi.fn()
   return {
     createAdjustmentMutateAsync,
     postAdjustmentMutateAsync,
     cancelAdjustmentMutateAsync,
+    startStockCountMutateAsync,
+    postStockCountMutateAsync,
+    cancelStockCountMutateAsync,
+    updateStockCountLinesMutateAsync,
     useStockBalances: vi.fn(),
+    useStockCountSessionList: vi.fn(),
+    useStockCountSessionDetail: vi.fn(),
     useIngredients: vi.fn(),
     useCreateStockAdjustment: vi.fn(),
     usePostStockAdjustment: vi.fn(),
     useCancelStockAdjustment: vi.fn(),
+    useStartStockCountSession: vi.fn(),
+    usePostStockCountSession: vi.fn(),
+    useCancelStockCountSession: vi.fn(),
+    useUpdateStockCountLines: vi.fn(),
   }
 })
 
@@ -26,10 +45,22 @@ vi.mock('../hooks/useStockBalances', () => ({
   useStockBalances: mocks.useStockBalances,
 }))
 
+vi.mock('../hooks/useStockCountSessionList', () => ({
+  useStockCountSessionList: mocks.useStockCountSessionList,
+}))
+
+vi.mock('../hooks/useStockCountSessionDetail', () => ({
+  useStockCountSessionDetail: mocks.useStockCountSessionDetail,
+}))
+
 vi.mock('../hooks/useInventoryCommands', () => ({
   useCreateStockAdjustment: mocks.useCreateStockAdjustment,
   usePostStockAdjustment: mocks.usePostStockAdjustment,
   useCancelStockAdjustment: mocks.useCancelStockAdjustment,
+  useStartStockCountSession: mocks.useStartStockCountSession,
+  usePostStockCountSession: mocks.usePostStockCountSession,
+  useCancelStockCountSession: mocks.useCancelStockCountSession,
+  useUpdateStockCountLines: mocks.useUpdateStockCountLines,
 }))
 
 vi.mock('@modules/catalog/hooks/useIngredients', () => ({
@@ -41,6 +72,8 @@ function InventoryRoutesHarness() {
     <Routes>
       <Route path="/inventory/stock-balances" element={<StockOverviewPage />} />
       <Route path="/inventory/stock-adjustments/new" element={<StockAdjustmentCreatePage />} />
+      <Route path="/inventory/stock-count-sessions" element={<StockCountSessionsPage />} />
+      <Route path="/inventory/stock-count-sessions/:sessionId" element={<StockCountSessionDetailPage />} />
     </Routes>
   )
 }
@@ -100,6 +133,10 @@ describe('Inventory route pages', () => {
     mocks.createAdjustmentMutateAsync.mockReset()
     mocks.postAdjustmentMutateAsync.mockReset()
     mocks.cancelAdjustmentMutateAsync.mockReset()
+    mocks.startStockCountMutateAsync.mockReset()
+    mocks.postStockCountMutateAsync.mockReset()
+    mocks.cancelStockCountMutateAsync.mockReset()
+    mocks.updateStockCountLinesMutateAsync.mockReset()
 
     mocks.useCreateStockAdjustment.mockReturnValue({
       mutateAsync: mocks.createAdjustmentMutateAsync,
@@ -113,6 +150,72 @@ describe('Inventory route pages', () => {
     })
     mocks.useCancelStockAdjustment.mockReturnValue({
       mutateAsync: mocks.cancelAdjustmentMutateAsync,
+      isPending: false,
+      error: null,
+    })
+    mocks.useStockCountSessionList.mockReturnValue({
+      data: {
+        items: [
+          {
+            id: 77,
+            status: 'COUNTING',
+            regionId: 1,
+            outletId: 101,
+            countDate: '2026-04-02',
+            note: 'Evening count',
+            startedAt: '2026-04-02T22:00:00Z',
+            postedAt: null,
+          },
+        ],
+        page: 0,
+        size: 20,
+        hasMore: false,
+      },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    })
+    mocks.useStockCountSessionDetail.mockReturnValue({
+      data: {
+        id: 77,
+        status: 'POSTED',
+        regionId: 1,
+        outletId: 101,
+        countDate: '2026-04-02',
+        note: 'Evening count',
+        startedAt: '2026-04-02T22:00:00Z',
+        postedAt: '2026-04-02T22:45:00Z',
+        lines: [
+          {
+            ingredientId: 10,
+            systemQty: 12,
+            actualQty: 11,
+            varianceQty: -1,
+            note: 'Minor variance',
+          },
+        ],
+      },
+      error: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    })
+    mocks.useStartStockCountSession.mockReturnValue({
+      mutateAsync: mocks.startStockCountMutateAsync,
+      isPending: false,
+      error: null,
+    })
+    mocks.usePostStockCountSession.mockReturnValue({
+      mutateAsync: mocks.postStockCountMutateAsync,
+      isPending: false,
+      error: null,
+    })
+    mocks.useCancelStockCountSession.mockReturnValue({
+      mutateAsync: mocks.cancelStockCountMutateAsync,
+      isPending: false,
+      error: null,
+    })
+    mocks.useUpdateStockCountLines.mockReturnValue({
+      mutateAsync: mocks.updateStockCountLinesMutateAsync,
       isPending: false,
       error: null,
     })
@@ -173,5 +276,24 @@ describe('Inventory route pages', () => {
     })
 
     expect(await screen.findByText('Adjustment #501')).toBeInTheDocument()
+  })
+
+  it('StockCountSessionsPage renders the outlet-scoped session list', async () => {
+    renderWithProviders(<InventoryRoutesHarness />, { route: '/inventory/stock-count-sessions' })
+
+    expect(await screen.findByRole('heading', { name: 'Stock count sessions' })).toBeInTheDocument()
+    expect(screen.getByText('Outlet #101')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '#77' })).toBeInTheDocument()
+    expect(screen.getByText('COUNTING')).toBeInTheDocument()
+  })
+
+  it('StockCountSessionDetailPage renders posted lines without mutation controls', async () => {
+    renderWithProviders(<InventoryRoutesHarness />, { route: '/inventory/stock-count-sessions/77' })
+
+    expect(await screen.findByRole('heading', { name: 'Stock count #77' })).toBeInTheDocument()
+    expect(screen.getByText('Status: POSTED')).toBeInTheDocument()
+    expect(screen.getByText(/#10: system 12, actual 11, variance -1/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Start count session' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save count lines' })).not.toBeInTheDocument()
   })
 })

@@ -73,7 +73,7 @@ export function OutletSummaryPage() {
         key: 'outlet',
         header: 'Outlet',
         render: (outlet) => (
-          <div className="page-stack" style={{ gap: '0.25rem' }}>
+          <div className="compact-stack-tight">
             <strong>{outlet.name}</strong>
             <span className="muted-text">{outlet.code}</span>
           </div>

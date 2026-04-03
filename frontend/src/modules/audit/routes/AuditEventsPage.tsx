@@ -1,15 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import {
   Button,
   DataTable,
-  FilterBar,
-  FormActions,
-  Input,
   PermissionDeniedInline,
-  Select,
   SummaryCards,
 } from '@design-system/index'
 import type { DataTableColumn, SelectOption } from '@design-system/index'
@@ -153,7 +150,7 @@ export function AuditEventsPage() {
         key: 'event',
         header: 'Event',
         render: (event) => (
-          <div className="page-stack" style={{ gap: '0.25rem' }}>
+          <div className="compact-stack-tight">
             <strong>{event.eventType}</strong>
             <span className="muted-text">{event.sourceService} · {event.module}</span>
           </div>
@@ -185,7 +182,7 @@ export function AuditEventsPage() {
 
   if (!canOpen) {
     return (
-      <DashboardLayout title="Audit Events" description="System audit trail for enterprise investigation and governance.">
+      <DashboardLayout title="Audit Events" description="System audit trail for enterprise investigation and governance." eyebrow="Audit">
         <PermissionDeniedInline message="Bạn cần audit.read để xem audit event trail." />
       </DashboardLayout>
     )
@@ -195,107 +192,137 @@ export function AuditEventsPage() {
     <DashboardLayout
       title="Audit Events"
       description="Dense audit-event console với filter-heavy traceability và deep-link vào từng event detail."
+      eyebrow="Audit"
     >
-      <form
-        onSubmit={(event) => {
-          event.preventDefault()
-          setFilters(draft)
-        }}
-      >
-        <FilterBar
-          actions={
-            <FormActions
-              primaryAction={<Button type="submit">Apply filters</Button>}
-              secondaryAction={
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Button
-                    id="btn-export-audit-csv"
-                    onClick={() => exportAuditCsv(filteredRows)}
-                    type="button"
-                    variant="secondary"
-                    disabled={filteredRows.length === 0}
-                  >
-                    ⬇ Export CSV ({filteredRows.length})
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setDraft(initialDraft)
-                      setFilters(initialDraft)
-                    }}
-                    type="button"
-                    variant="secondary"
-                  >
-                    Reset
-                  </Button>
-                </div>
-              }
-            />
-          }
-          description="Backend filters run first, then quick search narrows the loaded result set for investigation."
-          title="Audit filters"
-        >
-          <Input
-            label="Quick search"
+      <section className="workspace-filter-bar" aria-label="Audit filters">
+        <div className="workspace-inline-search">
+          <AppIcon name="search" size="sm" />
+          <input
+            aria-label="Quick search"
+            className="workspace-inline-input"
             onChange={(event) => setDraft((current) => ({ ...current, quickSearch: event.target.value }))}
             placeholder="event type, resource, correlation"
             value={draft.quickSearch}
           />
-          <Input
-            label="Module"
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Module</span>
+          <input
+            className="workspace-inline-input"
             onChange={(event) => setDraft((current) => ({ ...current, module: event.target.value }))}
             placeholder="inventory"
             value={draft.module}
           />
-          <Input
-            label="Action"
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Action</span>
+          <input
+            className="workspace-inline-input"
             onChange={(event) => setDraft((current) => ({ ...current, action: event.target.value }))}
             placeholder="UPDATE"
             value={draft.action}
           />
-          <Input
-            label="Resource ID"
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Resource ID</span>
+          <input
+            className="workspace-inline-input"
             onChange={(event) => setDraft((current) => ({ ...current, resourceId: event.target.value }))}
             placeholder="501"
             value={draft.resourceId}
           />
-          <Input
-            label="Correlation ID"
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Correlation ID</span>
+          <input
+            className="workspace-inline-input"
             onChange={(event) => setDraft((current) => ({ ...current, correlationId: event.target.value }))}
             placeholder="corr-..."
             value={draft.correlationId}
           />
-          <Input
-            label="Source service"
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Source service</span>
+          <input
+            className="workspace-inline-input"
             onChange={(event) => setDraft((current) => ({ ...current, sourceService: event.target.value }))}
             placeholder="inventory-service"
             value={draft.sourceService}
           />
-          <Select
-            label="Outcome"
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Outcome</span>
+          <select
+            className="workspace-inline-select"
             onChange={(event) => setDraft((current) => ({ ...current, outcome: event.target.value }))}
-            options={outcomeOptions}
             value={draft.outcome}
-          />
-          <Select
-            label="Limit"
+          >
+            {outcomeOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Limit</span>
+          <select
+            className="workspace-inline-select"
             onChange={(event) => setDraft((current) => ({ ...current, limit: event.target.value }))}
-            options={limitOptions}
             value={draft.limit}
-          />
-          <Input
-            label="Occurred from"
+          >
+            {limitOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Occurred from</span>
+          <input
+            className="workspace-inline-input"
             onChange={(event) => setDraft((current) => ({ ...current, occurredFrom: event.target.value }))}
             type="datetime-local"
             value={draft.occurredFrom}
           />
-          <Input
-            label="Occurred to"
+        </div>
+        <div className="workspace-filter-field">
+          <span className="eyebrow">Occurred to</span>
+          <input
+            className="workspace-inline-input"
             onChange={(event) => setDraft((current) => ({ ...current, occurredTo: event.target.value }))}
             type="datetime-local"
             value={draft.occurredTo}
           />
-        </FilterBar>
-      </form>
+        </div>
+        <div className="workspace-inline-actions">
+          <Button
+            onClick={() => setFilters(draft)}
+            size="sm"
+            type="button"
+          >
+            Apply filters
+          </Button>
+          <Button
+            id="btn-export-audit-csv"
+            onClick={() => exportAuditCsv(filteredRows)}
+            size="sm"
+            type="button"
+            variant="secondary"
+            disabled={filteredRows.length === 0}
+          >
+            ⬇ Export CSV ({filteredRows.length})
+          </Button>
+          <Button
+            onClick={() => {
+              setDraft(initialDraft)
+              setFilters(initialDraft)
+            }}
+            size="sm"
+            type="button"
+            variant="secondary"
+          >
+            Reset
+          </Button>
+        </div>
+      </section>
 
       <SummaryCards items={buildAuditEventSummaryCards(filteredRows)} />
 

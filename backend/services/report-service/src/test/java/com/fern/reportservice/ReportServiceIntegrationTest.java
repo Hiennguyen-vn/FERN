@@ -1,6 +1,7 @@
 package com.fern.reportservice;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -8,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.platform.common.FernPrincipalType;
+import com.fern.platform.observability.CorrelationId;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.contracts.ExpensePostedEvent;
@@ -16,14 +19,18 @@ import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
 import com.fern.platform.testsupport.FernIntegrationContainers;
 import com.fern.reportservice.service.ReportService;
+import com.sun.net.httpserver.HttpServer;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -33,6 +40,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,9 +57,28 @@ import org.springframework.test.web.servlet.MockMvc;
 class ReportServiceIntegrationTest {
     private static final Path EXPORT_DIR = createExportDir();
     private static final AtomicLong TOKEN_SEQUENCE = new AtomicLong();
+    private static HttpServer posServer;
+    private static HttpServer inventoryServer;
+    private static volatile String posStatsTodayResponseBody = "[]";
+    private static volatile String lastPosAuthorization;
+    private static volatile String lastPosCorrelationId;
+    private static volatile String lastPosActorUserId;
+    private static volatile String lastPosActorUsername;
+    private static volatile String inventoryStockBalancesResponseBody = """
+            {"items":[{"ingredientId":501,"qtyOnHand":12.5,"qtyReserved":1.5,"qtyAvailable":11.0}],"page":0,"size":50,"hasMore":false}
+            """;
+    private static volatile String inventoryTransactionsResponseBody = """
+            {"items":[{"factId":1,"movementType":"PURCHASE_IN"}],"page":0,"size":50,"hasMore":false}
+            """;
+    private static volatile String lastInventoryAuthorization;
+    private static volatile String lastInventoryCorrelationId;
+    private static volatile String lastInventoryActorUserId;
+    private static volatile String lastInventoryActorUsername;
 
     @DynamicPropertySource
     static void configure(DynamicPropertyRegistry registry) {
+        ensurePosServerStarted();
+        ensureInventoryServerStarted();
         registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("report"));
         registry.add("spring.datasource.username", FernIntegrationContainers::jdbcUsername);
         registry.add("spring.datasource.password", FernIntegrationContainers::jdbcPassword);
@@ -64,6 +92,8 @@ class ReportServiceIntegrationTest {
         registry.add("fern.report.export.base-dir", () -> EXPORT_DIR.toString());
         registry.add("fern.report.export.preview-row-limit", () -> "5");
         registry.add("fern.report.export.worker-delay-ms", () -> "60000");
+        registry.add("fern.clients.pos.base-url", () -> "http://localhost:" + posServer.getAddress().getPort());
+        registry.add("fern.clients.inventory.base-url", () -> "http://localhost:" + inventoryServer.getAddress().getPort());
     }
 
     @Autowired
@@ -81,6 +111,61 @@ class ReportServiceIntegrationTest {
     @Autowired
     private MeterRegistry meterRegistry;
 
+    @BeforeAll
+    static void startPosServer() throws IOException {
+        posServer = HttpServer.create(new InetSocketAddress(0), 0);
+        posServer.createContext("/pos-stats/today", exchange -> {
+            lastPosAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
+            lastPosCorrelationId = exchange.getRequestHeaders().getFirst(CorrelationId.HEADER);
+            lastPosActorUserId = exchange.getRequestHeaders().getFirst("X-Fern-Actor-User-Id");
+            lastPosActorUsername = exchange.getRequestHeaders().getFirst("X-Fern-Actor-Username");
+            byte[] body = posStatsTodayResponseBody.getBytes();
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(body);
+            }
+        });
+        posServer.start();
+
+        inventoryServer = HttpServer.create(new InetSocketAddress(0), 0);
+        inventoryServer.createContext("/stock-balances", exchange -> {
+            lastInventoryAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
+            lastInventoryCorrelationId = exchange.getRequestHeaders().getFirst(CorrelationId.HEADER);
+            lastInventoryActorUserId = exchange.getRequestHeaders().getFirst("X-Fern-Actor-User-Id");
+            lastInventoryActorUsername = exchange.getRequestHeaders().getFirst("X-Fern-Actor-Username");
+            byte[] body = inventoryStockBalancesResponseBody.getBytes();
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(body);
+            }
+        });
+        inventoryServer.createContext("/inventory-transactions", exchange -> {
+            lastInventoryAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
+            lastInventoryCorrelationId = exchange.getRequestHeaders().getFirst(CorrelationId.HEADER);
+            lastInventoryActorUserId = exchange.getRequestHeaders().getFirst("X-Fern-Actor-User-Id");
+            lastInventoryActorUsername = exchange.getRequestHeaders().getFirst("X-Fern-Actor-Username");
+            byte[] body = inventoryTransactionsResponseBody.getBytes();
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(body);
+            }
+        });
+        inventoryServer.start();
+    }
+
+    @AfterAll
+    static void stopPosServer() {
+        if (posServer != null) {
+            posServer.stop(0);
+        }
+        if (inventoryServer != null) {
+            inventoryServer.stop(0);
+        }
+    }
+
     @BeforeEach
     void setUp() throws IOException {
         jdbcTemplate.execute("""
@@ -89,6 +174,8 @@ class ReportServiceIntegrationTest {
                     report.company_daily_outlet,
                     report.region_daily_event,
                     report.export_job,
+                    report.projection_watermark,
+                    report.inventory_stock_snapshot,
                     report.company_daily_summary,
                     report.region_daily_summary,
                     report.expense_fact,
@@ -110,6 +197,220 @@ class ReportServiceIntegrationTest {
                 }
             });
         }
+        posStatsTodayResponseBody = "[]";
+        lastPosAuthorization = null;
+        lastPosCorrelationId = null;
+        lastPosActorUserId = null;
+        lastPosActorUsername = null;
+        inventoryStockBalancesResponseBody = """
+                {"items":[{"ingredientId":501,"qtyOnHand":12.5,"qtyReserved":1.5,"qtyAvailable":11.0}],"page":0,"size":50,"hasMore":false}
+                """;
+        inventoryTransactionsResponseBody = """
+                {"items":[{"factId":1,"movementType":"PURCHASE_IN"}],"page":0,"size":50,"hasMore":false}
+                """;
+        lastInventoryAuthorization = null;
+        lastInventoryCorrelationId = null;
+        lastInventoryActorUserId = null;
+        lastInventoryActorUsername = null;
+    }
+
+    @Test
+    void shouldReturnOutletRevenueTodayStatsThroughPosFacade() throws Exception {
+        posStatsTodayResponseBody = """
+                [
+                  {
+                    "outletId": 101,
+                    "sessionId": 9001,
+                    "sessionStatus": "OPEN",
+                    "currencyCode": "VND",
+                    "totalOrders": 4,
+                    "completed": 3,
+                    "open": 1,
+                    "cancelled": 0,
+                    "totalRevenue": 125.50,
+                    "cashCollected": 40.00,
+                    "nonCashCollected": 85.50
+                  }
+                ]
+                """;
+        String authorizationHeader = bearer(Set.of(PermissionCodes.REPORT_READ), List.of(1L), List.of(101L), false);
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        FernJwtClaims claims = jwtService.decode(authorizationHeader.substring("Bearer ".length()));
+
+        mockMvc.perform(get("/reports/revenue/outlet-stats/today")
+                        .header("Authorization", authorizationHeader)
+                        .header(CorrelationId.HEADER, "corr-report-revenue-1")
+                        .param("outletIds", "101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].outletId").value(101))
+                .andExpect(jsonPath("$[0].sessionId").value(9001))
+                .andExpect(jsonPath("$[0].sessionStatus").value("OPEN"))
+                .andExpect(jsonPath("$[0].currencyCode").value("VND"))
+                .andExpect(jsonPath("$[0].totalOrders").value(4))
+                .andExpect(jsonPath("$[0].completed").value(3))
+                .andExpect(jsonPath("$[0].open").value(1))
+                .andExpect(jsonPath("$[0].cancelled").value(0))
+                .andExpect(jsonPath("$[0].totalRevenue").value(125.5))
+                .andExpect(jsonPath("$[0].cashCollected").value(40.0))
+                .andExpect(jsonPath("$[0].nonCashCollected").value(85.5));
+
+        assertThat(lastPosCorrelationId).isEqualTo("corr-report-revenue-1");
+        assertThat(lastPosActorUserId).isEqualTo(claims.userId().toString());
+        assertThat(lastPosActorUsername).isEqualTo(claims.username());
+        assertThat(lastPosAuthorization).isNotBlank().isNotEqualTo(authorizationHeader);
+        assertThat(jwtService.decode(lastPosAuthorization.substring("Bearer ".length())).principalType())
+                .isEqualTo(FernPrincipalType.SERVICE);
+    }
+
+    @Test
+    void shouldReturnNoSessionOutletRevenueRowThroughPosFacade() throws Exception {
+        posStatsTodayResponseBody = """
+                [
+                  {
+                    "outletId": 102,
+                    "sessionId": null,
+                    "sessionStatus": "NO_SESSION",
+                    "currencyCode": "VND",
+                    "totalOrders": 0,
+                    "completed": 0,
+                    "open": 0,
+                    "cancelled": 0,
+                    "totalRevenue": 0,
+                    "cashCollected": 0,
+                    "nonCashCollected": 0
+                  }
+                ]
+                """;
+
+        mockMvc.perform(get("/reports/revenue/outlet-stats/today")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.REPORT_READ), List.of(1L), List.of(102L), false))
+                        .param("outletIds", "102"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].outletId").value(102))
+                .andExpect(jsonPath("$[0].sessionId").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$[0].sessionStatus").value("NO_SESSION"))
+                .andExpect(jsonPath("$[0].currencyCode").value("VND"))
+                .andExpect(jsonPath("$[0].totalOrders").value(0))
+                .andExpect(jsonPath("$[0].completed").value(0))
+                .andExpect(jsonPath("$[0].open").value(0))
+                .andExpect(jsonPath("$[0].cancelled").value(0))
+                .andExpect(jsonPath("$[0].totalRevenue").value(0))
+                .andExpect(jsonPath("$[0].cashCollected").value(0))
+                .andExpect(jsonPath("$[0].nonCashCollected").value(0));
+    }
+
+    @Test
+    void shouldServeDeprecatedInventoryProxyWithServiceTokenAndSunsetHeaders() throws Exception {
+        String authorizationHeader = bearer(Set.of(PermissionCodes.REPORT_READ), List.of(1L), List.of(101L), false);
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        FernJwtClaims claims = jwtService.decode(authorizationHeader.substring("Bearer ".length()));
+
+        mockMvc.perform(get("/reports/inventory/stock-balances")
+                        .header("Authorization", authorizationHeader)
+                        .header(CorrelationId.HEADER, "corr-report-inventory-compat")
+                        .param("outletId", "101"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Deprecation", "true"))
+                .andExpect(header().string("Sunset", "Wed, 31 Dec 2026 23:59:59 GMT"))
+                .andExpect(jsonPath("$.items[0].ingredientId").value(501))
+                .andExpect(jsonPath("$.items[0].qtyReserved").value(1.5))
+                .andExpect(jsonPath("$.items[0].qtyAvailable").value(11.0));
+
+        assertThat(lastInventoryCorrelationId).isEqualTo("corr-report-inventory-compat");
+        assertThat(lastInventoryActorUserId).isEqualTo(claims.userId().toString());
+        assertThat(lastInventoryActorUsername).isEqualTo(claims.username());
+        assertThat(lastInventoryAuthorization).isNotBlank().isNotEqualTo(authorizationHeader);
+        assertThat(jwtService.decode(lastInventoryAuthorization.substring("Bearer ".length())).principalType())
+                .isEqualTo(FernPrincipalType.SERVICE);
+    }
+
+    @Test
+    void shouldReadInventoryStockBalanceSnapshotsFromProjection() throws Exception {
+        jdbcTemplate.update("""
+                INSERT INTO report.inventory_stock_snapshot (
+                    snapshot_id, region_id, outlet_id, ingredient_id, qty_on_hand, unit_cost, last_count_date, last_movement_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                91001L, 1L, 101L, 501L, new BigDecimal("12.50"), new BigDecimal("4.20"), LocalDate.parse("2026-03-27"), OffsetDateTime.parse("2026-03-27T08:00:00Z"),
+                91002L, 1L, 101L, 502L, new BigDecimal("6.75"), new BigDecimal("3.10"), LocalDate.parse("2026-03-28"), OffsetDateTime.parse("2026-03-28T10:15:00Z")
+        );
+
+        mockMvc.perform(get("/reports/inventory/stock-balance-snapshots")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.REPORT_READ), List.of(1L), List.of(101L), false))
+                        .param("outletId", "101")
+                        .param("page", "0")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].regionId").value(1))
+                .andExpect(jsonPath("$.items[0].outletId").value(101))
+                .andExpect(jsonPath("$.items[0].ingredientId").value(501))
+                .andExpect(jsonPath("$.items[0].qtyOnHand").value(12.5))
+                .andExpect(jsonPath("$.items[0].unitCost").value(4.2))
+                .andExpect(jsonPath("$.items[0].lastCountDate[0]").value(2026))
+                .andExpect(jsonPath("$.items[0].lastCountDate[1]").value(3))
+                .andExpect(jsonPath("$.items[0].lastCountDate[2]").value(27))
+                .andExpect(jsonPath("$.hasMore").value(true));
+    }
+
+    @Test
+    void shouldReadInventoryTransactionFactsFromProjection() throws Exception {
+        jdbcTemplate.update("""
+                INSERT INTO report.inventory_movement_fact (
+                    fact_id, source_event_id, source_service, event_type, occurred_at, idempotency_key,
+                    region_id, outlet_id, ingredient_id, business_date, movement_type, qty_change, unit_cost,
+                    source_reference_type, source_reference_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                92001L, "evt-1", "inventory-service", "inventory.adjusted", OffsetDateTime.parse("2026-03-27T08:00:00Z"), "idem-1",
+                1L, 101L, 501L, LocalDate.parse("2026-03-27"), "PURCHASE_IN", new BigDecimal("5.00"), new BigDecimal("2.50"),
+                "GOODS_RECEIPT", "GR-1",
+                92002L, "evt-2", "inventory-service", "inventory.adjusted", OffsetDateTime.parse("2026-03-27T09:30:00Z"), "idem-2",
+                1L, 101L, 501L, LocalDate.parse("2026-03-27"), "SALE_USAGE", new BigDecimal("-2.00"), new BigDecimal("2.50"),
+                "POS_ORDER", "SO-1"
+        );
+
+        mockMvc.perform(get("/reports/inventory/transaction-facts")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.REPORT_READ), List.of(1L), List.of(101L), false))
+                        .param("outletId", "101")
+                        .param("ingredientId", "501")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].sourceEventId").value("evt-2"))
+                .andExpect(jsonPath("$.items[0].movementType").value("SALE_USAGE"))
+                .andExpect(jsonPath("$.items[0].qtyChange").value(-2.0))
+                .andExpect(jsonPath("$.items[0].sourceReferenceType").value("POS_ORDER"))
+                .andExpect(jsonPath("$.items[1].sourceEventId").value("evt-1"))
+                .andExpect(jsonPath("$.items[1].movementType").value("PURCHASE_IN"))
+                .andExpect(jsonPath("$.hasMore").value(false));
+    }
+
+    @Test
+    void shouldReportProjectionFreshnessFromWatermarkTable() throws Exception {
+        jdbcTemplate.update("""
+                INSERT INTO report.projection_watermark (
+                    dataset, last_occurred_at, last_ingested_at, failed_landing_count, updated_at
+                ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """,
+                "inventory_stock_snapshot",
+                OffsetDateTime.parse("2026-03-27T08:00:00Z"),
+                OffsetDateTime.parse("2026-03-27T08:05:00Z"),
+                2L
+        );
+
+        mockMvc.perform(get("/internal/report/projection-freshness")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.REPORT_READ), List.of(1L), List.of(101L), false))
+                        .param("dataset", "inventory_stock_snapshot"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].dataset").value("inventory_stock_snapshot"))
+                .andExpect(jsonPath("$[0].lagMillis").value(300000))
+                .andExpect(jsonPath("$[0].failedLandingCount").value(2));
     }
 
     @Test
@@ -592,6 +893,10 @@ class ReportServiceIntegrationTest {
     }
 
     private String bearer(Set<String> permissions, List<Long> regionIds, boolean systemScoped) {
+        return bearer(permissions, regionIds, List.of(), systemScoped);
+    }
+
+    private String bearer(Set<String> permissions, List<Long> regionIds, List<Long> outletIds, boolean systemScoped) {
         FernJwtProperties properties = new FernJwtProperties();
         properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         properties.setAllowInsecureDefaultSecret(true);
@@ -602,7 +907,8 @@ class ReportServiceIntegrationTest {
                 "report-tester-" + sequence,
                 Set.of("finance"),
                 permissions,
-                new ScopeRoots(systemScoped, regionIds, List.of()),
+                new ScopeRoots(systemScoped, regionIds, outletIds),
+                new ScopeRoots(systemScoped, regionIds, outletIds),
                 1L,
                 1L,
                 "report-test-jti-" + sequence,
@@ -612,6 +918,28 @@ class ReportServiceIntegrationTest {
                 FernJwtProperties.DEFAULT_GATEWAY_RELAY_USER_ISSUER,
                 Set.of("report-service")
         ), jwtService.accessTokenTtl());
+    }
+
+    private static void ensurePosServerStarted() {
+        if (posServer != null) {
+            return;
+        }
+        try {
+            startPosServer();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to start report POS stub", exception);
+        }
+    }
+
+    private static void ensureInventoryServerStarted() {
+        if (inventoryServer != null) {
+            return;
+        }
+        try {
+            startPosServer();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to start report inventory stub", exception);
+        }
     }
 
     private static Path createExportDir() {
