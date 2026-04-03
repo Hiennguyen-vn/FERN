@@ -47,4 +47,28 @@ class PayrollAllocationServiceTest {
                 new OutletAllocation(302L, new BigDecimal("4.00"), new BigDecimal("152.70"))
         );
     }
+
+    @Test
+    void shouldApplyResidualToLastOutletSoAllocatedNetPayMatchesExactly() {
+        Map<Long, BigDecimal> outletHours = new LinkedHashMap<>();
+        outletHours.put(301L, new BigDecimal("1.0"));
+        outletHours.put(302L, new BigDecimal("1.0"));
+        outletHours.put(303L, new BigDecimal("1.0"));
+
+        List<OutletAllocation> allocations = payrollAllocationService.allocate(
+                outletHours,
+                new BigDecimal("3.0"),
+                new BigDecimal("10.00"),
+                2
+        );
+
+        assertThat(allocations).containsExactly(
+                new OutletAllocation(301L, new BigDecimal("1.00"), new BigDecimal("3.33")),
+                new OutletAllocation(302L, new BigDecimal("1.00"), new BigDecimal("3.33")),
+                new OutletAllocation(303L, new BigDecimal("1.00"), new BigDecimal("3.34"))
+        );
+        assertThat(allocations.stream()
+                .map(OutletAllocation::allocatedAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)).isEqualByComparingTo("10.00");
+    }
 }

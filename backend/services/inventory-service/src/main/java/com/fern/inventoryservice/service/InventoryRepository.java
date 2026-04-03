@@ -147,6 +147,10 @@ public class InventoryRepository {
     }
 
     boolean beginInbox(String sourceEventId, String sourceService, String eventType, String partitionKey, Object payload) {
+        return beginInboxRaw(sourceEventId, sourceService, eventType, partitionKey, toJson(payload));
+    }
+
+    boolean beginInboxRaw(String sourceEventId, String sourceService, String eventType, String partitionKey, String payload) {
         return Boolean.TRUE.equals(jdbcTemplate.query("""
                 WITH claimed AS (
                     INSERT INTO inventory.inbox_event (
@@ -173,7 +177,7 @@ public class InventoryRepository {
                 "sourceService", sourceService,
                 "eventType", eventType,
                 "partitionKey", partitionKey,
-                "payload", toJson(payload)
+                "payload", payload
         ), rs -> rs.next() && rs.getBoolean(1)));
     }
 
@@ -186,11 +190,15 @@ public class InventoryRepository {
     }
 
     void markInboxFailed(String sourceEventId, RuntimeException exception) {
+        markInboxFailed(sourceEventId, ExceptionSummaries.safeSummary(exception));
+    }
+
+    void markInboxFailed(String sourceEventId, String errorMessage) {
         jdbcTemplate.update("""
                 UPDATE inventory.inbox_event
                 SET status = 'FAILED', error_message = :errorMessage
                 WHERE source_event_id = :sourceEventId
-                """, params("sourceEventId", sourceEventId, "errorMessage", ExceptionSummaries.safeSummary(exception)));
+                """, params("sourceEventId", sourceEventId, "errorMessage", errorMessage));
     }
 
     Long findIdempotentResourceId(String operation, String idempotencyKey) {

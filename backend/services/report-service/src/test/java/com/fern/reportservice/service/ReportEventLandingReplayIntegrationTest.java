@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fern.platform.contracts.ExpensePostedEvent;
 import com.fern.platform.testsupport.FernIntegrationContainers;
+import com.fern.reportservice.messaging.ReportEventConsumer;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -59,6 +60,9 @@ class ReportEventLandingReplayIntegrationTest {
 
     @Autowired
     private ReportService reportService;
+
+    @Autowired
+    private ReportEventConsumer reportEventConsumer;
 
     @SpyBean
     private DailySummaryProjector dailySummaryProjector;
@@ -142,6 +146,31 @@ class ReportEventLandingReplayIntegrationTest {
                 FROM report.region_daily_summary
                 WHERE region_id = 1 AND business_date = DATE '2026-03-27'
                 """, BigDecimal.class)).isEqualByComparingTo("42.25");
+    }
+
+    @Test
+    void shouldPersistMalformedPayloadInLandingWhenDeserializationFails() {
+        assertThatThrownBy(() -> reportEventConsumer.consumeExpensePosted("not-json"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unable to deserialize ExpensePostedEvent");
+
+        assertThat(count("SELECT COUNT(*) FROM raw_events.event_landing WHERE kafka_topic = 'finance.expense.posted'")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM raw_events.event_landing
+                WHERE kafka_topic = 'finance.expense.posted'
+                """, String.class)).isEqualTo("FAILED");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT source_service
+                FROM raw_events.event_landing
+                WHERE kafka_topic = 'finance.expense.posted'
+                """, String.class)).isEqualTo("report-service");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT payload::text
+                FROM raw_events.event_landing
+                WHERE kafka_topic = 'finance.expense.posted'
+                """, String.class)).contains("rawPayload")
+                .contains("not-json");
     }
 
     @Test

@@ -365,17 +365,45 @@ class FinanceProcurementConsumerHardeningTest {
     }
 
     @Test
-    void shouldRejectPoisonSupplierPaymentPayloadWithoutPersistingState() {
+    void shouldRecordPoisonSupplierPaymentPayloadAsFailedIntegrationEvent() {
         assertThatThrownBy(() -> consumer.consumeSupplierPaymentRecorded("{not-json"))
                 .isInstanceOf(JsonProcessingException.class);
 
-        assertThat(count("SELECT COUNT(*) FROM finance.integration_event")).isZero();
+        assertThat(count("""
+                SELECT COUNT(*)
+                FROM finance.integration_event
+                WHERE event_type = 'procurement.supplier.payment.recorded.deserialization_failed'
+                """)).isEqualTo(1);
+        assertThat(jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT error_message
+                FROM finance.integration_event
+                WHERE event_type = 'procurement.supplier.payment.recorded.deserialization_failed'
+                """, String.class)).isEqualTo("JsonProcessingException");
         assertThat(countProjection("SELECT COUNT(*) FROM finance_projection.accounting_posting_projection")).isZero();
         assertThat(countProjection("SELECT COUNT(*) FROM finance_projection.reconciliation_snapshot")).isZero();
     }
 
     @Test
-    void shouldRejectSemanticPoisonGoodsReceiptEventWithoutPersistingState() throws Exception {
+    void shouldRecordPoisonGoodsReceiptPayloadAsFailedIntegrationEvent() {
+        assertThatThrownBy(() -> consumer.consumeGoodsReceiptPosted("{not-json"))
+                .isInstanceOf(JsonProcessingException.class);
+
+        assertThat(count("""
+                SELECT COUNT(*)
+                FROM finance.integration_event
+                WHERE event_type = 'procurement.goods_receipt.posted.deserialization_failed'
+                """)).isEqualTo(1);
+        assertThat(jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT error_message
+                FROM finance.integration_event
+                WHERE event_type = 'procurement.goods_receipt.posted.deserialization_failed'
+                """, String.class)).isEqualTo("JsonProcessingException");
+        assertThat(count("SELECT COUNT(*) FROM finance.expense_record")).isZero();
+        assertThat(count("SELECT COUNT(*) FROM finance.outbox_event")).isZero();
+    }
+
+    @Test
+    void shouldRecordSemanticPoisonGoodsReceiptEventAsFailedIntegrationEvent() throws Exception {
         ProcurementGoodsReceiptPostedEvent event = new ProcurementGoodsReceiptPostedEvent(
                 "gr-poison-negative-1",
                 "procurement.goods_receipt.posted",
@@ -397,13 +425,23 @@ class FinanceProcurementConsumerHardeningTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("positive");
 
-        assertThat(count("SELECT COUNT(*) FROM finance.integration_event")).isZero();
+        assertThat(count("""
+                SELECT COUNT(*)
+                FROM finance.integration_event
+                WHERE source_event_id = 'gr-poison-negative-1'
+                  AND status = 'FAILED'
+                """)).isEqualTo(1);
+        assertThat(jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT error_message
+                FROM finance.integration_event
+                WHERE source_event_id = 'gr-poison-negative-1'
+                """, String.class)).isEqualTo("IllegalArgumentException");
         assertThat(count("SELECT COUNT(*) FROM finance.expense_record")).isZero();
         assertThat(count("SELECT COUNT(*) FROM finance.outbox_event")).isZero();
     }
 
     @Test
-    void shouldRejectSemanticPoisonSupplierPaymentEventWithoutPersistingState() throws Exception {
+    void shouldRecordSemanticPoisonSupplierPaymentEventAsFailedIntegrationEvent() throws Exception {
         SupplierPaymentRecordedEvent event = supplierPaymentEvent(
                 "payment-poison-negative-1",
                 "idem-payment-poison-negative-1",
@@ -416,7 +454,17 @@ class FinanceProcurementConsumerHardeningTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("positive");
 
-        assertThat(count("SELECT COUNT(*) FROM finance.integration_event")).isZero();
+        assertThat(count("""
+                SELECT COUNT(*)
+                FROM finance.integration_event
+                WHERE source_event_id = 'payment-poison-negative-1'
+                  AND status = 'FAILED'
+                """)).isEqualTo(1);
+        assertThat(jdbcTemplate.getJdbcTemplate().queryForObject("""
+                SELECT error_message
+                FROM finance.integration_event
+                WHERE source_event_id = 'payment-poison-negative-1'
+                """, String.class)).isEqualTo("IllegalArgumentException");
         assertThat(countProjection("SELECT COUNT(*) FROM finance_projection.accounting_posting_projection")).isZero();
         assertThat(countProjection("SELECT COUNT(*) FROM finance_projection.reconciliation_snapshot")).isZero();
     }

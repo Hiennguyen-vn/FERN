@@ -5,7 +5,10 @@ import com.fern.inventoryservice.dto.InventoryResponses.WasteRecordResponse;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.OperationalShardRegistry;
 import com.fern.platform.common.PermissionCodes;
+import com.fern.platform.common.RouteKey;
+import com.fern.platform.common.ShardResolver;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.contracts.WasteRecordPostedEvent;
 import com.fern.platform.observability.CorrelationId;
@@ -26,30 +29,33 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WasteRecordService {
-    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final InventoryAuthorizer inventoryAuthorizer;
     private final InventoryRepository inventoryRepository;
     private final InventoryOutboxService inventoryOutboxService;
     private final InventoryOrgClient inventoryOrgClient;
     private final InventoryAuditService inventoryAuditService;
     private final Clock clock;
+    private final OperationalShardRegistry operationalShardRegistry;
+    private final ShardResolver shardResolver;
 
     public WasteRecordService(
-            NamedParameterJdbcTemplate jdbcTemplate,
             InventoryAuthorizer inventoryAuthorizer,
             InventoryRepository inventoryRepository,
             InventoryOutboxService inventoryOutboxService,
             InventoryOrgClient inventoryOrgClient,
             InventoryAuditService inventoryAuditService,
-            Clock clock
+            Clock clock,
+            OperationalShardRegistry operationalShardRegistry,
+            ShardResolver shardResolver
     ) {
-        this.jdbcTemplate = jdbcTemplate;
         this.inventoryAuthorizer = inventoryAuthorizer;
         this.inventoryRepository = inventoryRepository;
         this.inventoryOutboxService = inventoryOutboxService;
         this.inventoryOrgClient = inventoryOrgClient;
         this.inventoryAuditService = inventoryAuditService;
         this.clock = clock;
+        this.operationalShardRegistry = operationalShardRegistry;
+        this.shardResolver = shardResolver;
     }
 
     @Transactional
@@ -85,6 +91,7 @@ public class WasteRecordService {
     public WasteRecordResponse postWasteRecord(FernPrincipal principal, Long id, String idempotencyKey) {
         requireIdempotencyKey(idempotencyKey);
         WasteRecord record = requireWasteRecordForUpdate(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(record.regionId(), record.outletId());
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_WASTE_WRITE);
         Long duplicateId = inventoryRepository.findIdempotentResourceId("waste-record-post", idempotencyKey);
         if (duplicateId != null) {
@@ -162,6 +169,7 @@ public class WasteRecordService {
     @Transactional
     public WasteRecordResponse cancelWasteRecord(FernPrincipal principal, Long id) {
         WasteRecord record = requireWasteRecordForUpdate(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(record.regionId(), record.outletId());
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_WASTE_WRITE);
         if (!WasteRecordStatus.DRAFT.name().equals(record.status())) {
             throw new ConflictException("Only draft waste records can be cancelled");
@@ -196,7 +204,7 @@ public class WasteRecordService {
     }
 
     public WasteRecordResponse getWasteRecord(Long id) {
-        WasteRecordResponse response = jdbcTemplate.query("""
+        WasteRecordResponse response = jdbcTemplate(null, null).query("""
                 SELECT id, status, region_id, outlet_id, ingredient_id, qty, business_date, reason, note,
                        inventory_transaction_id, posted_at
                 FROM inventory.waste_record
@@ -242,7 +250,7 @@ public class WasteRecordService {
     }
 
     private WasteRecord requireWasteRecordForUpdate(Long id) {
-        WasteRecord record = jdbcTemplate.query("""
+        WasteRecord record = jdbcTemplate(null, null).query("""
                 SELECT id, status, region_id, outlet_id, ingredient_id, qty, business_date, reason, note
                 FROM inventory.waste_record
                 WHERE id = :id
@@ -307,6 +315,10 @@ public class WasteRecordService {
 
     private String wastePostedIdempotencyKey(Long wasteRecordId) {
         return "inventory.waste.posted:waste:" + wasteRecordId;
+    }
+
+    private NamedParameterJdbcTemplate jdbcTemplate(Long regionId, Long outletId) {
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).jdbc();
     }
 
     private record WasteRecord(

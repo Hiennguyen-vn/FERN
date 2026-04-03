@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import { usePrincipal } from '@core/auth/auth.selectors'
 import { Button, Card, EmptyState, PermissionDeniedInline, ReadonlyBanner } from '@design-system/index'
@@ -60,6 +61,9 @@ export function ReportsDashboardPage() {
         }
       : null,
   ].filter((surface): surface is { description: string; title: string; to: string } => Boolean(surface))
+  const reportModeStats = canInspectExports
+    ? dashboard.summaryCards.map((item) => ({ label: item.label, value: item.value }))
+    : reportSurfaces.slice(0, 2).map((item) => ({ label: item.title, value: 'Ready' }))
 
   if (!canOpenDashboard) {
     return (
@@ -92,16 +96,52 @@ export function ReportsDashboardPage() {
 
       {canInspectExports ? <ReportSummaryCards items={dashboard.summaryCards} /> : null}
 
-      <div className="card-grid dashboard-module-grid">
-        {reportSurfaces.map((surface) => (
-          <Card className="dashboard-module-card" key={surface.to} title={surface.title}>
-            <p className="muted-text">{surface.description}</p>
-            <Button asChild size="sm" variant="secondary">
-              <Link to={surface.to}>Open</Link>
-            </Button>
-          </Card>
-        ))}
-      </div>
+      <section className="reports-command-grid">
+        <div className="surface-panel reports-surface-panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Published reports</p>
+              <h2>Available surfaces</h2>
+            </div>
+          </div>
+          <div className="reports-surface-list">
+            {reportSurfaces.map((surface) => (
+              <Link className="reports-surface-row" key={surface.to} to={surface.to}>
+                <div className="reports-surface-copy">
+                  <strong>{surface.title}</strong>
+                  <p className="muted-text">{surface.description}</p>
+                </div>
+                <span className="reports-surface-open">
+                  <AppIcon name="arrow_outward" size="sm" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <aside className="surface-panel reports-note-panel">
+          <p className="eyebrow">Export mode</p>
+          <strong className="action-summary-title">
+            {canInspectExports ? 'Readable export history enabled' : 'Create-only export center'}
+          </strong>
+          <p className="muted-text">
+            {canInspectExports
+              ? 'Use report surfaces for analysis, then inspect backend-backed export jobs in one place.'
+              : 'Queue new jobs first. Preview, download, and history inspection remain permission-gated.'}
+          </p>
+          <div className="reports-note-stats">
+            {reportModeStats.map((item) => (
+              <div className="reports-note-stat" key={item.label}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </div>
+          <Button asChild size="sm" variant="secondary">
+            <Link to="/reports/export-jobs">Open export jobs</Link>
+          </Button>
+        </aside>
+      </section>
 
       {canInspectExports ? (
         <section className="page-stack">

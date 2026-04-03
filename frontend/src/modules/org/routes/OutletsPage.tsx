@@ -139,6 +139,132 @@ export function OutletsPage() {
       description="Table-first outlet browse cho operational metadata, status và region context."
       eyebrow="Organization"
     >
+      <section className="surface-panel command-stage" aria-label="Outlet browse signal">
+        <div className="command-stage-copy">
+          <div className="command-stage-meta">
+            <span className="meta-chip">Operational browse</span>
+            <span className="meta-chip">
+              Region filter {regionFilter === 'ALL' ? 'All visible' : `#${regionFilter}`}
+            </span>
+            <span className={statusFilter === 'ALL' ? 'meta-chip' : 'meta-chip-success'}>
+              Status {statusFilter}
+            </span>
+          </div>
+          <div className="state-panel-heading">
+            <p className="eyebrow">Organization / Outlets</p>
+            <strong className="action-summary-title">Current outlet slice</strong>
+            <p className="muted-text">
+              Review outlet status, region coverage, and operational contact data before opening a
+              branch detail or create flow.
+            </p>
+          </div>
+          <div className="meta-grid">
+            <span>Visible outlets: {rows.length}</span>
+            <span>Regions represented: {regionIds.length}</span>
+            <span>Attention states: {rows.filter((row) => row.status !== 'ACTIVE').length}</span>
+            <span>Current page: {page + 1}</span>
+          </div>
+        </div>
+        <aside className="command-stage-side">
+          <div className="command-stage-note">
+            <span className="eyebrow">Outlet watch</span>
+            <strong>Status watchlist</strong>
+            <p>
+              Surface the latest non-active or recently updated outlets here so operations can drill
+              into the right branch quickly.
+            </p>
+          </div>
+          <div className="command-support-list">
+            {[...rows]
+              .sort((left, right) => {
+                const leftAttention = left.status === 'ACTIVE' ? 0 : 1
+                const rightAttention = right.status === 'ACTIVE' ? 0 : 1
+                if (leftAttention !== rightAttention) {
+                  return rightAttention - leftAttention
+                }
+                return Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
+              })
+              .slice(0, 4)
+              .map((outlet) => (
+                <article className="command-support-item" key={outlet.id}>
+                  <div className="command-support-copy">
+                    <strong>{outlet.name}</strong>
+                    <span className="muted-text">
+                      {buildRegionLabel(outlet.regionId, regionLookup.get(outlet.regionId))}
+                    </span>
+                    <span className="muted-text">{buildOutletContactLabel(outlet)}</span>
+                  </div>
+                  <div className="command-support-stack">
+                    <StatusBadge status={outlet.status} />
+                    <span className="command-support-metric">{formatOrgDate(outlet.updatedAt)}</span>
+                  </div>
+                </article>
+              ))}
+            {rows.length === 0 ? (
+              <div className="command-empty-note">
+                No outlets are visible in this slice. Adjust search, region, or scope to load branch
+                records.
+              </div>
+            ) : null}
+          </div>
+        </aside>
+      </section>
+
+      <section className="workspace-stats-grid" aria-label="Outlet summary">
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="storefront" />
+            </span>
+            <span className="workspace-stat-badge success">Visible</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Outlets in current slice</span>
+            <strong className="workspace-stat-value">{rows.length}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="check_circle" />
+            </span>
+            <span className="workspace-stat-badge success">Open</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Active outlets</span>
+            <strong className="workspace-stat-value">
+              {rows.filter((outlet) => outlet.status === 'ACTIVE').length}
+            </strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card warning">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="warning" />
+            </span>
+            <span className="workspace-stat-badge warning">Attention</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Needs attention</span>
+            <strong className="workspace-stat-value">
+              {rows.filter((outlet) => outlet.status !== 'ACTIVE').length}
+            </strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="public" />
+            </span>
+            <span className="workspace-stat-badge">Coverage</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Regions represented</span>
+            <strong className="workspace-stat-value">{regionIds.length}</strong>
+          </div>
+        </article>
+      </section>
+
       <section className="workspace-filter-bar" aria-label="Outlet filters">
         <div className="workspace-inline-search">
           <AppIcon name="search" size="sm" />

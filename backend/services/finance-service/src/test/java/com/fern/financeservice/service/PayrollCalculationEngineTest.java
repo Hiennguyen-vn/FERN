@@ -1,6 +1,7 @@
 package com.fern.financeservice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,6 +9,7 @@ import com.fern.financeservice.service.payroll.model.ApprovedAttendance;
 import com.fern.financeservice.service.payroll.model.EffectiveContract;
 import com.fern.financeservice.service.payroll.model.PayrollEmployeeComputation;
 import com.fern.financeservice.service.payroll.model.PayrollPeriodRecord;
+import com.fern.platform.common.BadRequestException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -95,6 +97,17 @@ class PayrollCalculationEngineTest {
 
         assertThat(payrollCalculationEngine.selectContract(contracts, LocalDate.of(2026, 3, 10)).contractId()).isEqualTo(701L);
         assertThat(payrollCalculationEngine.selectContract(contracts, LocalDate.of(2026, 3, 20)).contractId()).isEqualTo(702L);
+    }
+
+    @Test
+    void shouldRejectFutureContractWhenNoContractIsEffectiveForBusinessDate() {
+        List<EffectiveContract> contracts = List.of(
+                new EffectiveContract(702L, 501L, 10L, "FULL_TIME", "DAILY", new BigDecimal("200.00"), "TAX-001", LocalDate.of(2026, 3, 16), null)
+        );
+
+        assertThatThrownBy(() -> payrollCalculationEngine.selectContract(contracts, LocalDate.of(2026, 3, 10)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage("No effective contract for business date 2026-03-10");
     }
 
     @Test

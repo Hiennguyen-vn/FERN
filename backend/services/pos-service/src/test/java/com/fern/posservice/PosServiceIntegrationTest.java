@@ -371,6 +371,15 @@ class PosServiceIntegrationTest {
                           "timezoneName": "Asia/Ho_Chi_Minh"
                         }
                         """.getBytes();
+            } else if ("/regions/12".equals(path)) {
+                status = 200;
+                body = """
+                        {
+                          "id": 12,
+                          "currencyCode": "USD",
+                          "timezoneName": "America/Los_Angeles"
+                        }
+                        """.getBytes();
             }
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(status, body.length);
@@ -2133,6 +2142,29 @@ class PosServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectSessionOpenWhenCurrencyDoesNotMatchRegionCurrency() throws Exception {
+        String usOutletToken = issueToken(
+                Set.of("pos.session.open"),
+                List.of(12L),
+                List.of(105L)
+        );
+
+        mockMvc.perform(post("/pos-sessions")
+                        .header("Authorization", bearer(usOutletToken))
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 12,
+                                  "outletId": 105,
+                                  "currencyCode": "VND",
+                                  "businessDate": "2026-03-27"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Session currency does not match outlet region currency"));
+    }
+
+    @Test
     void shouldRejectOrderCreationWhenOutletBecomesInactiveAfterSessionOpened() throws Exception {
         Long sessionId = openSession(bearer(), 1L, 101L);
         putOutletRoute(101L, 1L, "INACTIVE", null);
@@ -3051,6 +3083,7 @@ class PosServiceIntegrationTest {
         putOutletRoute(102L, 11L, "ACTIVE", null);
         putOutletRoute(103L, 1L, "INACTIVE", null);
         putOutletRoute(104L, 1L, "ACTIVE", LocalDate.of(2026, 3, 26));
+        putOutletRoute(105L, 12L, "ACTIVE", null);
     }
 
     private static void putOutletRoute(Long id, Long regionId, String status, LocalDate closedAt) {

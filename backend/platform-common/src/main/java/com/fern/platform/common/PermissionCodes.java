@@ -44,6 +44,7 @@ public final class PermissionCodes {
     public static final String INVENTORY_WASTE_WRITE = "inventory.waste.write";
     public static final String INVENTORY_STOCK_COUNT_WRITE = "inventory.stock_count.write";
     public static final String INVENTORY_STOCK_COUNT_POST = "inventory.stock_count.post";
+    public static final String INVENTORY_INTERNAL_READ = "inventory.internal.read";
     public static final String INVENTORY_INTERNAL_RESERVE = "inventory.internal.reserve";
     public static final String INVENTORY_INTERNAL_RELEASE = "inventory.internal.release";
     public static final String PROCUREMENT_SUPPLIER_READ = "procurement.supplier.read";

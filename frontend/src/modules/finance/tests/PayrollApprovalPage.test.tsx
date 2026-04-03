@@ -47,7 +47,7 @@ describe('PayrollApprovalPage', () => {
   it('renders actionable submitted payroll runs', async () => {
     renderWithProviders(<PayrollApprovalPage />)
 
-    expect(await screen.findByText('RUN-000055')).toBeInTheDocument()
+    expect((await screen.findAllByText('RUN-000055')).length).toBeGreaterThan(0)
     expect(screen.getByText('Submitted: 1')).toBeInTheDocument()
   })
 })

@@ -14,6 +14,7 @@ import com.fern.platform.contracts.PosSaleCompletedEvent;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
 import com.fern.platform.contracts.StockCountPostedEvent;
 import com.fern.platform.contracts.WasteRecordPostedEvent;
+import com.fern.platform.testsupport.KafkaContractFixtures;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -33,29 +34,8 @@ class ReportEventContractTest {
 
     static java.util.stream.Stream<Arguments> eventPayloads() {
         return java.util.stream.Stream.of(
-                Arguments.of("PosSaleCompletedEvent", """
-                        {
-                          "eventId": "sale-1", "eventType": "pos.sale.completed",
-                          "occurredAt": "2026-03-29T10:00:00Z", "sourceService": "pos-service",
-                          "correlationId": "corr-1", "idempotencyKey": "pos.sale.completed:sale:1",
-                          "saleOrderId": 100, "sessionId": 200, "regionId": 1, "outletId": 101,
-                          "businessDate": "2026-03-29", "completedAt": "2026-03-29T10:05:00Z",
-                          "completedByUserId": 5, "reservationId": 999,
-                          "payments": [{"paymentId": 50, "paymentMethod": "CASH", "amount": 100.00, "status": "CAPTURED", "paymentTime": "2026-03-29T10:04:00Z", "transactionRef": "txn-1"}],
-                          "saleSnapshot": {"orderId": 100, "lines": []},
-                          "recipeUsageItems": []
-                        }
-                        """, PosSaleCompletedEvent.class),
-                Arguments.of("ProcurementGoodsReceiptPostedEvent", """
-                        {
-                          "eventId": "receipt-1", "eventType": "procurement.goods_receipt.posted",
-                          "occurredAt": "2026-03-29T10:00:00Z", "sourceService": "procurement-service",
-                          "correlationId": "corr-2", "idempotencyKey": "procurement.goods_receipt.posted:receipt:1",
-                          "regionId": 1, "outletId": 101, "goodsReceiptId": 33, "purchaseOrderId": 44,
-                          "businessDate": "2026-03-29", "postedAt": "2026-03-29T10:00:00Z", "postedByUserId": 7,
-                          "lines": [{"sourceLineId": 88, "qtyReceived": 10.00, "unitCost": 5.00, "ingredientId": 200}]
-                        }
-                        """, ProcurementGoodsReceiptPostedEvent.class),
+                Arguments.of("PosSaleCompletedEvent", KafkaContractFixtures.load("pos.sale.completed.json"), PosSaleCompletedEvent.class),
+                Arguments.of("ProcurementGoodsReceiptPostedEvent", KafkaContractFixtures.load("procurement.goods_receipt.posted.json"), ProcurementGoodsReceiptPostedEvent.class),
                 Arguments.of("AttendanceApprovedEvent", """
                         {
                           "eventId": "att-1", "eventType": "attendance.approved",
@@ -145,29 +125,18 @@ class ReportEventContractTest {
 
     @Test
     void shouldDeserializeSaleEventWithFullPayloadIntegrity() throws Exception {
-        PosSaleCompletedEvent event = objectMapper.readValue("""
-                {
-                  "eventId": "sale-integrity-1", "eventType": "pos.sale.completed",
-                  "occurredAt": "2026-03-29T10:00:00Z", "sourceService": "pos-service",
-                  "correlationId": "corr-integrity", "idempotencyKey": "pos.sale.completed:sale:99",
-                  "saleOrderId": 99, "sessionId": 200, "regionId": 2, "outletId": 102,
-                  "businessDate": "2026-03-29", "completedAt": "2026-03-29T10:05:00Z",
-                  "completedByUserId": 5, "reservationId": 888,
-                  "payments": [
-                    {"paymentId": 50, "paymentMethod": "CASH", "amount": 60.00, "status": "CAPTURED", "paymentTime": "2026-03-29T10:04:00Z", "transactionRef": null},
-                    {"paymentId": 51, "paymentMethod": "CARD", "amount": 40.00, "status": "CAPTURED", "paymentTime": "2026-03-29T10:04:30Z", "transactionRef": "txn-card-1"}
-                  ],
-                  "saleSnapshot": {"orderId": 99, "lines": [{"productId": 10, "qty": 2, "lineTotal": 100.00}]},
-                  "recipeUsageItems": [{"ingredientId": 200, "qty": 3.0}]
-                }
-                """, PosSaleCompletedEvent.class);
+        PosSaleCompletedEvent event = objectMapper.readValue(
+                KafkaContractFixtures.load("pos.sale.completed.json"),
+                PosSaleCompletedEvent.class
+        );
 
-        assertThat(event.saleOrderId()).isEqualTo(99L);
-        assertThat(event.regionId()).isEqualTo(2L);
-        assertThat(event.outletId()).isEqualTo(102L);
+        assertThat(event.eventVersion()).isEqualTo(1);
+        assertThat(event.saleOrderId()).isEqualTo(100L);
+        assertThat(event.regionId()).isEqualTo(1L);
+        assertThat(event.outletId()).isEqualTo(101L);
         assertThat(event.payments()).hasSize(2);
         assertThat(event.payments().getFirst().paymentMethod()).isEqualTo("CASH");
         assertThat(event.payments().getFirst().amount()).isEqualByComparingTo(new BigDecimal("60.00"));
-        assertThat(event.reservationId()).isEqualTo(888L);
+        assertThat(event.reservationId()).isEqualTo(999L);
     }
 }

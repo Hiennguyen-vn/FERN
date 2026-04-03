@@ -167,8 +167,8 @@ A family is marked `Ready for browser sign-off` when all of the following are tr
 | Auth and home | `/login`, `/session-expired`, `/unauthorized`, `/home` | `authRouting.test.tsx`, `homePagePermissions.test.tsx` | Ready for browser sign-off | Check auth loading/error variants, persona-aware action hub composition, desktop and narrow viewport shell chrome. |
 | POS | `/pos`, `/pos/orders/:orderId`, `/pos/sessions`, `/pos/sessions/:sessionId` | `PosHomePage.test.tsx`, `PosOrderWorkflow.test.tsx`, `PosSessionWorkflow.test.tsx`, `PosResilience.test.tsx` | Ready for browser sign-off | Check terminal header, session state transitions, payment readonly states, and outlet-first mobile density. |
 | Inventory and workforce-facing operations | `/inventory/stock-balances`, `/inventory/stock-count-sessions`, `/inventory/stock-count-sessions/:sessionId`, `/workforce/my-attendance`, `/workforce/attendance-approvals/:shiftAssignmentId` | `InventoryRoutes.test.tsx`, `MyAttendancePage.test.tsx`, `AttendanceWorkflow.test.tsx`, `WorkforcePermissions.test.tsx` | Ready for browser sign-off | Check count-session readonly posture, attendance hero state, approval detail hierarchy, and compact filter/table spacing. |
-| Procurement, regional ops, and organization | `/procurement/purchase-orders`, `/procurement/purchase-orders/:purchaseOrderId`, `/procurement/goods-receipts/:goodsReceiptId`, `/regional-ops`, `/regional-ops/outlets/:outletId`, `/org/regions`, `/org/outlets/:outletId` | `PurchaseOrderListPage.test.tsx`, `PurchaseOrderWorkflow.test.tsx`, `GoodsReceiptWorkflow.test.tsx`, `SupplierPaymentListPage.test.tsx`, `RegionalDashboardPage.test.tsx`, `OutletSummaryPage.test.tsx`, `RegionalOpsRoutes.test.tsx`, `OutletsPage.test.tsx`, `RegionsPage.test.tsx`, `OutletDetailPage.test.tsx`, `RegionDetailPage.test.tsx`, `OrgRoutes.test.tsx` | Ready for browser sign-off | Check procurement KPI cards, queue/detail balance, regional dashboard hierarchy, org tree chrome, and supplier/payment dashboards. |
-| Catalog, HR, and finance | `/catalog/products`, `/catalog/products/:productId`, `/catalog/ingredients`, `/catalog/availability`, `/hr/employees`, `/hr/employees/:employeeId`, `/hr/contracts`, `/hr/payroll-preparation`, `/finance/payment-requests`, `/finance/payroll-periods`, `/finance/config` | `CatalogRoutes.test.tsx`, `CatalogForms.test.tsx`, `ProductsPage.test.tsx`, `ProductDetailPage.test.tsx`, `IngredientsPage.test.tsx`, `PricingPage.test.tsx`, `RecipesPage.test.tsx`, `HrRoutes.test.tsx`, `EmployeesPage.test.tsx`, `EmployeeDetailPage.test.tsx`, `ContractsPage.test.tsx`, `AttendanceSummaryPage.test.tsx`, `PayrollPreparationPage.test.tsx`, `PayrollDraftReviewPage.test.tsx`, `FinanceRoutes.test.tsx`, `FinanceAdminPages.test.tsx`, `PaymentRequestsPage.test.tsx`, `PayrollApprovalPage.test.tsx`, `PayrollApprovalDetailPage.test.tsx`, `PayrollPaidPage.test.tsx`, `SuppliersPage.test.tsx` | Ready for browser sign-off | Check form rhythm, detail banners, payroll reconciliation density, config tabs/tables, and matrix-style catalog surfaces on desktop and tablet widths. |
+| Procurement, regional ops, and organization | `/procurement/purchase-orders`, `/procurement/purchase-orders/:purchaseOrderId`, `/procurement/goods-receipts/:goodsReceiptId`, `/regional-ops`, `/regional-ops/outlets/:outletId`, `/org/regions`, `/org/regions/new`, `/org/regions/:regionId/edit`, `/org/outlets`, `/org/outlets/new`, `/org/outlets/:outletId`, `/org/outlets/:outletId/edit` | `PurchaseOrderListPage.test.tsx`, `PurchaseOrderWorkflow.test.tsx`, `GoodsReceiptWorkflow.test.tsx`, `SupplierPaymentListPage.test.tsx`, `RegionalDashboardPage.test.tsx`, `OutletSummaryPage.test.tsx`, `RegionalOpsRoutes.test.tsx`, `OutletsPage.test.tsx`, `RegionsPage.test.tsx`, `OutletDetailPage.test.tsx`, `RegionDetailPage.test.tsx`, `OrgRoutes.test.tsx`, `OrgCreatePages.test.tsx`, `OrgEditPages.test.tsx` | Ready for browser sign-off | Check procurement KPI cards, queue/detail balance, regional dashboard hierarchy, org tree chrome, and create/edit forms for hierarchy-first composition. |
+| Catalog, HR, and finance | `/catalog/products`, `/catalog/products/:productId`, `/catalog/ingredients`, `/catalog/availability`, `/hr/employees`, `/hr/employees/:employeeId`, `/hr/contracts`, `/hr/payroll-preparation`, `/finance/payment-requests`, `/finance/payroll-periods`, `/finance/payroll-paid/:runId`, `/finance/config` | `CatalogRoutes.test.tsx`, `CatalogForms.test.tsx`, `ProductsPage.test.tsx`, `ProductDetailPage.test.tsx`, `IngredientsPage.test.tsx`, `PricingPage.test.tsx`, `RecipesPage.test.tsx`, `HrRoutes.test.tsx`, `EmployeesPage.test.tsx`, `EmployeeDetailPage.test.tsx`, `ContractsPage.test.tsx`, `AttendanceSummaryPage.test.tsx`, `PayrollPreparationPage.test.tsx`, `PayrollDraftReviewPage.test.tsx`, `FinanceRoutes.test.tsx`, `FinanceAdminPages.test.tsx`, `PaymentRequestsPage.test.tsx`, `PayrollApprovalPage.test.tsx`, `PayrollApprovalDetailPage.test.tsx`, `PayrollPaidPage.test.tsx`, `SuppliersPage.test.tsx` | Ready for browser sign-off | Check form rhythm, detail banners, payroll reconciliation density, payroll paid readonly posture, config tabs/tables, and matrix-style catalog surfaces on desktop and tablet widths. |
 | IAM, audit, and reports | `/iam/users`, `/iam/users/:userId`, `/iam/assignments`, `/iam/effective-access/:userId`, `/audit/events`, `/audit/request-traces/:traceId`, `/reports`, `/reports/outlet-revenue`, `/reports/export-jobs/:jobId` | `IamRoutes.test.tsx`, `UsersPage.test.tsx`, `UserDetailPage.test.tsx`, `AssignmentsPage.test.tsx`, `EffectiveAccessPage.test.tsx`, `AuditRoutes.test.tsx`, `AuditEventsPage.test.tsx`, `AuditEventDetailPage.test.tsx`, `SecurityEventsPage.test.tsx`, `RequestTracesPage.test.tsx`, `RequestTraceDetailPage.test.tsx`, `ReportsRoutes.test.tsx`, `ReportsDashboardPage.test.tsx`, `RevenueReportPage.test.tsx`, `InventoryReportPage.test.tsx`, `PayrollReportPage.test.tsx`, `ExportWorkflow.test.tsx` | Ready for browser sign-off | Check admin scope chips, forensic list/detail density, report dashboard hierarchy, and export center queue/detail chrome. |
 
 ## Acceptance notes
@@ -188,3 +188,46 @@ A family is marked `Ready for browser sign-off` when all of the following are tr
   - `workforce`
 - Remaining visual sign-off is manual browser comparison against `screen.png` for desktop first, then narrow viewport.
 - If a new route or state variant is added later, update the mapping matrix first, then add at least one representative render or workflow test before calling parity restored.
+
+## Browser QA run order
+
+Use this route order for final manual parity sweep:
+
+1. Auth and home
+   - `/login`
+   - `/home`
+2. POS
+   - `/pos`
+   - `/pos/sessions`
+   - `/pos/sessions/1`
+3. Inventory and workforce-facing operations
+   - `/inventory/stock-balances`
+   - `/inventory/stock-count-sessions`
+   - `/inventory/stock-count-sessions/77`
+   - `/workforce/my-attendance`
+4. Procurement, regional ops, and organization
+   - `/procurement/purchase-orders`
+   - `/procurement/purchase-orders/1`
+   - `/regional-ops`
+   - `/regional-ops/outlets/101`
+   - `/org/regions`
+   - `/org/regions/new`
+   - `/org/regions/1/edit`
+   - `/org/outlets`
+   - `/org/outlets/new`
+   - `/org/outlets/101/edit`
+5. Catalog, HR, and finance
+   - `/catalog/products`
+   - `/hr/employees`
+   - `/hr/payroll-preparation`
+   - `/finance/payment-requests`
+   - `/finance/payroll-periods`
+   - `/finance/payroll-approvals/55`
+   - `/finance/payroll-paid/55`
+   - `/finance/config`
+6. IAM, audit, and reports
+   - `/iam/users`
+   - `/audit/events`
+   - `/reports`
+   - `/reports/outlet-revenue`
+   - `/reports/export-jobs`

@@ -4,6 +4,8 @@ import { AppIcon } from '@app/components/AppIcon'
 export function AuthLayout({ children }: PropsWithChildren) {
   return (
     <div className="auth-shell">
+      <div className="auth-shell-orbit auth-shell-orbit-primary" aria-hidden="true" />
+      <div className="auth-shell-orbit auth-shell-orbit-secondary" aria-hidden="true" />
       <main className="auth-main">
         <div className="auth-stage">
           <div className="auth-brand-stack">
@@ -11,8 +13,14 @@ export function AuthLayout({ children }: PropsWithChildren) {
               <AppIcon filled name="restaurant_menu" size="lg" />
             </div>
             <div className="auth-brand-copy">
-              <h1>FERN ERP F&amp;B</h1>
-              <p>Enterprise Management System</p>
+              <span className="eyebrow">Operations operating system</span>
+              <h1>FERN ERP</h1>
+              <p>Restaurant, procurement, payroll, and reporting inside one operating shell.</p>
+            </div>
+            <div className="auth-brand-chips" aria-hidden="true">
+              <span>POS</span>
+              <span>Procurement</span>
+              <span>Reports</span>
             </div>
           </div>
 

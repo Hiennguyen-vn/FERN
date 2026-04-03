@@ -1,0 +1,54 @@
+{
+  "eventId": "sale-fixture-1",
+  "eventType": "pos.sale.completed",
+  "occurredAt": "2026-03-29T10:05:00Z",
+  "sourceService": "pos-service",
+  "correlationId": "corr-sale-fixture",
+  "idempotencyKey": "pos.sale.completed:sale:100",
+  "eventVersion": 1,
+  "saleOrderId": 100,
+  "sessionId": 200,
+  "regionId": 1,
+  "outletId": 101,
+  "businessDate": "2026-03-29",
+  "completedAt": "2026-03-29T10:05:00Z",
+  "completedByUserId": 5,
+  "reservationId": 999,
+  "payments": [
+    {
+      "paymentId": 50,
+      "paymentMethod": "CASH",
+      "amount": 60.00,
+      "status": "CAPTURED",
+      "paymentTime": "2026-03-29T10:04:00Z",
+      "transactionRef": null
+    },
+    {
+      "paymentId": 51,
+      "paymentMethod": "CARD",
+      "amount": 40.00,
+      "status": "CAPTURED",
+      "paymentTime": "2026-03-29T10:04:30Z",
+      "transactionRef": "txn-card-1"
+    }
+  ],
+  "saleSnapshot": {
+    "orderId": 100,
+    "lines": [
+      {
+        "productId": 10,
+        "qty": 2,
+        "lineTotal": 100.00
+      }
+    ]
+  },
+  "recipeUsageItems": [
+    {
+      "ingredientId": 200,
+      "ingredientCode": "MILK",
+      "ingredientName": "Fresh Milk",
+      "uomCode": "ML",
+      "qty": 180.00
+    }
+  ]
+}

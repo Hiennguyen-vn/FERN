@@ -1,0 +1,25 @@
+{
+  "eventId": "supplier-payment-fixture-1",
+  "eventType": "procurement.supplier.payment.recorded",
+  "occurredAt": "2026-03-29T15:00:00Z",
+  "sourceService": "procurement-service",
+  "correlationId": "corr-payment-fixture",
+  "idempotencyKey": "procurement.supplier.payment.recorded:payment:71",
+  "eventVersion": 1,
+  "paymentId": 71,
+  "supplierId": 22,
+  "paymentTime": "2026-03-29T15:00:00Z",
+  "amount": 75.00,
+  "currencyCode": "VND",
+  "invoiceAllocations": [
+    {
+      "supplierInvoiceId": 501,
+      "allocatedAmount": 50.00
+    },
+    {
+      "supplierInvoiceId": 502,
+      "allocatedAmount": 25.00
+    }
+  ],
+  "recordedByUserId": 9
+}

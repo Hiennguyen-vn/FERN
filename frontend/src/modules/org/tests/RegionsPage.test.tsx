@@ -59,7 +59,7 @@ describe('RegionsPage', () => {
   it('renders scoped regions', async () => {
     renderWithProviders(<RegionsPage />)
 
-    expect(await screen.findByText('Southern Region')).toBeInTheDocument()
+    expect((await screen.findAllByText('Southern Region')).length).toBeGreaterThan(0)
     expect(screen.getByText('VN-SOUTH')).toBeInTheDocument()
   })
 

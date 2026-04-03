@@ -34,6 +34,32 @@ export function RegionsPage() {
     () => new Map(rows.map((row) => [row.id, row] as const)),
     [rows],
   )
+  const hierarchySummary = useMemo(() => {
+    const visibleRegions = rows.length
+    const rootRegions = rows.filter((region) => region.parentRegionId == null).length
+    const nestedRegions = Math.max(visibleRegions - rootRegions, 0)
+    const timezoneCount = new Set(rows.map((region) => region.timezoneName).filter(Boolean)).size
+    const currencyCount = new Set(rows.map((region) => region.currencyCode).filter(Boolean)).size
+    const watchlist = [...rows]
+      .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+      .slice(0, 4)
+      .map((region) => ({
+        parentLabel: buildParentRegionLabel(
+          region.parentRegionId,
+          parentRegionLookup.get(region.parentRegionId ?? 0),
+        ),
+        region,
+      }))
+
+    return {
+      currencyCount,
+      nestedRegions,
+      rootRegions,
+      timezoneCount,
+      visibleRegions,
+      watchlist,
+    }
+  }, [parentRegionLookup, rows])
 
   const columns = useMemo<Array<DataTableColumn<OrgRegion>>>(
     () => [
@@ -97,6 +123,115 @@ export function RegionsPage() {
       }
       eyebrow="Organization"
     >
+      <section className="surface-panel command-stage" aria-label="Region hierarchy signal">
+        <div className="command-stage-copy">
+          <div className="command-stage-meta">
+            <span className="meta-chip">Hierarchy-first browse</span>
+            <span className="meta-chip">Page {page + 1}</span>
+            <span className={hasMore ? 'meta-chip' : 'meta-chip-success'}>
+              {hasMore ? 'More hierarchy available' : 'Current slice loaded'}
+            </span>
+          </div>
+          <div className="state-panel-heading">
+            <p className="eyebrow">Organization / Regions</p>
+            <strong className="action-summary-title">Current hierarchy slice</strong>
+            <p className="muted-text">
+              Browse root and nested regions with parent, currency, and timezone context before
+              drilling into each administrative node.
+            </p>
+          </div>
+          <div className="meta-grid">
+            <span>Visible regions: {hierarchySummary.visibleRegions}</span>
+            <span>Root nodes: {hierarchySummary.rootRegions}</span>
+            <span>Nested nodes: {hierarchySummary.nestedRegions}</span>
+            <span>Timezones in view: {hierarchySummary.timezoneCount}</span>
+          </div>
+        </div>
+        <aside className="command-stage-side">
+          <div className="command-stage-note">
+            <span className="eyebrow">Hierarchy watch</span>
+            <strong>Recently updated regions</strong>
+            <p>
+              Keep the freshest hierarchy changes visible here before opening full region detail or
+              moving to the next page.
+            </p>
+          </div>
+          <div className="command-support-list">
+            {hierarchySummary.watchlist.length > 0 ? (
+              hierarchySummary.watchlist.map(({ parentLabel, region }) => (
+                <article className="command-support-item" key={region.id}>
+                  <div className="command-support-copy">
+                    <strong>{region.name}</strong>
+                    <span className="muted-text">{parentLabel}</span>
+                    <span className="muted-text">{region.currencyCode} · {region.timezoneName}</span>
+                  </div>
+                  <div className="command-support-stack">
+                    <span className="command-support-metric">{formatOrgInstant(region.updatedAt)}</span>
+                    <span className="meta-chip">#{region.id}</span>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="command-empty-note">
+                No region rows are visible in the current scope. Adjust scope or filters to load
+                hierarchy data.
+              </div>
+            )}
+          </div>
+        </aside>
+      </section>
+
+      <section className="workspace-stats-grid" aria-label="Region summary">
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="account_tree" />
+            </span>
+            <span className="workspace-stat-badge success">Visible</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Regions in current slice</span>
+            <strong className="workspace-stat-value">{hierarchySummary.visibleRegions}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="flag" />
+            </span>
+            <span className="workspace-stat-badge">Structure</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Root regions</span>
+            <strong className="workspace-stat-value">{hierarchySummary.rootRegions}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="payments" />
+            </span>
+            <span className="workspace-stat-badge">Reference</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Currencies represented</span>
+            <strong className="workspace-stat-value">{hierarchySummary.currencyCount}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card warning">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="schedule" />
+            </span>
+            <span className="workspace-stat-badge warning">Coverage</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Timezones represented</span>
+            <strong className="workspace-stat-value">{hierarchySummary.timezoneCount}</strong>
+          </div>
+        </article>
+      </section>
+
       <section className="workspace-filter-bar" aria-label="Region filters">
         <div className="workspace-inline-search">
           <AppIcon name="search" size="sm" />

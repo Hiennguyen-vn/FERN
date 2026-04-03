@@ -9,8 +9,11 @@ import com.fern.inventoryservice.dto.InventoryResponses.StockCountSessionSummary
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.OperationalShardRegistry;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.PageResponse;
+import com.fern.platform.common.RouteKey;
+import com.fern.platform.common.ShardResolver;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.contracts.StockCountPostedEvent;
 import com.fern.platform.contracts.StockCountPostedLine;
@@ -36,33 +39,37 @@ import org.springframework.transaction.annotation.Transactional;
 public class StockCountService {
     private static final int MAX_PAGE_SIZE = 200;
 
-    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final InventoryAuthorizer inventoryAuthorizer;
     private final InventoryRepository inventoryRepository;
     private final InventoryOutboxService inventoryOutboxService;
     private final InventoryOrgClient inventoryOrgClient;
     private final Clock clock;
+    private final OperationalShardRegistry operationalShardRegistry;
+    private final ShardResolver shardResolver;
 
     public StockCountService(
-            NamedParameterJdbcTemplate jdbcTemplate,
             InventoryAuthorizer inventoryAuthorizer,
             InventoryRepository inventoryRepository,
             InventoryOutboxService inventoryOutboxService,
             InventoryOrgClient inventoryOrgClient,
-            Clock clock
+            Clock clock,
+            OperationalShardRegistry operationalShardRegistry,
+            ShardResolver shardResolver
     ) {
-        this.jdbcTemplate = jdbcTemplate;
         this.inventoryAuthorizer = inventoryAuthorizer;
         this.inventoryRepository = inventoryRepository;
         this.inventoryOutboxService = inventoryOutboxService;
         this.inventoryOrgClient = inventoryOrgClient;
         this.clock = clock;
+        this.operationalShardRegistry = operationalShardRegistry;
+        this.shardResolver = shardResolver;
     }
 
     @Transactional
     public StockCountSessionResponse createStockCountSession(FernPrincipal principal, CreateStockCountSessionRequest request) {
         inventoryAuthorizer.requireOutletAccess(principal, request.outletId(), PermissionCodes.INVENTORY_STOCK_COUNT_WRITE);
         InventoryOrgClient.OutletRoute outlet = inventoryOrgClient.requireOutlet(request.outletId());
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(outlet.regionId(), request.outletId());
         if (!outlet.regionId().equals(request.regionId())) {
             throw new BadRequestException("Region does not match the outlet route");
         }
@@ -97,6 +104,7 @@ public class StockCountService {
     @Transactional
     public StockCountSessionResponse startStockCountSession(FernPrincipal principal, Long id) {
         StockCountSessionRecord record = requireStockCountSessionForUpdate(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(record.regionId(), record.outletId());
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_STOCK_COUNT_WRITE);
         ensureStatus(record.status(), StockCountSessionStatus.DRAFT.name(), "Only draft stock count sessions can be started");
 
@@ -153,6 +161,7 @@ public class StockCountService {
     @Transactional
     public StockCountSessionResponse updateStockCountLines(FernPrincipal principal, Long id, UpdateStockCountLinesRequest request) {
         StockCountSessionRecord record = requireStockCountSessionForUpdate(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(record.regionId(), record.outletId());
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_STOCK_COUNT_WRITE);
         ensureStatus(record.status(), StockCountSessionStatus.COUNTING.name(), "Only counting stock sessions can be updated");
         for (StockCountLineInput input : request.lines()) {
@@ -183,6 +192,7 @@ public class StockCountService {
     public StockCountSessionResponse postStockCountSession(FernPrincipal principal, Long id, String idempotencyKey) {
         requireIdempotencyKey(idempotencyKey);
         StockCountSessionRecord record = requireStockCountSessionForUpdate(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(record.regionId(), record.outletId());
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_STOCK_COUNT_POST);
         Long duplicateId = inventoryRepository.findIdempotentResourceId("stock-count-post", idempotencyKey);
         if (duplicateId != null) {
@@ -270,6 +280,7 @@ public class StockCountService {
     @Transactional
     public StockCountSessionResponse cancelStockCountSession(FernPrincipal principal, Long id) {
         StockCountSessionRecord record = requireStockCountSessionForUpdate(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(record.regionId(), record.outletId());
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_STOCK_COUNT_WRITE);
         if (!List.of(StockCountSessionStatus.DRAFT.name(), StockCountSessionStatus.COUNTING.name()).contains(record.status())) {
             throw new ConflictException("Only draft or counting stock sessions can be cancelled");
@@ -303,6 +314,8 @@ public class StockCountService {
         validatePage(page, size);
         validateStatusFilter(status);
         inventoryAuthorizer.requireOutletAccess(principal, outletId, PermissionCodes.INVENTORY_BALANCE_READ);
+        InventoryOrgClient.OutletRoute outlet = inventoryOrgClient.requireOutlet(outletId);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(outlet.regionId(), outletId);
         StringBuilder sql = new StringBuilder("""
                 SELECT id, status, region_id, outlet_id, count_date, note, started_at, posted_at
                 FROM inventory.stock_count_session
@@ -335,7 +348,7 @@ public class StockCountService {
 
     @Transactional(readOnly = true)
     public StockCountSessionResponse readStockCountSession(FernPrincipal principal, Long id) {
-        Long outletId = jdbcTemplate.query("""
+        Long outletId = jdbcTemplate(null, null).query("""
                 SELECT outlet_id
                 FROM inventory.stock_count_session
                 WHERE id = :id
@@ -348,7 +361,7 @@ public class StockCountService {
     }
 
     public StockCountSessionResponse getStockCountSession(Long id) {
-        SessionProjection session = jdbcTemplate.query("""
+        SessionProjection session = jdbcTemplate(null, null).query("""
                 SELECT id, status, region_id, outlet_id, count_date, note, started_at, posted_at
                 FROM inventory.stock_count_session
                 WHERE id = :id
@@ -367,7 +380,7 @@ public class StockCountService {
         if (session == null) {
             throw new ResourceNotFoundException("Stock count session not found");
         }
-        List<StockCountLineResponse> lines = jdbcTemplate.query("""
+        List<StockCountLineResponse> lines = jdbcTemplate(null, null).query("""
                 SELECT ingredient_id, system_qty, actual_qty, variance_qty, note
                 FROM inventory.stock_count_line
                 WHERE stock_count_session_id = :sessionId
@@ -412,7 +425,7 @@ public class StockCountService {
     }
 
     private List<StockCountLineRecord> queryStockCountLines(Long sessionId) {
-        return jdbcTemplate.query("""
+        return jdbcTemplate(null, null).query("""
                 SELECT id, ingredient_id, system_qty, actual_qty, variance_qty, note
                 FROM inventory.stock_count_line
                 WHERE stock_count_session_id = :sessionId
@@ -428,7 +441,7 @@ public class StockCountService {
     }
 
     private Optional<BigDecimal> currentSystemQty(Long sessionId, Long ingredientId) {
-        return jdbcTemplate.query("""
+        return jdbcTemplate(null, null).query("""
                 SELECT system_qty
                 FROM inventory.stock_count_line
                 WHERE stock_count_session_id = :sessionId AND ingredient_id = :ingredientId
@@ -438,7 +451,7 @@ public class StockCountService {
     }
 
     private BigDecimal currentOnHand(Long outletId, Long ingredientId) {
-        BigDecimal result = jdbcTemplate.query("""
+        BigDecimal result = jdbcTemplate(null, null).query("""
                 SELECT qty_on_hand
                 FROM inventory.stock_balance
                 WHERE outlet_id = :outletId AND ingredient_id = :ingredientId
@@ -447,7 +460,7 @@ public class StockCountService {
     }
 
     private void updateLastCountDate(LocalDate countDate, Long outletId, Long ingredientId) {
-        jdbcTemplate.update("""
+        jdbcTemplate(null, null).update("""
                 UPDATE inventory.stock_balance
                 SET last_count_date = :countDate, updated_at = CURRENT_TIMESTAMP
                 WHERE outlet_id = :outletId AND ingredient_id = :ingredientId
@@ -455,7 +468,7 @@ public class StockCountService {
     }
 
     private StockCountSessionRecord requireStockCountSessionForUpdate(Long id) {
-        StockCountSessionRecord record = jdbcTemplate.query("""
+        StockCountSessionRecord record = jdbcTemplate(null, null).query("""
                 SELECT id, status, region_id, outlet_id, count_date
                 FROM inventory.stock_count_session
                 WHERE id = :id
@@ -547,6 +560,10 @@ public class StockCountService {
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException("Invalid stock count session status filter");
         }
+    }
+
+    private NamedParameterJdbcTemplate jdbcTemplate(Long regionId, Long outletId) {
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).jdbc();
     }
 
     private record StockCountSessionRecord(

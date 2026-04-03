@@ -991,6 +991,83 @@ class ProcurementServiceIntegrationTest {
     }
 
     @Test
+    void shouldRejectGoodsReceiptLineWhenIngredientDoesNotMatchPurchaseOrderLine() throws Exception {
+        IssuedPurchaseOrderFixture fixture = createIssuedPurchaseOrderFixture(
+                "SUP-GR-MISMATCH",
+                "Mismatch Supplier",
+                "5.0000"
+        );
+
+        mockMvc.perform(post("/goods-receipts")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "purchaseOrderId": %d,
+                                  "receiptTime": "2026-03-27T10:00:00Z",
+                                  "businessDate": "2026-03-27",
+                                  "lines": [
+                                    {
+                                      "purchaseOrderLineId": %d,
+                                      "ingredientId": 201,
+                                      "uomCode": "KG",
+                                      "qtyReceived": 3.0000,
+                                      "unitCost": 12.50
+                                    }
+                                  ]
+                                }
+                                """.formatted(fixture.purchaseOrderId(), fixture.purchaseOrderLineId())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Goods receipt line ingredient does not match purchase order line 1"));
+    }
+
+    @Test
+    void shouldRejectPostingGoodsReceiptThatWouldOverReceivePurchaseOrderLine() throws Exception {
+        IssuedPurchaseOrderFixture fixture = createIssuedPurchaseOrderFixture(
+                "SUP-GR-OVER",
+                "Over Receipt Supplier",
+                "5.0000"
+        );
+
+        Long firstReceiptId = createGoodsReceipt(
+                fixture.purchaseOrderId(),
+                fixture.purchaseOrderLineId(),
+                "4.0000",
+                "2026-03-27T09:00:00Z"
+        );
+        receiveGoodsReceipt(firstReceiptId);
+        postGoodsReceipt(firstReceiptId, "gr-over-batch-1");
+
+        Long secondReceiptId = createGoodsReceipt(
+                fixture.purchaseOrderId(),
+                fixture.purchaseOrderLineId(),
+                "2.0000",
+                "2026-03-27T11:00:00Z"
+        );
+        receiveGoodsReceipt(secondReceiptId);
+
+        mockMvc.perform(post("/goods-receipts/{id}/post", secondReceiptId)
+                        .header("Authorization", bearer())
+                        .header("Idempotency-Key", "gr-over-batch-2"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Goods receipt would over-receive purchase order line 1"));
+
+        BigDecimal qtyReceived = jdbcTemplate.queryForObject("""
+                SELECT qty_received
+                FROM procurement.purchase_order_line
+                WHERE id = ?
+                """, BigDecimal.class, fixture.purchaseOrderLineId());
+        String headerStatus = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM procurement.purchase_order
+                WHERE id = ?
+                """, String.class, fixture.purchaseOrderId());
+
+        assertThat(qtyReceived).isEqualByComparingTo("4.0000");
+        assertThat(headerStatus).isEqualTo("PARTIALLY_RECEIVED");
+    }
+
+    @Test
     void shouldTrackPartialGoodsReceiptsAcrossMultipleBatchesForSamePurchaseOrder() throws Exception {
         IssuedPurchaseOrderFixture fixture = createIssuedPurchaseOrderFixture(
                 "SUP-013",

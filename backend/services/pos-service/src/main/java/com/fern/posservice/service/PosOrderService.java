@@ -501,7 +501,7 @@ public class PosOrderService {
                 completedAt,
                 PosServiceNames.POS_SERVICE,
                 correlationId,
-                UUID.randomUUID().toString(),
+                saleCompletedIdempotencyKey(order.id()),
                 order.id(),
                 order.posSessionId(),
                 order.regionId(),
@@ -538,6 +538,10 @@ public class PosOrderService {
                 "payload", toJson(event),
                 "status", PosOutboxStatus.PENDING.name()
         ));
+    }
+
+    private String saleCompletedIdempotencyKey(Long saleOrderId) {
+        return PosEventTypes.SALE_COMPLETED + ":sale:" + saleOrderId;
     }
 
     private PricingSnapshot pricingSnapshotFromStoredOrder(OrderRecord order, List<SaleOrderLineResponse> lines) {

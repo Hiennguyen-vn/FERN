@@ -81,16 +81,8 @@ public class InventoryEventProjector {
                             && "SALE_USAGE".equals(event.reason())
                             && event.unitCost() != null
                             && event.qtyChange() != null) {
-                        BigDecimal cogsContribution = event.unitCost()
-                                .multiply(event.qtyChange().abs());
-                        support.jdbcTemplate().update("""
-                                UPDATE report.sales_fact
-                                SET cogs_amount = cogs_amount + :cogsContribution
-                                WHERE sale_order_id = :saleOrderId
-                                """, support.params(
-                                "cogsContribution", cogsContribution,
-                                "saleOrderId", Long.parseLong(event.sourceReferenceId())
-                        ));
+                        backfillSaleOrderCogs(Long.parseLong(event.sourceReferenceId()), event.unitCost()
+                                .multiply(event.qtyChange().abs()));
                     }
                     dailySummaryProjector.applyDelta(
                             event.eventId(),
@@ -107,6 +99,51 @@ public class InventoryEventProjector {
                     support.updateProjectionLag(event.occurredAt());
                 }
         );
+    }
+
+    private void backfillSaleOrderCogs(Long saleOrderId, BigDecimal cogsContribution) {
+        support.jdbcTemplate().update("""
+                WITH sale_lines AS (
+                    SELECT fact_id,
+                           line_number,
+                           COALESCE(net_amount, 0) AS net_amount,
+                           SUM(COALESCE(net_amount, 0)) OVER () AS total_net_amount,
+                           ROW_NUMBER() OVER (ORDER BY line_number, fact_id) AS row_num,
+                           COUNT(*) OVER () AS line_count
+                    FROM report.sales_fact
+                    WHERE sale_order_id = :saleOrderId
+                ),
+                proportional AS (
+                    SELECT fact_id,
+                           row_num,
+                           line_count,
+                           total_net_amount,
+                           CASE
+                               WHEN total_net_amount > 0 THEN ROUND((:cogsContribution * net_amount) / total_net_amount, 2)
+                               ELSE 0::numeric
+                           END AS rounded_share
+                    FROM sale_lines
+                ),
+                allocation AS (
+                    SELECT fact_id,
+                           CASE
+                               WHEN line_count = 1 THEN :cogsContribution
+                               WHEN total_net_amount > 0 AND row_num < line_count THEN rounded_share
+                               WHEN total_net_amount > 0 AND row_num = line_count THEN :cogsContribution
+                                   - COALESCE(SUM(CASE WHEN row_num < line_count THEN rounded_share ELSE 0 END) OVER (), 0)
+                               WHEN row_num = 1 THEN :cogsContribution
+                               ELSE 0::numeric
+                           END AS allocated_cogs
+                    FROM proportional
+                )
+                UPDATE report.sales_fact sales_fact
+                SET cogs_amount = sales_fact.cogs_amount + allocation.allocated_cogs
+                FROM allocation
+                WHERE sales_fact.fact_id = allocation.fact_id
+                """, support.params(
+                "saleOrderId", saleOrderId,
+                "cogsContribution", cogsContribution
+        ));
     }
 
     public void ingestWaste(String payload, WasteRecordPostedEvent event) {

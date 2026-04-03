@@ -7,7 +7,10 @@ import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.DownstreamUnavailableException;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.ForbiddenException;
+import com.fern.platform.common.OperationalShardRegistry;
 import com.fern.platform.common.PermissionCodes;
+import com.fern.platform.common.RouteKey;
+import com.fern.platform.common.ShardResolver;
 import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.contracts.InventoryAdjustmentPostedEvent;
 import com.fern.platform.observability.CorrelationId;
@@ -30,30 +33,33 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class StockAdjustmentService {
-    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final InventoryAuthorizer inventoryAuthorizer;
     private final InventoryRepository inventoryRepository;
     private final InventoryOutboxService inventoryOutboxService;
     private final InventoryOrgClient inventoryOrgClient;
     private final Clock clock;
     private final Counter inventoryAdjustmentFailureCounter;
+    private final OperationalShardRegistry operationalShardRegistry;
+    private final ShardResolver shardResolver;
 
     public StockAdjustmentService(
-            NamedParameterJdbcTemplate jdbcTemplate,
             InventoryAuthorizer inventoryAuthorizer,
             InventoryRepository inventoryRepository,
             InventoryOutboxService inventoryOutboxService,
             InventoryOrgClient inventoryOrgClient,
             Clock clock,
-            MeterRegistry meterRegistry
+            MeterRegistry meterRegistry,
+            OperationalShardRegistry operationalShardRegistry,
+            ShardResolver shardResolver
     ) {
-        this.jdbcTemplate = jdbcTemplate;
         this.inventoryAuthorizer = inventoryAuthorizer;
         this.inventoryRepository = inventoryRepository;
         this.inventoryOutboxService = inventoryOutboxService;
         this.inventoryOrgClient = inventoryOrgClient;
         this.clock = clock;
         this.inventoryAdjustmentFailureCounter = Counter.builder("fern_inventory_adjustment_failures_total").register(meterRegistry);
+        this.operationalShardRegistry = operationalShardRegistry;
+        this.shardResolver = shardResolver;
     }
 
     @Transactional
@@ -106,6 +112,7 @@ public class StockAdjustmentService {
     private StockAdjustmentResponse postStockAdjustmentInternal(FernPrincipal principal, Long id, String idempotencyKey) {
         requireIdempotencyKey(idempotencyKey);
         StockAdjustmentRecord record = requireStockAdjustmentRecordForUpdate(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(record.regionId(), record.outletId());
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_ADJUSTMENT_WRITE);
         Long duplicateId = inventoryRepository.findIdempotentResourceId("stock-adjustment-post", idempotencyKey);
         if (duplicateId != null) {
@@ -170,6 +177,7 @@ public class StockAdjustmentService {
     @Transactional
     public StockAdjustmentResponse cancelStockAdjustment(FernPrincipal principal, Long id) {
         StockAdjustmentRecord record = requireStockAdjustmentRecordForUpdate(id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(record.regionId(), record.outletId());
         inventoryAuthorizer.requireOutletAccess(principal, record.outletId(), PermissionCodes.INVENTORY_ADJUSTMENT_WRITE);
         if (!StockAdjustmentStatus.DRAFT.name().equals(record.status())) {
             throw new ConflictException("Only draft stock adjustments can be cancelled");
@@ -191,7 +199,7 @@ public class StockAdjustmentService {
     }
 
     public StockAdjustmentResponse getStockAdjustment(Long id) {
-        StockAdjustmentResponse response = jdbcTemplate.query("""
+        StockAdjustmentResponse response = jdbcTemplate(null, null).query("""
                 SELECT id, status, region_id, outlet_id, ingredient_id, adjustment_direction, qty,
                        business_date, reason, note, inventory_transaction_id, posted_at
                 FROM inventory.stock_adjustment
@@ -244,7 +252,7 @@ public class StockAdjustmentService {
     }
 
     private StockAdjustmentRecord requireStockAdjustmentRecordForUpdate(Long id) {
-        StockAdjustmentRecord record = jdbcTemplate.query("""
+        StockAdjustmentRecord record = jdbcTemplate(null, null).query("""
                 SELECT id, status, region_id, outlet_id, ingredient_id, adjustment_direction, qty, business_date, reason, note
                 FROM inventory.stock_adjustment
                 WHERE id = :id
@@ -311,6 +319,10 @@ public class StockAdjustmentService {
 
     private String adjustmentPostedIdempotencyKey(Long stockAdjustmentId) {
         return "inventory.adjustment.posted:adjustment:" + stockAdjustmentId;
+    }
+
+    private NamedParameterJdbcTemplate jdbcTemplate(Long regionId, Long outletId) {
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).jdbc();
     }
 
     private record StockAdjustmentRecord(

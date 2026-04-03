@@ -61,6 +61,12 @@ public class OrgServiceBeans {
     }
 
     @Bean
+    @Qualifier("inventoryRestClient")
+    RestClient inventoryRestClient(@Qualifier("inventoryClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createRestClient(spec);
+    }
+
+    @Bean
     @Qualifier("financeRestClient")
     RestClient financeRestClient(@Qualifier("financeClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
         return factory.createRestClient(spec);
@@ -75,6 +81,12 @@ public class OrgServiceBeans {
     @Bean
     @Qualifier("procurementCircuitBreaker")
     CircuitBreaker procurementCircuitBreaker(@Qualifier("procurementClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
+        return factory.createCircuitBreaker(spec);
+    }
+
+    @Bean
+    @Qualifier("inventoryCircuitBreaker")
+    CircuitBreaker inventoryCircuitBreaker(@Qualifier("inventoryClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
         return factory.createCircuitBreaker(spec);
     }
 
@@ -100,6 +112,12 @@ public class OrgServiceBeans {
     @Qualifier("procurementClientSpec")
     FernDownstreamClientSpec procurementClientSpec(OrgClientProperties properties) {
         return new FernDownstreamClientSpec(CALLER_SERVICE, "procurement-service", "procurement", properties.getProcurement());
+    }
+
+    @Bean
+    @Qualifier("inventoryClientSpec")
+    FernDownstreamClientSpec inventoryClientSpec(OrgClientProperties properties) {
+        return new FernDownstreamClientSpec(CALLER_SERVICE, "inventory-service", "inventory", properties.getInventory());
     }
 
     @Bean

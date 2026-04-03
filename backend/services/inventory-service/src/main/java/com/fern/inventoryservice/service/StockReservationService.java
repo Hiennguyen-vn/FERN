@@ -149,27 +149,31 @@ public class StockReservationService {
         if (StockReservationStatus.COMMITTED.name().equals(reservation.status())) {
             return;
         }
-        Map<Long, ReservationAggregate> aggregates = aggregateUsageFromRecipeItems(event.recipeUsageItems());
-        lockReservationBalances(event.outletId(), aggregates.values().stream()
+        if (!StockReservationStatus.RESERVED.name().equals(reservation.status())) {
+            throw new ConflictException("Reservation is not active");
+        }
+        verifyReservationMatchesEvent(reservation, event);
+        Map<Long, ReservationAggregate> aggregates = aggregateUsageFromReservationLines(queryReservationLines(reservationId));
+        lockReservationBalances(reservation.outletId(), aggregates.values().stream()
                 .map(ReservationAggregate::ingredientId)
                 .toList());
         Instant now = Instant.now(clock);
         for (ReservationAggregate aggregate : aggregates.values()) {
-            BigDecimal unitCost = inventoryRepository.currentUnitCost(event.outletId(), aggregate.ingredientId());
+            BigDecimal unitCost = inventoryRepository.currentUnitCost(reservation.outletId(), aggregate.ingredientId());
             inventoryRepository.appendTransaction(
                     event.regionId(),
-                    event.outletId(),
+                    reservation.outletId(),
                     aggregate.ingredientId(),
                     aggregate.qty().negate(),
-                    event.businessDate(),
+                    reservation.businessDate(),
                     InventoryTxnType.SALE_USAGE.name(),
                     unitCost,
                     "SALE_ORDER",
                     event.saleOrderId().toString(),
                     event.completedByUserId()
             );
-            commitReservationDelta(event.outletId(), aggregate.ingredientId(), aggregate.qty());
-            enqueueSaleUsageEvent(event, aggregate, unitCost, now);
+            commitReservationDelta(reservation.outletId(), aggregate.ingredientId(), aggregate.qty());
+            enqueueSaleUsageEvent(event, reservation.businessDate(), aggregate, unitCost, now);
         }
         jdbcTemplate.update("""
                 UPDATE inventory.stock_reservation
@@ -206,6 +210,34 @@ public class StockReservationService {
                 .map(item -> new SaleReservationItem(item.ingredientId(), item.ingredientCode(), item.ingredientName(), item.uomCode(), item.qty()))
                 .toList();
         return aggregateUsage(reservationItems);
+    }
+
+    private Map<Long, ReservationAggregate> aggregateUsageFromReservationLines(List<ReservationLineRecord> reservationLines) {
+        if (reservationLines.isEmpty()) {
+            throw new ConflictException("Reservation does not contain any reserved lines");
+        }
+        Map<Long, ReservationAggregate> aggregates = new LinkedHashMap<>();
+        for (ReservationLineRecord line : reservationLines) {
+            aggregates.compute(line.ingredientId(), (ingredientId, existing) -> {
+                if (existing == null) {
+                    return new ReservationAggregate(
+                            line.ingredientId(),
+                            line.ingredientCode(),
+                            line.ingredientName(),
+                            line.uomCode(),
+                            line.qty()
+                    );
+                }
+                return new ReservationAggregate(
+                        existing.ingredientId(),
+                        Optional.ofNullable(existing.ingredientCode()).orElse(line.ingredientCode()),
+                        Optional.ofNullable(existing.ingredientName()).orElse(line.ingredientName()),
+                        Optional.ofNullable(existing.uomCode()).orElse(line.uomCode()),
+                        existing.qty().add(line.qty())
+                );
+            });
+        }
+        return aggregates;
     }
 
     private void applyReservationDelta(Long outletId, Long ingredientId, BigDecimal qtyReservedDelta) {
@@ -252,9 +284,11 @@ public class StockReservationService {
                     qty_available = (qty_on_hand - :qty) - (qty_reserved - :qty),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE outlet_id = :outletId AND ingredient_id = :ingredientId
+                  AND qty_on_hand >= :qty
+                  AND qty_reserved >= :qty
                 """, inventoryRepository.params("qty", qty, "outletId", outletId, "ingredientId", ingredientId));
         if (updated == 0) {
-            throw new ConflictException("Stock balance not found for ingredient " + ingredientId);
+            throw new ConflictException("Reservation commit failed for ingredient " + ingredientId);
         }
     }
 
@@ -302,14 +336,26 @@ public class StockReservationService {
 
     private List<ReservationLineRecord> queryReservationLines(Long reservationId) {
         return jdbcTemplate.query("""
-                SELECT ingredient_id, qty
+                SELECT ingredient_id, ingredient_code, ingredient_name, uom_code, qty
                 FROM inventory.stock_reservation_line
                 WHERE reservation_id = :reservationId
                 ORDER BY ingredient_id
                 """, inventoryRepository.params("reservationId", reservationId), (rs, rowNum) -> new ReservationLineRecord(
                 rs.getLong("ingredient_id"),
+                rs.getString("ingredient_code"),
+                rs.getString("ingredient_name"),
+                rs.getString("uom_code"),
                 rs.getBigDecimal("qty")
         ));
+    }
+
+    private void verifyReservationMatchesEvent(ReservationRecord reservation, PosSaleCompletedEvent event) {
+        if (!reservation.outletId().equals(event.outletId())) {
+            throw new ConflictException("Reservation outlet does not match pos.sale.completed outlet");
+        }
+        if (!reservation.sourceOrderId().equals(event.saleOrderId())) {
+            throw new ConflictException("Reservation source order does not match pos.sale.completed sale order");
+        }
     }
 
     private void clearReservationLines(Long reservationId) {
@@ -375,11 +421,20 @@ public class StockReservationService {
 
     private record ReservationLineRecord(
             Long ingredientId,
+            String ingredientCode,
+            String ingredientName,
+            String uomCode,
             BigDecimal qty
     ) {
     }
 
-    private void enqueueSaleUsageEvent(PosSaleCompletedEvent event, ReservationAggregate aggregate, BigDecimal unitCost, Instant now) {
+    private void enqueueSaleUsageEvent(
+            PosSaleCompletedEvent event,
+            LocalDate businessDate,
+            ReservationAggregate aggregate,
+            BigDecimal unitCost,
+            Instant now
+    ) {
         String idempotencyKey = "inventory.sale_usage.posted:sale_order:" + event.saleOrderId() + ":ingredient:" + aggregate.ingredientId();
         InventoryAdjustmentPostedEvent usageEvent = new InventoryAdjustmentPostedEvent(
                 UUID.randomUUID().toString(),
@@ -392,7 +447,7 @@ public class StockReservationService {
                 event.regionId(),
                 event.outletId(),
                 aggregate.ingredientId(),
-                event.businessDate(),
+                businessDate,
                 now,
                 event.completedByUserId(),
                 "OUT",

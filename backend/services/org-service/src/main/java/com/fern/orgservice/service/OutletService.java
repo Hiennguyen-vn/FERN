@@ -29,6 +29,7 @@ public class OutletService {
     private final ScopeVersionService scopeVersionService;
     private final OrgOutboxService outboxService;
     private final OrgPosClient orgPosClient;
+    private final OrgInventoryClient orgInventoryClient;
     private final OrgProcurementClient orgProcurementClient;
     private final OrgFinanceClient orgFinanceClient;
     private final NamedParameterJdbcTemplate jdbcTemplate;
@@ -42,6 +43,7 @@ public class OutletService {
             ScopeVersionService scopeVersionService,
             OrgOutboxService outboxService,
             OrgPosClient orgPosClient,
+            OrgInventoryClient orgInventoryClient,
             OrgProcurementClient orgProcurementClient,
             OrgFinanceClient orgFinanceClient,
             NamedParameterJdbcTemplate jdbcTemplate,
@@ -54,6 +56,7 @@ public class OutletService {
         this.scopeVersionService = scopeVersionService;
         this.outboxService = outboxService;
         this.orgPosClient = orgPosClient;
+        this.orgInventoryClient = orgInventoryClient;
         this.orgProcurementClient = orgProcurementClient;
         this.orgFinanceClient = orgFinanceClient;
         this.jdbcTemplate = jdbcTemplate;
@@ -214,6 +217,14 @@ public class OutletService {
         }
         if (orgPosClient.hasOpenSessions(entity.getId(), principal)) {
             throw new ConflictException("Cannot close outlet while open POS sessions still exist");
+        }
+        OrgInventoryClient.OutletCloseCheck inventoryCheck = orgInventoryClient.getOutletCloseCheck(entity.getId(), principal);
+        if (inventoryCheck.hasBlockingOperations()) {
+            throw new ConflictException(
+                    "Cannot close outlet while inventory workflows remain open: "
+                            + "reservations=" + inventoryCheck.blockingReservations()
+                            + ", stockCountSessions=" + inventoryCheck.blockingStockCountSessions()
+            );
         }
         OrgProcurementClient.OutletCloseCheck procurementCheck = orgProcurementClient.getOutletCloseCheck(entity.getId(), principal);
         if (procurementCheck.hasBlockingDocuments()) {

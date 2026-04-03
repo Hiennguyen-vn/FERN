@@ -25,6 +25,18 @@ record PurchaseOrderRecord(
 ) {
 }
 
+record PurchaseOrderLineRecord(
+        Long id,
+        Long purchaseOrderId,
+        Integer lineNumber,
+        Long ingredientId,
+        String uomCode,
+        BigDecimal qtyOrdered,
+        BigDecimal qtyReceived,
+        String status
+) {
+}
+
 record GoodsReceiptRecord(
         Long id,
         String receiptNumber,
@@ -58,6 +70,14 @@ record SupplierInvoiceRecord(
         String status,
         String note,
         Instant approvedAt
+) {
+}
+
+record GoodsReceiptLineAggregate(
+        Long purchaseOrderLineId,
+        Long ingredientId,
+        String uomCode,
+        BigDecimal qtyReceived
 ) {
 }
 

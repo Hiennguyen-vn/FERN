@@ -165,6 +165,14 @@ export function PurchaseOrderListPage() {
     () => [...purchaseOrders].sort((left, right) => toAmount(right.totalAmount) - toAmount(left.totalAmount)).slice(0, 3),
     [purchaseOrders],
   )
+  const pendingApprovalOrders = useMemo(
+    () =>
+      purchaseOrders
+        .filter((order) => order.status === 'SUBMITTED')
+        .sort((left, right) => toAmount(right.totalAmount) - toAmount(left.totalAmount))
+        .slice(0, 4),
+    [purchaseOrders],
+  )
 
   const supplierPulseRows = useMemo(() => {
     const supplierStats = new Map<
@@ -213,6 +221,13 @@ export function PurchaseOrderListPage() {
       .sort((left, right) => right.totalSpend - left.totalSpend)
       .slice(0, 6)
   }, [purchaseOrders])
+  const supplierWatchlist = useMemo(
+    () =>
+      [...supplierPulseRows]
+        .sort((left, right) => right.lateOrders - left.lateOrders || right.openOrders - left.openOrders)
+        .slice(0, 4),
+    [supplierPulseRows],
+  )
 
   const supplierPulseColumns = useMemo<Array<DataTableColumn<(typeof supplierPulseRows)[number]>>>(
     () => [
@@ -399,6 +414,64 @@ export function PurchaseOrderListPage() {
         </article>
       </section>
 
+      <section className="surface-panel procurement-command-stage">
+        <div className="page-heading procurement-command-copy">
+          <p className="workspace-breadcrumb">Regional Operations / Procurement</p>
+          <div className="procurement-command-meta">
+            <span className="action-hub-persona-badge">Approval desk</span>
+            <span className="meta-chip">{purchaseOrders.length} POs in slice</span>
+            <span className="meta-chip">{supplierPulseRows.length} active suppliers</span>
+          </div>
+          <strong className="action-summary-title">Current procurement slice</strong>
+          <p className="muted-text">
+            Use the live queue, supplier pulse, and trend view to decide which purchase orders need finance review,
+            issue follow-up, or receipt coordination.
+          </p>
+          <div className="meta-grid">
+            <span>Supplier filter: {supplierId ? `#${supplierId}` : 'All suppliers'}</span>
+            <span>Outlet filter: {outletId ? `#${outletId}` : 'All outlets'}</span>
+            <span>Status filter: {statusOptions.find((option) => option.value === status)?.label ?? 'All statuses'}</span>
+            <span>Approval throughput: {dashboardMetrics.throughputRate}%</span>
+          </div>
+        </div>
+
+        <aside className="procurement-focus-panel">
+          <p className="eyebrow">Approval focus</p>
+          <strong className="action-summary-title">
+            {pendingApprovalOrders.length > 0 ? `${pendingApprovalOrders.length} approvals waiting` : 'No approvals waiting'}
+          </strong>
+          <p className="muted-text">
+            {pendingApprovalOrders.length > 0
+              ? 'Submitted orders are shown here first so regional finance can jump directly into the highest-value review items.'
+              : 'The current filter set has no submitted orders waiting for review.'}
+          </p>
+          <div className="procurement-focus-list">
+            {pendingApprovalOrders.length > 0 ? (
+              pendingApprovalOrders.map((order) => (
+                <article className="queue-item" key={order.id}>
+                  <div className="queue-item-head">
+                    <Link className="queue-item-title" to={`/procurement/purchase-orders/${order.id}`}>
+                      {order.poNumber}
+                    </Link>
+                    <StatusBadge status={order.status} />
+                  </div>
+                  <div className="cell-stack">
+                    <strong>{supplierLookup.get(order.supplierId)?.name ?? `Supplier #${order.supplierId}`}</strong>
+                    <span className="cell-subtitle">
+                      Outlet #{order.outletId} · {formatAmount(toAmount(order.totalAmount))}
+                    </span>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="action-hub-empty">
+                <p className="muted-text">No submitted orders need approval in this slice.</p>
+              </div>
+            )}
+          </div>
+        </aside>
+      </section>
+
       <section className="workspace-filter-bar" aria-label="Procurement filters">
         <div className="workspace-filter-field workspace-filter-field-grow">
           <span className="eyebrow">Outlet</span>
@@ -530,6 +603,43 @@ export function PurchaseOrderListPage() {
                     View full queue
                   </Link>
                 ) : null}
+              </section>
+
+              <section className="surface-panel procurement-watch-panel">
+                <div className="page-header">
+                  <div>
+                    <h2 className="card-title">Supplier Watchlist</h2>
+                    <p className="muted-text">Suppliers that currently need follow-up based on late or open orders.</p>
+                  </div>
+                </div>
+                <div className="procurement-watch-list">
+                  {supplierWatchlist.length > 0 ? (
+                    supplierWatchlist.map((row) => {
+                      const supplier = supplierLookup.get(row.supplierId)
+                      const tone = row.lateOrders > 0 ? 'danger' : row.openOrders > 2 ? 'warning' : 'success'
+                      const label = row.lateOrders > 0 ? 'Late delivery risk' : row.openOrders > 2 ? 'High load' : 'Healthy'
+
+                      return (
+                        <article className="procurement-watch-row" key={row.supplierId}>
+                          <div className="procurement-watch-copy">
+                            <strong>{supplier?.name ?? `Supplier #${row.supplierId}`}</strong>
+                            <span className="muted-text">
+                              {formatAmount(row.totalSpend)} volume · {row.averageLeadTime == null ? 'Open lead time' : `${row.averageLeadTime.toFixed(1)} day lead`}
+                            </span>
+                          </div>
+                          <span className="health-line">
+                            <span className={`health-dot ${tone}`} />
+                            {label}
+                          </span>
+                        </article>
+                      )
+                    })
+                  ) : (
+                    <div className="action-hub-empty">
+                      <p className="muted-text">No supplier risks are active in this procurement slice.</p>
+                    </div>
+                  )}
+                </div>
               </section>
             </aside>
           </section>

@@ -86,7 +86,7 @@ describe('ReportsDashboardPage', () => {
     renderWithProviders(<ReportsDashboardPage />)
 
     expect(screen.getByText(/create-only mode/i)).toBeInTheDocument()
-    expect(screen.getByText('Export jobs')).toBeInTheDocument()
+    expect(screen.getAllByText('Export jobs').length).toBeGreaterThan(0)
     expect(screen.queryByText('Revenue report')).not.toBeInTheDocument()
     expect(screen.queryByText('Export activity')).not.toBeInTheDocument()
   })

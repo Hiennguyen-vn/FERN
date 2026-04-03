@@ -55,15 +55,20 @@ public class PosSessionService {
         if (!outlet.regionId().equals(request.regionId())) {
             throw new ConflictException("Outlet route does not match requested region");
         }
+        PosOrgClient.RegionRoute region = posOrgClient.requireRegion(outlet.regionId());
+        if (!region.currencyCode().equalsIgnoreCase(request.currencyCode())) {
+            throw new ConflictException("Session currency does not match outlet region currency");
+        }
         ensureOutletOperational(outlet, request.businessDate());
         TransactionTemplate transactionTemplate = transactionTemplate(outlet.regionId(), request.outletId());
-        return transactionTemplate.execute(status -> openSessionTx(principal, request, outlet));
+        return transactionTemplate.execute(status -> openSessionTx(principal, request, outlet, region));
     }
 
     private PosSessionOpenResult openSessionTx(
             FernPrincipal principal,
             OpenSessionRequest request,
-            PosOrgClient.OutletRoute outlet
+            PosOrgClient.OutletRoute outlet,
+            PosOrgClient.RegionRoute region
     ) {
         NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(outlet.regionId(), request.outletId());
         lockOpenSessionScope(jdbcTemplate, request.outletId());
@@ -86,7 +91,7 @@ public class PosSessionService {
                 "sessionCode", codeGenerator.nextSessionCode(),
                 "regionId", outlet.regionId(),
                 "outletId", request.outletId(),
-                "currencyCode", request.currencyCode(),
+                "currencyCode", region.currencyCode(),
                 "cashierUserId", principal.userId(),
                 "terminalId", request.terminalId(),
                 "openedAt", clock.instant(),

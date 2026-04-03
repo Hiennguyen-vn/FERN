@@ -1,14 +1,17 @@
 import { useState } from 'react'
+import { AppIcon } from '@app/components/AppIcon'
 import { DashboardLayout } from '@shared/layouts/DashboardLayout'
 import {
   Badge,
   Button,
   Card,
+  EntityHeader,
   EmptyState,
   ErrorState,
   FormActions,
   Input,
   PermissionDeniedInline,
+  ReadonlyBanner,
 } from '@design-system/index'
 import { usePageTitle } from '@shared/hooks/usePageTitle'
 import { usePrincipal } from '@core/auth/auth.selectors'
@@ -338,85 +341,279 @@ export function FinanceConfigPage() {
     )
   }
 
+  const activeTabLabel = activeTab === 'numbering-rules' ? 'Numbering Rules' : 'System Policies'
+
   return (
     <DashboardLayout
       description="Configure numbering rules for document codes and system-wide finance policies."
       title="Finance Configuration"
     >
-      <div className="page-stack">
-        {/* Tab navigation */}
-        <div className="finance-config-tabs">
-          {(
-            [
-              { key: 'numbering-rules', label: 'Numbering Rules' },
-              { key: 'system-policies', label: 'System Policies' },
-            ] as { key: ConfigTab; label: string }[]
-          ).map((tab) => (
-            <button
-              className={`finance-config-tab ${activeTab === tab.key ? 'is-active' : ''}`}
-              id={`tab-${tab.key}`}
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              type="button"
-            >
-              {tab.label}
-            </button>
-          ))}
+      <ReadonlyBanner
+        message={
+          canWrite
+            ? 'Finance configuration đang ở chế độ write-enabled. Mọi thay đổi numbering rule và system policy sẽ tác động trực tiếp lên workflow vận hành.'
+            : 'Finance configuration hiện là read-only. Cần finance.config.write để chỉnh numbering rules hoặc policy values.'
+        }
+      />
+
+      <EntityHeader
+        eyebrow="Finance / Configuration"
+        metadata={
+          <>
+            <span>Active workspace: {activeTabLabel}</span>
+            <span>Document types: {DOCUMENT_TYPES.length}</span>
+            <span>Policy keys: {POLICY_KEYS.length}</span>
+            <span>Edit access: {canWrite ? 'Write enabled' : 'Read only'}</span>
+          </>
+        }
+        title="Configuration control room"
+      />
+
+      <section className="surface-panel command-stage" aria-label="Finance configuration command stage">
+        <div className="command-stage-copy">
+          <div className="command-stage-meta">
+            <span className="meta-chip">Admin workspace</span>
+            <span className={canWrite ? 'meta-chip-success' : 'meta-chip'}>{canWrite ? 'Write enabled' : 'Read only'}</span>
+            <span className="meta-chip">{activeTabLabel}</span>
+          </div>
+          <div className="state-panel-heading">
+            <p className="eyebrow">Finance / Configuration</p>
+            <strong className="action-summary-title">Govern numbering and policy defaults</strong>
+            <p className="muted-text">
+              Keep document sequencing, JSON policies, and change access visible from one finance
+              control room so operational rules stay consistent across modules.
+            </p>
+          </div>
+          <div className="meta-grid">
+            <span>Workspace tab: {activeTabLabel}</span>
+            <span>Editable document rules: {DOCUMENT_TYPES.length}</span>
+            <span>System policy keys: {POLICY_KEYS.length}</span>
+            <span>Change mode: {canWrite ? 'Direct update' : 'Review only'}</span>
+          </div>
+        </div>
+        <aside className="command-stage-side">
+          <div className="command-stage-note">
+            <span className="eyebrow">Governance focus</span>
+            <strong>High-impact finance defaults</strong>
+            <p>
+              Surface the active rule set, write permissions, and JSON policy posture before editing
+              values that shape numbering or approval behavior.
+            </p>
+          </div>
+          <div className="command-support-list">
+            <article className="command-support-item">
+              <div className="command-support-copy">
+                <strong>Current tab</strong>
+                <span className="muted-text">The active area of the configuration workspace.</span>
+              </div>
+              <div className="command-support-stack">
+                <span className="command-support-metric">{activeTabLabel}</span>
+              </div>
+            </article>
+            <article className="command-support-item">
+              <div className="command-support-copy">
+                <strong>Write access</strong>
+                <span className="muted-text">Controls whether rule and policy editors can be opened.</span>
+              </div>
+              <div className="command-support-stack">
+                <span className={canWrite ? 'meta-chip-success' : 'meta-chip'}>
+                  {canWrite ? 'Writable' : 'Read-only'}
+                </span>
+              </div>
+            </article>
+            <article className="command-support-item">
+              <div className="command-support-copy">
+                <strong>Governed surfaces</strong>
+                <span className="muted-text">Numbering rules plus system-wide policy objects.</span>
+              </div>
+              <div className="command-support-stack">
+                <span className="command-support-metric">{DOCUMENT_TYPES.length + POLICY_KEYS.length}</span>
+              </div>
+            </article>
+          </div>
+        </aside>
+      </section>
+
+      <section className="workspace-stats-grid" aria-label="Finance configuration summary">
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="tag" />
+            </span>
+            <span className="workspace-stat-badge">Rules</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Document numbering rules</span>
+            <strong className="workspace-stat-value">{DOCUMENT_TYPES.length}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="data_object" />
+            </span>
+            <span className="workspace-stat-badge">Policies</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">System policy keys</span>
+            <strong className="workspace-stat-value">{POLICY_KEYS.length}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="settings" />
+            </span>
+            <span className="workspace-stat-badge">Workspace</span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Active tab</span>
+            <strong className="workspace-stat-value">{activeTabLabel}</strong>
+          </div>
+        </article>
+        <article className="workspace-stat-card warning">
+          <div className="workspace-stat-topline">
+            <span className="workspace-stat-icon">
+              <AppIcon filled name="admin_panel_settings" />
+            </span>
+            <span className={canWrite ? 'workspace-stat-badge success' : 'workspace-stat-badge warning'}>
+              Access
+            </span>
+          </div>
+          <div className="compact-stack">
+            <span className="workspace-stat-label">Editor mode</span>
+            <strong className="workspace-stat-value">{canWrite ? 'Writable' : 'Review only'}</strong>
+          </div>
+        </article>
+      </section>
+
+      <div className="surface-grid">
+        <div className="surface-grid-main">
+          <section className="surface-panel command-table-stack">
+            <div className="state-panel-heading">
+              <span className="eyebrow">Workspace tabs</span>
+              <h2 className="card-title">Configuration views</h2>
+              <p className="muted-text">
+                Switch between numbering rules and JSON-backed policies without leaving the finance
+                control room.
+              </p>
+            </div>
+            <div className="finance-config-tabs">
+              {(
+                [
+                  { key: 'numbering-rules', label: 'Numbering Rules' },
+                  { key: 'system-policies', label: 'System Policies' },
+                ] as { key: ConfigTab; label: string }[]
+              ).map((tab) => (
+                <button
+                  className={`finance-config-tab ${activeTab === tab.key ? 'is-active' : ''}`}
+                  id={`tab-${tab.key}`}
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  type="button"
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {activeTab === 'numbering-rules' && (
+            <Card title="Document Numbering Rules">
+              <p className="muted-text finance-config-note">
+                Configure prefix, sequence, and format patterns for document codes (payroll runs, invoices, etc.).
+              </p>
+              <div className="finance-config-table-wrap">
+                <table className="finance-config-table">
+                  <thead>
+                    <tr className="finance-config-head">
+                      <th className="finance-config-header-cell">Document Type</th>
+                      <th className="finance-config-header-cell">Prefix</th>
+                      <th className="finance-config-header-cell">Next #</th>
+                      <th className="finance-config-header-cell">Format Pattern</th>
+                      <th className="finance-config-header-cell">Status</th>
+                      <th className="finance-config-header-cell">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {DOCUMENT_TYPES.map((dt) => (
+                      <NumberingRuleRow canWrite={canWrite} documentType={dt} key={dt} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
+          {activeTab === 'system-policies' && (
+            <Card title="System Policies">
+              <p className="muted-text finance-config-note">
+                Manage system-wide policies. Policy values are stored as JSON.
+              </p>
+              <div className="finance-config-table-wrap">
+                <table className="finance-config-table">
+                  <thead>
+                    <tr className="finance-config-head">
+                      <th className="finance-config-header-cell">Policy Key</th>
+                      <th className="finance-config-header-cell">Value</th>
+                      <th className="finance-config-header-cell">Description</th>
+                      <th className="finance-config-header-cell">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {POLICY_KEYS.map((key) => (
+                      <SystemPolicyRow canWrite={canWrite} key={key} policyKey={key} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
         </div>
 
-        {/* Numbering Rules Tab */}
-        {activeTab === 'numbering-rules' && (
-          <Card title="Document Numbering Rules">
-            <p className="muted-text finance-config-note">
-              Configure prefix, sequence, and format patterns for document codes (payroll runs, invoices, etc.).
-            </p>
-            <div className="finance-config-table-wrap">
-              <table className="finance-config-table">
-                <thead>
-                  <tr className="finance-config-head">
-                    <th className="finance-config-header-cell">Document Type</th>
-                    <th className="finance-config-header-cell">Prefix</th>
-                    <th className="finance-config-header-cell">Next #</th>
-                    <th className="finance-config-header-cell">Format Pattern</th>
-                    <th className="finance-config-header-cell">Status</th>
-                    <th className="finance-config-header-cell">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {DOCUMENT_TYPES.map((dt) => (
-                    <NumberingRuleRow canWrite={canWrite} documentType={dt} key={dt} />
-                  ))}
-                </tbody>
-              </table>
+        <aside className="surface-grid-side">
+          <section className="surface-panel command-table-stack">
+            <div className="state-panel-heading">
+              <span className="eyebrow">Change guidance</span>
+              <h2 className="card-title">Admin notes</h2>
+              <p className="muted-text">
+                High-impact finance settings should be changed deliberately and reviewed with the
+                current workspace context in view.
+              </p>
             </div>
-          </Card>
-        )}
-
-        {/* System Policies Tab */}
-        {activeTab === 'system-policies' && (
-          <Card title="System Policies">
-            <p className="muted-text finance-config-note">
-              Manage system-wide policies. Policy values are stored as JSON.
-            </p>
-            <div className="finance-config-table-wrap">
-              <table className="finance-config-table">
-                <thead>
-                  <tr className="finance-config-head">
-                    <th className="finance-config-header-cell">Policy Key</th>
-                    <th className="finance-config-header-cell">Value</th>
-                    <th className="finance-config-header-cell">Description</th>
-                    <th className="finance-config-header-cell">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {POLICY_KEYS.map((key) => (
-                    <SystemPolicyRow canWrite={canWrite} key={key} policyKey={key} />
-                  ))}
-                </tbody>
-              </table>
+            <div className="command-support-list">
+              <article className="command-support-item">
+                <div className="command-support-copy">
+                  <strong>Numbering patterns</strong>
+                  <span className="muted-text">Use stable prefixes and sequence patterns to keep downstream references readable.</span>
+                </div>
+                <div className="command-support-stack">
+                  <span className="meta-chip">Structured</span>
+                </div>
+              </article>
+              <article className="command-support-item">
+                <div className="command-support-copy">
+                  <strong>Policy values</strong>
+                  <span className="muted-text">System policies accept JSON, so malformed payloads should be avoided before save.</span>
+                </div>
+                <div className="command-support-stack">
+                  <span className="meta-chip">{activeTab === 'system-policies' ? 'JSON focus' : 'Available'}</span>
+                </div>
+              </article>
+              <article className="command-support-item">
+                <div className="command-support-copy">
+                  <strong>Write authority</strong>
+                  <span className="muted-text">Editors only open when the finance configuration write permission is present.</span>
+                </div>
+                <div className="command-support-stack">
+                  <span className={canWrite ? 'meta-chip-success' : 'meta-chip'}>
+                    {canWrite ? 'Granted' : 'Restricted'}
+                  </span>
+                </div>
+              </article>
             </div>
-          </Card>
-        )}
+          </section>
+        </aside>
       </div>
     </DashboardLayout>
   )

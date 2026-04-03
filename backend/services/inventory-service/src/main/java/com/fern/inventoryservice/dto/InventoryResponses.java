@@ -102,4 +102,12 @@ public final class InventoryResponses {
             Instant postedAt
     ) {
     }
+
+    public record OutletCloseCheckResponse(
+            Long outletId,
+            long blockingReservations,
+            long blockingStockCountSessions,
+            boolean hasBlockingOperations
+    ) {
+    }
 }

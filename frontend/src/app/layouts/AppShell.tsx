@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { AppIcon } from '@app/components/AppIcon'
 import { logout } from '@core/auth/auth.service'
 import { useAuthStore } from '@core/auth/auth.store'
@@ -37,6 +37,7 @@ function toInitials(label: string) {
 }
 
 export function AppShell() {
+  const location = useLocation()
   const principal = useAuthStore((state) => state.principal)
   const shellContextQuery = useShellContext()
   const {
@@ -54,6 +55,13 @@ export function AppShell() {
   const principalLabel = shellContext?.principalLabel ?? principal?.displayName ?? principal?.username ?? 'Guest'
   const roleLabel = shellContext?.roleLabel ?? 'Operations user'
   const principalInitials = toInitials(principalLabel)
+  const activeNavigationItem =
+    navigation.find((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`)) ?? navigation[0]
+  const workspaceLabel = activeNavigationItem?.label ?? 'Workspace'
+  const workspaceDescription = activeNavigationItem ? NAV_DESCRIPTIONS[activeNavigationItem.to] ?? 'Operational view' : 'Operational view'
+  const scopeSummary =
+    (shellContext?.scopeChips ?? []).slice(0, 2).join(' • ') ||
+    (principal?.accessibleScope?.system ? 'Enterprise scope available' : 'Choose region or outlet to narrow this workspace')
   const regionOptions = [
     ...(shellContext?.availableRegions ?? []).map((option) => ({ ...option })),
     ...((selectedRegionId !== null &&
@@ -122,6 +130,7 @@ export function AppShell() {
           <div className="shell-quick-summary">
             <p className="eyebrow">My scope</p>
             <strong className="shell-summary-role">{roleLabel}</strong>
+            <p className="shell-summary-principal">{principalLabel}</p>
             {(shellContext?.scopeChips ?? []).length > 0 ? (
               <div className="scope-chip-list">
                 {(shellContext?.scopeChips ?? []).slice(0, 4).map((chip) => (
@@ -170,9 +179,15 @@ export function AppShell() {
       <div className="shell-content">
         <header className="topbar">
           <div className="topbar-primary">
+            <div className="topbar-brandline">
+              <p className="eyebrow">Current workspace</p>
+              <strong>{workspaceLabel}</strong>
+              <span>{workspaceDescription}</span>
+              <p className="topbar-brandline-meta">{scopeSummary}</p>
+            </div>
             <div aria-hidden="true" className="shell-search">
               <AppIcon name="search" size="sm" />
-              <input placeholder="Search..." readOnly type="text" />
+              <input placeholder="Search commands, datasets, or outlets..." readOnly type="text" />
             </div>
           </div>
           <div className="topbar-actions">

@@ -1415,6 +1415,306 @@ class InventoryServiceIntegrationTest {
     }
 
     @Test
+    void shouldCommitSaleUsingReservedQuantitiesInsteadOfEventPayload() {
+        SaleReservationResponse reservation = stockReservationService.reserveSale(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        101L,
+                        LocalDate.of(2026, 3, 27),
+                        5401L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+                )
+        );
+
+        inventoryEventConsumerService.consumeSaleCompleted(new PosSaleCompletedEvent(
+                "sale-event-reservation-source",
+                "pos.sale.completed",
+                Instant.parse("2026-03-27T10:15:00Z"),
+                "pos-service",
+                "corr-sale-reservation-source",
+                "idem-sale-reservation-source",
+                5401L,
+                7401L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 27),
+                Instant.parse("2026-03-27T10:15:00Z"),
+                1L,
+                reservation.reservationId(),
+                List.of(),
+                java.util.Map.of(),
+                List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("9.0000")))
+        ));
+
+        BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        BigDecimal saleUsageQty = jdbcTemplate.queryForObject("""
+                SELECT qty_change
+                FROM inventory.inventory_transaction
+                WHERE txn_type = 'SALE_USAGE' AND source_reference_id = '5401'
+                """, BigDecimal.class);
+
+        assertThat(qtyOnHand).isEqualByComparingTo("18.0000");
+        assertThat(saleUsageQty).isEqualByComparingTo("-2.0000");
+    }
+
+    @Test
+    void shouldRejectSaleCompletionWhenReservationDoesNotMatchSaleOrder() {
+        SaleReservationResponse reservation = stockReservationService.reserveSale(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        101L,
+                        LocalDate.of(2026, 3, 27),
+                        5402L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+                )
+        );
+
+        PosSaleCompletedEvent mismatchedEvent = new PosSaleCompletedEvent(
+                "sale-event-mismatch",
+                "pos.sale.completed",
+                Instant.parse("2026-03-27T10:20:00Z"),
+                "pos-service",
+                "corr-sale-mismatch",
+                "idem-sale-mismatch",
+                9999L,
+                7402L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 27),
+                Instant.parse("2026-03-27T10:20:00Z"),
+                1L,
+                reservation.reservationId(),
+                List.of(),
+                java.util.Map.of(),
+                List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+        );
+
+        assertThatThrownBy(() -> inventoryEventConsumerService.consumeSaleCompleted(mismatchedEvent))
+                .isInstanceOf(com.fern.platform.common.ConflictException.class)
+                .hasMessage("Reservation source order does not match pos.sale.completed sale order");
+
+        BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        String reservationStatus = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM inventory.stock_reservation
+                WHERE id = ?
+                """, String.class, reservation.reservationId());
+
+        assertThat(qtyOnHand).isEqualByComparingTo("20.0000");
+        assertThat(reservationStatus).isEqualTo("RESERVED");
+    }
+
+    @Test
+    void shouldRejectSaleCompletionWhenReservationCommitWouldDriveReservedStockNegative() {
+        SaleReservationResponse reservation = stockReservationService.reserveSale(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        101L,
+                        LocalDate.of(2026, 3, 27),
+                        5403L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+                )
+        );
+        jdbcTemplate.update("""
+                UPDATE inventory.stock_balance
+                SET qty_on_hand = 1.0000,
+                    qty_reserved = 1.0000,
+                    qty_available = 0.0000,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """);
+
+        PosSaleCompletedEvent event = new PosSaleCompletedEvent(
+                "sale-event-negative-guard",
+                "pos.sale.completed",
+                Instant.parse("2026-03-27T10:25:00Z"),
+                "pos-service",
+                "corr-sale-negative-guard",
+                "idem-sale-negative-guard",
+                5403L,
+                7403L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 27),
+                Instant.parse("2026-03-27T10:25:00Z"),
+                1L,
+                reservation.reservationId(),
+                List.of(),
+                java.util.Map.of(),
+                List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+        );
+
+        assertThatThrownBy(() -> inventoryEventConsumerService.consumeSaleCompleted(event))
+                .isInstanceOf(com.fern.platform.common.ConflictException.class)
+                .hasMessage("Reservation commit failed for ingredient 200");
+
+        BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
+                SELECT qty_on_hand
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        BigDecimal qtyReserved = jdbcTemplate.queryForObject("""
+                SELECT qty_reserved
+                FROM inventory.stock_balance
+                WHERE outlet_id = 101 AND ingredient_id = 200
+                """, BigDecimal.class);
+        Integer saleUsageCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE txn_type = 'SALE_USAGE' AND source_reference_id = '5403'
+                """, Integer.class);
+
+        assertThat(qtyOnHand).isEqualByComparingTo("1.0000");
+        assertThat(qtyReserved).isEqualByComparingTo("1.0000");
+        assertThat(saleUsageCount).isZero();
+    }
+
+    @Test
+    void shouldRejectSaleCompletionForCancelledReservation() {
+        SaleReservationResponse reservation = stockReservationService.reserveSale(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        101L,
+                        LocalDate.of(2026, 3, 27),
+                        5404L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+                )
+        );
+        stockReservationService.releaseSaleReservation(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RELEASE)),
+                reservation.reservationId()
+        );
+
+        PosSaleCompletedEvent event = new PosSaleCompletedEvent(
+                "sale-event-cancelled-reservation",
+                "pos.sale.completed",
+                Instant.parse("2026-03-27T10:26:00Z"),
+                "pos-service",
+                "corr-sale-cancelled-reservation",
+                "idem-sale-cancelled-reservation",
+                5404L,
+                7404L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 27),
+                Instant.parse("2026-03-27T10:26:00Z"),
+                1L,
+                reservation.reservationId(),
+                List.of(),
+                java.util.Map.of(),
+                List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+        );
+
+        assertThatThrownBy(() -> inventoryEventConsumerService.consumeSaleCompleted(event))
+                .isInstanceOf(com.fern.platform.common.ConflictException.class)
+                .hasMessage("Reservation is not active");
+
+        String reservationStatus = jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM inventory.stock_reservation
+                WHERE id = ?
+                """, String.class, reservation.reservationId());
+        Integer saleUsageCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE txn_type = 'SALE_USAGE' AND source_reference_id = '5404'
+                """, Integer.class);
+
+        assertThat(reservationStatus).isEqualTo("CANCELLED");
+        assertThat(saleUsageCount).isZero();
+    }
+
+    @Test
+    void shouldUseReservationBusinessDateForSaleUsageCommit() {
+        SaleReservationResponse reservation = stockReservationService.reserveSale(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        101L,
+                        LocalDate.of(2026, 3, 27),
+                        5405L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+                )
+        );
+
+        inventoryEventConsumerService.consumeSaleCompleted(new PosSaleCompletedEvent(
+                "sale-event-business-date-drift",
+                "pos.sale.completed",
+                Instant.parse("2026-03-28T00:05:00Z"),
+                "pos-service",
+                "corr-sale-business-date-drift",
+                "idem-sale-business-date-drift",
+                5405L,
+                7405L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 28),
+                Instant.parse("2026-03-28T00:05:00Z"),
+                1L,
+                reservation.reservationId(),
+                List.of(),
+                java.util.Map.of(),
+                List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("99.0000")))
+        ));
+
+        LocalDate transactionBusinessDate = jdbcTemplate.queryForObject("""
+                SELECT business_date
+                FROM inventory.inventory_transaction
+                WHERE txn_type = 'SALE_USAGE' AND source_reference_id = '5405'
+                """, LocalDate.class);
+        String outboxBusinessDate = jdbcTemplate.queryForObject("""
+                SELECT payload ->> 'businessDate'
+                FROM inventory.outbox_event
+                WHERE aggregate_type = 'SALE_ORDER'
+                  AND aggregate_id = '5405:ingredient:200'
+                """, String.class);
+
+        assertThat(transactionBusinessDate).isEqualTo(LocalDate.of(2026, 3, 27));
+        assertThat(outboxBusinessDate).isEqualTo("2026-03-27");
+    }
+
+    @Test
+    void shouldExposeInventoryOutletCloseCheckForInternalCallers() throws Exception {
+        stockReservationService.reserveSale(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        101L,
+                        LocalDate.of(2026, 3, 27),
+                        5406L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("1.0000")))
+                )
+        );
+        mockMvc.perform(post("/stock-count-sessions")
+                        .header("Authorization", bearer())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "regionId": 1,
+                                  "outletId": 101,
+                                  "countDate": "2026-03-27",
+                                  "ingredientIds": [200]
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/internal/inventory/outlet-close-check")
+                        .header("Authorization", serviceBearer(Set.of(PermissionCodes.INVENTORY_INTERNAL_READ)))
+                        .param("outletId", "101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.outletId").value(101))
+                .andExpect(jsonPath("$.blockingReservations").value(1))
+                .andExpect(jsonPath("$.blockingStockCountSessions").value(1))
+                .andExpect(jsonPath("$.hasBlockingOperations").value(true));
+    }
+
+    @Test
     void shouldSanitizeInboxFailureMessage() {
         PosSaleCompletedEvent invalidEvent = new PosSaleCompletedEvent(
                 "sale-event-failed",
@@ -2036,6 +2336,30 @@ class InventoryServiceIntegrationTest {
                 "inventory-service-jti-" + permissions.hashCode(),
                 FernPrincipalType.SERVICE
         );
+    }
+
+    private String serviceBearer(Set<String> permissions) {
+        FernJwtProperties properties = new FernJwtProperties();
+        properties.setSecret("XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
+        properties.setAllowInsecureDefaultSecret(true);
+        FernJwtService jwtService = new FernJwtService(properties, Clock.systemUTC());
+        Instant now = Instant.now();
+        String serviceToken = jwtService.encode(new FernJwtClaims(
+                null,
+                "org-service",
+                Set.of(),
+                permissions,
+                new ScopeRoots(true, List.of(), List.of()),
+                1L,
+                1L,
+                "inventory-service-test-jti-" + permissions.hashCode(),
+                now,
+                now.plus(jwtService.serviceTokenTtl()),
+                FernPrincipalType.SERVICE,
+                "org-service",
+                Set.of("inventory-service")
+        ), jwtService.serviceTokenTtl());
+        return "Bearer " + serviceToken;
     }
 
     private static void ensureOrgServerStarted() {

@@ -3,7 +3,7 @@ import clsx from 'clsx'
 import { AppIcon } from '@app/components/AppIcon'
 import { useActionHub } from '@core/api/ui.hooks'
 import { useScopeContext } from '@core/scopes/useScopeContext'
-import { Badge, Button, Card, ErrorState, ReadonlyBanner } from '@design-system/index'
+import { Badge, Button, ErrorState, ReadonlyBanner } from '@design-system/index'
 
 const PERSONA_LABELS = {
   system_admin: 'System Admin',
@@ -51,6 +51,7 @@ export function HomeActionHub() {
       href: alert.href,
     })),
   ].slice(0, 6)
+  const prioritySignals = actionHub.alerts.slice(0, 3)
 
   return (
     <section className="page-stack action-hub">
@@ -58,34 +59,56 @@ export function HomeActionHub() {
         <ReadonlyBanner message="Select a region or outlet in the shell to narrow the operational context before acting." />
       ) : null}
 
-      <section className="action-hub-header">
-        <div className="page-heading">
+      <section className="action-hub-stage surface-panel">
+        <div className="page-heading action-hub-stage-copy">
           <p className="workspace-breadcrumb">Home / Action Hub</p>
+          <div className="action-hub-stage-meta">
+            <span className="action-hub-persona-badge">{PERSONA_LABELS[actionHub.persona]}</span>
+            {actionHub.scopeSummary.chips.slice(0, 2).map((chip) => (
+              <span className="meta-chip" key={chip}>
+                {chip}
+              </span>
+            ))}
+          </div>
           <h1>Action Hub</h1>
           <p className="muted-text">
-            System-wide overview for <strong>{PERSONA_LABELS[actionHub.persona]}</strong>.
+            Operational overview for <strong>{PERSONA_LABELS[actionHub.persona]}</strong>, with the current scope pinned before you act.
           </p>
         </div>
-        <div className="action-hub-hero-actions">
-          {actionHub.quickActions.slice(0, 2).map((action, index) => (
-            <Button
-              asChild
-              key={action.id}
-              size="sm"
-              variant={action.tone === 'primary' ? 'primary' : 'secondary'}
-            >
-              <Link to={action.href}>
-                <AppIcon name={index === 0 ? 'add' : 'arrow_forward'} size="sm" />
-                {index === 0 ? `Open ${action.title}` : `Review ${action.title}`}
-              </Link>
-            </Button>
-          ))}
+        <div className="action-hub-stage-aside">
+          <div className="action-hub-stage-summary">
+            <p className="eyebrow">Working scope</p>
+            <strong className="action-summary-title">{actionHub.scopeSummary.title}</strong>
+            <p className="muted-text">{actionHub.scopeSummary.subtitle}</p>
+            <div className="scope-summary-grid">
+              {actionHub.scopeSummary.chips.map((chip) => (
+                <span className="meta-chip" key={chip}>
+                  {chip}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="action-hub-stage-cta">
+            {actionHub.quickActions.slice(0, 2).map((action, index) => (
+              <Button
+                asChild
+                key={action.id}
+                size="sm"
+                variant={action.tone === 'primary' ? 'primary' : 'secondary'}
+              >
+                <Link to={action.href}>
+                  <AppIcon name={index === 0 ? 'add' : 'arrow_forward'} size="sm" />
+                  {index === 0 ? `Open ${action.title}` : `Review ${action.title}`}
+                </Link>
+              </Button>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="action-hub-kpi-grid">
         {actionHub.kpis.map((kpi) => (
-          <Card className={clsx('action-kpi-card', `action-kpi-${kpi.tone}`)} key={kpi.id}>
+          <article className={clsx('action-kpi-card', `action-kpi-${kpi.tone}`)} key={kpi.id}>
             <div className="action-kpi-topline">
               <span className="action-kpi-icon">
                 <AppIcon
@@ -105,12 +128,18 @@ export function HomeActionHub() {
             </div>
             <strong className="action-kpi-value">{kpi.value}</strong>
             {kpi.detail ? <p className="muted-text">{kpi.detail}</p> : null}
-          </Card>
+          </article>
         ))}
       </section>
 
       <section className="action-hub-main-grid">
-        <Card className="action-hub-panel action-hub-feed-panel" title="Operational pulse">
+        <section className="surface-panel action-hub-panel action-hub-feed-panel">
+          <div className="action-hub-panel-heading">
+            <div>
+              <p className="eyebrow">Operational pulse</p>
+              <h2>Queues and alerts</h2>
+            </div>
+          </div>
           <div className="action-timeline">
             {activityFeed.length > 0 ? (
               activityFeed.map((item, index) => (
@@ -144,25 +173,48 @@ export function HomeActionHub() {
               </div>
             )}
           </div>
-        </Card>
+        </section>
 
-        <Card className="action-hub-panel action-hub-glass-panel" title="Scope summary">
-          <div className="page-stack">
+        <section className="surface-panel action-hub-panel action-hub-glass-panel">
+          <div className="action-hub-panel-heading">
             <div>
-              <strong className="action-summary-title">{actionHub.scopeSummary.title}</strong>
-              <p className="muted-text">{actionHub.scopeSummary.subtitle}</p>
-            </div>
-            <div className="scope-summary-grid">
-              {actionHub.scopeSummary.chips.map((chip) => (
-                <span className="meta-chip" key={chip}>
-                  {chip}
-                </span>
-              ))}
+              <p className="eyebrow">Priority signals</p>
+              <h2>Focus next</h2>
             </div>
           </div>
-        </Card>
+          {prioritySignals.length > 0 ? (
+            <div className="action-hub-signal-list">
+              {prioritySignals.map((alert) => (
+                <div className={clsx('action-hub-signal-row', `action-hub-signal-${alert.tone}`)} key={alert.id}>
+                  <div className="action-hub-signal-copy">
+                    <strong>{alert.title}</strong>
+                    <p className="muted-text">{alert.message}</p>
+                  </div>
+                  {alert.href ? (
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to={alert.href}>
+                        <AppIcon name="open_in_new" size="sm" />
+                        Open
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="action-hub-empty">
+              <p className="muted-text">No critical alerts are active for the current role and scope.</p>
+            </div>
+          )}
+        </section>
 
-        <Card className="action-hub-panel action-hub-quick-panel" title="Quick actions">
+        <section className="surface-panel action-hub-panel action-hub-quick-panel">
+          <div className="action-hub-panel-heading">
+            <div>
+              <p className="eyebrow">Command shortcuts</p>
+              <h2>Quick actions</h2>
+            </div>
+          </div>
           <div className="action-list">
             {actionHub.quickActions.map((action) => (
               <Button
@@ -181,27 +233,27 @@ export function HomeActionHub() {
               </Button>
             ))}
           </div>
-        </Card>
+        </section>
       </section>
 
-      <section className="page-stack">
+      <section className="page-stack action-hub-atlas">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Module atlas</p>
             <h2>Published workspaces</h2>
           </div>
         </div>
-        <div className="card-grid dashboard-module-grid">
+        <div className="action-hub-atlas-list">
           {actionHub.modules.map((moduleEntry) => (
-            <Card className="dashboard-module-card" key={moduleEntry.id} title={moduleEntry.title}>
-              <p className="muted-text">{moduleEntry.description}</p>
-              <Button asChild size="sm" variant="secondary">
-                <Link to={moduleEntry.href}>
-                  <AppIcon name="open_in_new" size="sm" />
-                  Open
-                </Link>
-              </Button>
-            </Card>
+            <Link className="action-hub-atlas-row" key={moduleEntry.id} to={moduleEntry.href}>
+              <div className="action-hub-atlas-copy">
+                <strong>{moduleEntry.title}</strong>
+                <p className="muted-text">{moduleEntry.description}</p>
+              </div>
+              <span className="action-hub-atlas-open">
+                <AppIcon name="arrow_outward" size="sm" />
+              </span>
+            </Link>
           ))}
         </div>
       </section>

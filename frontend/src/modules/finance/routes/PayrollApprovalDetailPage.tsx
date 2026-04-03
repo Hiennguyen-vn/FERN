@@ -272,6 +272,74 @@ export function PayrollApprovalDetailPage() {
         title={run.runCode}
       />
 
+      <section className="surface-panel command-stage" aria-label="Payroll approval detail command stage">
+        <div className="command-stage-copy">
+          <div className="command-stage-meta">
+            <span className="meta-chip">Decision workspace</span>
+            <span className={canReadDetail ? 'meta-chip-success' : 'meta-chip'}>
+              {canReadDetail ? 'Detail visible' : 'Employee detail masked'}
+            </span>
+            <span className="meta-chip">Employees {summary.employeeCount}</span>
+          </div>
+          <div className="state-panel-heading">
+            <p className="eyebrow">Finance / Payroll Approval Detail</p>
+            <strong className="action-summary-title">Current approval posture</strong>
+            <p className="muted-text">
+              Review lifecycle state, exception load, and payment posture before deciding whether the
+              run can move forward.
+            </p>
+          </div>
+          <div className="meta-grid">
+            <span>Run date: {formatFinanceDateLabel(run.runDate)}</span>
+            <span>Submitted at: {formatFinanceDateLabel(run.submittedAt)}</span>
+            <span>Approved at: {formatFinanceDateLabel(run.approvedAt)}</span>
+            <span>Payment reference: {run.paymentRef ?? 'No payment reference'}</span>
+          </div>
+        </div>
+        <aside className="command-stage-side">
+          <div className="command-stage-note">
+            <span className="eyebrow">Review focus</span>
+            <strong>Exception and payout checks</strong>
+            <p>
+              Surface the highest-signal approval checks here before opening detailed payroll lines.
+            </p>
+          </div>
+          <div className="command-support-list">
+            <article className="command-support-item">
+              <div className="command-support-copy">
+                <strong>Exceptions in run</strong>
+                <span className="muted-text">Employee results carrying review messages.</span>
+              </div>
+              <div className="command-support-stack">
+                <span className="command-support-metric">{summary.exceptionCount}</span>
+              </div>
+            </article>
+            <article className="command-support-item">
+              <div className="command-support-copy">
+                <strong>Payment state</strong>
+                <span className="muted-text">Lifecycle status for the current payroll record.</span>
+              </div>
+              <div className="command-support-stack">
+                <StatusBadge status={run.status} />
+              </div>
+            </article>
+            <article className="command-support-item">
+              <div className="command-support-copy">
+                <strong>Net pay visibility</strong>
+                <span className="muted-text">
+                  {canReadDetail ? 'Employee-level payroll values are available.' : 'Employee-level payroll values are currently masked.'}
+                </span>
+              </div>
+              <div className="command-support-stack">
+                <span className={canReadDetail ? 'meta-chip-success' : 'meta-chip'}>
+                  {canReadDetail ? 'Visible' : 'Masked'}
+                </span>
+              </div>
+            </article>
+          </div>
+        </aside>
+      </section>
+
       <div className="card-grid">
         <MaskedField
           helperText={
@@ -301,86 +369,92 @@ export function PayrollApprovalDetailPage() {
         <PermissionDeniedInline message="Employee-level gross/net/tax details đang được masked vì thiếu finance.payroll.detail.read." />
       ) : null}
 
-      <ApprovalPanel
-        actions={
-          <div className="form-actions align-start">
-            {canApprove ? (
-              <Button
-                loading={approveMutation.isPending}
-                onClick={() => setDialogMode('approve')}
-                size="sm"
-              >
-                Approve
-              </Button>
-            ) : null}
-            {canReject ? (
-              <Button
-                loading={rejectMutation.isPending}
-                onClick={() => setDialogMode('reject')}
-                size="sm"
-                variant="danger"
-              >
-                Reject
-              </Button>
-            ) : null}
-            {canCancel ? (
-              <Button
-                loading={cancelMutation.isPending}
-                onClick={() => setDialogMode('cancel')}
-                size="sm"
-                variant="ghost"
-              >
-                Cancel run
-              </Button>
-            ) : null}
-          </div>
-        }
-        description="Decision actions chỉ bật khi lifecycle và permission cho phép. Review note sẽ được gửi kèm approve/reject/cancel request."
-        status={<StatusBadge status={run.status} />}
-        title="Decision panel"
-      >
-        <Textarea
-          label="Review note"
-          onChange={(event) => setReviewNote(event.target.value)}
-          placeholder="Ghi chú cho quyết định approve / reject / cancel"
-          value={reviewNote}
-        />
-        {actionError ? (
-          <ErrorState message={actionError} title="Không thể cập nhật payroll run" />
-        ) : null}
-      </ApprovalPanel>
+      <div className="surface-grid">
+        <div className="surface-grid-main">
+          <FormSection description="Toàn bộ employee results trong payroll run hiện tại." title="Employee results">
+            <DataTable
+              columns={employeeColumns}
+              emptyDescription="Payroll run này chưa có employee results."
+              emptyTitle="No employee results"
+              rowKey={(employee) => employee.id}
+              rows={run.employees}
+            />
+          </FormSection>
 
-      <AuditMetaBlock
-        items={[
-          { label: 'Run date', value: formatFinanceDateLabel(run.runDate) },
-          { label: 'Submitted at', value: formatFinanceDateLabel(run.submittedAt) },
-          { label: 'Approved at', value: formatFinanceDateLabel(run.approvedAt) },
-          { label: 'Paid at', value: formatFinanceDateLabel(run.paidAt) },
-          { label: 'Payment reference', value: run.paymentRef ?? 'No payment reference' },
-          { label: 'Note', value: run.note ?? 'No note' },
-        ]}
-        title="Audit / lifecycle metadata"
-      />
+          <FormSection description="Tập trung các dòng có exception message để review trước khi approve." title="Exception review">
+            <DataTable
+              columns={exceptionColumns}
+              emptyDescription="Payroll run này không có exception nào."
+              emptyTitle="No payroll exceptions"
+              rowKey={(employee) => employee.id}
+              rows={exceptionRows}
+            />
+          </FormSection>
+        </div>
 
-      <FormSection description="Toàn bộ employee results trong payroll run hiện tại." title="Employee results">
-        <DataTable
-          columns={employeeColumns}
-          emptyDescription="Payroll run này chưa có employee results."
-          emptyTitle="No employee results"
-          rowKey={(employee) => employee.id}
-          rows={run.employees}
-        />
-      </FormSection>
+        <aside className="surface-grid-side">
+          <ApprovalPanel
+            actions={
+              <div className="form-actions align-start">
+                {canApprove ? (
+                  <Button
+                    loading={approveMutation.isPending}
+                    onClick={() => setDialogMode('approve')}
+                    size="sm"
+                  >
+                    Approve
+                  </Button>
+                ) : null}
+                {canReject ? (
+                  <Button
+                    loading={rejectMutation.isPending}
+                    onClick={() => setDialogMode('reject')}
+                    size="sm"
+                    variant="danger"
+                  >
+                    Reject
+                  </Button>
+                ) : null}
+                {canCancel ? (
+                  <Button
+                    loading={cancelMutation.isPending}
+                    onClick={() => setDialogMode('cancel')}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    Cancel run
+                  </Button>
+                ) : null}
+              </div>
+            }
+            description="Decision actions chỉ bật khi lifecycle và permission cho phép. Review note sẽ được gửi kèm approve/reject/cancel request."
+            status={<StatusBadge status={run.status} />}
+            title="Decision panel"
+          >
+            <Textarea
+              label="Review note"
+              onChange={(event) => setReviewNote(event.target.value)}
+              placeholder="Ghi chú cho quyết định approve / reject / cancel"
+              value={reviewNote}
+            />
+            {actionError ? (
+              <ErrorState message={actionError} title="Không thể cập nhật payroll run" />
+            ) : null}
+          </ApprovalPanel>
 
-      <FormSection description="Tập trung các dòng có exception message để review trước khi approve." title="Exception review">
-        <DataTable
-          columns={exceptionColumns}
-          emptyDescription="Payroll run này không có exception nào."
-          emptyTitle="No payroll exceptions"
-          rowKey={(employee) => employee.id}
-          rows={exceptionRows}
-        />
-      </FormSection>
+          <AuditMetaBlock
+            items={[
+              { label: 'Run date', value: formatFinanceDateLabel(run.runDate) },
+              { label: 'Submitted at', value: formatFinanceDateLabel(run.submittedAt) },
+              { label: 'Approved at', value: formatFinanceDateLabel(run.approvedAt) },
+              { label: 'Paid at', value: formatFinanceDateLabel(run.paidAt) },
+              { label: 'Payment reference', value: run.paymentRef ?? 'No payment reference' },
+              { label: 'Note', value: run.note ?? 'No note' },
+            ]}
+            title="Audit / lifecycle metadata"
+          />
+        </aside>
+      </div>
 
       <ConfirmActionDialog
         confirmLabel={

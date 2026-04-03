@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.reset;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.common.PermissionCodes;
@@ -66,6 +67,9 @@ class InventoryInboxReplayIntegrationTest {
 
     @Autowired
     private InventoryEventConsumerService inventoryEventConsumerService;
+
+    @Autowired
+    private InventoryEventConsumer inventoryEventConsumer;
 
     @Autowired
     private StockReservationService stockReservationService;
@@ -200,6 +204,23 @@ class InventoryInboxReplayIntegrationTest {
     }
 
     @Test
+    void shouldRecordMalformedSalePayloadAsFailedInboxEvent() {
+        assertThatThrownBy(() -> inventoryEventConsumer.consumeSaleCompleted("{not-json"))
+                .isInstanceOf(JsonProcessingException.class);
+
+        assertThat(inboxCount("""
+                SELECT COUNT(*)
+                FROM inventory.inbox_event
+                WHERE event_type = 'pos.sale.completed.deserialization_failed'
+                """)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT error_message
+                FROM inventory.inbox_event
+                WHERE event_type = 'pos.sale.completed.deserialization_failed'
+                """, String.class)).isEqualTo("JsonProcessingException");
+    }
+
+    @Test
     void shouldRetryFailedGoodsReceiptInboxEvent() {
         AtomicBoolean failOnce = new AtomicBoolean(true);
         doAnswer(invocation -> {
@@ -254,6 +275,34 @@ class InventoryInboxReplayIntegrationTest {
         assertThat(transactionCount("PURCHASE_IN", "9401")).isEqualTo(1);
     }
 
+    @Test
+    void shouldRecordSemanticPoisonGoodsReceiptEventAsFailedInboxEvent() {
+        ProcurementGoodsReceiptPostedEvent event = new ProcurementGoodsReceiptPostedEvent(
+                "receipt-event-poison-negative",
+                "procurement.goods_receipt.posted",
+                Instant.parse("2026-03-27T12:35:00Z"),
+                "procurement-service",
+                "corr-receipt-event-poison-negative",
+                "idem-receipt-event-poison-negative",
+                9402L,
+                8302L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 27),
+                Instant.parse("2026-03-27T12:35:00Z"),
+                2L,
+                List.of(new GoodsReceiptPostedLine(200L, new BigDecimal("-3.0000"), new BigDecimal("10000.00"), 3302L))
+        );
+
+        assertThatThrownBy(() -> inventoryEventConsumerService.consumeGoodsReceiptPosted(event))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("positive");
+
+        assertThat(inboxStatus("receipt-event-poison-negative")).isEqualTo("FAILED");
+        assertThat(inboxError("receipt-event-poison-negative")).isEqualTo("IllegalArgumentException");
+        assertThat(transactionCount("PURCHASE_IN", "9402")).isZero();
+    }
+
     private String inboxStatus(String sourceEventId) {
         return jdbcTemplate.queryForObject("""
                 SELECT status
@@ -276,6 +325,10 @@ class InventoryInboxReplayIntegrationTest {
                 FROM inventory.inventory_transaction
                 WHERE txn_type = ? AND source_reference_id = ?
                 """, Integer.class, txnType, sourceReferenceId);
+    }
+
+    private int inboxCount(String sql) {
+        return jdbcTemplate.queryForObject(sql, Integer.class);
     }
 
     private FernPrincipal servicePrincipal(Set<String> permissions) {

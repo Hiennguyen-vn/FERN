@@ -110,11 +110,11 @@ describe('PaymentRequestsPage', () => {
 
     renderWithProviders(<PaymentRequestsPage />)
 
-    await user.click(screen.getByText('INV-45 · #45'))
+    await user.click(screen.getByRole('cell', { name: 'INV-45 · #45' }))
 
     expect(await screen.findByRole('heading', { name: 'INV-45 · #45' })).toBeInTheDocument()
     expect(screen.getByText('Request summary')).toBeInTheDocument()
-    expect(screen.getAllByText('INV-45 · #45')).toHaveLength(2)
+    expect(screen.getAllByText('INV-45 · #45').length).toBeGreaterThan(1)
   })
 
   it('shows permission denied without invoice read permissions', () => {

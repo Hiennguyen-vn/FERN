@@ -29,6 +29,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -42,6 +43,7 @@ import org.springframework.stereotype.Repository;
 class ProcurementJdbcRepository {
     private final OperationalShardRegistry operationalShardRegistry;
     private final ShardResolver shardResolver;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate masterJdbcTemplate;
     private final ObjectMapper objectMapper;
 
@@ -53,12 +55,13 @@ class ProcurementJdbcRepository {
     ) {
         this.operationalShardRegistry = operationalShardRegistry;
         this.shardResolver = shardResolver;
+        this.jdbcTemplate = operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(null, null))).jdbc();
         this.masterJdbcTemplate = masterJdbcTemplate;
         this.objectMapper = objectMapper;
     }
 
     NamedParameterJdbcTemplate jdbcTemplate() {
-        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(null, null))).jdbc();
+        return jdbcTemplate;
     }
 
     NamedParameterJdbcTemplate masterJdbcTemplate() {
@@ -654,6 +657,46 @@ class ProcurementJdbcRepository {
         }
     }
 
+    void validateGoodsReceiptLines(Long purchaseOrderId, List<GoodsReceiptLineInput> lines) {
+        List<Long> purchaseOrderLineIds = lines.stream()
+                .map(GoodsReceiptLineInput::purchaseOrderLineId)
+                .toList();
+        if (purchaseOrderLineIds.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new ConflictException("Goods receipt lines must reference a purchase order line");
+        }
+        Map<Long, PurchaseOrderLineRecord> purchaseOrderLines = queryPurchaseOrderLines(purchaseOrderId, purchaseOrderLineIds, false).stream()
+                .collect(java.util.stream.Collectors.toMap(PurchaseOrderLineRecord::id, line -> line));
+        for (GoodsReceiptLineInput line : lines) {
+            PurchaseOrderLineRecord purchaseOrderLine = purchaseOrderLines.get(line.purchaseOrderLineId());
+            if (purchaseOrderLine == null) {
+                throw new ConflictException("Goods receipt line does not belong to purchase order " + purchaseOrderId);
+            }
+            validateGoodsReceiptLineAgainstPurchaseOrder(line.ingredientId(), line.uomCode(), purchaseOrderLine);
+        }
+    }
+
+    void validateGoodsReceiptPosting(Long purchaseOrderId, Long goodsReceiptId) {
+        List<GoodsReceiptLineAggregate> receiptLines = aggregateGoodsReceiptLines(goodsReceiptId);
+        List<Long> purchaseOrderLineIds = receiptLines.stream()
+                .map(GoodsReceiptLineAggregate::purchaseOrderLineId)
+                .toList();
+        if (purchaseOrderLineIds.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new ConflictException("Goods receipt lines must reference a purchase order line");
+        }
+        Map<Long, PurchaseOrderLineRecord> purchaseOrderLines = queryPurchaseOrderLines(purchaseOrderId, purchaseOrderLineIds, true).stream()
+                .collect(java.util.stream.Collectors.toMap(PurchaseOrderLineRecord::id, line -> line));
+        for (GoodsReceiptLineAggregate receiptLine : receiptLines) {
+            PurchaseOrderLineRecord purchaseOrderLine = purchaseOrderLines.get(receiptLine.purchaseOrderLineId());
+            if (purchaseOrderLine == null) {
+                throw new ConflictException("Goods receipt line does not belong to purchase order " + purchaseOrderId);
+            }
+            validateGoodsReceiptLineAgainstPurchaseOrder(receiptLine.ingredientId(), receiptLine.uomCode(), purchaseOrderLine);
+            if (purchaseOrderLine.qtyReceived().add(receiptLine.qtyReceived()).compareTo(purchaseOrderLine.qtyOrdered()) > 0) {
+                throw new ConflictException("Goods receipt would over-receive purchase order line " + purchaseOrderLine.lineNumber());
+            }
+        }
+    }
+
     void insertInvoiceLines(Long supplierInvoiceId, List<SupplierInvoiceLineInput> lines) {
         int lineNumber = 1;
         for (SupplierInvoiceLineInput line : lines) {
@@ -682,11 +725,8 @@ class ProcurementJdbcRepository {
     }
 
     void updatePurchaseOrderReceiptProgress(Long purchaseOrderId, Long goodsReceiptId) {
-        List<GoodsReceiptLineResponse> receiptLines = mapGoodsReceipt(requireGoodsReceipt(goodsReceiptId)).lines();
-        for (GoodsReceiptLineResponse receiptLine : receiptLines) {
-            if (receiptLine.purchaseOrderLineId() == null) {
-                continue;
-            }
+        List<GoodsReceiptLineAggregate> receiptLines = aggregateGoodsReceiptLines(goodsReceiptId);
+        for (GoodsReceiptLineAggregate receiptLine : receiptLines) {
             jdbcTemplate.update("""
                     UPDATE procurement.purchase_order_line
                     SET qty_received = qty_received + :qtyReceived,
@@ -696,9 +736,11 @@ class ProcurementJdbcRepository {
                         END,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = :purchaseOrderLineId
+                      AND purchase_order_id = :purchaseOrderId
                     """, params(
                     "qtyReceived", receiptLine.qtyReceived(),
-                    "purchaseOrderLineId", receiptLine.purchaseOrderLineId()
+                    "purchaseOrderLineId", receiptLine.purchaseOrderLineId(),
+                    "purchaseOrderId", purchaseOrderId
             ));
         }
         List<String> lineStatuses = jdbcTemplate.queryForList("""
@@ -712,6 +754,56 @@ class ProcurementJdbcRepository {
                 SET status = :status, updated_at = CURRENT_TIMESTAMP
                 WHERE id = :id
                 """, params("status", headerStatus, "id", purchaseOrderId));
+    }
+
+    private List<GoodsReceiptLineAggregate> aggregateGoodsReceiptLines(Long goodsReceiptId) {
+        return jdbcTemplate.query("""
+                SELECT purchase_order_line_id, ingredient_id, uom_code, SUM(qty_received) AS qty_received
+                FROM procurement.goods_receipt_line
+                WHERE goods_receipt_id = :goodsReceiptId
+                GROUP BY purchase_order_line_id, ingredient_id, uom_code
+                ORDER BY purchase_order_line_id
+                """, params("goodsReceiptId", goodsReceiptId), (rs, rowNum) -> new GoodsReceiptLineAggregate(
+                rs.getObject("purchase_order_line_id", Long.class),
+                rs.getLong("ingredient_id"),
+                rs.getString("uom_code"),
+                rs.getBigDecimal("qty_received")
+        ));
+    }
+
+    private List<PurchaseOrderLineRecord> queryPurchaseOrderLines(Long purchaseOrderId, List<Long> purchaseOrderLineIds, boolean forUpdate) {
+        if (purchaseOrderLineIds.isEmpty()) {
+            return List.of();
+        }
+        String sql = """
+                SELECT id, purchase_order_id, line_number, ingredient_id, uom_code, qty_ordered, qty_received, status
+                FROM procurement.purchase_order_line
+                WHERE purchase_order_id = :purchaseOrderId
+                  AND id IN (:purchaseOrderLineIds)
+                ORDER BY id
+                """ + (forUpdate ? "\nFOR UPDATE" : "");
+        return jdbcTemplate.query(sql, params(
+                "purchaseOrderId", purchaseOrderId,
+                "purchaseOrderLineIds", purchaseOrderLineIds
+        ), (rs, rowNum) -> new PurchaseOrderLineRecord(
+                rs.getLong("id"),
+                rs.getLong("purchase_order_id"),
+                rs.getInt("line_number"),
+                rs.getLong("ingredient_id"),
+                rs.getString("uom_code"),
+                rs.getBigDecimal("qty_ordered"),
+                rs.getBigDecimal("qty_received"),
+                rs.getString("status")
+        ));
+    }
+
+    private void validateGoodsReceiptLineAgainstPurchaseOrder(Long ingredientId, String uomCode, PurchaseOrderLineRecord purchaseOrderLine) {
+        if (!purchaseOrderLine.ingredientId().equals(ingredientId)) {
+            throw new ConflictException("Goods receipt line ingredient does not match purchase order line " + purchaseOrderLine.lineNumber());
+        }
+        if (!purchaseOrderLine.uomCode().equals(uomCode)) {
+            throw new ConflictException("Goods receipt line UOM does not match purchase order line " + purchaseOrderLine.lineNumber());
+        }
     }
 
     Long insertForId(NamedParameterJdbcTemplate template, String sql, MapSqlParameterSource parameters) {

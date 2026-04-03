@@ -7,6 +7,7 @@ import com.fern.financeservice.service.payroll.model.OutletAllocation;
 import com.fern.financeservice.service.payroll.model.PayrollEmployeeComputation;
 import com.fern.financeservice.service.payroll.model.PayrollLine;
 import com.fern.financeservice.service.payroll.model.PayrollPeriodRecord;
+import com.fern.platform.common.BadRequestException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -153,13 +154,16 @@ public class PayrollCalculationEngine {
     }
 
     public EffectiveContract selectContract(List<EffectiveContract> contracts, LocalDate businessDate) {
+        if (contracts.isEmpty()) {
+            throw new BadRequestException("No contracts available for business date " + businessDate);
+        }
         List<EffectiveContract> sortedContracts = new ArrayList<>(contracts);
         sortedContracts.sort(Comparator.comparing(EffectiveContract::startDate));
         return sortedContracts.stream()
                 .filter(contract -> !contract.startDate().isAfter(businessDate))
                 .filter(contract -> contract.endDate() == null || !contract.endDate().isBefore(businessDate))
                 .max(Comparator.comparing(EffectiveContract::startDate))
-                .orElse(sortedContracts.get(sortedContracts.size() - 1));
+                .orElseThrow(() -> new BadRequestException("No effective contract for business date " + businessDate));
     }
 
     private BigDecimal decimalPolicyValue(JsonNode policy, String field, BigDecimal defaultValue) {

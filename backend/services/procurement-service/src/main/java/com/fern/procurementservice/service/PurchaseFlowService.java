@@ -219,6 +219,7 @@ public class PurchaseFlowService {
         if (!List.of("ORDERED", "PARTIALLY_RECEIVED").contains(purchaseOrder.status())) {
             throw new ConflictException("Goods receipts can only be created from ordered or partially received purchase orders");
         }
+        procurementJdbcRepository.validateGoodsReceiptLines(purchaseOrder.id(), request.lines());
         BigDecimal totalAmount = calculateGoodsReceiptTotal(request.lines());
         Long id = insertForId(jdbcTemplate(), """
                 INSERT INTO procurement.goods_receipt (
@@ -318,6 +319,7 @@ public class PurchaseFlowService {
             return getGoodsReceipt(principal, duplicateId);
         }
         ensureStatus(record.status(), "RECEIVED", "Only received goods receipts can be posted");
+        procurementJdbcRepository.validateGoodsReceiptPosting(record.purchaseOrderId(), id);
         int updated = jdbcTemplate().update("""
                 UPDATE procurement.goods_receipt
                 SET status = 'POSTED',

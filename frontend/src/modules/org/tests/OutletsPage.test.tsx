@@ -120,12 +120,12 @@ describe('OutletsPage', () => {
 
     renderWithProviders(<OutletsPage />)
 
-    expect(await screen.findByText('District 1 Flagship')).toBeInTheDocument()
-    expect(screen.getByText('Hanoi Center')).toBeInTheDocument()
+    expect((await screen.findAllByText('District 1 Flagship')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Hanoi Center').length).toBeGreaterThan(0)
 
     await user.type(screen.getByLabelText('Search outlets'), 'Hanoi')
     expect(screen.queryByText('District 1 Flagship')).not.toBeInTheDocument()
-    expect(screen.getByText('Hanoi Center')).toBeInTheDocument()
+    expect(screen.getAllByText('Hanoi Center').length).toBeGreaterThan(0)
   })
 
   it('shows permission denied without org.outlet.read', () => {

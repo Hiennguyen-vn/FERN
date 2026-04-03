@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FERN Browser QA Routes</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7f9fb;
+        --panel: #ffffff;
+        --text: #191c1e;
+        --muted: #5a6370;
+        --border: #d8dde5;
+        --primary: #27389a;
+        --primary-soft: #dee0ff;
+        --success: #0f7a4b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(39, 56, 154, 0.08), transparent 22%),
+          linear-gradient(180deg, #fbfcfe 0%, var(--bg) 100%);
+      }
+
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 32px 20px 56px;
+      }
+
+      .hero,
+      .family {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        box-shadow: 0 12px 28px rgba(25, 28, 30, 0.05);
+      }
+
+      .hero {
+        padding: 28px;
+        margin-bottom: 20px;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--primary);
+      }
+
+      h1,
+      h2 {
+        margin: 0;
+        font-family: Manrope, Inter, system-ui, sans-serif;
+        letter-spacing: -0.03em;
+      }
+
+      h1 {
+        font-size: clamp(32px, 4vw, 44px);
+      }
+
+      h2 {
+        font-size: 24px;
+      }
+
+      p {
+        margin: 0;
+        line-height: 1.6;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.9fr);
+        gap: 18px;
+        margin-top: 20px;
+      }
+
+      .note {
+        border-radius: 18px;
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(222, 224, 255, 0.54), rgba(255, 255, 255, 0.96));
+      }
+
+      .note strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: var(--primary);
+        color: #fff;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .button.secondary {
+        background: var(--primary-soft);
+        border-color: rgba(39, 56, 154, 0.16);
+        color: var(--primary);
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .stat {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 14px 16px;
+      }
+
+      .stat-label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .stat strong {
+        font-size: 24px;
+      }
+
+      .family-list {
+        display: grid;
+        gap: 18px;
+      }
+
+      .family {
+        padding: 22px;
+      }
+
+      .route-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .route-link {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-height: 72px;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        text-decoration: none;
+        color: inherit;
+        background: #fbfcfe;
+      }
+
+      .route-link:hover {
+        border-color: rgba(39, 56, 154, 0.35);
+        background: #fff;
+      }
+
+      .route-link code {
+        font-size: 13px;
+        color: var(--primary);
+      }
+
+      .route-link span {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .ok {
+        color: var(--success);
+        font-weight: 700;
+      }
+
+      @media (max-width: 760px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <p class="eyebrow">FERN Frontend QA</p>
+        <h1>Browser QA Route Hub</h1>
+        <p class="muted">
+          Use this page to open every representative Stitch parity route in the browser after login.
+          Start with the login screen, use the full-access dev account, then open routes in the same
+          tab or new tabs as needed.
+        </p>
+
+        <div class="actions">
+          <a class="button" href="http://127.0.0.1:3000/login" target="_blank" rel="noreferrer">Open login</a>
+          <a class="button secondary" href="http://127.0.0.1:3000/home" target="_blank" rel="noreferrer">Open home</a>
+        </div>
+
+        <div class="summary">
+          <div class="stat">
+            <span class="stat-label">Server</span>
+            <strong class="ok">3000</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">QA families</span>
+            <strong>6</strong>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Representative routes</span>
+            <strong>31</strong>
+          </div>
+        </div>
+
+        <div class="hero-grid">
+          <div class="note">
+            <strong>Login</strong>
+            <p class="muted">Use `bootstrap-admin / Admin123!` or the `Use full-access dev account` shortcut on the login screen.</p>
+          </div>
+          <div class="note">
+            <strong>Recommended flow</strong>
+            <p class="muted">Login once, keep this hub open, then open each route group below in order for desktop first and narrow viewport second.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="family-list">
+        <section class="family">
+          <p class="eyebrow">1. Auth and Home</p>
+          <h2>Entry and workspace shell</h2>
+          <div class="route-grid">
+            <a class="route-link" href="http://127.0.0.1:3000/login" target="_blank" rel="noreferrer"><code>/login</code><span>Auth shell and login variants</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/home" target="_blank" rel="noreferrer"><code>/home</code><span>Persona-aware action hub</span></a>
+          </div>
+        </section>
+
+        <section class="family">
+          <p class="eyebrow">2. POS</p>
+          <h2>Terminal and session surfaces</h2>
+          <div class="route-grid">
+            <a class="route-link" href="http://127.0.0.1:3000/pos" target="_blank" rel="noreferrer"><code>/pos</code><span>POS home and session state</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/pos/sessions" target="_blank" rel="noreferrer"><code>/pos/sessions</code><span>Session workspace</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/pos/sessions/1" target="_blank" rel="noreferrer"><code>/pos/sessions/1</code><span>Session detail representative route</span></a>
+          </div>
+        </section>
+
+        <section class="family">
+          <p class="eyebrow">3. Inventory and Workforce</p>
+          <h2>Operational control surfaces</h2>
+          <div class="route-grid">
+            <a class="route-link" href="http://127.0.0.1:3000/inventory/stock-balances" target="_blank" rel="noreferrer"><code>/inventory/stock-balances</code><span>Stock overview</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/inventory/stock-count-sessions" target="_blank" rel="noreferrer"><code>/inventory/stock-count-sessions</code><span>Count sessions list</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/inventory/stock-count-sessions/77" target="_blank" rel="noreferrer"><code>/inventory/stock-count-sessions/77</code><span>Count session detail</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/workforce/my-attendance" target="_blank" rel="noreferrer"><code>/workforce/my-attendance</code><span>Attendance self-service</span></a>
+          </div>
+        </section>
+
+        <section class="family">
+          <p class="eyebrow">4. Procurement, Regional Ops, Organization</p>
+          <h2>Hierarchy, procurement, and regional oversight</h2>
+          <div class="route-grid">
+            <a class="route-link" href="http://127.0.0.1:3000/procurement/purchase-orders" target="_blank" rel="noreferrer"><code>/procurement/purchase-orders</code><span>PO workspace</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/procurement/purchase-orders/1" target="_blank" rel="noreferrer"><code>/procurement/purchase-orders/1</code><span>PO detail</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/regional-ops" target="_blank" rel="noreferrer"><code>/regional-ops</code><span>Regional command center</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/regional-ops/outlets/101" target="_blank" rel="noreferrer"><code>/regional-ops/outlets/101</code><span>Outlet operational detail</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/org/regions" target="_blank" rel="noreferrer"><code>/org/regions</code><span>Region list</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/org/regions/new" target="_blank" rel="noreferrer"><code>/org/regions/new</code><span>Region create</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/org/regions/1/edit" target="_blank" rel="noreferrer"><code>/org/regions/1/edit</code><span>Region edit</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/org/outlets" target="_blank" rel="noreferrer"><code>/org/outlets</code><span>Outlet list</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/org/outlets/new" target="_blank" rel="noreferrer"><code>/org/outlets/new</code><span>Outlet create</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/org/outlets/101/edit" target="_blank" rel="noreferrer"><code>/org/outlets/101/edit</code><span>Outlet edit</span></a>
+          </div>
+        </section>
+
+        <section class="family">
+          <p class="eyebrow">5. Catalog, HR, Finance</p>
+          <h2>Back-office management surfaces</h2>
+          <div class="route-grid">
+            <a class="route-link" href="http://127.0.0.1:3000/catalog/products" target="_blank" rel="noreferrer"><code>/catalog/products</code><span>Product catalog</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/hr/employees" target="_blank" rel="noreferrer"><code>/hr/employees</code><span>Employee workspace</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/hr/payroll-preparation" target="_blank" rel="noreferrer"><code>/hr/payroll-preparation</code><span>Payroll prep workspace</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/finance/payment-requests" target="_blank" rel="noreferrer"><code>/finance/payment-requests</code><span>Payment request queue</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/finance/payroll-periods" target="_blank" rel="noreferrer"><code>/finance/payroll-periods</code><span>Payroll periods</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/finance/payroll-approvals/55" target="_blank" rel="noreferrer"><code>/finance/payroll-approvals/55</code><span>Payroll approval detail</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/finance/payroll-paid/55" target="_blank" rel="noreferrer"><code>/finance/payroll-paid/55</code><span>Payroll paid readonly</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/finance/config" target="_blank" rel="noreferrer"><code>/finance/config</code><span>Finance configuration</span></a>
+          </div>
+        </section>
+
+        <section class="family">
+          <p class="eyebrow">6. IAM, Audit, Reports</p>
+          <h2>Admin and forensic surfaces</h2>
+          <div class="route-grid">
+            <a class="route-link" href="http://127.0.0.1:3000/iam/users" target="_blank" rel="noreferrer"><code>/iam/users</code><span>User admin workspace</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/audit/events" target="_blank" rel="noreferrer"><code>/audit/events</code><span>Audit event list</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/reports" target="_blank" rel="noreferrer"><code>/reports</code><span>Reports landing</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/reports/outlet-revenue" target="_blank" rel="noreferrer"><code>/reports/outlet-revenue</code><span>Outlet revenue report</span></a>
+            <a class="route-link" href="http://127.0.0.1:3000/reports/export-jobs" target="_blank" rel="noreferrer"><code>/reports/export-jobs</code><span>Export jobs center</span></a>
+          </div>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

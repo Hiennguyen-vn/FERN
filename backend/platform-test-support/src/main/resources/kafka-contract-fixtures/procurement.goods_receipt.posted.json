@@ -1,0 +1,30 @@
+{
+  "eventId": "receipt-fixture-1",
+  "eventType": "procurement.goods_receipt.posted",
+  "occurredAt": "2026-03-29T10:00:00Z",
+  "sourceService": "procurement-service",
+  "correlationId": "corr-gr-fixture",
+  "idempotencyKey": "procurement.goods_receipt.posted:receipt:33",
+  "eventVersion": 1,
+  "goodsReceiptId": 33,
+  "purchaseOrderId": 44,
+  "regionId": 1,
+  "outletId": 101,
+  "businessDate": "2026-03-29",
+  "postedAt": "2026-03-29T10:00:00Z",
+  "postedByUserId": 7,
+  "lines": [
+    {
+      "ingredientId": 200,
+      "qtyReceived": 10.00,
+      "unitCost": 5.00,
+      "sourceLineId": 88
+    },
+    {
+      "ingredientId": 201,
+      "qtyReceived": 4.00,
+      "unitCost": 7.50,
+      "sourceLineId": 89
+    }
+  ]
+}

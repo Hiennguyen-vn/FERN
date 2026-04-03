@@ -7,13 +7,18 @@ import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
 import com.fern.platform.contracts.SupplierPaymentRecordedEvent;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Types;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -26,6 +31,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class FinanceProcurementConsumer {
+    private static final String GOODS_RECEIPT_TOPIC = "procurement.goods_receipt.posted";
+    private static final String SUPPLIER_PAYMENT_TOPIC = "procurement.supplier.payment.recorded";
+    private static final String FINANCE_SERVICE = "finance-service";
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final NamedParameterJdbcTemplate projectionJdbcTemplate;
     private final SnowflakeIdGenerator snowflakeIdGenerator;
@@ -52,36 +61,82 @@ public class FinanceProcurementConsumer {
         this.projectionTransactionTemplate = projectionTransactionTemplate;
     }
 
-    @KafkaListener(topics = "procurement.goods_receipt.posted", groupId = "${spring.kafka.consumer.group-id}")
+    @KafkaListener(topics = GOODS_RECEIPT_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
     public void consumeGoodsReceiptPosted(String payload) throws Exception {
-        ProcurementGoodsReceiptPostedEvent event = objectMapper.readValue(payload, ProcurementGoodsReceiptPostedEvent.class);
-        validateGoodsReceiptPostedEvent(event);
+        ProcurementGoodsReceiptPostedEvent event;
+        try {
+            event = objectMapper.readValue(payload, ProcurementGoodsReceiptPostedEvent.class);
+        } catch (JsonProcessingException exception) {
+            recordDeserializationFailure(GOODS_RECEIPT_TOPIC, payload, ProcurementGoodsReceiptPostedEvent.class, exception);
+            throw exception;
+        }
+        String sourceEventId = resolveSourceEventId(event.eventId(), GOODS_RECEIPT_TOPIC, payload, "validation");
+        String eventType = resolveEventType(event.eventType(), GOODS_RECEIPT_TOPIC);
+        String idempotencyKey = resolveIdempotencyKey(event.idempotencyKey(), eventType, sourceEventId, payload);
         if (!transactionTemplate.execute(status ->
-                beginIntegrationEvent(event.eventId(), event.eventType(), event.idempotencyKey(), payload))) {
+                beginIntegrationEvent(sourceEventId, eventType, idempotencyKey, payload))) {
             return;
         }
         try {
-            transactionTemplate.executeWithoutResult(status -> processGoodsReceiptPosted(event));
+            validateGoodsReceiptPostedEvent(event);
+            transactionTemplate.executeWithoutResult(status -> processGoodsReceiptPosted(event, sourceEventId));
         } catch (RuntimeException exception) {
-            transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(event.eventId(), exception));
+            transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
             throw exception;
         }
     }
 
-    @KafkaListener(topics = "procurement.supplier.payment.recorded", groupId = "${spring.kafka.consumer.group-id}")
+    @KafkaListener(topics = SUPPLIER_PAYMENT_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
     public void consumeSupplierPaymentRecorded(String payload) throws Exception {
-        SupplierPaymentRecordedEvent event = objectMapper.readValue(payload, SupplierPaymentRecordedEvent.class);
-        validateSupplierPaymentRecordedEvent(event);
+        SupplierPaymentRecordedEvent event;
+        try {
+            event = objectMapper.readValue(payload, SupplierPaymentRecordedEvent.class);
+        } catch (JsonProcessingException exception) {
+            recordDeserializationFailure(SUPPLIER_PAYMENT_TOPIC, payload, SupplierPaymentRecordedEvent.class, exception);
+            throw exception;
+        }
+        String sourceEventId = resolveSourceEventId(event.eventId(), SUPPLIER_PAYMENT_TOPIC, payload, "validation");
+        String eventType = resolveEventType(event.eventType(), SUPPLIER_PAYMENT_TOPIC);
+        String idempotencyKey = resolveIdempotencyKey(event.idempotencyKey(), eventType, sourceEventId, payload);
         if (!transactionTemplate.execute(status ->
-                beginIntegrationEvent(event.eventId(), event.eventType(), event.idempotencyKey(), payload))) {
+                beginIntegrationEvent(sourceEventId, eventType, idempotencyKey, payload))) {
             return;
         }
         try {
-            transactionTemplate.executeWithoutResult(status -> processSupplierPaymentRecorded(event, payload));
+            validateSupplierPaymentRecordedEvent(event);
+            transactionTemplate.executeWithoutResult(status ->
+                    processSupplierPaymentRecorded(event, payload, sourceEventId));
         } catch (RuntimeException exception) {
-            transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(event.eventId(), exception));
+            transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
             throw exception;
         }
+    }
+
+    private void recordDeserializationFailure(
+            String topic,
+            String payload,
+            Class<?> expectedType,
+            JsonProcessingException exception
+    ) {
+        String sourceEventId = syntheticId("deser", topic, payload);
+        String wrappedPayload = toJson(Map.of(
+                "topic", topic,
+                "expectedType", expectedType.getName(),
+                "rawPayload", payload,
+                "failureType", exception.getClass().getSimpleName()
+        ));
+        boolean claimed = Boolean.TRUE.equals(transactionTemplate.execute(status ->
+                beginIntegrationEvent(
+                        sourceEventId,
+                        topic + ".deserialization_failed",
+                        sourceEventId,
+                        wrappedPayload
+                )));
+        if (!claimed) {
+            return;
+        }
+        transactionTemplate.executeWithoutResult(status ->
+                markIntegrationFailed(sourceEventId, exception.getClass().getSimpleName()));
     }
 
     private void validateSupplierPaymentRecordedEvent(SupplierPaymentRecordedEvent event) {
@@ -92,6 +147,7 @@ public class FinanceProcurementConsumer {
         requireNonNull(event.paymentId(), "Supplier payment id is required");
         requireNonNull(event.supplierId(), "Supplier id is required");
         requireNonNull(event.paymentTime(), "Supplier payment time is required");
+        requireNonNull(event.invoiceAllocations(), "Supplier payment allocations are required");
         requirePositive(event.amount(), "Supplier payment amount must be positive");
         BigDecimal allocatedTotal = event.invoiceAllocations().stream()
                 .map(allocation -> {
@@ -115,6 +171,7 @@ public class FinanceProcurementConsumer {
         requireNonNull(event.outletId(), "Goods receipt outlet id is required");
         requireNonNull(event.businessDate(), "Goods receipt business date is required");
         requireNonNull(event.postedAt(), "Goods receipt posted time is required");
+        requireNonNull(event.lines(), "Goods receipt lines are required");
         if (event.lines().isEmpty()) {
             throw new IllegalArgumentException("Goods receipt lines are required");
         }
@@ -169,6 +226,10 @@ public class FinanceProcurementConsumer {
     }
 
     private void markIntegrationFailed(String sourceEventId, RuntimeException exception) {
+        markIntegrationFailed(sourceEventId, ExceptionSummaries.safeSummary(exception));
+    }
+
+    private void markIntegrationFailed(String sourceEventId, String errorMessage) {
         jdbcTemplate.update("""
                 UPDATE finance.integration_event
                 SET status = 'FAILED',
@@ -177,7 +238,7 @@ public class FinanceProcurementConsumer {
                 WHERE source_event_id = :sourceEventId
                 """, params(
                 "sourceEventId", sourceEventId,
-                "errorMessage", ExceptionSummaries.safeSummary(exception)
+                "errorMessage", errorMessage
         ));
     }
 
@@ -234,7 +295,7 @@ public class FinanceProcurementConsumer {
         }
     }
 
-    private void processGoodsReceiptPosted(ProcurementGoodsReceiptPostedEvent event) {
+    private void processGoodsReceiptPosted(ProcurementGoodsReceiptPostedEvent event, String sourceEventId) {
         BigDecimal amount = event.lines().stream()
                 .map(line -> line.qtyReceived().multiply(line.unitCost()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -256,7 +317,7 @@ public class FinanceProcurementConsumer {
                 "note", "Goods receipt " + event.goodsReceiptId() + " posted from procurement-service",
                 "submittedByUserId", event.postedByUserId(),
                 "approvedByUserId", event.postedByUserId(),
-                "sourceEventId", event.eventId(),
+                "sourceEventId", sourceEventId,
                 "sourceReferenceId", event.goodsReceiptId().toString(),
                 "postedAt", event.postedAt()
         ));
@@ -278,10 +339,14 @@ public class FinanceProcurementConsumer {
                 "GOODS_RECEIPT",
                 event.goodsReceiptId().toString()
         );
-        markIntegrationProcessed(event.eventId());
+        markIntegrationProcessed(sourceEventId);
     }
 
-    private void processSupplierPaymentRecorded(SupplierPaymentRecordedEvent event, String payload) {
+    private void processSupplierPaymentRecorded(
+            SupplierPaymentRecordedEvent event,
+            String payload,
+            String sourceEventId
+    ) {
         projectionTransactionTemplate.executeWithoutResult(status -> {
             long postingId = snowflakeIdGenerator.nextId();
             projectionJdbcTemplate.update("""
@@ -295,7 +360,7 @@ public class FinanceProcurementConsumer {
                     ON CONFLICT (source_event_id) DO NOTHING
                     """, params(
                     "postingId", postingId,
-                    "sourceEventId", event.eventId(),
+                    "sourceEventId", sourceEventId,
                     "sourceService", event.sourceService(),
                     "eventType", event.eventType(),
                     "occurredAt", event.occurredAt(),
@@ -316,17 +381,17 @@ public class FinanceProcurementConsumer {
                     ON CONFLICT (source_event_id) DO NOTHING
                     """, params(
                     "snapshotId", snowflakeIdGenerator.nextId(),
-                    "sourceEventId", event.eventId(),
+                    "sourceEventId", sourceEventId,
                     "sourceService", event.sourceService(),
                     "eventType", event.eventType(),
                     "occurredAt", event.occurredAt(),
                     "idempotencyKey", event.idempotencyKey(),
-                    "businessDate", LocalDate.ofInstant(event.paymentTime(), java.time.ZoneOffset.UTC),
+                    "businessDate", LocalDate.ofInstant(event.paymentTime(), ZoneOffset.UTC),
                     "snapshotValue", event.amount(),
                     "snapshotPayload", payload
             ));
         });
-        markIntegrationProcessed(event.eventId());
+        markIntegrationProcessed(sourceEventId);
     }
 
     private Long insertForId(String sql, MapSqlParameterSource parameters) {
@@ -379,6 +444,50 @@ public class FinanceProcurementConsumer {
             return leftNode.equals(rightNode);
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to compare integration payload", exception);
+        }
+    }
+
+    private String resolveSourceEventId(String eventId, String topic, String payload, String prefix) {
+        if (eventId != null && !eventId.isBlank()) {
+            return eventId;
+        }
+        return syntheticId(prefix, topic, payload);
+    }
+
+    private String resolveEventType(String eventType, String fallback) {
+        return eventType == null || eventType.isBlank() ? fallback : eventType;
+    }
+
+    private String resolveIdempotencyKey(String idempotencyKey, String eventType, String sourceEventId, String payload) {
+        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
+            return idempotencyKey;
+        }
+        return "synthetic:" + eventType + ":" + stableHash(eventType, sourceEventId, payload);
+    }
+
+    private String syntheticId(String prefix, String topic, String payload) {
+        return prefix + ":" + topic + ":" + stableHash(prefix, topic, payload);
+    }
+
+    private String stableHash(String first, String second, String payload) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update(first.getBytes(StandardCharsets.UTF_8));
+            digest.update((byte) 0);
+            digest.update(second.getBytes(StandardCharsets.UTF_8));
+            digest.update((byte) 0);
+            digest.update(payload.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is not available", exception);
+        }
+    }
+
+    private String toJson(Object payload) {
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Unable to serialize finance integration payload", exception);
         }
     }
 

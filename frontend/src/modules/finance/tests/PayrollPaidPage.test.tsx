@@ -60,7 +60,7 @@ describe('PayrollPaidPage', () => {
       { route: '/finance/payroll-paid/55' },
     )
 
-    expect(await screen.findByText('PAY-55')).toBeInTheDocument()
+    expect((await screen.findAllByText('PAY-55')).length).toBeGreaterThan(0)
     expect(screen.getByText('Terminal readonly state')).toBeInTheDocument()
   })
 

@@ -14,6 +14,9 @@ import com.fern.platform.observability.CorrelationId;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.platform.contracts.ExpensePostedEvent;
+import com.fern.platform.contracts.InventoryAdjustmentPostedEvent;
+import com.fern.platform.contracts.PosSaleCompletedEvent;
+import com.fern.platform.contracts.SalePaymentSnapshot;
 import com.fern.platform.security.FernJwtClaims;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernJwtService;
@@ -33,6 +36,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -303,6 +307,14 @@ class ReportServiceIntegrationTest {
     }
 
     @Test
+    void shouldDenyRevenueStatsForPayrollOnlyPermission() throws Exception {
+        mockMvc.perform(get("/reports/revenue/outlet-stats/today")
+                        .header("Authorization", bearer(Set.of(PermissionCodes.REPORT_PAYROLL_READ), List.of(1L), List.of(101L), false))
+                        .param("outletIds", "101"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldServeDeprecatedInventoryProxyWithServiceTokenAndSunsetHeaders() throws Exception {
         String authorizationHeader = bearer(Set.of(PermissionCodes.REPORT_READ), List.of(1L), List.of(101L), false);
         FernJwtProperties properties = new FernJwtProperties();
@@ -389,6 +401,73 @@ class ReportServiceIntegrationTest {
                 .andExpect(jsonPath("$.items[1].sourceEventId").value("evt-1"))
                 .andExpect(jsonPath("$.items[1].movementType").value("PURCHASE_IN"))
                 .andExpect(jsonPath("$.hasMore").value(false));
+    }
+
+    @Test
+    void shouldBackfillSaleOrderCogsWithoutDuplicatingAcrossAllSaleLines() throws Exception {
+        PosSaleCompletedEvent saleEvent = new PosSaleCompletedEvent(
+                "sale-event-cogs-1",
+                "pos.sale.completed",
+                Instant.parse("2026-03-27T08:00:00Z"),
+                "pos-service",
+                "corr-sale-event-cogs-1",
+                "sale-idem-cogs-1",
+                81001L,
+                91001L,
+                1L,
+                101L,
+                LocalDate.parse("2026-03-27"),
+                Instant.parse("2026-03-27T08:05:00Z"),
+                5L,
+                null,
+                List.of(new SalePaymentSnapshot(61L, "CASH", new BigDecimal("150.00"), "CAPTURED", Instant.parse("2026-03-27T08:05:00Z"), null)),
+                Map.of("lines", List.of(
+                        Map.of("productId", 501L, "qty", 1, "lineTotal", 100.00, "discountAmount", 0, "taxAmount", 0),
+                        Map.of("productId", 502L, "qty", 1, "lineTotal", 50.00, "discountAmount", 0, "taxAmount", 0)
+                )),
+                List.of()
+        );
+        reportService.ingestPosSaleCompleted(objectMapper.writeValueAsString(saleEvent), saleEvent);
+
+        InventoryAdjustmentPostedEvent saleUsageEvent = new InventoryAdjustmentPostedEvent(
+                "inventory-sale-usage-1",
+                "inventory.adjustment.posted",
+                Instant.parse("2026-03-27T08:06:00Z"),
+                "inventory-service",
+                "corr-inventory-sale-usage-1",
+                "inventory-idem-sale-usage-1",
+                99001L,
+                1L,
+                101L,
+                601L,
+                LocalDate.parse("2026-03-27"),
+                Instant.parse("2026-03-27T08:06:00Z"),
+                7L,
+                "OUT",
+                "SALE_USAGE",
+                new BigDecimal("-3.00"),
+                new BigDecimal("10.00"),
+                "SALE_ORDER",
+                "81001"
+        );
+        reportService.ingestInventoryAdjustmentPosted(objectMapper.writeValueAsString(saleUsageEvent), saleUsageEvent);
+
+        List<BigDecimal> cogsPerLine = jdbcTemplate.query(
+                """
+                        SELECT cogs_amount
+                        FROM report.sales_fact
+                        WHERE sale_order_id = 81001
+                        ORDER BY line_number
+                        """,
+                (rs, rowNum) -> rs.getBigDecimal("cogs_amount")
+        );
+        BigDecimal totalCogs = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(SUM(cogs_amount), 0) FROM report.sales_fact WHERE sale_order_id = 81001",
+                BigDecimal.class
+        );
+
+        assertThat(cogsPerLine).containsExactly(new BigDecimal("20.00"), new BigDecimal("10.00"));
+        assertThat(totalCogs).isEqualByComparingTo("30.00");
     }
 
     @Test

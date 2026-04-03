@@ -15,7 +15,12 @@ import com.fern.platform.alerts.OperationalAlertPublisher;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
+import com.fern.platform.common.OperationalShardAccess;
+import com.fern.platform.common.OperationalShardRegistry;
 import com.fern.platform.common.PermissionCodes;
+import com.fern.platform.common.RouteKey;
+import com.fern.platform.common.ShardId;
+import com.fern.platform.common.ShardResolver;
 import com.fern.platform.common.ScopeRoots;
 import com.fern.posservice.dto.PosCommands.AddPaymentRequest;
 import com.fern.posservice.dto.PosResponses.SaleOrderResponse;
@@ -64,6 +69,12 @@ class PosOrderServiceTest {
     private TransactionTemplate transactionTemplate;
 
     @Mock
+    private OperationalShardRegistry operationalShardRegistry;
+
+    @Mock
+    private ShardResolver shardResolver;
+
+    @Mock
     private OperationalAlertPublisher operationalAlertPublisher;
 
     @Mock
@@ -75,6 +86,9 @@ class PosOrderServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(shardResolver.resolve(any(RouteKey.class))).thenReturn(new ShardId("operational-0"));
+        when(operationalShardRegistry.get(any(ShardId.class)))
+                .thenReturn(new OperationalShardAccess(new ShardId("operational-0"), jdbcTemplate, transactionTemplate));
         doAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(mockTransactionStatus());
@@ -85,19 +99,19 @@ class PosOrderServiceTest {
             return null;
         }).when(transactionTemplate).executeWithoutResult(any());
         service = new PosOrderService(
-                jdbcTemplate,
                 posAuthorizer,
                 store,
                 posOrgClient,
                 pricingService,
                 inventoryClient,
                 codeGenerator,
-                transactionTemplate,
                 new ObjectMapper(),
                 Clock.fixed(Instant.parse("2026-03-29T08:00:00Z"), ZoneOffset.UTC),
                 operationalAlertPublisher,
                 posAuditService,
-                new SimpleMeterRegistry()
+                new SimpleMeterRegistry(),
+                operationalShardRegistry,
+                shardResolver
         );
         principal = new FernPrincipal(
                 99L,

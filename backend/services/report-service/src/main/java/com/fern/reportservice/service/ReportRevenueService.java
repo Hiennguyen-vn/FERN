@@ -25,7 +25,7 @@ public class ReportRevenueService {
         if (normalizedOutletIds.isEmpty()) {
             return List.of();
         }
-        requireReportRead(principal);
+        requireRevenueRead(principal);
         if (!ScopeAccess.isSystemScoped(principal)) {
             for (Long outletId : normalizedOutletIds) {
                 if (!ScopeAccess.allowsOutlet(principal, outletId)) {
@@ -36,10 +36,8 @@ public class ReportRevenueService {
         return reportPosClient.fetchOutletTodayStats(normalizedOutletIds, principal, correlationId);
     }
 
-    private void requireReportRead(FernPrincipal principal) {
-        if (principal == null
-                || (!principal.permissions().contains(PermissionCodes.REPORT_READ)
-                && !principal.permissions().contains(PermissionCodes.REPORT_PAYROLL_READ))) {
+    private void requireRevenueRead(FernPrincipal principal) {
+        if (principal == null || !principal.permissions().contains(PermissionCodes.REPORT_READ)) {
             throw new ForbiddenException("Missing permission");
         }
     }

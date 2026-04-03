@@ -59,9 +59,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class OrgServiceIntegrationTest {
     private static HttpServer posServer;
+    private static HttpServer inventoryServer;
     private static HttpServer procurementServer;
     private static HttpServer financeServer;
     private static volatile boolean posHasOpenSessions;
+    private static volatile boolean inventoryHasBlockingOperations;
+    private static volatile long inventoryBlockingReservations;
+    private static volatile long inventoryBlockingStockCountSessions;
     private static volatile boolean procurementHasBlockingDocuments;
     private static volatile long procurementBlockingPurchaseOrders;
     private static volatile long procurementBlockingGoodsReceipts;
@@ -73,6 +77,11 @@ class OrgServiceIntegrationTest {
     private static volatile String lastPosActorUserId;
     private static volatile String lastPosActorUsername;
     private static volatile String lastPosQuery;
+    private static volatile String lastInventoryAuthorization;
+    private static volatile String lastInventoryCorrelationId;
+    private static volatile String lastInventoryActorUserId;
+    private static volatile String lastInventoryActorUsername;
+    private static volatile String lastInventoryQuery;
     private static volatile String lastProcurementAuthorization;
     private static volatile String lastProcurementCorrelationId;
     private static volatile String lastProcurementActorUserId;
@@ -101,6 +110,7 @@ class OrgServiceIntegrationTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         ensurePosServerStarted();
+        ensureInventoryServerStarted();
         ensureProcurementServerStarted();
         ensureFinanceServerStarted();
         registry.add("spring.datasource.url", () -> FernIntegrationContainers.masterJdbcUrl("org"));
@@ -112,6 +122,7 @@ class OrgServiceIntegrationTest {
         registry.add("fern.security.jwt.secret", () -> "XV4T89da-00NoHY48hZTYhGdaCNpqooKVy4MDKTRO5v4Im6TwlAITKb6_O4K--Iv");
         registry.add("fern.security.jwt.allow-insecure-default-secret", () -> true);
         registry.add("fern.clients.pos.base-url", () -> "http://localhost:" + posServer.getAddress().getPort());
+        registry.add("fern.clients.inventory.base-url", () -> "http://localhost:" + inventoryServer.getAddress().getPort());
         registry.add("fern.clients.procurement.base-url", () -> "http://localhost:" + procurementServer.getAddress().getPort());
         registry.add("fern.clients.finance.base-url", () -> "http://localhost:" + financeServer.getAddress().getPort());
     }
@@ -119,6 +130,7 @@ class OrgServiceIntegrationTest {
     @org.junit.jupiter.api.BeforeAll
     static void startPosServer() {
         ensurePosServerStarted();
+        ensureInventoryServerStarted();
         ensureProcurementServerStarted();
         ensureFinanceServerStarted();
     }
@@ -131,6 +143,9 @@ class OrgServiceIntegrationTest {
         if (procurementServer != null) {
             procurementServer.stop(0);
         }
+        if (inventoryServer != null) {
+            inventoryServer.stop(0);
+        }
         if (financeServer != null) {
             financeServer.stop(0);
         }
@@ -142,6 +157,9 @@ class OrgServiceIntegrationTest {
         redisTemplate.delete("fern:versions:scope");
         token = issueToken(1L);
         posHasOpenSessions = false;
+        inventoryHasBlockingOperations = false;
+        inventoryBlockingReservations = 0;
+        inventoryBlockingStockCountSessions = 0;
         procurementHasBlockingDocuments = false;
         procurementBlockingPurchaseOrders = 0;
         procurementBlockingGoodsReceipts = 0;
@@ -153,6 +171,11 @@ class OrgServiceIntegrationTest {
         lastPosActorUserId = null;
         lastPosActorUsername = null;
         lastPosQuery = null;
+        lastInventoryAuthorization = null;
+        lastInventoryCorrelationId = null;
+        lastInventoryActorUserId = null;
+        lastInventoryActorUsername = null;
+        lastInventoryQuery = null;
         lastProcurementAuthorization = null;
         lastProcurementCorrelationId = null;
         lastProcurementActorUserId = null;
@@ -431,6 +454,47 @@ class OrgServiceIntegrationTest {
         assertThat(serviceClaims.principalType()).isEqualTo(FernPrincipalType.SERVICE);
         assertThat(serviceClaims.audience()).contains("procurement-service");
         assertThat(serviceClaims.permissions()).contains(PermissionCodes.PROCUREMENT_INTERNAL_READ);
+    }
+
+    @Test
+    void shouldRejectClosingOutletWhenInventoryWorkflowsRemainOpen() throws Exception {
+        Long regionId = createRegion("REGION-CLOSE-GUARD-INV", "Close Guard Region Inventory");
+        token = issueToken(currentScopeVersion());
+        Long outletId = createOutlet(regionId, "OUTLET-CLOSE-GUARD-INV", "Close Guard Outlet Inventory");
+        token = issueToken(currentScopeVersion());
+        inventoryHasBlockingOperations = true;
+        inventoryBlockingReservations = 2;
+        inventoryBlockingStockCountSessions = 1;
+
+        FernJwtService jwtService = testJwtService();
+        FernJwtClaims actorClaims = jwtService.decode(token);
+
+        mockMvc.perform(patch("/outlets/{id}", outletId)
+                        .header("Authorization", "Bearer " + token)
+                        .header(CorrelationId.HEADER, "corr-org-close-inventory")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "status": "CLOSED"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(
+                        "Cannot close outlet while inventory workflows remain open: reservations=2, stockCountSessions=1"
+                ));
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM org.outlet WHERE id = ?", String.class, outletId))
+                .isEqualTo("ACTIVE");
+        assertThat(lastInventoryQuery).contains("outletId=" + outletId);
+        assertThat(lastInventoryCorrelationId).isEqualTo("corr-org-close-inventory");
+        assertThat(lastInventoryActorUserId).isEqualTo(actorClaims.userId().toString());
+        assertThat(lastInventoryActorUsername).isEqualTo(actorClaims.username());
+        assertThat(lastInventoryAuthorization).isNotBlank().isNotEqualTo("Bearer " + token);
+
+        FernJwtClaims serviceClaims = jwtService.decode(lastInventoryAuthorization.substring("Bearer ".length()));
+        assertThat(serviceClaims.principalType()).isEqualTo(FernPrincipalType.SERVICE);
+        assertThat(serviceClaims.audience()).contains("inventory-service");
+        assertThat(serviceClaims.permissions()).contains(PermissionCodes.INVENTORY_INTERNAL_READ);
     }
 
     @Test
@@ -730,6 +794,43 @@ class OrgServiceIntegrationTest {
             }
         });
         procurementServer.start();
+    }
+
+    private static synchronized void ensureInventoryServerStarted() {
+        if (inventoryServer != null) {
+            return;
+        }
+        try {
+            inventoryServer = HttpServer.create(new InetSocketAddress(0), 0);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to start inventory stub server", exception);
+        }
+        inventoryServer.createContext("/internal/inventory/outlet-close-check", exchange -> {
+            lastInventoryAuthorization = exchange.getRequestHeaders().getFirst("Authorization");
+            lastInventoryCorrelationId = exchange.getRequestHeaders().getFirst(CorrelationId.HEADER);
+            lastInventoryActorUserId = exchange.getRequestHeaders().getFirst("X-Fern-Actor-User-Id");
+            lastInventoryActorUsername = exchange.getRequestHeaders().getFirst("X-Fern-Actor-Username");
+            lastInventoryQuery = exchange.getRequestURI().getRawQuery();
+            String body = """
+                    {
+                      "outletId": 0,
+                      "blockingReservations": %d,
+                      "blockingStockCountSessions": %d,
+                      "hasBlockingOperations": %s
+                    }
+                    """.formatted(
+                    inventoryBlockingReservations,
+                    inventoryBlockingStockCountSessions,
+                    inventoryHasBlockingOperations
+            );
+            byte[] response = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, response.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(response);
+            }
+        });
+        inventoryServer.start();
     }
 
     private static synchronized void ensureFinanceServerStarted() {
