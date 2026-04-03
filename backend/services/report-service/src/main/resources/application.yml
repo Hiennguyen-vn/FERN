@@ -2,7 +2,7 @@ spring:
   application:
     name: report-service
   datasource:
-    url: ${FERN_REPORT_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=report}
+    url: ${FERN_REPORT_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_reporting?currentSchema=raw_events}
     username: ${FERN_DB_USERNAME:}
     password: ${FERN_DB_PASSWORD:}
   flyway:
@@ -10,7 +10,7 @@ spring:
     create-schemas: true
     schemas: raw_events,report
     default-schema: raw_events
-    locations: classpath:db/migration/postgresql/master
+    locations: classpath:db/migration/postgresql/reporting
   kafka:
     bootstrap-servers: ${FERN_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     properties:
@@ -37,6 +37,10 @@ fern:
       secret: ${FERN_JWT_SECRET:}
       access-token-ttl-seconds: 900
       refresh-token-ttl-seconds: 604800
+  read-datasource:
+    url: ${FERN_REPORT_READ_JDBC_URL:}
+    username: ${FERN_DB_USERNAME:}
+    password: ${FERN_DB_PASSWORD:}
   id-generator:
     node-id: ${FERN_ID_GENERATOR_NODE_ID:10}
     epoch-millis: ${FERN_ID_GENERATOR_EPOCH_MILLIS:1767225600000}

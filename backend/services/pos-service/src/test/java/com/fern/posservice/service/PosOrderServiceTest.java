@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -91,6 +92,8 @@ class PosOrderServiceTest {
         when(shardResolver.resolve(any(RouteKey.class))).thenReturn(new ShardId("operational-0"));
         when(operationalShardRegistry.get(any(ShardId.class)))
                 .thenReturn(new OperationalShardAccess(new ShardId("operational-0"), jdbcTemplate, transactionTemplate));
+        when(operationalShardRegistry.allShards())
+                .thenReturn(List.of(new OperationalShardAccess(new ShardId("operational-0"), jdbcTemplate, transactionTemplate)));
         doAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
             return callback.doInTransaction(mockTransactionStatus());
@@ -138,8 +141,8 @@ class PosOrderServiceTest {
     void shouldReturnCurrentOrderWhenCompletionIsReplayed() {
         OrderRecord completedOrder = order(SaleOrderStatus.COMPLETED.name(), new BigDecimal("10.00"), 555L);
         SaleOrderResponse response = response(completedOrder);
-        when(store.requireOrder(10L)).thenReturn(completedOrder, completedOrder);
-        when(store.mapOrder(completedOrder)).thenReturn(response);
+        when(store.requireOrder(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(completedOrder, completedOrder);
+        when(store.mapOrder(any(NamedParameterJdbcTemplate.class), eq(completedOrder))).thenReturn(response);
 
         SaleOrderResponse result = service.completeOrder(principal, 10L, "corr-1");
 
@@ -151,7 +154,7 @@ class PosOrderServiceTest {
     @Test
     void shouldRejectCompletionWhileAnotherCompletionIsInProgress() {
         OrderRecord completingOrder = order(SaleOrderStatus.COMPLETING.name(), new BigDecimal("10.00"), null);
-        when(store.requireOrder(10L)).thenReturn(completingOrder);
+        when(store.requireOrder(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(completingOrder);
 
         assertThatThrownBy(() -> service.completeOrder(principal, 10L, "corr-2"))
                 .isInstanceOf(ConflictException.class)
@@ -164,8 +167,8 @@ class PosOrderServiceTest {
     @Test
     void shouldRejectCompletionUntilSuccessfulPaymentsCoverOrderTotal() {
         OrderRecord openOrder = order(SaleOrderStatus.OPEN.name(), new BigDecimal("10.00"), null);
-        when(store.requireOrder(10L)).thenReturn(openOrder);
-        when(store.successfulPaymentTotal(10L)).thenReturn(new BigDecimal("9.99"));
+        when(store.requireOrder(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(openOrder);
+        when(store.successfulPaymentTotal(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(new BigDecimal("9.99"));
 
         assertThatThrownBy(() -> service.completeOrder(principal, 10L, "corr-3"))
                 .isInstanceOf(ConflictException.class)
@@ -178,8 +181,8 @@ class PosOrderServiceTest {
     @Test
     void shouldRejectCancellationWhenSuccessfulPaymentsAlreadyExist() {
         OrderRecord openOrder = order(SaleOrderStatus.OPEN.name(), new BigDecimal("10.00"), null);
-        when(store.requireOrder(10L)).thenReturn(openOrder);
-        when(store.successfulPaymentTotal(10L)).thenReturn(new BigDecimal("1.00"));
+        when(store.requireOrder(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(openOrder);
+        when(store.successfulPaymentTotal(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(new BigDecimal("1.00"));
 
         assertThatThrownBy(() -> service.cancelOrder(principal, 10L))
                 .isInstanceOf(ConflictException.class)
@@ -189,21 +192,21 @@ class PosOrderServiceTest {
     @Test
     void shouldRejectCancellingCompletedOrder() {
         OrderRecord completedOrder = order(SaleOrderStatus.COMPLETED.name(), new BigDecimal("10.00"), 555L);
-        when(store.requireOrder(10L)).thenReturn(completedOrder);
+        when(store.requireOrder(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(completedOrder);
 
         assertThatThrownBy(() -> service.cancelOrder(principal, 10L))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("Only open orders can be modified");
 
-        verify(store, never()).successfulPaymentTotal(10L);
+        verify(store, never()).successfulPaymentTotal(any(NamedParameterJdbcTemplate.class), eq(10L));
         verify(transactionTemplate, never()).executeWithoutResult(any());
     }
 
     @Test
     void shouldRejectUnsupportedPaymentStatusBeforePersistingPayment() {
         OrderRecord openOrder = order(SaleOrderStatus.OPEN.name(), new BigDecimal("10.00"), null);
-        when(store.requireOrder(10L)).thenReturn(openOrder);
-        when(store.requireOrderForUpdate(10L)).thenReturn(openOrder);
+        when(store.requireOrder(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(openOrder);
+        when(store.requireOrderForUpdate(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(openOrder);
         when(jdbcTemplate.query(anyString(), any(MapSqlParameterSource.class), any(ResultSetExtractor.class))).thenReturn(null);
 
         assertThatThrownBy(() -> service.addPayment(
@@ -215,7 +218,7 @@ class PosOrderServiceTest {
         )).isInstanceOf(BadRequestException.class)
                 .hasMessage("Unsupported payment status");
 
-        verify(store, never()).refreshPaymentStatus(10L);
+        verify(store, never()).refreshPaymentStatus(any(NamedParameterJdbcTemplate.class), eq(10L));
     }
 
     @Test
@@ -234,7 +237,7 @@ class PosOrderServiceTest {
         service.recoverStaleCompletions();
 
         verify(inventoryClient).releaseInventoryReservationBySourceOrderId(null, 55L);
-        verify(store).refreshPaymentStatus(55L);
+        verify(store).refreshPaymentStatus(any(NamedParameterJdbcTemplate.class), eq(55L));
     }
 
     private OrderRecord order(String status, BigDecimal totalAmount, Long reservationId) {

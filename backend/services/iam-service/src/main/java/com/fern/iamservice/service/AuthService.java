@@ -63,31 +63,32 @@ public class AuthService {
 
     @Transactional
     public AuthTokenResponse login(AuthLoginRequest request, IamRequestMetadata requestMetadata) {
-        if (loginProtectionService.isTemporarilyLocked(request.username())) {
+        String username = request.username() == null ? "" : request.username().trim().toLowerCase(java.util.Locale.ROOT);
+        if (loginProtectionService.isTemporarilyLocked(username)) {
             iamAuditService.publishSecurityEvent(
                     "iam.auth.login.failed",
                     null,
                     "DENIED",
                     "temporarily_locked",
-                    java.util.Map.of("username", request.username(), "lockedUntil", loginProtectionService.lockedUntil(request.username())),
+                    java.util.Map.of("username", username, "lockedUntil", loginProtectionService.lockedUntil(username)),
                     requestMetadata
             );
             throw new UnauthorizedException("Account is temporarily locked");
         }
 
-        UserAccountEntity user = userAccountService.findOptionalByUsername(request.username()).orElse(null);
+        UserAccountEntity user = userAccountService.findOptionalByUsername(username).orElse(null);
         boolean passwordMatches = passwordHasher.matches(
                 request.password(),
                 user == null ? DUMMY_PASSWORD_HASH : user.getPasswordHash()
         );
         if (user == null || user.getStatus() != UserStatus.ACTIVE || !passwordMatches) {
-            boolean locked = loginProtectionService.recordFailure(request.username());
+            boolean locked = loginProtectionService.recordFailure(username);
             iamAuditService.publishSecurityEvent(
                     "iam.auth.login.failed",
                     user == null ? null : user.getId(),
                     "DENIED",
                     user == null ? "invalid_credentials" : "invalid_credentials_or_status",
-                    java.util.Map.of("username", request.username(), "locked", locked),
+                    java.util.Map.of("username", username, "locked", locked),
                     requestMetadata
             );
             if (locked) {
@@ -96,13 +97,13 @@ public class AuthService {
                         user == null ? null : user.getId(),
                         "LOCKED",
                         "too_many_failures",
-                        java.util.Map.of("username", request.username()),
+                        java.util.Map.of("username", username),
                         requestMetadata
                 );
             }
             throw new UnauthorizedException("Invalid username or password");
         }
-        loginProtectionService.clearFailures(request.username());
+        loginProtectionService.clearFailures(username);
         AuthTokenResponse response = issueTokens(user, null, requestMetadata);
         iamAuditService.publishSecurityEvent(
                 "iam.auth.login.succeeded",

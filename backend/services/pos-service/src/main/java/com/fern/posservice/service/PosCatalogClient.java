@@ -8,7 +8,10 @@ import com.fern.platform.web.FernDownstreamClientFactory;
 import com.fern.platform.web.FernDownstreamClientSpec;
 import com.fern.platform.web.FernDownstreamErrorMapper;
 import com.fern.platform.web.FernDownstreamHeadersContributor;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -17,6 +20,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -33,6 +37,7 @@ public class PosCatalogClient {
     private final FernDownstreamClientFactory downstreamClientFactory;
     private final FernDownstreamErrorMapper errorMapper;
     private final FernDownstreamClientSpec clientSpec;
+    private final Cache<String, MenuResponse> menuCache;
 
     public PosCatalogClient(
             @Qualifier("catalogRestClient") RestClient restClient,
@@ -40,7 +45,8 @@ public class PosCatalogClient {
             @Qualifier("catalogClientSpec") FernDownstreamClientSpec clientSpec,
             FernServiceTokenSupport serviceTokenSupport,
             FernDownstreamClientFactory downstreamClientFactory,
-            FernDownstreamErrorMapper errorMapper
+            FernDownstreamErrorMapper errorMapper,
+            @Value("${fern.pos.menu-cache-ttl-seconds:60}") int menuCacheTtlSeconds
     ) {
         this.restClient = restClient;
         this.circuitBreaker = catalogCircuitBreaker;
@@ -48,10 +54,19 @@ public class PosCatalogClient {
         this.serviceTokenSupport = serviceTokenSupport;
         this.downstreamClientFactory = downstreamClientFactory;
         this.errorMapper = errorMapper;
+        this.menuCache = Caffeine.newBuilder()
+                .expireAfterWrite(Duration.ofSeconds(menuCacheTtlSeconds))
+                .maximumSize(200)
+                .build();
     }
 
     public MenuResponse fetchMenu(FernPrincipal principal, Long outletId, LocalDate businessDate) {
-        return execute(() -> Objects.requireNonNull(restClient.get()
+        String cacheKey = outletId + ":" + businessDate;
+        MenuResponse cached = menuCache.getIfPresent(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        MenuResponse response = execute(() -> Objects.requireNonNull(restClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/internal/catalog/menu")
                         .queryParam("outletId", outletId)
@@ -68,6 +83,8 @@ public class PosCatalogClient {
                 )::contribute)
                 .retrieve()
                 .body(MenuResponse.class)));
+        menuCache.put(cacheKey, response);
+        return response;
     }
 
     public List<RecipeSnapshot> resolveRecipes(FernPrincipal principal, List<Long> productIds, LocalDate businessDate) {

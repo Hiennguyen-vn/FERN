@@ -289,11 +289,15 @@ public class StockReservationService {
     }
 
     private void commitReservationDelta(Long outletId, Long ingredientId, BigDecimal qty) {
+        // qty_available remains unchanged after commit because:
+        //   reserve:  available -= qty, reserved += qty
+        //   commit:   on_hand  -= qty, reserved -= qty
+        //   net:      available = (on_hand - qty) - (reserved - qty) = on_hand - reserved  (unchanged)
+        // Therefore qty_available is intentionally omitted from the SET clause.
         int updated = jdbcTemplate.update("""
                 UPDATE inventory.stock_balance
                 SET qty_on_hand = qty_on_hand - :qty,
                     qty_reserved = qty_reserved - :qty,
-                    qty_available = (qty_on_hand - :qty) - (qty_reserved - :qty),
                     updated_at = CURRENT_TIMESTAMP
                 WHERE outlet_id = :outletId AND ingredient_id = :ingredientId
                   AND qty_on_hand >= :qty

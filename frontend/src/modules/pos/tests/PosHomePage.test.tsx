@@ -1,5 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from '@core/api/apiError'
 import { renderWithProviders } from '@shared/test-utils/renderWithProviders'
 import { PosHomePage } from '../routes/PosHomePage'
 import { useCartStore } from '../state/cart.store'
@@ -59,6 +60,16 @@ const minimalOutlet = {
   updatedAt: '',
 }
 
+const outletQueryState: {
+  data: typeof minimalOutlet | undefined
+  isLoading: boolean
+  error: Error | null
+} = {
+  data: minimalOutlet,
+  isLoading: false,
+  error: null,
+}
+
 vi.mock('@modules/org/hooks/useOrg', () => ({
   useRegion: (regionId: number, options?: { enabled?: boolean }) => ({
     data: options?.enabled && regionId ? { currencyCode: 'VND' } : undefined,
@@ -66,9 +77,10 @@ vi.mock('@modules/org/hooks/useOrg', () => ({
     error: null,
   }),
   useOutlet: (outletId: number, options?: { enabled?: boolean }) => ({
-    data: options?.enabled && outletId === 101 ? minimalOutlet : undefined,
-    isLoading: false,
-    error: null,
+    data: options?.enabled && outletId === 101 ? outletQueryState.data : undefined,
+    isLoading: outletQueryState.isLoading,
+    error: outletQueryState.error,
+    refetch: vi.fn(),
   }),
 }))
 
@@ -114,6 +126,9 @@ describe('PosHomePage', () => {
     mockScopeContext.selectedRegionId = 1
     mockScopeContext.outletIds = [101]
     mockScopeContext.regionIds = [1]
+    outletQueryState.data = minimalOutlet
+    outletQueryState.isLoading = false
+    outletQueryState.error = null
     useCartStore.getState().clearAllDrafts()
     usePosUiStore.setState({
       businessDates: {},
@@ -200,5 +215,28 @@ describe('PosHomePage', () => {
     expect(screen.queryByText('No outlet selected')).not.toBeInTheDocument()
     expect(screen.getByText('Open POS session')).toBeInTheDocument()
     expect(screen.getByLabelText(/Region ID/i)).toHaveValue('1')
+  })
+
+  it('shows permission guidance when outlet lookup is forbidden for outlet-only scope', () => {
+    mockScopeContext.selectedRegionId = null
+    mockScopeContext.regionIds = []
+    mockScopeContext.selectedOutletId = 101
+    mockScopeContext.outletIds = [101]
+    outletQueryState.data = undefined
+    outletQueryState.error = new ApiError(403, {
+      code: 'forbidden',
+      message: 'Missing permission: org.outlet.read',
+    })
+    usePosSessionsMock.mockReturnValue({
+      data: [],
+      error: null,
+      isLoading: false,
+    })
+
+    renderWithProviders(<PosHomePage />)
+
+    expect(screen.getByText('Unable to resolve outlet context')).toBeInTheDocument()
+    expect(screen.getByText(/lacks `org\.outlet\.read`/i)).toBeInTheDocument()
+    expect(screen.queryByText('Region context missing')).not.toBeInTheDocument()
   })
 })

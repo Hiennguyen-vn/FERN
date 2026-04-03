@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PosStatsService {
@@ -42,7 +41,6 @@ public class PosStatsService {
         this.shardResolver = shardResolver;
     }
 
-    @Transactional(readOnly = true)
     public List<OutletTodayStatResponse> listTodayStats(FernPrincipal principal, List<Long> outletIds) {
         List<Long> normalizedOutletIds = normalizeOutletIds(outletIds);
         if (normalizedOutletIds.isEmpty()) {
@@ -162,7 +160,10 @@ public class PosStatsService {
         if (sessionIds.isEmpty()) {
             return Map.of();
         }
-        return jdbcTemplate(null, null).query("""
+        // Sessions passed here were already resolved from a single shard (findLatestSessionsByOutlet uses the
+        // first outlet's shard). Use the root/default shard template for this aggregation query.
+        NamedParameterJdbcTemplate statsJdbc = operationalShardRegistry.get(shardResolver.resolve(com.fern.platform.common.RouteKey.of(0L, 0L))).jdbc();
+        return statsJdbc.query("""
                 WITH order_summary AS (
                     SELECT sale_order.pos_session_id,
                            COUNT(*) AS total_orders,

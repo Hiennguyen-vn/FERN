@@ -132,7 +132,8 @@ services:
       - "8084:8084"
     environment:
       <<: *common-env
-      FERN_AUDIT_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=audit
+      FERN_AUDIT_JDBC_URL: jdbc:postgresql://postgres:5432/fern_reporting?currentSchema=audit
+      FERN_AUDIT_READ_JDBC_URL: jdbc:postgresql://postgres:5432/fern_reporting?currentSchema=audit
     depends_on:
       postgres:
         condition: service_healthy
@@ -179,8 +180,9 @@ services:
       - "8087:8087"
     environment:
       <<: *common-env
-      FERN_INVENTORY_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=inventory
+      FERN_INVENTORY_JDBC_URL: jdbc:postgresql://postgres:5432/fern_operational?currentSchema=inventory
       FERN_ORG_BASE_URL: http://org-service:8082
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 15
     depends_on:
       postgres:
         condition: service_healthy
@@ -205,10 +207,11 @@ services:
       - "8086:8086"
     environment:
       <<: *common-env
-      FERN_POS_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=pos
+      FERN_POS_JDBC_URL: jdbc:postgresql://postgres:5432/fern_operational?currentSchema=pos
       FERN_CATALOG_BASE_URL: http://catalog-service:8085
       FERN_INVENTORY_BASE_URL: http://inventory-service:8087
       FERN_OUTBOX_PUBLISH_DELAY_MS: ${FERN_OUTBOX_PUBLISH_DELAY_MS:-5000}
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 15
     depends_on:
       postgres:
         condition: service_healthy
@@ -259,7 +262,7 @@ services:
       - "8089:8089"
     environment:
       <<: *common-env
-      FERN_HR_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=hr
+      FERN_HR_JDBC_URL: jdbc:postgresql://postgres:5432/fern_operational?currentSchema=hr
       FERN_OUTBOX_PUBLISH_DELAY_MS: ${FERN_OUTBOX_PUBLISH_DELAY_MS:-5000}
     depends_on:
       postgres:
@@ -283,7 +286,8 @@ services:
       - "8090:8090"
     environment:
       <<: *common-env
-      FERN_REPORT_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=report
+      FERN_REPORT_JDBC_URL: jdbc:postgresql://postgres:5432/fern_reporting?currentSchema=raw_events
+      FERN_REPORT_READ_JDBC_URL: jdbc:postgresql://postgres:5432/fern_reporting?currentSchema=report
     depends_on:
       postgres:
         condition: service_healthy
@@ -308,7 +312,7 @@ services:
       <<: *common-env
       FERN_FINANCE_JDBC_URL: jdbc:postgresql://postgres:5432/fern_operational?currentSchema=finance
       FERN_FINANCE_MASTER_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=config
-      FERN_FINANCE_PROJECTION_JDBC_URL: jdbc:postgresql://postgres:5432/fern_master?currentSchema=finance_projection
+      FERN_FINANCE_PROJECTION_JDBC_URL: jdbc:postgresql://postgres:5432/fern_reporting?currentSchema=finance_projection
       FERN_HR_BASE_URL: http://hr-service:8089
     depends_on:
       postgres:

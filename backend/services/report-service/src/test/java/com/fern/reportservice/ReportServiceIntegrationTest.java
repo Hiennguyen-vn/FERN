@@ -371,9 +371,7 @@ class ReportServiceIntegrationTest {
                 .andExpect(jsonPath("$.items[0].ingredientId").value(501))
                 .andExpect(jsonPath("$.items[0].qtyOnHand").value(12.5))
                 .andExpect(jsonPath("$.items[0].unitCost").value(4.2))
-                .andExpect(jsonPath("$.items[0].lastCountDate[0]").value(2026))
-                .andExpect(jsonPath("$.items[0].lastCountDate[1]").value(3))
-                .andExpect(jsonPath("$.items[0].lastCountDate[2]").value(27))
+                .andExpect(jsonPath("$.items[0].lastCountDate").value("2026-03-27"))
                 .andExpect(jsonPath("$.hasMore").value(true));
     }
 

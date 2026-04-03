@@ -44,7 +44,7 @@ fern:
     username: ${FERN_DB_USERNAME:}
     password: ${FERN_DB_PASSWORD:}
   projection-datasource:
-    url: ${FERN_FINANCE_PROJECTION_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=finance_projection}
+    url: ${FERN_FINANCE_PROJECTION_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_reporting?currentSchema=finance_projection}
     username: ${FERN_DB_USERNAME:}
     password: ${FERN_DB_PASSWORD:}
   outbox:

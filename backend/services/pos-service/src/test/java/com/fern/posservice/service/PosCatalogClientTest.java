@@ -74,7 +74,8 @@ class PosCatalogClientTest {
                 clientSpec(),
                 tokenSupport(jwtService),
                 downstreamClientFactory(),
-                errorMapper()
+                errorMapper(),
+                60
         );
 
         MDC.put(CorrelationId.MDC_KEY, "corr-pos-catalog");
@@ -118,7 +119,8 @@ class PosCatalogClientTest {
                 clientSpec(),
                 tokenSupport(jwtService()),
                 downstreamClientFactory(),
-                errorMapper()
+                errorMapper(),
+                60
         );
 
         MDC.put(CorrelationId.MDC_KEY, "corr-pos-catalog");
@@ -143,7 +145,8 @@ class PosCatalogClientTest {
                 clientSpec(),
                 tokenSupport(jwtService()),
                 downstreamClientFactory(),
-                errorMapper()
+                errorMapper(),
+                60
         );
 
         MDC.put(CorrelationId.MDC_KEY, "corr-pos-catalog");

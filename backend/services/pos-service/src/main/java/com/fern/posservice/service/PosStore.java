@@ -11,23 +11,28 @@ import java.util.Map;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Component;
 
+/**
+ * Shard-aware data access layer for POS entities.
+ *
+ * <p>Every method accepts an explicit {@link NamedParameterJdbcTemplate} that has already been
+ * resolved to the correct shard by the calling service.  Callers that execute multiple operations
+ * inside a single transaction MUST pass the same template instance so they all participate in the
+ * same connection/transaction boundary.
+ */
 @Component
 public class PosStore {
-    private final NamedParameterJdbcTemplate jdbcTemplate;
 
-    public PosStore(NamedParameterJdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    // No injected jdbcTemplate — callers must supply the shard-resolved template.
+
+    public SessionRecord requireSession(NamedParameterJdbcTemplate jdbcTemplate, Long id) {
+        return requireSession(jdbcTemplate, id, false);
     }
 
-    public SessionRecord requireSession(Long id) {
-        return requireSession(id, false);
+    public SessionRecord requireSessionForUpdate(NamedParameterJdbcTemplate jdbcTemplate, Long id) {
+        return requireSession(jdbcTemplate, id, true);
     }
 
-    public SessionRecord requireSessionForUpdate(Long id) {
-        return requireSession(id, true);
-    }
-
-    private SessionRecord requireSession(Long id, boolean forUpdate) {
+    private SessionRecord requireSession(NamedParameterJdbcTemplate jdbcTemplate, Long id, boolean forUpdate) {
         SessionRecord record = jdbcTemplate.query("""
                 SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
                        status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
@@ -59,19 +64,19 @@ public class PosStore {
         return record;
     }
 
-    public OrderRecord requireOrder(Long id) {
-        return requireOrder(id, false);
+    public OrderRecord requireOrder(NamedParameterJdbcTemplate jdbcTemplate, Long id) {
+        return requireOrder(jdbcTemplate, id, false);
     }
 
-    public OrderRecord requireOrderForUpdate(Long id) {
-        return requireOrder(id, true);
+    public OrderRecord requireOrderForUpdate(NamedParameterJdbcTemplate jdbcTemplate, Long id) {
+        return requireOrder(jdbcTemplate, id, true);
     }
 
-    public OrderRecord requireOrderForCompletionPreflight(Long id) {
-        return requireOrder(id, true);
+    public OrderRecord requireOrderForCompletionPreflight(NamedParameterJdbcTemplate jdbcTemplate, Long id) {
+        return requireOrder(jdbcTemplate, id, true);
     }
 
-    private OrderRecord requireOrder(Long id, boolean forUpdate) {
+    private OrderRecord requireOrder(NamedParameterJdbcTemplate jdbcTemplate, Long id, boolean forUpdate) {
         OrderRecord record = jdbcTemplate.query("""
                 SELECT id, order_number, region_id, outlet_id, pos_session_id, currency_code, order_type, status, payment_status,
                        subtotal, discount_amount, tax_amount, total_amount, note, created_at, completed_at, reservation_id
@@ -103,7 +108,7 @@ public class PosStore {
         return record;
     }
 
-    public List<OrderRecord> listOrdersBySession(Long posSessionId, int limit) {
+    public List<OrderRecord> listOrdersBySession(NamedParameterJdbcTemplate jdbcTemplate, Long posSessionId, int limit) {
         return jdbcTemplate.query("""
                 SELECT id, order_number, region_id, outlet_id, pos_session_id, currency_code, order_type, status, payment_status,
                        subtotal, discount_amount, tax_amount, total_amount, note, created_at, completed_at, reservation_id
@@ -132,7 +137,7 @@ public class PosStore {
         ));
     }
 
-    public List<SaleOrderLineResponse> queryOrderLines(Long saleOrderId) {
+    public List<SaleOrderLineResponse> queryOrderLines(NamedParameterJdbcTemplate jdbcTemplate, Long saleOrderId) {
         return jdbcTemplate.query("""
                 SELECT line_number, product_id, product_code, product_name_snapshot, unit_price, qty, discount_amount, tax_amount, line_total, note
                 FROM pos.sale_order_line
@@ -152,7 +157,7 @@ public class PosStore {
         ));
     }
 
-    public List<SalePaymentResponse> queryPayments(Long saleOrderId) {
+    public List<SalePaymentResponse> queryPayments(NamedParameterJdbcTemplate jdbcTemplate, Long saleOrderId) {
         return jdbcTemplate.query("""
                 SELECT id, payment_method, amount, status, payment_time, transaction_ref
                 FROM pos.sale_payment
@@ -168,7 +173,7 @@ public class PosStore {
         ));
     }
 
-    public BigDecimal successfulPaymentTotal(Long saleOrderId) {
+    public BigDecimal successfulPaymentTotal(NamedParameterJdbcTemplate jdbcTemplate, Long saleOrderId) {
         return jdbcTemplate.queryForObject("""
                 SELECT COALESCE(SUM(amount), 0)
                 FROM pos.sale_payment
@@ -176,7 +181,7 @@ public class PosStore {
                 """, PosSql.params("saleOrderId", saleOrderId, "status", SalePaymentStatus.SUCCESS.name()), BigDecimal.class);
     }
 
-    public void replaceOrderLines(Long saleOrderId, List<PricedLine> lines) {
+    public void replaceOrderLines(NamedParameterJdbcTemplate jdbcTemplate, Long saleOrderId, List<PricedLine> lines) {
         jdbcTemplate.update("DELETE FROM pos.sale_order_line WHERE sale_order_id = :saleOrderId",
                 PosSql.params("saleOrderId", saleOrderId));
         for (PricedLine line : lines) {
@@ -204,7 +209,7 @@ public class PosStore {
         }
     }
 
-    public Map<String, Object> getSaleSnapshot(Long saleOrderId) {
+    public Map<String, Object> getSaleSnapshot(NamedParameterJdbcTemplate jdbcTemplate, Long saleOrderId) {
         return jdbcTemplate.query("""
                 SELECT order_snapshot
                 FROM pos.sale_snapshot
@@ -215,8 +220,8 @@ public class PosStore {
         });
     }
 
-    public void refreshPaymentStatus(Long saleOrderId) {
-        BigDecimal successAmount = successfulPaymentTotal(saleOrderId);
+    public void refreshPaymentStatus(NamedParameterJdbcTemplate jdbcTemplate, Long saleOrderId) {
+        BigDecimal successAmount = successfulPaymentTotal(jdbcTemplate, saleOrderId);
         BigDecimal totalAmount = jdbcTemplate.queryForObject(
                 "SELECT total_amount FROM pos.sale_order WHERE id = :id",
                 PosSql.params("id", saleOrderId),
@@ -256,8 +261,8 @@ public class PosStore {
         );
     }
 
-    public SaleOrderResponse mapOrder(OrderRecord order) {
-        return mapOrder(order, queryOrderLines(order.id()), queryPayments(order.id()));
+    public SaleOrderResponse mapOrder(NamedParameterJdbcTemplate jdbcTemplate, OrderRecord order) {
+        return mapOrder(order, queryOrderLines(jdbcTemplate, order.id()), queryPayments(jdbcTemplate, order.id()));
     }
 
     public SaleOrderResponse mapOrder(

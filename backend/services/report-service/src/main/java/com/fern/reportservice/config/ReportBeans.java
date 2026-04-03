@@ -155,6 +155,32 @@ public class ReportBeans {
     }
 
     @Bean
+    @ConfigurationProperties("fern.read-datasource")
+    DataSourceProperties readDataSourceProperties() {
+        return new DataSourceProperties();
+    }
+
+    @Bean
+    DataSource readDataSource(
+            @org.springframework.beans.factory.annotation.Qualifier("readDataSourceProperties")
+            DataSourceProperties readDataSourceProperties,
+            @org.springframework.beans.factory.annotation.Qualifier("dataSource")
+            DataSource landingDataSource
+    ) {
+        if (!hasText(readDataSourceProperties.getUrl())) {
+            return landingDataSource;
+        }
+        return tunePool(readDataSourceProperties.initializeDataSourceBuilder().build());
+    }
+
+    @Bean
+    NamedParameterJdbcTemplate readJdbcTemplate(
+            @org.springframework.beans.factory.annotation.Qualifier("readDataSource") DataSource readDataSource
+    ) {
+        return new NamedParameterJdbcTemplate(readDataSource);
+    }
+
+    @Bean
     TransactionTemplate transactionTemplate(PlatformTransactionManager transactionManager) {
         return new TransactionTemplate(transactionManager);
     }
@@ -209,7 +235,7 @@ public class ReportBeans {
                 .dataSource(dataSource)
                 .schemas("raw_events", "report")
                 .defaultSchema("raw_events")
-                .locations("classpath:db/migration/postgresql/master")
+                .locations("classpath:db/migration/postgresql/reporting")
                 .load();
     }
 

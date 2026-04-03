@@ -53,6 +53,7 @@ class PosOutboxPublisherTest {
                 Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), ZoneOffset.UTC),
                 3,
                 Duration.ofMinutes(1),
+                30,
                 operationalAlertPublisher,
                 new SimpleMeterRegistry()
         );

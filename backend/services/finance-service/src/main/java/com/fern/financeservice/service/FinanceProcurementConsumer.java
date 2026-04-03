@@ -84,7 +84,8 @@ public class FinanceProcurementConsumer {
             transactionTemplate.executeWithoutResult(status -> processGoodsReceiptPosted(event, sourceEventId));
         } catch (RuntimeException exception) {
             transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
-            throw exception;
+            // Do not re-throw: the event is recorded as FAILED in the integration log.
+            // Re-throwing would cause Kafka to retry indefinitely for persistent errors.
         }
     }
 
@@ -110,7 +111,7 @@ public class FinanceProcurementConsumer {
                     processSupplierPaymentRecorded(event, payload, sourceEventId));
         } catch (RuntimeException exception) {
             transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
-            throw exception;
+            // Do not re-throw: the event is recorded as FAILED in the integration log.
         }
     }
 
@@ -136,7 +137,7 @@ public class FinanceProcurementConsumer {
                     processSupplierInvoiceApproved(event, payload, sourceEventId));
         } catch (RuntimeException exception) {
             transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
-            throw exception;
+            // Do not re-throw: the event is recorded as FAILED in the integration log.
         }
     }
 

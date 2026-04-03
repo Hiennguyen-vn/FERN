@@ -17,7 +17,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -105,6 +104,7 @@ public class PurchaseFlowService {
         if (!"DRAFT".equals(record.status())) {
             throw new ConflictException("Only draft purchase orders can be updated");
         }
+        requireActiveApprovedSupplier(record.supplierId());
         PurchaseOrderTotals totals = calculatePurchaseOrderTotals(request.lines());
         int updated = jdbcTemplate().update("""
                 UPDATE procurement.purchase_order
@@ -410,7 +410,15 @@ public class PurchaseFlowService {
     }
 
     private String nextReferenceNumber(String prefix) {
-        return prefix + "-" + UUID.randomUUID();
+        Long nextVal = jdbcTemplate().queryForObject(
+                "SELECT nextval('procurement.reference_number_seq')",
+                new MapSqlParameterSource(),
+                Long.class
+        );
+        String datePart = java.time.LocalDate.now(clock).format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyyMM")
+        );
+        return prefix + "-" + datePart + "-" + String.format("%06d", nextVal);
     }
 
     private void ensureOutletOperational(ProcurementOrgClient.OutletRoute outlet, java.time.LocalDate businessDate) {

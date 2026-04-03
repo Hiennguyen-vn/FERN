@@ -79,6 +79,7 @@ class PosOutboxPublisherIntegrationTest {
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 3,
                 Duration.ofMinutes(1),
+                30,
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );

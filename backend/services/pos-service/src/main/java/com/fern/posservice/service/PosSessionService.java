@@ -16,7 +16,6 @@ import java.util.List;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
@@ -102,14 +101,14 @@ public class PosSessionService {
         return new PosSessionOpenResult(getSession(principal, id), false);
     }
 
-    @Transactional(readOnly = true)
     public PosSessionResponse getSession(FernPrincipal principal, Long id) {
-        SessionRecord session = store.requireSession(id);
+        // No @Transactional — these reads use a shard-aware jdbcTemplate resolved at runtime;
+        // Spring's default PlatformTransactionManager would bind to the wrong DataSource.
+        SessionRecord session = store.requireSession(rootJdbcTemplate(), id);
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_SESSION_READ);
         return store.mapSession(session);
     }
 
-    @Transactional(readOnly = true)
     public List<PosSessionResponse> listSessions(
             FernPrincipal principal,
             Long outletId,
@@ -168,109 +167,117 @@ public class PosSessionService {
         )));
     }
 
-    @Transactional
     public PosSessionResponse closeSession(FernPrincipal principal, Long id) {
-        SessionRecord session = store.requireSessionForUpdate(id);
+        SessionRecord session = store.requireSession(rootJdbcTemplate(), id);
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_SESSION_CLOSE);
         ensureSessionStatus(session, PosSessionStatus.OPEN, "Only open sessions can be closed");
-        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(session.regionId(), session.outletId());
-        boolean openOrders = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM pos.sale_order
-                    WHERE pos_session_id = :sessionId AND status IN (:openStatus, :completingStatus)
-                )
-                """, PosSql.params(
-                "sessionId", id,
-                "openStatus", SaleOrderStatus.OPEN.name(),
-                "completingStatus", SaleOrderStatus.COMPLETING.name()
-        ), Boolean.class));
-        if (openOrders) {
-            throw new ConflictException("Cannot close a POS session while open orders still exist");
-        }
-        // P1: Calculate expectedCashAmount at close time so UI can show it immediately
-        BigDecimal expectedCash = jdbcTemplate.queryForObject("""
-                SELECT COALESCE(SUM(payment.amount), 0)
-                FROM pos.sale_payment payment
-                JOIN pos.sale_order sale_order ON sale_order.id = payment.sale_order_id
-                WHERE payment.pos_session_id = :sessionId
-                  AND payment.status = :paymentStatus
-                  AND payment.payment_method = :paymentMethod
-                  AND sale_order.status = :orderStatus
-                """, PosSql.params(
-                "sessionId", id,
-                "paymentStatus", SalePaymentStatus.SUCCESS.name(),
-                "paymentMethod", PAYMENT_METHOD_CASH,
-                "orderStatus", SaleOrderStatus.COMPLETED.name()
-        ), BigDecimal.class);
-        int updated = jdbcTemplate.update("""
-                UPDATE pos.pos_session
-                SET status = :status, closed_at = :closedAt, manager_user_id = :managerUserId,
-                    expected_cash_amount = :expectedCashAmount,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id
-                  AND status = :currentStatus
-                """, PosSql.params(
-                "status", PosSessionStatus.CLOSED.name(),
-                "closedAt", clock.instant(),
-                "managerUserId", principal.userId(),
-                "expectedCashAmount", expectedCash,
-                "id", id,
-                "currentStatus", PosSessionStatus.OPEN.name()
-        ));
-        if (updated != 1) {
-            throw new ConflictException("Only open sessions can be closed");
-        }
+        TransactionTemplate transactionTemplate = transactionTemplate(session.regionId(), session.outletId());
+        transactionTemplate.executeWithoutResult(status -> {
+            NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(session.regionId(), session.outletId());
+            SessionRecord locked = requireSessionForUpdateOnShard(jdbcTemplate, id);
+            ensureSessionStatus(locked, PosSessionStatus.OPEN, "Only open sessions can be closed");
+            boolean openOrders = Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM pos.sale_order
+                        WHERE pos_session_id = :sessionId AND status IN (:openStatus, :completingStatus)
+                    )
+                    """, PosSql.params(
+                    "sessionId", id,
+                    "openStatus", SaleOrderStatus.OPEN.name(),
+                    "completingStatus", SaleOrderStatus.COMPLETING.name()
+            ), Boolean.class));
+            if (openOrders) {
+                throw new ConflictException("Cannot close a POS session while open orders still exist");
+            }
+            // P1: Calculate expectedCashAmount at close time so UI can show it immediately
+            BigDecimal expectedCash = jdbcTemplate.queryForObject("""
+                    SELECT COALESCE(SUM(payment.amount), 0)
+                    FROM pos.sale_payment payment
+                    JOIN pos.sale_order sale_order ON sale_order.id = payment.sale_order_id
+                    WHERE payment.pos_session_id = :sessionId
+                      AND payment.status = :paymentStatus
+                      AND payment.payment_method = :paymentMethod
+                      AND sale_order.status = :orderStatus
+                    """, PosSql.params(
+                    "sessionId", id,
+                    "paymentStatus", SalePaymentStatus.SUCCESS.name(),
+                    "paymentMethod", PAYMENT_METHOD_CASH,
+                    "orderStatus", SaleOrderStatus.COMPLETED.name()
+            ), BigDecimal.class);
+            int updated = jdbcTemplate.update("""
+                    UPDATE pos.pos_session
+                    SET status = :status, closed_at = :closedAt, manager_user_id = :managerUserId,
+                        expected_cash_amount = :expectedCashAmount,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                      AND status = :currentStatus
+                    """, PosSql.params(
+                    "status", PosSessionStatus.CLOSED.name(),
+                    "closedAt", clock.instant(),
+                    "managerUserId", principal.userId(),
+                    "expectedCashAmount", expectedCash,
+                    "id", id,
+                    "currentStatus", PosSessionStatus.OPEN.name()
+            ));
+            if (updated != 1) {
+                throw new ConflictException("Only open sessions can be closed");
+            }
+        });
         return getSession(principal, id);
     }
 
-    @Transactional
     public PosSessionResponse reconcileSession(FernPrincipal principal, Long id, ReconcileSessionRequest request) {
-        SessionRecord session = store.requireSessionForUpdate(id);
+        SessionRecord session = store.requireSession(rootJdbcTemplate(), id);
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_SESSION_RECONCILE);
         ensureSessionStatus(session, PosSessionStatus.CLOSED, "Only closed sessions can be reconciled");
-        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(session.regionId(), session.outletId());
-        BigDecimal expectedCash = jdbcTemplate.queryForObject("""
-                SELECT COALESCE(SUM(payment.amount), 0)
-                FROM pos.sale_payment payment
-                JOIN pos.sale_order sale_order ON sale_order.id = payment.sale_order_id
-                WHERE payment.pos_session_id = :sessionId
-                  AND payment.status = :paymentStatus
-                  AND payment.payment_method = :paymentMethod
-                  AND sale_order.status = :orderStatus
-                """, PosSql.params(
-                "sessionId", id,
-                "paymentStatus", SalePaymentStatus.SUCCESS.name(),
-                "paymentMethod", PAYMENT_METHOD_CASH,
-                "orderStatus", SaleOrderStatus.COMPLETED.name()
-        ), BigDecimal.class);
-        BigDecimal discrepancy = request.countedCashAmount().subtract(expectedCash);
-        int updated = jdbcTemplate.update("""
-                UPDATE pos.pos_session
-                SET status = :status,
-                    manager_user_id = :managerUserId,
-                    reconciled_at = :reconciledAt,
-                    expected_cash_amount = :expectedCashAmount,
-                    counted_cash_amount = :countedCashAmount,
-                    discrepancy_amount = :discrepancyAmount,
-                    note = COALESCE(:note, note),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id
-                  AND status = :currentStatus
-                """, PosSql.params(
-                "status", PosSessionStatus.RECONCILED.name(),
-                "managerUserId", principal.userId(),
-                "reconciledAt", clock.instant(),
-                "expectedCashAmount", expectedCash,
-                "countedCashAmount", request.countedCashAmount(),
-                "discrepancyAmount", discrepancy,
-                "note", request.note(),
-                "id", id,
-                "currentStatus", PosSessionStatus.CLOSED.name()
-        ));
-        if (updated != 1) {
-            throw new ConflictException("Only closed sessions can be reconciled");
-        }
+        TransactionTemplate transactionTemplate = transactionTemplate(session.regionId(), session.outletId());
+        transactionTemplate.executeWithoutResult(status -> {
+            NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(session.regionId(), session.outletId());
+            SessionRecord locked = requireSessionForUpdateOnShard(jdbcTemplate, id);
+            ensureSessionStatus(locked, PosSessionStatus.CLOSED, "Only closed sessions can be reconciled");
+            BigDecimal expectedCash = jdbcTemplate.queryForObject("""
+                    SELECT COALESCE(SUM(payment.amount), 0)
+                    FROM pos.sale_payment payment
+                    JOIN pos.sale_order sale_order ON sale_order.id = payment.sale_order_id
+                    WHERE payment.pos_session_id = :sessionId
+                      AND payment.status = :paymentStatus
+                      AND payment.payment_method = :paymentMethod
+                      AND sale_order.status = :orderStatus
+                    """, PosSql.params(
+                    "sessionId", id,
+                    "paymentStatus", SalePaymentStatus.SUCCESS.name(),
+                    "paymentMethod", PAYMENT_METHOD_CASH,
+                    "orderStatus", SaleOrderStatus.COMPLETED.name()
+            ), BigDecimal.class);
+            BigDecimal discrepancy = request.countedCashAmount().subtract(expectedCash);
+            int updated = jdbcTemplate.update("""
+                    UPDATE pos.pos_session
+                    SET status = :status,
+                        manager_user_id = :managerUserId,
+                        reconciled_at = :reconciledAt,
+                        expected_cash_amount = :expectedCashAmount,
+                        counted_cash_amount = :countedCashAmount,
+                        discrepancy_amount = :discrepancyAmount,
+                        note = COALESCE(:note, note),
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                      AND status = :currentStatus
+                    """, PosSql.params(
+                    "status", PosSessionStatus.RECONCILED.name(),
+                    "managerUserId", principal.userId(),
+                    "reconciledAt", clock.instant(),
+                    "expectedCashAmount", expectedCash,
+                    "countedCashAmount", request.countedCashAmount(),
+                    "discrepancyAmount", discrepancy,
+                    "note", request.note(),
+                    "id", id,
+                    "currentStatus", PosSessionStatus.CLOSED.name()
+            ));
+            if (updated != 1) {
+                throw new ConflictException("Only closed sessions can be reconciled");
+            }
+        });
         return getSession(principal, id);
     }
 
@@ -330,11 +337,47 @@ public class PosSessionService {
                 """, PosSql.params("lockKey", outletId), rs -> null);
     }
 
+    private NamedParameterJdbcTemplate rootJdbcTemplate() {
+        return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(0L, 0L))).jdbc();
+    }
+
     private NamedParameterJdbcTemplate jdbcTemplate(Long regionId, Long outletId) {
         return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).jdbc();
     }
 
     private TransactionTemplate transactionTemplate(Long regionId, Long outletId) {
         return operationalShardRegistry.get(shardResolver.resolve(RouteKey.of(regionId, outletId))).tx();
+    }
+
+    private SessionRecord requireSessionForUpdateOnShard(NamedParameterJdbcTemplate jdbcTemplate, Long id) {
+        SessionRecord record = jdbcTemplate.query("""
+                SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
+                       status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
+                FROM pos.pos_session
+                WHERE id = :id
+                FOR UPDATE
+                """, PosSql.params("id", id), rs -> rs.next() ? new SessionRecord(
+                rs.getLong("id"),
+                rs.getString("session_code"),
+                rs.getLong("region_id"),
+                rs.getLong("outlet_id"),
+                rs.getString("terminal_id"),
+                rs.getString("currency_code"),
+                rs.getObject("cashier_user_id", Long.class),
+                rs.getObject("manager_user_id", Long.class),
+                rs.getObject("business_date", LocalDate.class),
+                rs.getString("status"),
+                rs.getString("note"),
+                PosSql.instant(rs, "opened_at"),
+                PosSql.instant(rs, "closed_at"),
+                PosSql.instant(rs, "reconciled_at"),
+                rs.getBigDecimal("expected_cash_amount"),
+                rs.getBigDecimal("counted_cash_amount"),
+                rs.getBigDecimal("discrepancy_amount")
+        ) : null);
+        if (record == null) {
+            throw new com.fern.platform.common.ResourceNotFoundException("POS session not found");
+        }
+        return record;
     }
 }

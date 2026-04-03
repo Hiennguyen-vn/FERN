@@ -127,6 +127,7 @@ class PosServiceIntegrationTest {
         registry.add("fern.clients.inventory.read-timeout", () -> "500ms");
         registry.add("fern.clients.org.base-url", () -> "http://localhost:" + orgServer.getAddress().getPort());
         registry.add("fern.outbox.max-attempts", () -> "3");
+        registry.add("fern.pos.menu-cache-ttl-seconds", () -> "0");
     }
 
     @Autowired
@@ -491,7 +492,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 60.00
+                                  "amount": 60.00,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -505,7 +507,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": 81.50,
-                                  "transactionRef": "txn-2"
+                                  "transactionRef": "txn-2",
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -566,7 +569,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 20.00
+                                  "amount": 20.00,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -580,7 +584,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": 35.00,
-                                  "transactionRef": "today-stats-card"
+                                  "transactionRef": "today-stats-card",
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -695,7 +700,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 60.00
+                                  "amount": 60.00,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk());
@@ -708,7 +714,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": 26.50,
-                                  "transactionRef": "txn-reconciliation-1"
+                                  "transactionRef": "txn-reconciliation-1",
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -800,7 +807,7 @@ class PosServiceIntegrationTest {
     }
 
     @Test
-    void shouldDefaultPaymentStatusToSuccessWhenStatusMissingOrBlank() throws Exception {
+    void shouldRejectPaymentWhenStatusIsBlank() throws Exception {
         String sessionJson = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())
                         .contentType("application/json")
@@ -816,7 +823,7 @@ class PosServiceIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         Long sessionId = readId(sessionJson);
 
-        String firstOrderJson = mockMvc.perform(post("/sale-orders")
+        String orderJson = mockMvc.perform(post("/sale-orders")
                         .header("Authorization", bearer())
                         .contentType("application/json")
                         .content("""
@@ -830,38 +837,9 @@ class PosServiceIntegrationTest {
                                 """.formatted(sessionId)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        Long firstOrderId = readId(firstOrderJson);
+        Long orderId = readId(orderJson);
 
-        mockMvc.perform(post("/sale-orders/{id}/payments", firstOrderId)
-                        .header("Authorization", bearer())
-                        .header("Idempotency-Key", "pay-status-missing")
-                        .contentType("application/json")
-                        .content("""
-                                {
-                                  "paymentMethod": "CASH",
-                                  "amount": 55.00
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
-
-        String secondOrderJson = mockMvc.perform(post("/sale-orders")
-                        .header("Authorization", bearer())
-                        .contentType("application/json")
-                        .content("""
-                                {
-                                  "posSessionId": %d,
-                                  "orderType": "TAKEAWAY",
-                                  "lines": [
-                                    {"productId": 10, "qty": 1.0000}
-                                  ]
-                                }
-                                """.formatted(sessionId)))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-        Long secondOrderId = readId(secondOrderJson);
-
-        mockMvc.perform(post("/sale-orders/{id}/payments", secondOrderId)
+        mockMvc.perform(post("/sale-orders/{id}/payments", orderId)
                         .header("Authorization", bearer())
                         .header("Idempotency-Key", "pay-status-blank")
                         .contentType("application/json")
@@ -872,20 +850,11 @@ class PosServiceIntegrationTest {
                                   "status": "   "
                                 }
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
-
-        List<String> storedStatuses = jdbcTemplate.query("""
-                SELECT status
-                FROM pos.sale_payment
-                WHERE sale_order_id IN (?, ?)
-                ORDER BY sale_order_id
-                """, (rs, rowNum) -> rs.getString("status"), firstOrderId, secondOrderId);
-        assertThat(storedStatuses).containsExactly("SUCCESS", "SUCCESS");
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    void shouldDefaultPaymentStatusToSuccessWhenStatusExplicitlyNull() throws Exception {
+    void shouldRejectPaymentWhenStatusExplicitlyNull() throws Exception {
         String sessionJson = mockMvc.perform(post("/pos-sessions")
                         .header("Authorization", bearer())
                         .contentType("application/json")
@@ -928,14 +897,7 @@ class PosServiceIntegrationTest {
                                   "status": null
                                 }
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.paymentStatus").value("PAID"));
-
-        assertThat(jdbcTemplate.queryForObject("""
-                SELECT status
-                FROM pos.sale_payment
-                WHERE sale_order_id = ?
-                """, String.class, orderId)).isEqualTo("SUCCESS");
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -979,7 +941,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 55.00
+                                  "amount": 55.00,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -1277,7 +1240,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 20.00
+                                  "amount": 20.00,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isForbidden());
@@ -1409,7 +1373,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": 30.00,
-                                  "transactionRef": "txn-replay-1"
+                                  "transactionRef": "txn-replay-1",
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -1424,7 +1389,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": 30.00,
-                                  "transactionRef": "txn-replay-1"
+                                  "transactionRef": "txn-replay-1",
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -1504,7 +1470,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": 30.00,
-                                  "transactionRef": "txn-replay-cross-order-1"
+                                  "transactionRef": "txn-replay-cross-order-1",
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -1517,7 +1484,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 31.50
+                                  "amount": 31.50,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isConflict());
@@ -1656,12 +1624,12 @@ class PosServiceIntegrationTest {
         AtomicBoolean intercepted = new AtomicBoolean(false);
         org.mockito.Mockito.doAnswer(invocation -> {
             Object record = invocation.callRealMethod();
-            if (Objects.equals(invocation.getArgument(0), orderId) && intercepted.compareAndSet(false, true)) {
+            if (Objects.equals(invocation.getArgument(1), orderId) && intercepted.compareAndSet(false, true)) {
                 paymentPaused.countDown();
                 assertThat(allowPaymentToContinue.await(5, TimeUnit.SECONDS)).isTrue();
             }
             return record;
-        }).when(posStore).requireOrderForUpdate(orderId);
+        }).when(posStore).requireOrderForUpdate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(orderId));
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
@@ -1672,7 +1640,8 @@ class PosServiceIntegrationTest {
                             .content("""
                                     {
                                       "paymentMethod": "CASH",
-                                      "amount": 20.00
+                                      "amount": 20.00,
+                                      "status": "SUCCESS"
                                     }
                                     """))
                     .andReturn().getResponse().getStatus());
@@ -1742,12 +1711,12 @@ class PosServiceIntegrationTest {
         AtomicBoolean intercepted = new AtomicBoolean(false);
         org.mockito.Mockito.doAnswer(invocation -> {
             Object record = invocation.callRealMethod();
-            if (Objects.equals(invocation.getArgument(0), orderId) && intercepted.compareAndSet(false, true)) {
+            if (Objects.equals(invocation.getArgument(1), orderId) && intercepted.compareAndSet(false, true)) {
                 paymentPaused.countDown();
                 assertThat(allowPaymentToContinue.await(5, TimeUnit.SECONDS)).isTrue();
             }
             return record;
-        }).when(posStore).requireOrderForUpdate(orderId);
+        }).when(posStore).requireOrderForUpdate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(orderId));
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
@@ -1759,7 +1728,8 @@ class PosServiceIntegrationTest {
                                     {
                                       "paymentMethod": "CARD",
                                       "amount": 30.00,
-                                      "transactionRef": "txn-update-race"
+                                      "transactionRef": "txn-update-race",
+                                      "status": "SUCCESS"
                                     }
                                     """))
                     .andReturn().getResponse().getStatus());
@@ -1906,7 +1876,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": 55.00,
-                                  "transactionRef": "txn-security-gap"
+                                  "transactionRef": "txn-security-gap",
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk());
@@ -2264,7 +2235,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 110.00
+                                  "amount": 110.00,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -2323,7 +2295,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 55.00
+                                  "amount": 55.00,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -2403,7 +2376,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": 55.00,
-                                  "transactionRef": "txn-complete-retry"
+                                  "transactionRef": "txn-complete-retry",
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -2475,7 +2449,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 55.00
+                                  "amount": 55.00,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk());
@@ -2621,7 +2596,8 @@ class PosServiceIntegrationTest {
                         .content("""
                                 {
                                   "paymentMethod": "CASH",
-                                  "amount": 110.00
+                                  "amount": 110.00,
+                                  "status": "SUCCESS"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -2629,7 +2605,7 @@ class PosServiceIntegrationTest {
 
         doThrow(new RuntimeException("forced completion failure"))
                 .when(posStore)
-                .requireOrderForUpdate(orderId);
+                .requireOrderForUpdate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(orderId));
 
         mockMvc.perform(post("/sale-orders/{id}/complete", orderId)
                         .header("Authorization", bearer()))
@@ -2758,7 +2734,8 @@ class PosServiceIntegrationTest {
                             .content("""
                                     {
                                       "paymentMethod": "CASH",
-                                      "amount": 30.00
+                                      "amount": 30.00,
+                                      "status": "SUCCESS"
                                     }
                                     """))
                     .andExpect(status().isOk())
@@ -2918,6 +2895,7 @@ class PosServiceIntegrationTest {
                 Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC),
                 3,
                 Duration.ofMinutes(1),
+                30,
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );
@@ -2967,6 +2945,7 @@ class PosServiceIntegrationTest {
                 fixedClock,
                 3,
                 Duration.ofMinutes(1),
+                30,
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );
@@ -2976,6 +2955,7 @@ class PosServiceIntegrationTest {
                 fixedClock,
                 3,
                 Duration.ofMinutes(1),
+                30,
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );
@@ -3024,6 +3004,7 @@ class PosServiceIntegrationTest {
                 Clock.fixed(Instant.parse("2026-03-27T12:00:00Z"), java.time.ZoneOffset.UTC),
                 3,
                 Duration.ofMinutes(1),
+                30,
                 new NoopOperationalAlertPublisher(),
                 new SimpleMeterRegistry()
         );
@@ -3099,7 +3080,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": 30.00,
-                                  "transactionRef": "%s"
+                                  "transactionRef": "%s",
+                                  "status": "SUCCESS"
                                 }
                                 """.formatted(transactionRef)))
                 .andReturn().getResponse().getStatus();
@@ -3202,7 +3184,8 @@ class PosServiceIntegrationTest {
                                 {
                                   "paymentMethod": "CARD",
                                   "amount": %s,
-                                  "transactionRef": "%s"
+                                  "transactionRef": "%s",
+                                  "status": "SUCCESS"
                                 }
                                 """.formatted(amount, idempotencyKey.toUpperCase())))
                 .andExpect(status().isOk())

@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -25,16 +26,21 @@ public class AuditJdbcRepository {
     private static final String SECURITY_EVENT_TABLE = "audit.security_event";
     private static final String REQUEST_TRACE_TABLE = "audit.request_trace";
 
-    private final NamedParameterJdbcTemplate jdbcTemplate;
+    /** Primary datasource — for write operations (Kafka ingestion). */
+    private final NamedParameterJdbcTemplate writeJdbcTemplate;
+    /** Read-replica datasource — for query operations (API reads). */
+    private final NamedParameterJdbcTemplate readJdbcTemplate;
     private final ObjectMapper objectMapper;
     private final SnowflakeIdGenerator idGenerator;
 
     public AuditJdbcRepository(
-            NamedParameterJdbcTemplate jdbcTemplate,
+            @Qualifier("writeJdbcTemplate") NamedParameterJdbcTemplate writeJdbcTemplate,
+            @Qualifier("readJdbcTemplate") NamedParameterJdbcTemplate readJdbcTemplate,
             ObjectMapper objectMapper,
             SnowflakeIdGenerator idGenerator
     ) {
-        this.jdbcTemplate = jdbcTemplate;
+        this.writeJdbcTemplate = writeJdbcTemplate;
+        this.readJdbcTemplate = readJdbcTemplate;
         this.objectMapper = objectMapper;
         this.idGenerator = idGenerator;
     }
@@ -67,7 +73,7 @@ public class AuditJdbcRepository {
                 .addValue("newValueJson", toJson(event.newValue()))
                 .addValue("payloadJson", toJson(event.payload()));
 
-        jdbcTemplate.update("""
+        writeJdbcTemplate.update("""
                 INSERT INTO %s (
                     audit_event_id,
                     source_event_id,
@@ -134,7 +140,7 @@ public class AuditJdbcRepository {
                 .addValue("userAgent", event.userAgent())
                 .addValue("payloadJson", toJson(event.payload()));
 
-        jdbcTemplate.update("""
+        writeJdbcTemplate.update("""
                 INSERT INTO %s (
                     security_event_id,
                     source_event_id,
@@ -196,7 +202,7 @@ public class AuditJdbcRepository {
                 .addValue("userId", event.userId())
                 .addValue("payloadJson", toJson(event.payload()));
 
-        jdbcTemplate.update("""
+        writeJdbcTemplate.update("""
                 INSERT INTO %s (
                     request_trace_id,
                     source_event_id,
@@ -243,7 +249,7 @@ public class AuditJdbcRepository {
 
     public List<AuditEventRow> findAuditEvents(AuditEventFilter filter, AuditAccessScope accessScope) {
         QueryParts query = auditEventQuery(filter, accessScope);
-        return jdbcTemplate.query(query.sql(), query.params(), (resultSet, rowNum) -> mapAuditEvent(resultSet));
+        return readJdbcTemplate.query(query.sql(), query.params(), (resultSet, rowNum) -> mapAuditEvent(resultSet));
     }
 
     public Optional<AuditEventRow> findAuditEventById(Long id) {
@@ -275,7 +281,7 @@ public class AuditJdbcRepository {
 
     public List<SecurityEventRow> findSecurityEvents(SecurityEventFilter filter) {
         QueryParts query = securityEventQuery(filter);
-        return jdbcTemplate.query(query.sql(), query.params(), (resultSet, rowNum) -> mapSecurityEvent(resultSet));
+        return readJdbcTemplate.query(query.sql(), query.params(), (resultSet, rowNum) -> mapSecurityEvent(resultSet));
     }
 
     public Optional<SecurityEventRow> findSecurityEventById(Long id) {
@@ -307,7 +313,7 @@ public class AuditJdbcRepository {
 
     public List<RequestTraceRow> findRequestTraces(RequestTraceFilter filter, AuditAccessScope accessScope) {
         QueryParts query = requestTraceQuery(filter, accessScope);
-        return jdbcTemplate.query(query.sql(), query.params(), (resultSet, rowNum) -> mapRequestTrace(resultSet));
+        return readJdbcTemplate.query(query.sql(), query.params(), (resultSet, rowNum) -> mapRequestTrace(resultSet));
     }
 
     public Optional<RequestTraceRow> findRequestTraceById(Long id) {
@@ -660,7 +666,7 @@ public class AuditJdbcRepository {
     }
 
     private <T> Optional<T> queryOptional(String sql, MapSqlParameterSource params, ResultSetMapper<T> mapper) {
-        return Optional.ofNullable(jdbcTemplate.query(sql, params, resultSet -> resultSet.next() ? mapper.map(resultSet) : null));
+        return Optional.ofNullable(readJdbcTemplate.query(sql, params, resultSet -> resultSet.next() ? mapper.map(resultSet) : null));
     }
 
     private Instant instant(ResultSet resultSet, String columnName) throws SQLException {
@@ -683,7 +689,7 @@ public class AuditJdbcRepository {
         lockKeys.stream()
                 .distinct()
                 .sorted()
-                .forEach(lockKey -> jdbcTemplate.query(
+                .forEach(lockKey -> writeJdbcTemplate.query(
                         "SELECT pg_advisory_xact_lock(hashtext(:lockKey))",
                         new MapSqlParameterSource("lockKey", lockKey),
                         resultSet -> null
@@ -691,7 +697,7 @@ public class AuditJdbcRepository {
     }
 
     private StoredAuditEvent findStoredAuditEvent(String sourceEventId, String idempotencyKey) {
-        return jdbcTemplate.query("""
+        return writeJdbcTemplate.query("""
                 SELECT source_event_id, source_service, module, event_type, occurred_at, idempotency_key, correlation_id,
                        region_id, outlet_id, user_id, action, resource_type, resource_id, outcome,
                        CAST(old_value AS text) AS old_value_json,
@@ -728,7 +734,7 @@ public class AuditJdbcRepository {
     }
 
     private StoredSecurityEvent findStoredSecurityEvent(String sourceEventId, String idempotencyKey) {
-        return jdbcTemplate.query("""
+        return writeJdbcTemplate.query("""
                 SELECT source_event_id, source_service, module, event_type, occurred_at, idempotency_key, correlation_id,
                        user_id, outcome, failure_reason, ip_address, user_agent, CAST(payload AS text) AS payload_json
                 FROM audit.security_event
@@ -758,7 +764,7 @@ public class AuditJdbcRepository {
     }
 
     private StoredRequestTrace findStoredRequestTrace(String sourceEventId, String idempotencyKey) {
-        return jdbcTemplate.query("""
+        return writeJdbcTemplate.query("""
                 SELECT source_event_id, source_service, module, event_type, occurred_at, idempotency_key, correlation_id,
                        request_id, endpoint, method, status_code, duration_ms, region_id, outlet_id, user_id,
                        CAST(payload AS text) AS payload_json

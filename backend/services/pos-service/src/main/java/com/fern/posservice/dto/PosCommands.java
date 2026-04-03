@@ -48,6 +48,7 @@ public final class PosCommands {
         }
 
         public record UpdateSaleOrderRequest(
+                        String orderType,
                         String note,
                         @NotEmpty List<@Valid OrderLineInput> lines) {
         }

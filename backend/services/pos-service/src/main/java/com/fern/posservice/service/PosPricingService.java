@@ -1,5 +1,6 @@
 package com.fern.posservice.service;
 
+import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.contracts.RecipeUsageItem;
@@ -30,6 +31,24 @@ public class PosPricingService {
             LocalDate businessDate,
             List<OrderLineInput> requestedLines
     ) {
+        if (requestedLines == null || requestedLines.isEmpty()) {
+            throw new BadRequestException("Order must contain at least one line");
+        }
+        if (requestedLines.size() > 100) {
+            throw new BadRequestException("Order cannot contain more than 100 lines");
+        }
+        Set<Long> seenProductIds = new java.util.LinkedHashSet<>();
+        for (OrderLineInput input : requestedLines) {
+            if (input.qty() == null || input.qty().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BadRequestException("Line quantity must be greater than zero");
+            }
+            if (input.qty().compareTo(new BigDecimal("9999")) > 0) {
+                throw new BadRequestException("Line quantity cannot exceed 9999");
+            }
+            if (input.productId() != null && !seenProductIds.add(input.productId())) {
+                throw new BadRequestException("Duplicate productId " + input.productId() + " in order lines");
+            }
+        }
         MenuResponse menu = catalogClient.fetchMenu(principal, outletId, businessDate);
         Map<Long, MenuItem> menuItems = menu.items().stream().collect(Collectors.toMap(MenuItem::productId, item -> item));
         List<PricedLine> pricedLines = new ArrayList<>();

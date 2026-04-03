@@ -161,6 +161,8 @@ export function PosHomePage() {
     !selectedRegionId &&
     !currentSession?.regionId &&
     outletDetailQuery.isLoading
+  const outletContextQueryEnabled = Boolean(selectedOutletId && !selectedRegionId && !currentSession?.regionId)
+  const outletContextError = outletContextQueryEnabled ? outletDetailQuery.error : null
 
   if (!selectedOutletId) {
     return (
@@ -199,6 +201,27 @@ export function PosHomePage() {
       <section className="page-stack pos-home-page">
         <ReadonlyBanner message="POS needs an outlet context to resolve sessions and create orders. Choose an outlet below or from the shell." />
         <EmptyState description="Resolving region for the selected outlet from organization data." title="Loading outlet context" />
+      </section>
+    )
+  }
+
+  if (outletContextError) {
+    return (
+      <section className="page-stack pos-home-page">
+        <ReadonlyBanner message="POS needs an outlet context to resolve sessions and create orders. Choose an outlet below or from the shell." />
+        {outletContextError instanceof ApiError && outletContextError.isForbidden ? (
+          <PermissionDeniedInline
+            message="POS could not resolve the selected outlet because this account lacks `org.outlet.read`. Grant outlet read access or choose a shell scope that already includes region context."
+            title="Unable to resolve outlet context"
+          />
+        ) : (
+          <ErrorState
+            actionLabel="Retry"
+            message={outletContextError instanceof Error ? outletContextError.message : 'Failed to load outlet context'}
+            onAction={() => void outletDetailQuery.refetch()}
+            title="Unable to resolve outlet context"
+          />
+        )}
       </section>
     )
   }

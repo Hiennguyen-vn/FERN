@@ -18,6 +18,7 @@
 #   BOOTSTRAP_USERNAME=bootstrap-admin
 #   BOOTSTRAP_PASSWORD=Admin123!
 #   UITEST_PASSWORD=UiTest2026!
+#   UITEST_REAPPLY_ASSIGNMENTS=0  Skip role/scope reapply when user already exists (default)
 # =============================================================================
 
 set -euo pipefail
@@ -26,6 +27,7 @@ FERN_BASE_URL="${FERN_BASE_URL:-http://localhost:8080}"
 BOOTSTRAP_USERNAME="${BOOTSTRAP_USERNAME:-bootstrap-admin}"
 BOOTSTRAP_PASSWORD="${BOOTSTRAP_PASSWORD:-Admin123!}"
 UITEST_PASSWORD="${UITEST_PASSWORD:-UiTest2026!}"
+UITEST_REAPPLY_ASSIGNMENTS="${UITEST_REAPPLY_ASSIGNMENTS:-0}"
 BOOTSTRAP_TOKEN_FILE="${TMPDIR:-/tmp}/fern-uitest-bootstrap-token.$$"
 BOOTSTRAP_REFRESH_FILE="${TMPDIR:-/tmp}/fern-uitest-bootstrap-refresh.$$"
 
@@ -130,7 +132,7 @@ refresh_bootstrap_token() {
     rm -f "${BOOTSTRAP_REFRESH_FILE}"
   fi
   local attempt=1
-  local max_attempts=6
+  local max_attempts=10
   while (( attempt <= max_attempts )); do
     perform_request POST "${FERN_BASE_URL}/auth/login" \
       "{\"username\":\"${BOOTSTRAP_USERNAME}\",\"password\":\"${BOOTSTRAP_PASSWORD}\"}" ""
@@ -145,7 +147,7 @@ refresh_bootstrap_token() {
       return
     fi
     if [[ "${HTTP_STATUS}" == "429" ]]; then
-      sleep $(( attempt * 2 ))
+      sleep $(( attempt * 3 ))
       attempt=$(( attempt + 1 ))
       continue
     fi
@@ -158,7 +160,7 @@ bootstrap_request() {
   local method="$1"; local path="$2"; local body="${3:-}"
   shift 3 || true
   local attempt=1
-  local max_attempts=6
+  local max_attempts=10
   while (( attempt <= max_attempts )); do
     refresh_bootstrap_token
     perform_request "${method}" "${FERN_BASE_URL}${path}" "${body}" "Bearer ${BOOTSTRAP_TOKEN}" "$@"
@@ -170,7 +172,7 @@ bootstrap_request() {
       continue
     fi
     if [[ "${HTTP_STATUS}" == "429" ]]; then
-      sleep $(( attempt ))
+      sleep $(( attempt * 2 ))
       attempt=$(( attempt + 1 ))
       continue
     fi
@@ -211,6 +213,7 @@ find_user_id_by_username() {
 create_uitest_user() {
   local username="$1"; local full_name="$2"; local roles_json="$3"
   local scope_json="${4:-}"
+  local existed="0"
 
   refresh_bootstrap_token
 
@@ -221,12 +224,18 @@ create_uitest_user() {
   if [[ "${HTTP_STATUS}" == "409" ]]; then
     user_id="$(find_user_id_by_username "${username}")"
     [[ -n "${user_id}" ]] || fail "409 for user ${username} but not resolvable from /users"
+    existed="1"
     log "  ${username} already exists → id=${user_id}" >&2
   elif [[ "${HTTP_STATUS}" -ge 200 && "${HTTP_STATUS}" -lt 300 ]]; then
     user_id="$(json_id "${HTTP_BODY}")"
     log "  Created ${username} → id=${user_id}" >&2
   else
     fail "Failed to create ${username}: ${HTTP_STATUS} ${HTTP_BODY}"
+  fi
+
+  if [[ "${existed}" == "1" && "${UITEST_REAPPLY_ASSIGNMENTS}" != "1" ]]; then
+    printf '%s' "${user_id}"
+    return
   fi
 
   bootstrap_request POST "/users/${user_id}/roles" \
@@ -261,13 +270,28 @@ OUTLET_D3="$(find_outlet_id_by_code DEMO-HCM-DIST3)"
 log "regionId=${REGION_ID} outlet DIST1=${OUTLET_D1} DIST3=${OUTLET_D3}"
 log "Creating uitest-* users (password: ${UITEST_PASSWORD})…"
 
+# SRS actor: Staff (POS operating staff within outlet scope)
+create_uitest_user "uitest-cashier" "UI Test Cashier" \
+  '["staff"]' \
+  "{\"regionIds\":[],\"outletIds\":[${OUTLET_D1}]}" >/dev/null
+
 create_uitest_user "uitest-staff" "UI Test Staff" \
   '["staff"]' \
+  "{\"regionIds\":[],\"outletIds\":[${OUTLET_D1}]}" >/dev/null
+
+# SRS actor: Outlet Manager (dedicated alias for workforce-focused UAT)
+create_uitest_user "uitest-outlet-workforce" "UI Test Outlet Workforce Lead" \
+  '["outlet_manager"]' \
   "{\"regionIds\":[],\"outletIds\":[${OUTLET_D1}]}" >/dev/null
 
 create_uitest_user "uitest-outlet-mgr" "UI Test Outlet Manager" \
   '["outlet_manager"]' \
   "{\"regionIds\":[],\"outletIds\":[${OUTLET_D1}]}" >/dev/null
+
+# SRS actor: Region Manager / Regional Oversight
+create_uitest_user "uitest-regional-oversight" "UI Test Regional Oversight" \
+  '["region_manager"]' \
+  "{\"regionIds\":[${REGION_ID}],\"outletIds\":[]}" >/dev/null
 
 create_uitest_user "uitest-region-mgr" "UI Test Region Manager" \
   '["region_manager"]' \
@@ -276,6 +300,11 @@ create_uitest_user "uitest-region-mgr" "UI Test Region Manager" \
 create_uitest_user "uitest-reg-finance" "UI Test Regional Finance" \
   '["regional_finance"]' \
   "{\"regionIds\":[${REGION_ID}],\"outletIds\":[]}" >/dev/null
+
+# SRS actor: Finance (company-wide)
+create_uitest_user "uitest-company-finance" "UI Test Company Finance" \
+  '["finance"]' \
+  "{\"system\":true}" >/dev/null
 
 create_uitest_user "uitest-hr" "UI Test HR" \
   '["hr"]' \
@@ -308,16 +337,24 @@ UI TEST ACCOUNTS READY
 ======================================================================
 Password for all: ${UITEST_PASSWORD}
 
+  uitest-cashier      staff               POS/cashier alias, outlet DEMO-HCM-DIST1 only
   uitest-staff        staff               outlet DEMO-HCM-DIST1 only
+  uitest-outlet-workforce outlet_manager  workforce alias, outlet DEMO-HCM-DIST1 only
   uitest-outlet-mgr   outlet_manager      outlet DEMO-HCM-DIST1 only
+  uitest-regional-oversight region_manager regional oversight alias, region DEMO-HCM (${REGION_ID})
   uitest-region-mgr   region_manager      region DEMO-HCM (${REGION_ID})
   uitest-reg-finance  regional_finance    region DEMO-HCM (${REGION_ID})
+  uitest-company-finance finance          system scope
   uitest-hr           hr                  system scope
   uitest-finance      finance             system scope
   uitest-product-mgr  product_manager     system scope
   uitest-sysadmin     system_admin        system scope
   uitest-audit        audit_viewer        system scope
   uitest-readonly     regional_finance    outlet DEMO-HCM-DIST3 only (edge)
+
+Notes:
+  - "Customer" trong SRS khong duoc tao thanh tai khoan noi bo vi khong nam trong baseline IAM login cua app nay.
+  - Dat UITEST_REAPPLY_ASSIGNMENTS=1 neu can ep script ghi de role/scope cho user da ton tai.
 
 Gateway: ${FERN_BASE_URL}
 ======================================================================

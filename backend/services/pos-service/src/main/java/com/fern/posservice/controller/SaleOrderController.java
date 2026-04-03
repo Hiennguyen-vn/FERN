@@ -34,7 +34,7 @@ public class SaleOrderController {
         this.posOrderService = posOrderService;
     }
 
-    @Operation(summary = "Create or execute Sale Order")
+    @Operation(summary = "Create a new sale order")
     @PostMapping
     public SaleOrderResponse createOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -43,7 +43,7 @@ public class SaleOrderController {
         return posOrderService.createOrder(principal, request);
     }
 
-    @Operation(summary = "Get Sale Order")
+    @Operation(summary = "List sale orders by session")
     @GetMapping
     public List<SaleOrderResponse> listOrders(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -54,7 +54,7 @@ public class SaleOrderController {
                 ListQueryDefaults.clampLimit(limit));
     }
 
-    @Operation(summary = "Get Sale Order")
+    @Operation(summary = "Get sale order by ID")
     @GetMapping("/{id}")
     public SaleOrderResponse getOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -63,7 +63,7 @@ public class SaleOrderController {
         return posOrderService.getOrder(principal, id);
     }
 
-    @Operation(summary = "Get Sale Order")
+    @Operation(summary = "Get sale order completion snapshot")
     @GetMapping("/{id}/snapshot")
     public Map<String, Object> getSaleOrderSnapshot(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -72,7 +72,7 @@ public class SaleOrderController {
         return posOrderService.getSaleOrderSnapshot(principal, id);
     }
 
-    @Operation(summary = "Patch Sale Order")
+    @Operation(summary = "Update an open sale order")
     @PatchMapping("/{id}")
     public SaleOrderResponse updateOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -82,7 +82,7 @@ public class SaleOrderController {
         return posOrderService.updateOrder(principal, id, request);
     }
 
-    @Operation(summary = "Create or execute Sale Order")
+    @Operation(summary = "Add payment to a sale order")
     @PostMapping("/{id}/payments")
     public SaleOrderResponse addPayment(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -94,7 +94,7 @@ public class SaleOrderController {
         return posOrderService.addPayment(principal, id, idempotencyKey, correlationId, request);
     }
 
-    @Operation(summary = "Create or execute Sale Order")
+    @Operation(summary = "Complete a sale order")
     @PostMapping("/{id}/complete")
     public SaleOrderResponse completeOrder(
             @AuthenticationPrincipal FernPrincipal principal,
@@ -104,7 +104,7 @@ public class SaleOrderController {
         return posOrderService.completeOrder(principal, id, correlationId);
     }
 
-    @Operation(summary = "Create or execute Sale Order")
+    @Operation(summary = "Cancel a sale order")
     @PostMapping("/{id}/cancel")
     public SaleOrderResponse cancelOrder(
             @AuthenticationPrincipal FernPrincipal principal,

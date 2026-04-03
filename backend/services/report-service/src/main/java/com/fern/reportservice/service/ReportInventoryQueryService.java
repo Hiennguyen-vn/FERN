@@ -23,14 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReportInventoryQueryService {
     private static final int MAX_PAGE_SIZE = 200;
 
-    private final NamedParameterJdbcTemplate projectionJdbcTemplate;
+    private final NamedParameterJdbcTemplate readJdbcTemplate;
     private final ReportAuthorizer reportAuthorizer;
 
     public ReportInventoryQueryService(
-            @Qualifier("projectionJdbcTemplate") NamedParameterJdbcTemplate projectionJdbcTemplate,
+            @Qualifier("readJdbcTemplate") NamedParameterJdbcTemplate readJdbcTemplate,
             ReportAuthorizer reportAuthorizer
     ) {
-        this.projectionJdbcTemplate = projectionJdbcTemplate;
+        this.readJdbcTemplate = readJdbcTemplate;
         this.reportAuthorizer = reportAuthorizer;
     }
 
@@ -60,7 +60,7 @@ public class ReportInventoryQueryService {
         parameters.addValue("limit", size + 1);
         parameters.addValue("offset", page * size);
 
-        List<InventoryStockBalanceSnapshotResponse> items = projectionJdbcTemplate.query(
+        List<InventoryStockBalanceSnapshotResponse> items = readJdbcTemplate.query(
                 sql.toString(),
                 parameters,
                 stockSnapshotMapper()
@@ -120,7 +120,7 @@ public class ReportInventoryQueryService {
         parameters.addValue("limit", size + 1);
         parameters.addValue("offset", page * size);
 
-        List<InventoryMovementFactResponse> items = projectionJdbcTemplate.query(
+        List<InventoryMovementFactResponse> items = readJdbcTemplate.query(
                 sql.toString(),
                 parameters,
                 movementFactMapper()
@@ -140,7 +140,7 @@ public class ReportInventoryQueryService {
             parameters.addValue("dataset", dataset);
         }
         sql.append("\nORDER BY dataset");
-        return projectionJdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> {
+        return readJdbcTemplate.query(sql.toString(), parameters, (rs, rowNum) -> {
             Instant lastOccurredAt = instant(rs, "last_occurred_at");
             Instant lastIngestedAt = instant(rs, "last_ingested_at");
             long lagMillis = lastOccurredAt == null || lastIngestedAt == null

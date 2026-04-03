@@ -36,6 +36,7 @@ class AuditJdbcRepositoryTest {
         sqlStatements = new ArrayList<>();
         auditJdbcRepository = new AuditJdbcRepository(
                 jdbcTemplate,
+                jdbcTemplate,
                 new ObjectMapper().findAndRegisterModules(),
                 new SnowflakeIdGenerator(1)
         );

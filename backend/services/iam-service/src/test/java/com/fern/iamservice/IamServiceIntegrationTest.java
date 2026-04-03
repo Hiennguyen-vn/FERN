@@ -390,6 +390,44 @@ class IamServiceIntegrationTest {
     }
 
     @Test
+    void shouldPublishOutletManagerRoleWithOutletReadPermission() throws Exception {
+        String adminToken = issueBootstrapAdminToken();
+        Long userId = createUser(adminToken, "outlet-manager-user", "Outlet123!").get("id").asLong();
+
+        mockMvc.perform(post("/users/%d/roles".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"roleCodes":["outlet_manager"]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roleCodes[0]").value("outlet_manager"));
+
+        adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(post("/users/%d/scopes".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"regionIds":[],"outletIds":[1]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeRoots.outlets[0]").value(1));
+
+        adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roles[?(@=='outlet_manager')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='org.outlet.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='pos.session.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='inventory.balance.read')]").exists())
+                .andExpect(jsonPath("$.scopeRoots.outlets[0]").value(1))
+                .andExpect(jsonPath("$.scopeRoots.system").value(false));
+    }
+
+    @Test
     void shouldRejectManualLockedSuspendedAndInactiveStatuses() throws Exception {
         String adminToken = issueBootstrapAdminToken();
         Long userId = createUser(adminToken, "status-user", "Status123!").get("id").asLong();

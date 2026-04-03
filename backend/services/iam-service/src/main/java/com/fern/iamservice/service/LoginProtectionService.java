@@ -50,11 +50,15 @@ public class LoginProtectionService {
         redisTemplate.delete(lockKey(username));
     }
 
+    private String normalizeUsername(String username) {
+        return username == null ? "" : username.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
     private String failureKey(String username) {
-        return "fern:iam:login-fail:" + username;
+        return "fern:iam:login-fail:" + normalizeUsername(username);
     }
 
     private String lockKey(String username) {
-        return "fern:iam:login-lock:" + username;
+        return "fern:iam:login-lock:" + normalizeUsername(username);
     }
 }
