@@ -1,6 +1,7 @@
 package com.fern.posservice.service;
 
 import com.fern.platform.common.ResourceNotFoundException;
+import com.fern.posservice.dto.PosResponses.CustomerSummaryResponse;
 import com.fern.posservice.dto.PosResponses.PosSessionResponse;
 import com.fern.posservice.dto.PosResponses.SaleOrderLineResponse;
 import com.fern.posservice.dto.PosResponses.SaleOrderResponse;
@@ -78,10 +79,11 @@ public class PosStore {
 
     private OrderRecord requireOrder(NamedParameterJdbcTemplate jdbcTemplate, Long id, boolean forUpdate) {
         OrderRecord record = jdbcTemplate.query("""
-                SELECT id, order_number, region_id, outlet_id, pos_session_id, currency_code, order_type, status, payment_status,
-                       subtotal, discount_amount, tax_amount, total_amount, note, created_at, completed_at, reservation_id
-                FROM pos.sale_order
-                WHERE id = :id
+                SELECT o.id, o.order_number, o.region_id, o.outlet_id, o.pos_session_id, o.currency_code, o.order_type, o.status, o.payment_status,
+                       o.subtotal, o.discount_amount, o.tax_amount, o.total_amount, o.promotion_code, o.note, o.created_at, o.completed_at,
+                       o.reservation_id, o.customer_id, o.table_id
+                FROM pos.sale_order o
+                WHERE o.id = :id
                 %s
                 """.formatted(forUpdate ? "FOR UPDATE" : ""), PosSql.params("id", id), rs -> rs.next() ? new OrderRecord(
                 rs.getLong("id"),
@@ -97,10 +99,13 @@ public class PosStore {
                 rs.getBigDecimal("discount_amount"),
                 rs.getBigDecimal("tax_amount"),
                 rs.getBigDecimal("total_amount"),
+                rs.getString("promotion_code"),
                 rs.getString("note"),
                 PosSql.instant(rs, "created_at"),
                 PosSql.instant(rs, "completed_at"),
-                rs.getObject("reservation_id", Long.class)
+                rs.getObject("reservation_id", Long.class),
+                rs.getObject("customer_id", Long.class),
+                rs.getObject("table_id", Long.class)
         ) : null);
         if (record == null) {
             throw new ResourceNotFoundException("Sale order not found");
@@ -111,7 +116,8 @@ public class PosStore {
     public List<OrderRecord> listOrdersBySession(NamedParameterJdbcTemplate jdbcTemplate, Long posSessionId, int limit) {
         return jdbcTemplate.query("""
                 SELECT id, order_number, region_id, outlet_id, pos_session_id, currency_code, order_type, status, payment_status,
-                       subtotal, discount_amount, tax_amount, total_amount, note, created_at, completed_at, reservation_id
+                       subtotal, discount_amount, tax_amount, total_amount, promotion_code, note, created_at, completed_at,
+                       reservation_id, customer_id, table_id
                 FROM pos.sale_order
                 WHERE pos_session_id = :posSessionId
                 ORDER BY created_at DESC, id DESC
@@ -130,10 +136,13 @@ public class PosStore {
                 rs.getBigDecimal("discount_amount"),
                 rs.getBigDecimal("tax_amount"),
                 rs.getBigDecimal("total_amount"),
+                rs.getString("promotion_code"),
                 rs.getString("note"),
                 PosSql.instant(rs, "created_at"),
                 PosSql.instant(rs, "completed_at"),
-                rs.getObject("reservation_id", Long.class)
+                rs.getObject("reservation_id", Long.class),
+                rs.getObject("customer_id", Long.class),
+                rs.getObject("table_id", Long.class)
         ));
     }
 
@@ -265,15 +274,21 @@ public class PosStore {
         );
     }
 
-    public SaleOrderResponse mapOrder(NamedParameterJdbcTemplate jdbcTemplate, OrderRecord order) {
-        return mapOrder(order, queryOrderLines(jdbcTemplate, order.id()), queryPayments(jdbcTemplate, order.id()));
+    public SaleOrderResponse mapOrder(NamedParameterJdbcTemplate jdbcTemplate, OrderRecord order,
+                                      CustomerSummaryResponse customerSummary) {
+        return mapOrder(order, queryOrderLines(jdbcTemplate, order.id()),
+                queryPayments(jdbcTemplate, order.id()), customerSummary);
     }
 
     public SaleOrderResponse mapOrder(
             OrderRecord order,
             List<SaleOrderLineResponse> lines,
-            List<SalePaymentResponse> payments
+            List<SalePaymentResponse> payments,
+            CustomerSummaryResponse customerSummary
     ) {
+        // Resolve table name if tableId is set
+        String tableName = null;
+        // Table name is resolved by the caller via DineInService if needed
         return new SaleOrderResponse(
                 order.id(),
                 order.orderNumber(),
@@ -288,11 +303,37 @@ public class PosStore {
                 order.discountAmount(),
                 order.taxAmount(),
                 order.totalAmount(),
+                order.promotionCode(),
                 order.note(),
                 order.createdAt(),
                 order.completedAt(),
+                order.tableId(),
+                tableName,
+                customerSummary,
                 lines,
                 payments
         );
+    }
+
+    /**
+     * Resolves a {@link CustomerSummaryResponse} for an order's customer_id.
+     * Returns null if customerId is null (walk-in customer).
+     * Uses the root template since customer is global data.
+     */
+    public CustomerSummaryResponse resolveCustomerSummary(NamedParameterJdbcTemplate rootJdbcTemplate, Long customerId) {
+        if (customerId == null) {
+            return null;
+        }
+        return rootJdbcTemplate.query("""
+                SELECT id, customer_code, full_name, phone, loyalty_tier
+                FROM pos.customer
+                WHERE id = :id
+                """, PosSql.params("id", customerId), rs -> rs.next() ? new CustomerSummaryResponse(
+                rs.getLong("id"),
+                rs.getString("customer_code"),
+                rs.getString("full_name"),
+                rs.getString("phone"),
+                rs.getString("loyalty_tier")
+        ) : null);
     }
 }

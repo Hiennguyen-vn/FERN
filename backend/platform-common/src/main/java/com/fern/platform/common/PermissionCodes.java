@@ -38,6 +38,11 @@ public final class PermissionCodes {
     public static final String POS_ORDER_UPDATE = "pos.order.update";
     public static final String POS_ORDER_CANCEL = "pos.order.cancel";
     public static final String POS_ORDER_COMPLETE = "pos.order.complete";
+    public static final String POS_CUSTOMER_READ = "pos.customer.read";
+    public static final String POS_CUSTOMER_WRITE = "pos.customer.write";
+    public static final String POS_TABLE_READ = "pos.table.read";
+    public static final String POS_TABLE_WRITE = "pos.table.write";
+    public static final String POS_TABLE_MANAGE = "pos.table.manage";
     public static final String INVENTORY_BALANCE_READ = "inventory.balance.read";
     public static final String INVENTORY_LEDGER_READ = "inventory.ledger.read";
     public static final String INVENTORY_ADJUSTMENT_WRITE = "inventory.adjustment.write";

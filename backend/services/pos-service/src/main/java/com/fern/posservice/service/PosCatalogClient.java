@@ -13,6 +13,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -109,6 +110,60 @@ public class PosCatalogClient {
                 )::contribute)
                 .retrieve()
                 .body(RECIPE_LIST_TYPE)));
+    }
+
+    /**
+     * Resolves an applicable promotion/discount for a given code, outlet, and order total.
+     * Returns null if no applicable promotion is found (404 from catalog-service).
+     */
+    public PromotionSnapshot resolvePromotion(
+            FernPrincipal principal,
+            String code,
+            Long outletId,
+            Long regionId,
+            BigDecimal orderTotal,
+            LocalDate businessDate
+    ) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        try {
+            return execute(() -> Objects.requireNonNull(restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/internal/catalog/promotion-resolution")
+                            .queryParam("code", code)
+                            .queryParam("outletId", outletId)
+                            .queryParam("regionId", regionId)
+                            .queryParam("orderTotal", orderTotal)
+                            .queryParam("at", businessDate)
+                            .build())
+                    .headers(FernDownstreamHeadersContributor.bearerToken(
+                            serviceTokenSupport.issueToken(
+                                    PosServiceNames.POS_SERVICE,
+                                    PosServiceNames.CATALOG_SERVICE,
+                                    Set.of(PermissionCodes.CATALOG_INTERNAL_RESOLVE)
+                            ),
+                            principal,
+                            MDC.get(CorrelationId.MDC_KEY)
+                    )::contribute)
+                    .retrieve()
+                    .body(PromotionSnapshot.class)));
+        } catch (RuntimeException exception) {
+            // Promotion not found is not a fatal error — treat as no discount
+            return null;
+        }
+    }
+
+    public record PromotionSnapshot(
+            Long id,
+            String code,
+            String name,
+            String promotionType,
+            BigDecimal discountPercent,
+            BigDecimal discountAmount,
+            String scopeType,
+            Long scopeId
+    ) {
     }
 
     private <T> T execute(Supplier<T> supplier) {

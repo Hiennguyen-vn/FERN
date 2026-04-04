@@ -12,4 +12,8 @@ public class PosReferenceCodeGenerator {
     public String nextOrderNumber() {
         return "SO-" + UUID.randomUUID();
     }
+
+    public String nextCustomerCode() {
+        return "CUST-" + UUID.randomUUID();
+    }
 }

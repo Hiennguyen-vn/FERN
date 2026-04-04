@@ -188,6 +188,31 @@ class ApiGatewayIntegrationTest {
                 outputStream.write(bytes);
             }
         });
+        posServer.createContext("/customers", exchange -> {
+            byte[] bytes = "[{\"id\":1,\"customerCode\":\"CUST-001\",\"fullName\":\"Customer One\"}]".getBytes();
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(bytes);
+            }
+        });
+        posServer.createContext("/pos-stats/today", exchange -> {
+            byte[] bytes = "[{\"outletId\":101,\"openSessions\":1,\"totalOrders\":3}]".getBytes();
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(bytes);
+            }
+        });
+        posServer.createContext("/api/pos/tables", exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            byte[] bytes = (path.endsWith("/status")
+                    ? "{\"id\":1,\"code\":\"T-01\",\"status\":\"AVAILABLE\"}"
+                    : "[{\"id\":1,\"code\":\"T-01\",\"status\":\"AVAILABLE\"}]")
+                    .getBytes();
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream outputStream = exchange.getResponseBody()) {
+                outputStream.write(bytes);
+            }
+        });
         posServer.start();
 
         inventoryServer = HttpServer.create(new InetSocketAddress(0), 0);
@@ -272,6 +297,24 @@ class ApiGatewayIntegrationTest {
                 String.class
         );
         assertThat(payload).contains("gateway.auth.missing_bearer_token");
+    }
+
+    @Test
+    void shouldRejectNewPosRoutesWithoutToken() {
+        webTestClient.get()
+                .uri("/customers")
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        webTestClient.get()
+                .uri("/pos-stats/today?outletIds=101")
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        webTestClient.get()
+                .uri("/api/pos/tables?outletId=101")
+                .exchange()
+                .expectStatus().isUnauthorized();
     }
 
     @Test
@@ -610,7 +653,14 @@ class ApiGatewayIntegrationTest {
                 1L,
                 "bootstrap-admin",
                 Set.of("bootstrap_admin"),
-                Set.of("pos.session.read", "inventory.balance.read", "procurement.supplier.read"),
+                Set.of(
+                        "pos.session.read",
+                        "pos.customer.read",
+                        "pos.table.read",
+                        "pos.table.manage",
+                        "inventory.balance.read",
+                        "procurement.supplier.read"
+                ),
                 new ScopeRoots(java.util.List.of(1L), java.util.List.of(101L)),
                 1L,
                 1L,
@@ -629,6 +679,38 @@ class ApiGatewayIntegrationTest {
                 .expectStatus().isOk()
                 .expectBody(String.class)
                 .value(body -> assertThat(body).contains("\"status\":\"OPEN\""));
+
+        webTestClient.get()
+                .uri("/customers?limit=1")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("\"customerCode\":\"CUST-001\""));
+
+        webTestClient.get()
+                .uri("/pos-stats/today?outletIds=101")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("\"outletId\":101"));
+
+        webTestClient.get()
+                .uri("/api/pos/tables?outletId=101")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("\"code\":\"T-01\""));
+
+        webTestClient.post()
+                .uri("/api/pos/tables/1/status?status=AVAILABLE")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(String.class)
+                .value(body -> assertThat(body).contains("\"status\":\"AVAILABLE\""));
 
         webTestClient.get()
                 .uri("/stock-balances?outletId=101")

@@ -251,8 +251,9 @@ public class PurchaseFlowService {
     @Transactional(readOnly = true)
     public List<PurchaseOrderResponse> listPurchaseOrders(FernPrincipal principal, Long outletId, Long supplierId, String status, int limit) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_PO_READ);
-        var scope = com.fern.platform.common.ScopeAccess.accessibleScope(principal);
-        var records = procurementJdbcRepository.listPurchaseOrders(outletId, supplierId, status, limit, scope);
+        var records = procurementJdbcRepository.listPurchaseOrders(outletId, supplierId, status, limit).stream()
+                .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
+                .toList();
         if (records.isEmpty()) {
             return List.of();
         }
@@ -267,8 +268,9 @@ public class PurchaseFlowService {
     @Transactional(readOnly = true)
     public List<GoodsReceiptResponse> listGoodsReceipts(FernPrincipal principal, Long purchaseOrderId, Long outletId, String status, int limit) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_GR_READ);
-        var scope = com.fern.platform.common.ScopeAccess.accessibleScope(principal);
-        var records = procurementJdbcRepository.listGoodsReceipts(purchaseOrderId, outletId, status, limit, scope);
+        var records = procurementJdbcRepository.listGoodsReceipts(purchaseOrderId, outletId, status, limit).stream()
+                .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
+                .toList();
         if (records.isEmpty()) {
             return List.of();
         }
@@ -413,7 +415,7 @@ public class PurchaseFlowService {
                 new MapSqlParameterSource(),
                 Long.class
         );
-        String datePart = java.time.LocalDate.now(clock).format(
+        String datePart = java.time.ZonedDateTime.now(clock).toLocalDate().format(
                 java.time.format.DateTimeFormatter.ofPattern("yyyyMM")
         );
         return prefix + "-" + datePart + "-" + String.format("%06d", nextVal);

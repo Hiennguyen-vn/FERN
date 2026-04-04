@@ -24,12 +24,10 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class StockReservationService {
@@ -40,9 +38,7 @@ public class StockReservationService {
     private final InventoryRepository inventoryRepository;
     private final InventoryProperties inventoryProperties;
     private final InventoryOutboxService inventoryOutboxService;
-    private final TransactionTemplate transactionTemplate;
     private final Clock clock;
-    private final int reservationCleanupBatchSize;
 
     public StockReservationService(
             NamedParameterJdbcTemplate jdbcTemplate,
@@ -50,18 +46,14 @@ public class StockReservationService {
             InventoryRepository inventoryRepository,
             InventoryProperties inventoryProperties,
             InventoryOutboxService inventoryOutboxService,
-            TransactionTemplate transactionTemplate,
-            Clock clock,
-            @Value("${fern.inventory.reservation-cleanup-batch-size:100}") int reservationCleanupBatchSize
+            Clock clock
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.inventoryAuthorizer = inventoryAuthorizer;
         this.inventoryRepository = inventoryRepository;
         this.inventoryProperties = inventoryProperties;
         this.inventoryOutboxService = inventoryOutboxService;
-        this.transactionTemplate = transactionTemplate;
         this.clock = clock;
-        this.reservationCleanupBatchSize = reservationCleanupBatchSize;
     }
 
     @Transactional
@@ -119,7 +111,8 @@ public class StockReservationService {
                     "expiresAt", expiresAt
             ));
         }
-        lockReservationBalances(request.outletId(), aggregates.values().stream()
+        Long regionId = inventoryRepository.resolveOutletRegionId(request.outletId());
+        lockReservationBalances(regionId, request.outletId(), aggregates.values().stream()
                 .map(ReservationAggregate::ingredientId)
                 .toList());
         for (ReservationAggregate aggregate : aggregates.values()) {
@@ -179,7 +172,7 @@ public class StockReservationService {
         }
         verifyReservationMatchesEvent(reservation, event);
         Map<Long, ReservationAggregate> aggregates = aggregateUsageFromReservationLines(queryReservationLines(reservationId));
-        lockReservationBalances(reservation.outletId(), aggregates.values().stream()
+        lockReservationBalances(event.regionId(), reservation.outletId(), aggregates.values().stream()
                 .map(ReservationAggregate::ingredientId)
                 .toList());
         Instant now = Instant.now(clock);
@@ -209,59 +202,6 @@ public class StockReservationService {
                 "committedAt", event.completedAt(),
                 "id", reservationId
         ));
-    }
-
-    /**
-     * Scheduled cleanup of expired RESERVED reservations.
-     *
-     * <p>When a POS order is abandoned after inventory was reserved but before completion,
-     * the reservation will have an {@code expires_at} in the past and status = RESERVED.
-     * This task releases the stock delta back to {@code qty_available} and marks the
-     * reservation as CANCELLED, preventing a silent stock leak.
-     */
-    @Scheduled(fixedDelayString = "${fern.inventory.reservation-cleanup-delay-ms:60000}")
-    public void releaseExpiredReservations() {
-        Instant now = Instant.now(clock);
-        List<Long> expiredIds = jdbcTemplate.queryForList("""
-                SELECT id
-                FROM inventory.stock_reservation
-                WHERE status = :reservedStatus
-                  AND expires_at IS NOT NULL
-                  AND expires_at <= :now
-                ORDER BY expires_at ASC
-                LIMIT :limit
-                """, inventoryRepository.params(
-                "reservedStatus", StockReservationStatus.RESERVED.name(),
-                "now", now,
-                "limit", reservationCleanupBatchSize
-        ), Long.class);
-        if (expiredIds.isEmpty()) {
-            return;
-        }
-        log.info("releaseExpiredReservations: found {} expired reservations", expiredIds.size());
-        int released = 0;
-        for (Long reservationId : expiredIds) {
-            try {
-                transactionTemplate.executeWithoutResult(status -> {
-                    ReservationRecord reservation = requireReservationForUpdate(reservationId);
-                    // Re-verify after obtaining the lock — another thread may have committed/cancelled it
-                    if (!StockReservationStatus.RESERVED.name().equals(reservation.status())) {
-                        return;
-                    }
-                    if (reservation.expiresAt() != null && reservation.expiresAt().isAfter(Instant.now(clock))) {
-                        // Reservation was refreshed (re-reserved) after our initial query
-                        return;
-                    }
-                    releaseReservation(reservation);
-                });
-                released++;
-            } catch (RuntimeException exception) {
-                log.warn("releaseExpiredReservations: failed to release reservationId={}", reservationId, exception);
-            }
-        }
-        if (released > 0) {
-            log.info("releaseExpiredReservations: released {} expired reservations", released);
-        }
     }
 
     private Map<Long, ReservationAggregate> aggregateUsage(List<SaleReservationItem> usageItems) {
@@ -449,7 +389,8 @@ public class StockReservationService {
 
     private void releaseReservation(ReservationRecord reservation) {
         List<ReservationLineRecord> lines = queryReservationLines(reservation.id());
-        lockReservationBalances(reservation.outletId(), lines.stream()
+        Long regionId = inventoryRepository.resolveOutletRegionId(reservation.outletId());
+        lockReservationBalances(regionId, reservation.outletId(), lines.stream()
                 .map(ReservationLineRecord::ingredientId)
                 .toList());
         for (ReservationLineRecord line : lines) {
@@ -469,11 +410,15 @@ public class StockReservationService {
         ));
     }
 
-    private void lockReservationBalances(Long outletId, List<Long> ingredientIds) {
+    private void lockReservationBalances(Long regionId, Long outletId, List<Long> ingredientIds) {
         ingredientIds.stream()
                 .distinct()
                 .sorted()
-                .forEach(ingredientId -> inventoryRepository.lockExistingStockBalance(outletId, ingredientId));
+                .forEach(ingredientId -> {
+                    // BUG-008: Ensure balance row exists before locking — handles ingredients never stocked at this outlet
+                    inventoryRepository.ensureBalanceRowPublic(regionId, outletId, ingredientId);
+                    inventoryRepository.lockExistingStockBalance(outletId, ingredientId);
+                });
     }
 
     private Instant instant(java.sql.ResultSet resultSet, String column) throws java.sql.SQLException {
@@ -546,5 +491,52 @@ public class StockReservationService {
                 event.outletId().toString(),
                 usageEvent
         );
+    }
+
+    /**
+     * Scheduled job that releases reservations whose TTL has expired but were never committed or cancelled.
+     * Without this, a crashed POS client would leave qty_reserved permanently locked ("ghost reservation").
+     */
+    @Scheduled(fixedDelayString = "${fern.inventory.reservation-expiry-cleanup-delay-ms:60000}")
+    public void releaseExpiredReservations() {
+        Instant now = Instant.now(clock);
+        List<ReservationRecord> expiredReservations = jdbcTemplate.query("""
+                SELECT id, outlet_id, business_date, source_order_id, status, expires_at, committed_at
+                FROM inventory.stock_reservation
+                WHERE status = :status AND expires_at < :now
+                ORDER BY expires_at ASC
+                LIMIT 100
+                """, inventoryRepository.params(
+                "status", StockReservationStatus.RESERVED.name(),
+                "now", now
+        ), (rs, rowNum) -> new ReservationRecord(
+                rs.getLong("id"),
+                rs.getLong("outlet_id"),
+                rs.getObject("business_date", LocalDate.class),
+                rs.getLong("source_order_id"),
+                rs.getString("status"),
+                instant(rs, "expires_at"),
+                instant(rs, "committed_at")
+        ));
+        for (ReservationRecord reservation : expiredReservations) {
+            try {
+                releaseExpiredReservation(reservation);
+            } catch (RuntimeException exception) {
+                log.warn("Failed to release expired reservation id={} sourceOrderId={}",
+                        reservation.id(), reservation.sourceOrderId(), exception);
+            }
+        }
+        if (!expiredReservations.isEmpty()) {
+            log.info("Released {} expired inventory reservations", expiredReservations.size());
+        }
+    }
+
+    @Transactional
+    void releaseExpiredReservation(ReservationRecord reservation) {
+        ReservationRecord locked = requireReservationForUpdate(reservation.id());
+        if (!StockReservationStatus.RESERVED.name().equals(locked.status())) {
+            return; // Already committed or cancelled since we read it
+        }
+        releaseReservation(locked);
     }
 }

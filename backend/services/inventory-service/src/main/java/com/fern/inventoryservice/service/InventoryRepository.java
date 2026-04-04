@@ -83,6 +83,7 @@ public class InventoryRepository {
                     UPDATE inventory.stock_balance
                     SET qty_on_hand = qty_on_hand + :delta,
                         qty_available = (qty_on_hand + :delta) - qty_reserved,
+                        unit_cost = COALESCE(:unitCost, unit_cost),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE outlet_id = :outletId AND ingredient_id = :ingredientId
                     """
@@ -238,6 +239,14 @@ public class InventoryRepository {
                 """, params("regionId", regionId, "outletId", outletId, "ingredientId", ingredientId));
     }
 
+    /**
+     * Public wrapper for {@link #ensureBalanceRow} — used by StockReservationService
+     * to guarantee a balance row exists before attempting FOR UPDATE locks.
+     */
+    void ensureBalanceRowPublic(Long regionId, Long outletId, Long ingredientId) {
+        ensureBalanceRow(regionId, outletId, ingredientId);
+    }
+
     record StockBalanceSnapshot(
             BigDecimal qtyOnHand,
             BigDecimal unitCost
@@ -250,5 +259,15 @@ public class InventoryRepository {
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize payload", exception);
         }
+    }
+
+    /**
+     * Resolves the regionId for an outlet by looking up any existing stock_balance row.
+     * Falls back to 0L if no balance rows exist for this outlet (should not happen in normal operation).
+     */
+    Long resolveOutletRegionId(Long outletId) {
+        return jdbcTemplate.query("""
+                SELECT region_id FROM inventory.stock_balance WHERE outlet_id = :outletId LIMIT 1
+                """, params("outletId", outletId), rs -> rs.next() ? rs.getLong("region_id") : 0L);
     }
 }

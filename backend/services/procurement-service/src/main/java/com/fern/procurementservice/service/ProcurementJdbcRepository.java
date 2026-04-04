@@ -500,7 +500,7 @@ class ProcurementJdbcRepository {
                 """, params("outletId", outletId), Long.class);
     }
 
-    List<PurchaseOrderRecord> listPurchaseOrders(Long outletId, Long supplierId, String status, int limit, com.fern.platform.common.ScopeRoots scope) {
+    List<PurchaseOrderRecord> listPurchaseOrders(Long outletId, Long supplierId, String status, int limit) {
         MapSqlParameterSource p = params("limit", limit);
         StringBuilder sql = new StringBuilder("""
                 SELECT id, po_number, region_id, outlet_id, supplier_id, order_date, expected_delivery_date, status, subtotal_amount, tax_amount, total_amount, note, approved_at, issued_at
@@ -519,7 +519,6 @@ class ProcurementJdbcRepository {
             sql.append(" AND status = :status");
             p.addValue("status", status);
         }
-        appendScopeFilter(sql, p, scope);
         sql.append(" ORDER BY created_at DESC LIMIT :limit");
         return jdbcTemplate.query(sql.toString(), p, (rs, rowNum) -> new PurchaseOrderRecord(
                 rs.getLong("id"),
@@ -539,7 +538,7 @@ class ProcurementJdbcRepository {
         ));
     }
 
-    List<GoodsReceiptRecord> listGoodsReceipts(Long purchaseOrderId, Long outletId, String status, int limit, com.fern.platform.common.ScopeRoots scope) {
+    List<GoodsReceiptRecord> listGoodsReceipts(Long purchaseOrderId, Long outletId, String status, int limit) {
         MapSqlParameterSource p = params("limit", limit);
         StringBuilder sql = new StringBuilder("""
                 SELECT id, receipt_number, purchase_order_id, region_id, outlet_id, supplier_id, receipt_time, business_date,
@@ -559,7 +558,6 @@ class ProcurementJdbcRepository {
             sql.append(" AND status = :status");
             p.addValue("status", status);
         }
-        appendScopeFilter(sql, p, scope);
         sql.append(" ORDER BY receipt_time DESC LIMIT :limit");
         return jdbcTemplate.query(sql.toString(), p, (rs, rowNum) -> new GoodsReceiptRecord(
                 rs.getLong("id"),
@@ -577,33 +575,6 @@ class ProcurementJdbcRepository {
                 instant(rs, "received_at"),
                 instant(rs, "posted_at")
         ));
-    }
-
-    /**
-     * Appends SQL-level scope filtering to prevent in-memory post-filtering.
-     * For system-scoped principals, no filter is added.
-     * For scoped principals, restricts to regions and outlets in their scope.
-     */
-    private void appendScopeFilter(StringBuilder sql, MapSqlParameterSource params, com.fern.platform.common.ScopeRoots scope) {
-        if (scope == null || scope.system()) {
-            return;
-        }
-        boolean hasRegions = scope.regions() != null && !scope.regions().isEmpty();
-        boolean hasOutlets = scope.outlets() != null && !scope.outlets().isEmpty();
-        if (hasRegions && hasOutlets) {
-            sql.append(" AND (region_id IN (:scopeRegions) OR outlet_id IN (:scopeOutlets))");
-            params.addValue("scopeRegions", scope.regions());
-            params.addValue("scopeOutlets", scope.outlets());
-        } else if (hasRegions) {
-            sql.append(" AND region_id IN (:scopeRegions)");
-            params.addValue("scopeRegions", scope.regions());
-        } else if (hasOutlets) {
-            sql.append(" AND outlet_id IN (:scopeOutlets)");
-            params.addValue("scopeOutlets", scope.outlets());
-        } else {
-            // User has no scope — return nothing
-            sql.append(" AND 1=0");
-        }
     }
 
     List<SupplierInvoiceRecord> listSupplierInvoices(Long supplierId, Long outletId, String status, int limit) {

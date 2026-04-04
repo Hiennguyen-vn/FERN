@@ -19,6 +19,7 @@ import com.fern.platform.security.RedisSchedulerLock;
 import com.fern.posservice.dto.PosCommands.AddPaymentRequest;
 import com.fern.posservice.dto.PosCommands.CreateSaleOrderRequest;
 import com.fern.posservice.dto.PosCommands.UpdateSaleOrderRequest;
+import com.fern.posservice.dto.PosResponses.CustomerSummaryResponse;
 import com.fern.posservice.dto.PosResponses.SaleOrderLineResponse;
 import com.fern.posservice.dto.PosResponses.SaleOrderResponse;
 import com.fern.posservice.dto.PosResponses.SalePaymentResponse;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,12 +50,22 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class PosOrderService {
     private static final Logger log = LoggerFactory.getLogger(PosOrderService.class);
 
+    /** Service-level principal used for automated recovery tasks that have no user context. */
+    private static final FernPrincipal SYSTEM_PRINCIPAL = new FernPrincipal(
+            0L, "pos-service-system",
+            Set.of(), Set.of(PermissionCodes.INVENTORY_INTERNAL_RELEASE),
+            new com.fern.platform.common.ScopeRoots(true, List.of(), List.of()),
+            0L, 0L, "pos-system-recovery",
+            com.fern.platform.common.FernPrincipalType.SERVICE
+    );
+
     private final PosAuthorizer posAuthorizer;
     private final PosStore store;
     private final PosOrgClient posOrgClient;
     private final PosPricingService pricingService;
     private final PosInventoryClient inventoryClient;
     private final PosReferenceCodeGenerator codeGenerator;
+    private final PosCustomerService customerService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final OperationalAlertPublisher operationalAlertPublisher;
@@ -65,6 +77,7 @@ public class PosOrderService {
     private final Duration completionRecoveryAge;
     private final int completionRecoveryBatchSize;
     private final RedisSchedulerLock schedulerLock;
+    private final PosDineInService dineInService;
 
     public PosOrderService(
             PosAuthorizer posAuthorizer,
@@ -73,6 +86,7 @@ public class PosOrderService {
             PosPricingService pricingService,
             PosInventoryClient inventoryClient,
             PosReferenceCodeGenerator codeGenerator,
+            PosCustomerService customerService,
             ObjectMapper objectMapper,
             Clock clock,
             OperationalAlertPublisher operationalAlertPublisher,
@@ -82,7 +96,8 @@ public class PosOrderService {
             ShardResolver shardResolver,
             @Value("${fern.pos.completion-recovery.age:PT2M}") Duration completionRecoveryAge,
             @Value("${fern.pos.completion-recovery.batch-size:50}") int completionRecoveryBatchSize,
-            @org.springframework.lang.Nullable RedisSchedulerLock schedulerLock
+            @org.springframework.lang.Nullable RedisSchedulerLock schedulerLock,
+            PosDineInService dineInService
     ) {
         this.posAuthorizer = posAuthorizer;
         this.store = store;
@@ -90,6 +105,7 @@ public class PosOrderService {
         this.pricingService = pricingService;
         this.inventoryClient = inventoryClient;
         this.codeGenerator = codeGenerator;
+        this.customerService = customerService;
         this.objectMapper = objectMapper;
         this.clock = clock;
         this.operationalAlertPublisher = operationalAlertPublisher;
@@ -101,6 +117,7 @@ public class PosOrderService {
         this.completionRecoveryAge = completionRecoveryAge;
         this.completionRecoveryBatchSize = completionRecoveryBatchSize;
         this.schedulerLock = schedulerLock;
+        this.dineInService = dineInService;
     }
 
     public SaleOrderResponse createOrder(FernPrincipal principal, CreateSaleOrderRequest request) {
@@ -111,11 +128,14 @@ public class PosOrderService {
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_ORDER_CREATE);
         ensureSessionOpen(session);
         ensureOutletOperational(session.outletId(), session.businessDate());
+        customerService.requireActiveCustomer(request.customerId());
         PricingSnapshot pricingSnapshot = pricingService.resolvePricingSnapshot(
                 principal,
                 session.outletId(),
+                session.regionId(),
                 session.businessDate(),
-                request.lines()
+                request.lines(),
+                request.promotionCode()
         );
         Long id = Objects.requireNonNull(transactionTemplate.execute(status -> {
             SessionRecord currentSession = store.requireSessionForUpdate(jdbcTemplate, request.posSessionId());
@@ -124,10 +144,10 @@ public class PosOrderService {
             Long orderId = PosSql.insertForId(jdbcTemplate, """
                     INSERT INTO pos.sale_order (
                         order_number, region_id, outlet_id, pos_session_id, currency_code, order_type, status,
-                        payment_status, subtotal, discount_amount, tax_amount, total_amount, note, created_at, updated_at
+                        payment_status, subtotal, discount_amount, tax_amount, total_amount, promotion_code, customer_id, table_id, note, created_at, updated_at
                     ) VALUES (
                         :orderNumber, :regionId, :outletId, :sessionId, :currencyCode, :orderType, :status,
-                        :paymentStatus, :subtotal, 0, :taxAmount, :totalAmount, :note, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                        :paymentStatus, :subtotal, :discountAmount, :taxAmount, :totalAmount, :promotionCode, :customerId, :tableId, :note, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
                     """, PosSql.params(
                     "orderNumber", codeGenerator.nextOrderNumber(),
@@ -139,11 +159,19 @@ public class PosOrderService {
                     "status", SaleOrderStatus.OPEN.name(),
                     "paymentStatus", SaleOrderPaymentStatus.UNPAID.name(),
                     "subtotal", pricingSnapshot.subtotal(),
+                    "discountAmount", pricingSnapshot.discountAmount(),
                     "taxAmount", pricingSnapshot.taxAmount(),
                     "totalAmount", pricingSnapshot.totalAmount(),
+                    "promotionCode", pricingSnapshot.promotionCode(),
+                    "customerId", request.customerId(),
+                    "tableId", request.tableId(),
                     "note", request.note()
             ));
             store.replaceOrderLines(jdbcTemplate, orderId, pricingSnapshot.lines());
+            // Assign table to order if dine-in
+            if (request.tableId() != null) {
+                dineInService.assignTableToOrder(request.tableId(), orderId, currentSession.regionId(), currentSession.outletId());
+            }
             return orderId;
         }));
         return getOrder(principal, id);
@@ -154,7 +182,8 @@ public class PosOrderService {
         OrderRecord order = store.requireOrder(rootJdbcTemplate(), id);
         NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_READ);
-        return store.mapOrder(jdbcTemplate, order);
+        CustomerSummaryResponse customerSummary = store.resolveCustomerSummary(rootJdbcTemplate(), order.customerId());
+        return store.mapOrder(jdbcTemplate, order, customerSummary);
     }
 
     public java.util.Map<String, Object> getSaleOrderSnapshot(FernPrincipal principal, Long id) {
@@ -173,7 +202,11 @@ public class PosOrderService {
         NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(session.regionId(), session.outletId());
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_ORDER_READ);
         return store.listOrdersBySession(jdbcTemplate, posSessionId, limit).stream()
-                .map(order -> store.mapOrder(order, store.queryOrderLines(jdbcTemplate, order.id()), store.queryPayments(jdbcTemplate, order.id())))
+                .map(order -> {
+                    CustomerSummaryResponse cs = store.resolveCustomerSummary(rootJdbcTemplate(), order.customerId());
+                    return store.mapOrder(order, store.queryOrderLines(jdbcTemplate, order.id()),
+                            store.queryPayments(jdbcTemplate, order.id()), cs);
+                })
                 .toList();
     }
 
@@ -184,12 +217,15 @@ public class PosOrderService {
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_UPDATE);
         ensureOrderOpen(order);
         ensureNoSuccessfulPayments(jdbcTemplate, id);
+        customerService.requireActiveCustomer(request.customerId());
         SessionRecord session = store.requireSession(jdbcTemplate, order.posSessionId());
         PricingSnapshot pricingSnapshot = pricingService.resolvePricingSnapshot(
                 principal,
                 order.outletId(),
+                order.regionId(),
                 session.businessDate(),
-                request.lines()
+                request.lines(),
+                request.promotionCode()
         );
         transactionTemplate.executeWithoutResult(status -> {
             OrderRecord currentOrder = store.requireOrderForUpdate(jdbcTemplate, id);
@@ -199,16 +235,22 @@ public class PosOrderService {
                     UPDATE pos.sale_order
                     SET order_type = COALESCE(:orderType, order_type),
                         subtotal = :subtotal,
+                        discount_amount = :discountAmount,
                         tax_amount = :taxAmount,
                         total_amount = :totalAmount,
+                        promotion_code = :promotionCode,
+                        customer_id = COALESCE(:customerId, customer_id),
                         note = COALESCE(:note, note),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = :id
                     """, PosSql.params(
                     "orderType", request.orderType(),
                     "subtotal", pricingSnapshot.subtotal(),
+                    "discountAmount", pricingSnapshot.discountAmount(),
                     "taxAmount", pricingSnapshot.taxAmount(),
                     "totalAmount", pricingSnapshot.totalAmount(),
+                    "promotionCode", pricingSnapshot.promotionCode(),
+                    "customerId", request.customerId(),
                     "note", request.note(),
                     "id", id
             ));
@@ -448,14 +490,18 @@ public class PosOrderService {
                         finalizedCompletedAt,
                         correlationId
                 );
+                // BUG-004: Accrue loyalty points inside the transaction so it's atomic with completion
+                customerService.accrueVisit(currentOrder.customerId(), finalizedOrderId, currentOrder.outletId(), currentOrder.totalAmount());
             });
         } catch (RuntimeException exception) {
             if (reservation != null) {
-                releaseReservationAfterFailure(principal, reservation, exception, order.regionId(), order.outletId(), id, jdbcTemplate);
+                releaseReservationAfterFailure(principal, reservation, exception);
             }
             revertCompletingOrder(order.regionId(), order.outletId(), id);
             throw exception;
         }
+        // Release dining table after successful completion
+        dineInService.releaseTable(order.tableId(), order.regionId(), order.outletId());
         return getOrder(principal, id);
     }
 
@@ -621,8 +667,10 @@ public class PosOrderService {
         return new PricingSnapshot(
                 toPricedLines(lines),
                 order.subtotal(),
+                order.discountAmount(),
                 order.taxAmount(),
-                order.totalAmount()
+                order.totalAmount(),
+                null // promotion code not needed for stored order reconstruction
         );
     }
 
@@ -691,7 +739,7 @@ public class PosOrderService {
 
     private void recoverStaleCompletion(StaleCompletingOrder staleOrder) {
         try {
-            inventoryClient.releaseInventoryReservationBySourceOrderId(null, staleOrder.orderId());
+            inventoryClient.releaseInventoryReservationBySourceOrderId(SYSTEM_PRINCIPAL, staleOrder.orderId());
             revertCompletingOrder(staleOrder.regionId(), staleOrder.outletId(), staleOrder.orderId());
             completionRecoveryCounter.increment();
             log.warn(
@@ -834,15 +882,7 @@ public class PosOrderService {
         }
     }
 
-    private void releaseReservationAfterFailure(
-            FernPrincipal principal,
-            SaleReservationResponse reservation,
-            RuntimeException originalException,
-            Long regionId,
-            Long outletId,
-            Long orderId,
-            NamedParameterJdbcTemplate jdbcTemplate
-    ) {
+    private void releaseReservationAfterFailure(FernPrincipal principal, SaleReservationResponse reservation, RuntimeException originalException) {
         if (reservation == null || reservation.reservationId() == null) {
             return;
         }
@@ -850,15 +890,6 @@ public class PosOrderService {
             inventoryClient.releaseInventoryReservation(principal, reservation.reservationId());
         } catch (RuntimeException releaseException) {
             originalException.addSuppressed(releaseException);
-            // The reservation release failed — the order is still COMPLETING.
-            // recoverStaleCompletions will retry via releaseInventoryReservationBySourceOrderId.
-            // The C1 expired-reservation scheduler in inventory-service is a safety net.
-            log.warn(
-                    "releaseReservationAfterFailure: REST release failed for reservationId={} orderId={} — will be retried by scheduler",
-                    reservation.reservationId(),
-                    orderId,
-                    releaseException
-            );
         }
     }
 

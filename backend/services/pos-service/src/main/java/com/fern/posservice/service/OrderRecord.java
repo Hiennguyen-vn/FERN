@@ -17,9 +17,12 @@ record OrderRecord(
         BigDecimal discountAmount,
         BigDecimal taxAmount,
         BigDecimal totalAmount,
+        String promotionCode,
         String note,
         Instant createdAt,
         Instant completedAt,
-        Long reservationId
+        Long reservationId,
+        Long customerId,
+        Long tableId
 ) {
 }

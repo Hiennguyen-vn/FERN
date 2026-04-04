@@ -30,7 +30,13 @@ public class RouteConfig {
                         "/catalog/promotions/**"
                 ).uri(properties.getCatalog()))
                 .route("audit-core", r -> r.path("/audit/**").uri(properties.getAudit()))
-                .route("pos-core", r -> r.path("/pos-sessions/**", "/sale-orders/**").uri(properties.getPos()))
+                .route("pos-core", r -> r.path(
+                        "/pos-sessions/**",
+                        "/sale-orders/**",
+                        "/customers/**",
+                        "/pos-stats/**",
+                        "/api/pos/tables/**"
+                ).uri(properties.getPos()))
                 .route("inventory-core", r -> r.path(
                         "/stock-balances/**",
                         "/inventory-transactions/**",

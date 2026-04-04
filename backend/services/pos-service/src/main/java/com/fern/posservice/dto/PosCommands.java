@@ -43,12 +43,17 @@ public final class PosCommands {
         public record CreateSaleOrderRequest(
                         @NotNull Long posSessionId,
                         @NotNull String orderType,
+                        Long customerId,
+                        Long tableId,
+                        String promotionCode,
                         String note,
                         @NotEmpty List<@Valid OrderLineInput> lines) {
         }
 
         public record UpdateSaleOrderRequest(
                         String orderType,
+                        Long customerId,
+                        String promotionCode,
                         String note,
                         @NotEmpty List<@Valid OrderLineInput> lines) {
         }
@@ -64,5 +69,42 @@ public final class PosCommands {
                                 message = "Status must be SUCCESS, FAILED, or CANCELLED"
                         )
                         String status) {
+        }
+
+        public record CreateCustomerRequest(
+                        @NotNull @Size(min = 1, max = 150) String fullName,
+                        @Size(max = 30) String phone,
+                        @Size(max = 150) String email,
+                        LocalDate dob,
+                        String gender,
+                        String note) {
+        }
+
+        public record UpdateCustomerRequest(
+                        @Size(min = 1, max = 150) String fullName,
+                        @Size(max = 30) String phone,
+                        @Size(max = 150) String email,
+                        LocalDate dob,
+                        String gender,
+                        String note,
+                        String status) {
+        }
+
+        public record CreateTableRequest(
+                        @NotNull Long outletId,
+                        @NotNull @Size(min = 1, max = 50) String tableName,
+                        @Size(max = 30) String tableCode,
+                        Integer capacity,
+                        @Size(max = 50) String zone,
+                        String note) {
+        }
+
+        public record UpdateTableRequest(
+                        @Size(min = 1, max = 50) String tableName,
+                        @Size(max = 30) String tableCode,
+                        Integer capacity,
+                        @Size(max = 50) String zone,
+                        String status,
+                        String note) {
         }
 }

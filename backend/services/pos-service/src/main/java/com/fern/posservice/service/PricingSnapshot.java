@@ -6,7 +6,9 @@ import java.util.List;
 record PricingSnapshot(
         List<PricedLine> lines,
         BigDecimal subtotal,
+        BigDecimal discountAmount,
         BigDecimal taxAmount,
-        BigDecimal totalAmount
+        BigDecimal totalAmount,
+        String promotionCode
 ) {
 }

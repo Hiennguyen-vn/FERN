@@ -28,8 +28,10 @@ public class PosPricingService {
     public PricingSnapshot resolvePricingSnapshot(
             FernPrincipal principal,
             Long outletId,
+            Long regionId,
             LocalDate businessDate,
-            List<OrderLineInput> requestedLines
+            List<OrderLineInput> requestedLines,
+            String promotionCode
     ) {
         if (requestedLines == null || requestedLines.isEmpty()) {
             throw new BadRequestException("Order must contain at least one line");
@@ -72,7 +74,7 @@ public class PosPricingService {
                     item.productName(),
                     item.priceValue(),
                     input.qty(),
-                    BigDecimal.ZERO,
+                    BigDecimal.ZERO, // per-line discount placeholder (will be distributed below)
                     lineTax,
                     lineTotal,
                     input.note()
@@ -80,7 +82,58 @@ public class PosPricingService {
             subtotal = subtotal.add(lineSubtotal);
             taxAmount = taxAmount.add(lineTax);
         }
-        return new PricingSnapshot(pricedLines, subtotal, taxAmount, subtotal.add(taxAmount));
+
+        // Resolve order-level promotion/discount
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        String resolvedPromotionCode = null;
+        if (promotionCode != null && !promotionCode.isBlank()) {
+            PosCatalogClient.PromotionSnapshot promo = catalogClient.resolvePromotion(
+                    principal, promotionCode, outletId, regionId, subtotal, businessDate);
+            if (promo != null) {
+                resolvedPromotionCode = promo.code();
+                if (promo.discountPercent() != null) {
+                    discountAmount = subtotal.multiply(promo.discountPercent())
+                            .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+                } else if (promo.discountAmount() != null) {
+                    discountAmount = promo.discountAmount().min(subtotal); // Cap at subtotal
+                }
+                // Distribute discount proportionally across lines
+                if (discountAmount.compareTo(BigDecimal.ZERO) > 0 && subtotal.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal distributed = BigDecimal.ZERO;
+                    List<PricedLine> adjustedLines = new ArrayList<>();
+                    for (int i = 0; i < pricedLines.size(); i++) {
+                        PricedLine line = pricedLines.get(i);
+                        BigDecimal lineSubtotal = line.unitPrice().multiply(line.qty()).setScale(2, RoundingMode.HALF_UP);
+                        BigDecimal lineDiscount;
+                        if (i == pricedLines.size() - 1) {
+                            // Last line gets the remainder to avoid rounding drift
+                            lineDiscount = discountAmount.subtract(distributed);
+                        } else {
+                            lineDiscount = lineSubtotal.multiply(discountAmount)
+                                    .divide(subtotal, 2, RoundingMode.HALF_UP);
+                        }
+                        distributed = distributed.add(lineDiscount);
+                        BigDecimal adjustedLineTotal = line.lineTotal().subtract(lineDiscount);
+                        adjustedLines.add(new PricedLine(
+                                line.lineNumber(),
+                                line.productId(),
+                                line.productCode(),
+                                line.productNameSnapshot(),
+                                line.unitPrice(),
+                                line.qty(),
+                                lineDiscount,
+                                line.taxAmount(),
+                                adjustedLineTotal,
+                                line.note()
+                        ));
+                    }
+                    pricedLines = adjustedLines;
+                }
+            }
+        }
+
+        BigDecimal totalAmount = subtotal.add(taxAmount).subtract(discountAmount);
+        return new PricingSnapshot(pricedLines, subtotal, discountAmount, taxAmount, totalAmount, resolvedPromotionCode);
     }
 
     public List<RecipeSnapshot> resolveRecipeSnapshots(FernPrincipal principal, List<PricedLine> lines, LocalDate businessDate) {

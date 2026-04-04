@@ -738,9 +738,7 @@ class PosServiceIntegrationTest {
         assertThat(event.path("saleOrderId").asLong()).isEqualTo(orderId);
         assertThat(event.path("regionId").asLong()).isEqualTo(1L);
         assertThat(event.path("outletId").asLong()).isEqualTo(101L);
-        assertThat(event.at("/businessDate/0").asInt()).isEqualTo(2026);
-        assertThat(event.at("/businessDate/1").asInt()).isEqualTo(3);
-        assertThat(event.at("/businessDate/2").asInt()).isEqualTo(27);
+        assertThat(event.path("businessDate").asText()).isEqualTo("2026-03-27");
         assertThat(event.path("correlationId").asText()).isEqualTo("corr-reconciliation-outbox");
         assertThat(event.path("payments")).hasSize(2);
         assertThat(event.at("/saleSnapshot/orderId").asLong()).isEqualTo(orderId);

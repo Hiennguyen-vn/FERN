@@ -14,6 +14,9 @@ public interface ProductOutletAvailabilityRepository extends JpaRepository<Produ
     List<ProductOutletAvailabilityEntity> findByIdOutletIdAndIsAvailableTrue(Long outletId);
 
     @EntityGraph(attributePaths = {"product"})
+    List<ProductOutletAvailabilityEntity> findByIdOutletId(Long outletId);
+
+    @EntityGraph(attributePaths = {"product"})
     List<ProductOutletAvailabilityEntity> findByIdProductIdOrderByIdOutletIdAsc(Long productId);
 
     @Query("""

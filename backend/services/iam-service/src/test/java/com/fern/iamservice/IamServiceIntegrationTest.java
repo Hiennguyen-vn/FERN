@@ -428,6 +428,70 @@ class IamServiceIntegrationTest {
     }
 
     @Test
+    void shouldExposePosCustomerAndTablePermissionsThroughPermissionsAndEffectiveAccess() throws Exception {
+        String adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(get("/permissions")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.code=='pos.customer.read')]").exists())
+                .andExpect(jsonPath("$[?(@.code=='pos.customer.write')]").exists())
+                .andExpect(jsonPath("$[?(@.code=='pos.table.read')]").exists())
+                .andExpect(jsonPath("$[?(@.code=='pos.table.write')]").exists())
+                .andExpect(jsonPath("$[?(@.code=='pos.table.manage')]").exists());
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM iam.role_permission role_permission
+                JOIN iam.role role ON role.id = role_permission.role_id
+                JOIN iam.permission permission ON permission.id = role_permission.permission_id
+                WHERE role.code IN ('bootstrap_admin', 'region_manager', 'outlet_manager', 'staff')
+                  AND permission.code IN (
+                      'pos.customer.read',
+                      'pos.customer.write',
+                      'pos.table.read',
+                      'pos.table.write',
+                      'pos.table.manage'
+                  )
+                """, Long.class)).isEqualTo(20L);
+
+        Long userId = createUser(adminToken, "pos-floor-user", "PosFloor123!").get("id").asLong();
+
+        mockMvc.perform(post("/users/%d/roles".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"roleCodes":["staff"]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roleCodes[0]").value("staff"));
+
+        adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(post("/users/%d/scopes".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"regionIds":[],"outletIds":[101]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scopeRoots.outlets[0]").value(101));
+
+        adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(userId))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roles[?(@=='staff')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='pos.customer.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='pos.customer.write')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='pos.table.read')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='pos.table.write')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='pos.table.manage')]").exists())
+                .andExpect(jsonPath("$.scopeRoots.outlets[0]").value(101));
+    }
+
+    @Test
     void shouldRejectManualLockedSuspendedAndInactiveStatuses() throws Exception {
         String adminToken = issueBootstrapAdminToken();
         Long userId = createUser(adminToken, "status-user", "Status123!").get("id").asLong();

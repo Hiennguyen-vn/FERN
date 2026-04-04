@@ -93,10 +93,13 @@ class PosSaleProducerIntegrationContractTest {
                         BigDecimal.ZERO,
                         new BigDecimal("9.09"),
                         new BigDecimal("100.00"),
+                        null, // promotionCode
                         "fixture order",
                         Instant.parse("2026-03-29T10:00:00Z"),
                         Instant.parse("2026-03-29T10:05:00Z"),
-                        999L
+                        999L,
+                        null, // customerId
+                        null  // tableId
                 ),
                 new SessionRecord(
                         200L,
@@ -117,7 +120,7 @@ class PosSaleProducerIntegrationContractTest {
                         null,
                         null
                 ),
-                new PricingSnapshot(List.of(), new BigDecimal("90.91"), new BigDecimal("9.09"), new BigDecimal("100.00")),
+                new PricingSnapshot(List.of(), new BigDecimal("90.91"), BigDecimal.ZERO, new BigDecimal("9.09"), new BigDecimal("100.00"), null),
                 List.of(
                         new com.fern.posservice.dto.PosResponses.SalePaymentResponse(
                                 50L,

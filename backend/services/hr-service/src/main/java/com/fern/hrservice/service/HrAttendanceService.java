@@ -322,9 +322,7 @@ class HrAttendanceService {
                 ORDER BY s.shift_date DESC, sa.id DESC
                 LIMIT :limit
                 """;
-        List<ShiftAssignmentRecord> assignments = new ArrayList<>();
-        List<Object[]> rawRows = new ArrayList<>();
-        jdbcTemplate.query(sql, params("regionId", regionId, "outletId", outletId, "limit", limit), (rs, rowNum) -> {
+        return jdbcTemplate.query(sql, params("regionId", regionId, "outletId", outletId, "limit", limit), (rs, rowNum) -> {
             ShiftAssignmentRecord assignment = new ShiftAssignmentRecord(
                     rs.getLong("shift_assignment_id"),
                     null,
@@ -338,42 +336,20 @@ class HrAttendanceService {
                     rs.getString("approval_status"),
                     null
             );
-            assignments.add(assignment);
-            rawRows.add(new Object[]{
+            AttendanceAnalysis computation = analyzeAttendance(assignment, attendanceEventsForShiftAssignment(assignment.id()));
+            return new AttendanceApprovalResponse(
                     nullableLong(rs, "approval_id"),
+                    assignment.id(),
                     rs.getString("approval_status"),
                     rs.getString("comments"),
                     instant(rs, "approved_at"),
-                    nullableLong(rs, "approved_by_user_id")
-            });
-            return null;
-        });
-        if (assignments.isEmpty()) {
-            return List.of();
-        }
-        // Batch-load all attendance events for the returned shift assignments in one query
-        List<Long> assignmentIds = assignments.stream().map(ShiftAssignmentRecord::id).toList();
-        Map<Long, List<AttendanceEventRecord>> eventsByAssignmentId = batchLoadAttendanceEvents(assignmentIds);
-        List<AttendanceApprovalResponse> results = new ArrayList<>(assignments.size());
-        for (int i = 0; i < assignments.size(); i++) {
-            ShiftAssignmentRecord assignment = assignments.get(i);
-            Object[] row = rawRows.get(i);
-            List<AttendanceEventRecord> events = eventsByAssignmentId.getOrDefault(assignment.id(), List.of());
-            AttendanceAnalysis computation = analyzeAttendance(assignment, events);
-            results.add(new AttendanceApprovalResponse(
-                    (Long) row[0],
-                    assignment.id(),
-                    (String) row[1],
-                    (String) row[2],
-                    (Instant) row[3],
-                    (Long) row[4],
+                    nullableLong(rs, "approved_by_user_id"),
                     computation.attendanceStatus(),
                     computation.workHours(),
                     computation.overtimeHours(),
                     assignment.shiftDate()
-            ));
-        }
-        return results;
+            );
+        });
     }
 
     @Transactional(readOnly = true)
@@ -773,29 +749,6 @@ class HrAttendanceService {
                 WHERE shift_assignment_id = :shiftAssignmentId
                 ORDER BY event_time, id
                 """, params("shiftAssignmentId", shiftAssignmentId), (rs, rowNum) -> mapAttendanceEventRecord(rs));
-    }
-
-    /**
-     * Batch-loads attendance events for multiple shift assignments in a single query.
-     * This replaces the N+1 pattern where attendanceEventsForShiftAssignment() was
-     * called individually per row in listAttendanceApprovals().
-     */
-    private Map<Long, List<AttendanceEventRecord>> batchLoadAttendanceEvents(List<Long> shiftAssignmentIds) {
-        if (shiftAssignmentIds.isEmpty()) {
-            return Map.of();
-        }
-        Map<Long, List<AttendanceEventRecord>> result = new HashMap<>();
-        jdbcTemplate.query("""
-                SELECT id, employee_id, region_id, outlet_id, shift_assignment_id, event_type, event_time, source_system, idempotency_key
-                FROM hr.attendance_event
-                WHERE shift_assignment_id IN (:shiftAssignmentIds)
-                ORDER BY shift_assignment_id, event_time, id
-                """, params("shiftAssignmentIds", shiftAssignmentIds), (rs, rowNum) -> {
-            long assignmentId = rs.getLong("shift_assignment_id");
-            result.computeIfAbsent(assignmentId, k -> new ArrayList<>()).add(mapAttendanceEventRecord(rs));
-            return null;
-        });
-        return result;
     }
 
     private Optional<AttendanceEventRecord> findAttendanceEventByIdempotencyKey(String idempotencyKey) {

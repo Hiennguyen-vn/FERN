@@ -126,9 +126,20 @@ public class CatalogPricingService {
 
     @Transactional(readOnly = true)
     public List<ProductAvailabilityResponse> listAvailability(Long productId, Long outletId) {
-        return productOutletAvailabilityRepository.findAll().stream()
-                .filter(entity -> productId == null || entity.getId().getProductId().equals(productId))
-                .filter(entity -> outletId == null || entity.getId().getOutletId().equals(outletId))
+        List<ProductOutletAvailabilityEntity> entities;
+        if (productId != null && outletId != null) {
+            entities = productOutletAvailabilityRepository
+                    .findById(new ProductOutletAvailabilityId(productId, outletId))
+                    .map(List::of)
+                    .orElse(List.of());
+        } else if (productId != null) {
+            entities = productOutletAvailabilityRepository.findByIdProductIdOrderByIdOutletIdAsc(productId);
+        } else if (outletId != null) {
+            entities = productOutletAvailabilityRepository.findByIdOutletId(outletId);
+        } else {
+            entities = productOutletAvailabilityRepository.findAll();
+        }
+        return entities.stream()
                 .map(this::toAvailabilityResponse)
                 .toList();
     }

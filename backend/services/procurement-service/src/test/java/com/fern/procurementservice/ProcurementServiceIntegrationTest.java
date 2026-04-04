@@ -540,13 +540,13 @@ class ProcurementServiceIntegrationTest {
                 SELECT MAX(id)
                 FROM procurement.supplier_payment
                 """, Long.class);
-        assertThat(new BigDecimal(objectMapper.readTree(postedReceiptJson).get("postedAt").asText()))
-                .isEqualByComparingTo(new BigDecimal(outboxPayloadField(
+        assertThat(objectMapper.readTree(postedReceiptJson).get("postedAt").asText())
+                .isEqualTo(outboxPayloadField(
                         "GOODS_RECEIPT",
                         goodsReceiptId.toString(),
                         "procurement.goods_receipt.posted",
                         "postedAt"
-                )));
+                ));
         assertThat(outboxPayloadField("GOODS_RECEIPT", goodsReceiptId.toString(), "procurement.goods_receipt.posted", "idempotencyKey"))
                 .isEqualTo("procurement.goods_receipt.posted:receipt:" + goodsReceiptId);
         assertThat(outboxPayloadField("SUPPLIER_PAYMENT", supplierPaymentId.toString(), "procurement.supplier.payment.recorded", "idempotencyKey"))

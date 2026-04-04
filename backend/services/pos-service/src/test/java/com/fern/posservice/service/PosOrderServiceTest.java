@@ -83,6 +83,12 @@ class PosOrderServiceTest {
     @Mock
     private PosAuditService posAuditService;
 
+    @Mock
+    private PosCustomerService customerService;
+
+    @Mock
+    private PosDineInService dineInService;
+
     private PosOrderService service;
     private FernPrincipal principal;
 
@@ -110,6 +116,7 @@ class PosOrderServiceTest {
                 pricingService,
                 inventoryClient,
                 codeGenerator,
+                customerService,
                 new ObjectMapper(),
                 Clock.fixed(Instant.parse("2026-03-29T08:00:00Z"), ZoneOffset.UTC),
                 operationalAlertPublisher,
@@ -119,7 +126,8 @@ class PosOrderServiceTest {
                 shardResolver,
                 java.time.Duration.ofMinutes(2),
                 50,
-                null // schedulerLock — not needed in unit test
+                null, // schedulerLock — not needed in unit test
+                dineInService
         );
         principal = new FernPrincipal(
                 99L,
@@ -143,7 +151,7 @@ class PosOrderServiceTest {
         OrderRecord completedOrder = order(SaleOrderStatus.COMPLETED.name(), new BigDecimal("10.00"), 555L);
         SaleOrderResponse response = response(completedOrder);
         when(store.requireOrder(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(completedOrder, completedOrder);
-        when(store.mapOrder(any(NamedParameterJdbcTemplate.class), eq(completedOrder))).thenReturn(response);
+        when(store.mapOrder(any(NamedParameterJdbcTemplate.class), eq(completedOrder), any())).thenReturn(response);
 
         SaleOrderResponse result = service.completeOrder(principal, 10L, "corr-1");
 
@@ -237,7 +245,7 @@ class PosOrderServiceTest {
 
         service.recoverStaleCompletions();
 
-        verify(inventoryClient).releaseInventoryReservationBySourceOrderId(null, 55L);
+        verify(inventoryClient).releaseInventoryReservationBySourceOrderId(any(FernPrincipal.class), eq(55L));
         verify(store).refreshPaymentStatus(any(NamedParameterJdbcTemplate.class), eq(55L));
     }
 
@@ -256,10 +264,13 @@ class PosOrderServiceTest {
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
                 totalAmount,
-                null,
+                null, // promotionCode
+                null, // note
                 Instant.parse("2026-03-29T08:00:00Z"),
                 null,
-                reservationId
+                reservationId,
+                null, // customerId
+                null  // tableId
         );
     }
 
@@ -278,9 +289,13 @@ class PosOrderServiceTest {
                 order.discountAmount(),
                 order.taxAmount(),
                 order.totalAmount(),
+                order.promotionCode(),
                 order.note(),
                 order.createdAt(),
                 order.completedAt(),
+                order.tableId(),
+                null, // tableName
+                null, // customer
                 List.of(),
                 List.of()
         );

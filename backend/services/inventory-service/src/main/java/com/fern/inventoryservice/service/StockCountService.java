@@ -89,16 +89,7 @@ public class StockCountService {
                 "note", request.note(),
                 "createdByUserId", principal.userId()
         ));
-        for (Long ingredientId : request.ingredientIds()) {
-            jdbcTemplate.update("""
-                    INSERT INTO inventory.stock_count_line (
-                        stock_count_session_id, ingredient_id, system_qty, actual_qty, variance_qty, note, created_at, updated_at
-                    ) VALUES (
-                        :sessionId, :ingredientId, 0, NULL, 0, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                    )
-                    ON CONFLICT (stock_count_session_id, ingredient_id) DO NOTHING
-                    """, inventoryRepository.params("sessionId", id, "ingredientId", ingredientId));
-        }
+        batchInsertCountLines(jdbcTemplate, id, request.ingredientIds());
         return getStockCountSession(id);
     }
 
@@ -122,16 +113,7 @@ public class StockCountService {
                     WHERE outlet_id = :outletId
                     ORDER BY ingredient_id
                     """, inventoryRepository.params("outletId", record.outletId()), Long.class);
-            for (Long ingredientId : lineIngredientIds) {
-                jdbcTemplate.update("""
-                        INSERT INTO inventory.stock_count_line (
-                            stock_count_session_id, ingredient_id, system_qty, actual_qty, variance_qty, note, created_at, updated_at
-                        ) VALUES (
-                            :sessionId, :ingredientId, 0, NULL, 0, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                        )
-                        ON CONFLICT (stock_count_session_id, ingredient_id) DO NOTHING
-                        """, inventoryRepository.params("sessionId", id, "ingredientId", ingredientId));
-            }
+            batchInsertCountLines(jdbcTemplate, id, lineIngredientIds);
         }
         for (Long ingredientId : lineIngredientIds) {
             BigDecimal systemQty = currentOnHand(record.outletId(), ingredientId);
@@ -602,5 +584,22 @@ public class StockCountService {
             Instant startedAt,
             Instant postedAt
     ) {
+    }
+
+    private void batchInsertCountLines(NamedParameterJdbcTemplate jdbcTemplate, Long sessionId, List<Long> ingredientIds) {
+        if (ingredientIds.isEmpty()) {
+            return;
+        }
+        org.springframework.jdbc.core.namedparam.SqlParameterSource[] batchParams = ingredientIds.stream()
+                .map(ingredientId -> inventoryRepository.params("sessionId", sessionId, "ingredientId", ingredientId))
+                .toArray(org.springframework.jdbc.core.namedparam.SqlParameterSource[]::new);
+        jdbcTemplate.batchUpdate("""
+                INSERT INTO inventory.stock_count_line (
+                    stock_count_session_id, ingredient_id, system_qty, actual_qty, variance_qty, note, created_at, updated_at
+                ) VALUES (
+                    :sessionId, :ingredientId, 0, NULL, 0, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                ON CONFLICT (stock_count_session_id, ingredient_id) DO NOTHING
+                """, batchParams);
     }
 }

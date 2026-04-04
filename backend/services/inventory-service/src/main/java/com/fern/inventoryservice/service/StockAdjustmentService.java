@@ -70,6 +70,9 @@ public class StockAdjustmentService {
             throw new BadRequestException("Region does not match the outlet route");
         }
         ensureOutletOperational(outlet, request.businessDate());
+        if (request.qty() == null || request.qty().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Adjustment qty must be greater than zero");
+        }
         validateDirection(request.adjustmentDirection());
         Long id = inventoryRepository.insertForId("""
                 INSERT INTO inventory.stock_adjustment (
