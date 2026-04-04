@@ -16,11 +16,14 @@ import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 
 @Service
 public class InventoryEventConsumerService {
+    private static final Logger log = LoggerFactory.getLogger(InventoryEventConsumerService.class);
     private static final String POS_SALE_COMPLETED_TOPIC = "pos.sale.completed";
     private static final String PROCUREMENT_GOODS_RECEIPT_POSTED_TOPIC = "procurement.goods_receipt.posted";
     private static final String INVENTORY_SERVICE = "inventory-service";
@@ -48,12 +51,13 @@ public class InventoryEventConsumerService {
         this.transactionOperations = transactionOperations;
     }
 
-    public void consumeSaleCompleted(String payload) throws Exception {
+    public void consumeSaleCompleted(String payload) {
         try {
             consumeSaleCompleted(objectMapper.readValue(payload, PosSaleCompletedEvent.class), payload);
         } catch (JsonProcessingException exception) {
             recordDeserializationFailure(POS_SALE_COMPLETED_TOPIC, payload, PosSaleCompletedEvent.class, exception);
-            throw exception;
+            // Do not re-throw: deserialization failure is recorded in the inbox table.
+            // Re-throwing would cause Kafka to retry a permanently unparseable message.
         }
     }
 
@@ -61,7 +65,7 @@ public class InventoryEventConsumerService {
         consumeSaleCompleted(event, toJson(event));
     }
 
-    public void consumeGoodsReceiptPosted(String payload) throws Exception {
+    public void consumeGoodsReceiptPosted(String payload) {
         try {
             consumeGoodsReceiptPosted(objectMapper.readValue(payload, ProcurementGoodsReceiptPostedEvent.class), payload);
         } catch (JsonProcessingException exception) {
@@ -71,7 +75,7 @@ public class InventoryEventConsumerService {
                     ProcurementGoodsReceiptPostedEvent.class,
                     exception
             );
-            throw exception;
+            // Do not re-throw: deserialization failure is recorded in the inbox table.
         }
     }
 
@@ -97,7 +101,10 @@ public class InventoryEventConsumerService {
         } catch (RuntimeException exception) {
             transactionOperations.executeWithoutResult(status ->
                     inventoryRepository.markInboxFailed(sourceEventId, exception));
-            throw exception;
+            // Do not re-throw: the event is recorded as FAILED in the inbox table.
+            // Re-throwing would cause Kafka to retry, but inbox dedup would skip it
+            // on the second attempt — silently losing the event.
+            log.error("Failed to process pos.sale.completed event [sourceEventId={}]: {}", sourceEventId, exception.getMessage(), exception);
         }
     }
 
@@ -155,7 +162,8 @@ public class InventoryEventConsumerService {
         } catch (RuntimeException exception) {
             transactionOperations.executeWithoutResult(status ->
                     inventoryRepository.markInboxFailed(sourceEventId, exception));
-            throw exception;
+            // Do not re-throw: the event is recorded as FAILED in the inbox table.
+            log.error("Failed to process procurement.goods_receipt.posted event [sourceEventId={}]: {}", sourceEventId, exception.getMessage(), exception);
         }
     }
 

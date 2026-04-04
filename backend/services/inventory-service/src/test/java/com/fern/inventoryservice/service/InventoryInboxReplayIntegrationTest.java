@@ -190,13 +190,15 @@ class InventoryInboxReplayIntegrationTest {
                 List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
         );
 
-        assertThatThrownBy(() -> inventoryEventConsumerService.consumeSaleCompleted(event))
-                .isInstanceOf(DataAccessResourceFailureException.class);
+        // With swallow-exception strategy, the consumer does NOT throw.
+        // It records the failure in the inbox table and logs the error.
+        inventoryEventConsumerService.consumeSaleCompleted(event);
 
         assertThat(inboxStatus("sale-event-retry-failed")).isEqualTo("FAILED");
         assertThat(inboxError("sale-event-retry-failed")).isEqualTo("DataAccessResourceFailureException");
         assertThat(transactionCount("SALE_USAGE", "5003")).isZero();
 
+        // Retry: inbox allows re-processing FAILED events
         inventoryEventConsumerService.consumeSaleCompleted(event);
 
         assertThat(inboxStatus("sale-event-retry-failed")).isEqualTo("PROCESSED");
@@ -205,8 +207,8 @@ class InventoryInboxReplayIntegrationTest {
 
     @Test
     void shouldRecordMalformedSalePayloadAsFailedInboxEvent() {
-        assertThatThrownBy(() -> inventoryEventConsumer.consumeSaleCompleted("{not-json"))
-                .isInstanceOf(JsonProcessingException.class);
+        // With swallow-exception strategy, deserialization failures are no longer re-thrown
+        inventoryEventConsumer.consumeSaleCompleted("{not-json");
 
         assertThat(inboxCount("""
                 SELECT COUNT(*)
@@ -217,7 +219,7 @@ class InventoryInboxReplayIntegrationTest {
                 SELECT error_message
                 FROM inventory.inbox_event
                 WHERE event_type = 'pos.sale.completed.deserialization_failed'
-                """, String.class)).isEqualTo("JsonProcessingException");
+                """, String.class)).isEqualTo("JsonParseException");
     }
 
     @Test
@@ -262,13 +264,14 @@ class InventoryInboxReplayIntegrationTest {
                 List.of(new GoodsReceiptPostedLine(200L, new BigDecimal("3.0000"), new BigDecimal("10000.00"), 3301L))
         );
 
-        assertThatThrownBy(() -> inventoryEventConsumerService.consumeGoodsReceiptPosted(event))
-                .isInstanceOf(DataAccessResourceFailureException.class);
+        // With swallow-exception strategy, the consumer does NOT throw.
+        inventoryEventConsumerService.consumeGoodsReceiptPosted(event);
 
         assertThat(inboxStatus("receipt-event-retry-failed")).isEqualTo("FAILED");
         assertThat(inboxError("receipt-event-retry-failed")).isEqualTo("DataAccessResourceFailureException");
         assertThat(transactionCount("PURCHASE_IN", "9401")).isZero();
 
+        // Retry: inbox allows re-processing FAILED events
         inventoryEventConsumerService.consumeGoodsReceiptPosted(event);
 
         assertThat(inboxStatus("receipt-event-retry-failed")).isEqualTo("PROCESSED");
@@ -294,9 +297,8 @@ class InventoryInboxReplayIntegrationTest {
                 List.of(new GoodsReceiptPostedLine(200L, new BigDecimal("-3.0000"), new BigDecimal("10000.00"), 3302L))
         );
 
-        assertThatThrownBy(() -> inventoryEventConsumerService.consumeGoodsReceiptPosted(event))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("positive");
+        // With swallow-exception strategy, validation failures are no longer re-thrown.
+        inventoryEventConsumerService.consumeGoodsReceiptPosted(event);
 
         assertThat(inboxStatus("receipt-event-poison-negative")).isEqualTo("FAILED");
         assertThat(inboxError("receipt-event-poison-negative")).isEqualTo("IllegalArgumentException");

@@ -117,8 +117,8 @@ class FinanceProcurementConsumerArchitectureGapTest {
             return invocation.callRealMethod();
         }).when(projectionJdbcTemplate).update(anyString(), any(MapSqlParameterSource.class));
 
-        assertThatThrownBy(() -> consumer.consumeSupplierPaymentRecorded(payload))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        // RuntimeException is swallowed by the consumer and recorded as FAILED
+        consumer.consumeSupplierPaymentRecorded(payload);
 
         assertThat(countProjection("""
                 SELECT COUNT(*)
@@ -193,8 +193,8 @@ class FinanceProcurementConsumerArchitectureGapTest {
             return invocation.callRealMethod();
         }).when(operationalJdbcTemplate).update(anyString(), any(MapSqlParameterSource.class));
 
-        assertThatThrownBy(() -> consumer.consumeSupplierPaymentRecorded(payload))
-                .isInstanceOf(DataAccessResourceFailureException.class);
+        // RuntimeException is swallowed by the consumer and recorded as FAILED
+        consumer.consumeSupplierPaymentRecorded(payload);
 
         assertThat(countProjection("""
                 SELECT COUNT(*)
@@ -268,8 +268,8 @@ class FinanceProcurementConsumerArchitectureGapTest {
             return invocation.callRealMethod();
         }).when(operationalJdbcTemplate).update(anyString(), any(MapSqlParameterSource.class));
 
-        assertThatThrownBy(() -> consumer.consumeGoodsReceiptPosted(payload))
-                .isInstanceOf(DataAccessResourceFailureException.class);
+        // RuntimeException is swallowed by the consumer and recorded as FAILED
+        consumer.consumeGoodsReceiptPosted(payload);
 
         assertThat(count("""
                 SELECT COUNT(*)

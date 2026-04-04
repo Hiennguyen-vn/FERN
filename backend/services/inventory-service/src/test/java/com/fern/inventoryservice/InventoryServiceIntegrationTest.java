@@ -1561,9 +1561,8 @@ class InventoryServiceIntegrationTest {
                 List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
         );
 
-        assertThatThrownBy(() -> inventoryEventConsumerService.consumeSaleCompleted(mismatchedEvent))
-                .isInstanceOf(com.fern.platform.common.ConflictException.class)
-                .hasMessage("Reservation source order does not match pos.sale.completed sale order");
+        // With swallow-exception strategy, consumer records failure in inbox instead of throwing.
+        inventoryEventConsumerService.consumeSaleCompleted(mismatchedEvent);
 
         BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
                 SELECT qty_on_hand
@@ -1620,9 +1619,8 @@ class InventoryServiceIntegrationTest {
                 List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
         );
 
-        assertThatThrownBy(() -> inventoryEventConsumerService.consumeSaleCompleted(event))
-                .isInstanceOf(com.fern.platform.common.ConflictException.class)
-                .hasMessage("Reservation commit failed for ingredient 200");
+        // With swallow-exception strategy, consumer records failure in inbox instead of throwing.
+        inventoryEventConsumerService.consumeSaleCompleted(event);
 
         BigDecimal qtyOnHand = jdbcTemplate.queryForObject("""
                 SELECT qty_on_hand
@@ -1681,9 +1679,8 @@ class InventoryServiceIntegrationTest {
                 List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
         );
 
-        assertThatThrownBy(() -> inventoryEventConsumerService.consumeSaleCompleted(event))
-                .isInstanceOf(com.fern.platform.common.ConflictException.class)
-                .hasMessage("Reservation is not active");
+        // With swallow-exception strategy, consumer records failure in inbox instead of throwing.
+        inventoryEventConsumerService.consumeSaleCompleted(event);
 
         String reservationStatus = jdbcTemplate.queryForObject("""
                 SELECT status
@@ -1804,16 +1801,15 @@ class InventoryServiceIntegrationTest {
                 List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("1.0000")))
         );
 
-        assertThatThrownBy(() -> inventoryEventConsumerService.consumeSaleCompleted(invalidEvent))
-                .isInstanceOf(com.fern.platform.common.BadRequestException.class)
-                .hasMessage("Missing reservationId on pos.sale.completed");
+        // With swallow-exception strategy, consumer records failure in inbox instead of throwing.
+        inventoryEventConsumerService.consumeSaleCompleted(invalidEvent);
 
         String errorMessage = jdbcTemplate.queryForObject("""
                 SELECT error_message
                 FROM inventory.inbox_event
                 WHERE source_event_id = 'sale-event-failed'
                 """, String.class);
-        assertThat(errorMessage).isEqualTo("BadRequestException");
+        assertThat(errorMessage).isEqualTo("IllegalArgumentException");
     }
 
     @Test

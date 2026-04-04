@@ -2,7 +2,7 @@ spring:
   application:
     name: audit-service
   datasource:
-    url: ${FERN_AUDIT_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_reporting?currentSchema=audit}
+    url: ${FERN_AUDIT_JDBC_URL:jdbc:postgresql://127.0.0.1:55432/fern_master?currentSchema=audit}
     username: ${FERN_DB_USERNAME:}
     password: ${FERN_DB_PASSWORD:}
   flyway:

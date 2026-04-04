@@ -251,9 +251,8 @@ public class PurchaseFlowService {
     @Transactional(readOnly = true)
     public List<PurchaseOrderResponse> listPurchaseOrders(FernPrincipal principal, Long outletId, Long supplierId, String status, int limit) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_PO_READ);
-        var records = procurementJdbcRepository.listPurchaseOrders(outletId, supplierId, status, limit).stream()
-                .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
-                .toList();
+        var scope = com.fern.platform.common.ScopeAccess.accessibleScope(principal);
+        var records = procurementJdbcRepository.listPurchaseOrders(outletId, supplierId, status, limit, scope);
         if (records.isEmpty()) {
             return List.of();
         }
@@ -268,9 +267,8 @@ public class PurchaseFlowService {
     @Transactional(readOnly = true)
     public List<GoodsReceiptResponse> listGoodsReceipts(FernPrincipal principal, Long purchaseOrderId, Long outletId, String status, int limit) {
         procurementAuthorizer.requirePermission(principal, PermissionCodes.PROCUREMENT_GR_READ);
-        var records = procurementJdbcRepository.listGoodsReceipts(purchaseOrderId, outletId, status, limit).stream()
-                .filter(record -> com.fern.platform.common.ScopeAccess.allowsRoute(principal, record.regionId(), record.outletId()))
-                .toList();
+        var scope = com.fern.platform.common.ScopeAccess.accessibleScope(principal);
+        var records = procurementJdbcRepository.listGoodsReceipts(purchaseOrderId, outletId, status, limit, scope);
         if (records.isEmpty()) {
             return List.of();
         }

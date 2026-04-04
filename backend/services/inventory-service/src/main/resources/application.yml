@@ -21,6 +21,9 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       auto-startup: ${FERN_INVENTORY_KAFKA_AUTO_STARTUP:true}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 server:
   port: ${PORT:8087}
 

@@ -38,8 +38,8 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
@@ -150,75 +150,82 @@ public class PayrollRunOrchestrator {
         return response;
     }
 
-    @Transactional
     public PayrollRunResponse approvePayrollRun(FernPrincipal principal, Long runId, String note) {
         return approvePayrollRun(principal, runId, note, null);
     }
 
-    @Transactional
+    /**
+     * Uses TransactionTemplate instead of @Transactional for consistency with
+     * markPayrollPaid/createPayrollRun and to avoid AOP proxy bypass risks from self-invocation.
+     */
     public PayrollRunResponse approvePayrollRun(FernPrincipal principal, Long runId, String note, String correlationId) {
-        PayrollRunRecord run = requirePayrollRunRecord(runId);
-        PayrollPeriodRecord period = payrollPeriodService.requirePayrollPeriodRecord(run.payrollPeriodId());
-        financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_APPROVE);
-        if (!"SUBMITTED".equals(run.status())) {
-            throw new BadRequestException("Only submitted payroll runs can be approved");
-        }
-        int updated = jdbcTemplate.update("""
-                UPDATE finance.payroll_run
-                SET status = 'APPROVED',
-                    approved_by_user_id = :approvedByUserId,
-                    approved_at = CURRENT_TIMESTAMP,
-                    note = COALESCE(:note, note),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id
-                  AND status = 'SUBMITTED'
-                """, params(
-                "approvedByUserId", actorId(principal),
-                "note", note,
-                "id", runId
-        ));
-        if (updated != 1) {
-            throw new BadRequestException("Only submitted payroll runs can be approved");
-        }
-        PayrollRunResponse response = getPayrollRun(principal, runId);
-        financeOutboxService.emitPayrollCalculated(period, response, principal, correlationId);
-        financeAuditService.publish("finance.payroll.approved", principal, correlationId, period.regionId(), null, "APPROVE", "PAYROLL_RUN", runId.toString(), run, response, Map.of());
-        return response;
+        return transactionTemplate.execute(status -> {
+            PayrollRunRecord run = requirePayrollRunRecord(runId);
+            PayrollPeriodRecord period = payrollPeriodService.requirePayrollPeriodRecord(run.payrollPeriodId());
+            financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_APPROVE);
+            if (!"SUBMITTED".equals(run.status())) {
+                throw new BadRequestException("Only submitted payroll runs can be approved");
+            }
+            int updated = jdbcTemplate.update("""
+                    UPDATE finance.payroll_run
+                    SET status = 'APPROVED',
+                        approved_by_user_id = :approvedByUserId,
+                        approved_at = CURRENT_TIMESTAMP,
+                        note = COALESCE(:note, note),
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                      AND status = 'SUBMITTED'
+                    """, params(
+                    "approvedByUserId", actorId(principal),
+                    "note", note,
+                    "id", runId
+            ));
+            if (updated != 1) {
+                throw new BadRequestException("Only submitted payroll runs can be approved");
+            }
+            PayrollRunResponse response = getPayrollRun(principal, runId);
+            financeOutboxService.emitPayrollCalculated(period, response, principal, correlationId);
+            financeAuditService.publish("finance.payroll.approved", principal, correlationId, period.regionId(), null, "APPROVE", "PAYROLL_RUN", runId.toString(), run, response, Map.of());
+            return response;
+        });
     }
 
-    @Transactional
     public PayrollRunResponse rejectPayrollRun(FernPrincipal principal, Long runId, String note) {
         return rejectPayrollRun(principal, runId, note, null);
     }
 
-    @Transactional
+    /**
+     * Uses TransactionTemplate instead of @Transactional for consistency.
+     */
     public PayrollRunResponse rejectPayrollRun(FernPrincipal principal, Long runId, String note, String correlationId) {
-        PayrollRunRecord run = requirePayrollRunRecord(runId);
-        PayrollPeriodRecord period = payrollPeriodService.requirePayrollPeriodRecord(run.payrollPeriodId());
-        financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_APPROVE);
-        if (!"SUBMITTED".equals(run.status())) {
-            throw new BadRequestException("Only submitted payroll runs can be rejected");
-        }
-        int updated = jdbcTemplate.update("""
-                UPDATE finance.payroll_run
-                SET status = 'REJECTED',
-                    rejected_by_user_id = :rejectedByUserId,
-                    rejected_at = CURRENT_TIMESTAMP,
-                    rejection_reason = :rejectionReason,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id
-                  AND status = 'SUBMITTED'
-                """, params(
-                "rejectedByUserId", actorId(principal),
-                "rejectionReason", note,
-                "id", runId
-        ));
-        if (updated != 1) {
-            throw new BadRequestException("Only submitted payroll runs can be rejected");
-        }
-        PayrollRunResponse response = getPayrollRun(principal, runId);
-        financeAuditService.publish("finance.payroll.rejected", principal, correlationId, period.regionId(), null, "REJECT", "PAYROLL_RUN", runId.toString(), run, response, Map.of("reason", note));
-        return response;
+        return transactionTemplate.execute(status -> {
+            PayrollRunRecord run = requirePayrollRunRecord(runId);
+            PayrollPeriodRecord period = payrollPeriodService.requirePayrollPeriodRecord(run.payrollPeriodId());
+            financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_APPROVE);
+            if (!"SUBMITTED".equals(run.status())) {
+                throw new BadRequestException("Only submitted payroll runs can be rejected");
+            }
+            int updated = jdbcTemplate.update("""
+                    UPDATE finance.payroll_run
+                    SET status = 'REJECTED',
+                        rejected_by_user_id = :rejectedByUserId,
+                        rejected_at = CURRENT_TIMESTAMP,
+                        rejection_reason = :rejectionReason,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                      AND status = 'SUBMITTED'
+                    """, params(
+                    "rejectedByUserId", actorId(principal),
+                    "rejectionReason", note,
+                    "id", runId
+            ));
+            if (updated != 1) {
+                throw new BadRequestException("Only submitted payroll runs can be rejected");
+            }
+            PayrollRunResponse response = getPayrollRun(principal, runId);
+            financeAuditService.publish("finance.payroll.rejected", principal, correlationId, period.regionId(), null, "REJECT", "PAYROLL_RUN", runId.toString(), run, response, Map.of("reason", note));
+            return response;
+        });
     }
 
     public PayrollRunResponse markPayrollPaid(FernPrincipal principal, Long runId, MarkPaidRequest request) {
@@ -314,36 +321,39 @@ public class PayrollRunOrchestrator {
         return response;
     }
 
-    @Transactional
     public PayrollRunResponse cancelPayrollRun(FernPrincipal principal, Long runId, String note) {
         return cancelPayrollRun(principal, runId, note, null);
     }
 
-    @Transactional
+    /**
+     * Uses TransactionTemplate instead of @Transactional for consistency.
+     */
     public PayrollRunResponse cancelPayrollRun(FernPrincipal principal, Long runId, String note, String correlationId) {
-        PayrollRunRecord run = requirePayrollRunRecord(runId);
-        PayrollPeriodRecord period = payrollPeriodService.requirePayrollPeriodRecord(run.payrollPeriodId());
-        financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PREPARE);
-        if (!"DRAFT".equals(run.status()) && !"REJECTED".equals(run.status())) {
-            throw new BadRequestException("Only draft or rejected payroll runs can be cancelled");
-        }
-        int updated = jdbcTemplate.update("""
-                UPDATE finance.payroll_run
-                SET status = 'CANCELLED',
-                    note = COALESCE(:note, note),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = :id
-                  AND status IN ('DRAFT', 'REJECTED')
-                """, params(
-                "note", note,
-                "id", runId
-        ));
-        if (updated != 1) {
-            throw new BadRequestException("Only draft or rejected payroll runs can be cancelled");
-        }
-        PayrollRunResponse response = getPayrollRun(principal, runId);
-        financeAuditService.publish("finance.payroll.cancelled", principal, correlationId, period.regionId(), null, "CANCEL", "PAYROLL_RUN", runId.toString(), run, response, Map.of("reason", note));
-        return response;
+        return transactionTemplate.execute(status -> {
+            PayrollRunRecord run = requirePayrollRunRecord(runId);
+            PayrollPeriodRecord period = payrollPeriodService.requirePayrollPeriodRecord(run.payrollPeriodId());
+            financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PREPARE);
+            if (!"DRAFT".equals(run.status()) && !"REJECTED".equals(run.status())) {
+                throw new BadRequestException("Only draft or rejected payroll runs can be cancelled");
+            }
+            int updated = jdbcTemplate.update("""
+                    UPDATE finance.payroll_run
+                    SET status = 'CANCELLED',
+                        note = COALESCE(:note, note),
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                      AND status IN ('DRAFT', 'REJECTED')
+                    """, params(
+                    "note", note,
+                    "id", runId
+            ));
+            if (updated != 1) {
+                throw new BadRequestException("Only draft or rejected payroll runs can be cancelled");
+            }
+            PayrollRunResponse response = getPayrollRun(principal, runId);
+            financeAuditService.publish("finance.payroll.cancelled", principal, correlationId, period.regionId(), null, "CANCEL", "PAYROLL_RUN", runId.toString(), run, response, Map.of("reason", note));
+            return response;
+        });
     }
 
     public List<PayrollRunResponse> listPayrollRuns(FernPrincipal principal, Long regionId) {
@@ -436,23 +446,30 @@ public class PayrollRunOrchestrator {
         Map<Long, List<EffectiveContract>> contractsByEmployee = new HashMap<>();
         for (EffectiveContract contract : prefetched.contracts()) {
             contractsByEmployee.computeIfAbsent(contract.employeeId(), ignored -> new ArrayList<>()).add(contract);
-            insertForId(jdbcTemplate, """
+        }
+
+        // Batch-insert contract snapshots
+        if (!prefetched.contracts().isEmpty()) {
+            SqlParameterSource[] contractBatch = prefetched.contracts().stream()
+                    .map(contract -> params(
+                            "payrollRunId", runId,
+                            "employeeId", contract.employeeId(),
+                            "contractId", contract.contractId(),
+                            "employmentType", contract.employmentType(),
+                            "salaryType", contract.salaryType(),
+                            "baseSalary", contract.baseSalary(),
+                            "taxCode", contract.taxCode(),
+                            "startDate", contract.startDate(),
+                            "endDate", contract.endDate()
+                    ))
+                    .toArray(SqlParameterSource[]::new);
+            jdbcTemplate.batchUpdate("""
                     INSERT INTO finance.payroll_contract_snapshot (
                         payroll_run_id, employee_id, contract_id, employment_type, salary_type, base_salary, tax_code, start_date, end_date, created_at
                     ) VALUES (
                         :payrollRunId, :employeeId, :contractId, :employmentType, :salaryType, :baseSalary, :taxCode, :startDate, :endDate, CURRENT_TIMESTAMP
                     )
-                    """, params(
-                    "payrollRunId", runId,
-                    "employeeId", contract.employeeId(),
-                    "contractId", contract.contractId(),
-                    "employmentType", contract.employmentType(),
-                    "salaryType", contract.salaryType(),
-                    "baseSalary", contract.baseSalary(),
-                    "taxCode", contract.taxCode(),
-                    "startDate", contract.startDate(),
-                    "endDate", contract.endDate()
-            ));
+                    """, contractBatch);
         }
 
         Map<Long, List<ApprovedAttendance>> attendanceByEmployee = new LinkedHashMap<>();
@@ -462,6 +479,10 @@ public class PayrollRunOrchestrator {
 
         int scale = prefetched.roundingPolicy().path("scale").asInt(2);
         BigDecimal totalAmount = BigDecimal.ZERO.setScale(scale, RoundingMode.HALF_UP);
+
+        List<SqlParameterSource> allLines = new ArrayList<>();
+        List<SqlParameterSource> allAllocations = new ArrayList<>();
+        List<SqlParameterSource> allAttendance = new ArrayList<>();
 
         for (Map.Entry<Long, List<ApprovedAttendance>> entry : attendanceByEmployee.entrySet()) {
             Long employeeId = entry.getKey();
@@ -525,14 +546,9 @@ public class PayrollRunOrchestrator {
                     "overtimeHours", computation.overtimeHours(),
                     "exceptionMessage", computation.exceptionMessage()
             ));
+            // Collect lines, allocations, attendance for batch insert after loop
             for (PayrollLine line : computation.lines()) {
-                insertForId(jdbcTemplate, """
-                        INSERT INTO finance.payroll_result_line (
-                            payroll_employee_result_id, line_type, description, amount, created_at
-                        ) VALUES (
-                            :payrollEmployeeResultId, :lineType, :description, :amount, CURRENT_TIMESTAMP
-                        )
-                        """, params(
+                allLines.add(params(
                         "payrollEmployeeResultId", resultId,
                         "lineType", line.lineType(),
                         "description", line.description(),
@@ -540,13 +556,7 @@ public class PayrollRunOrchestrator {
                 ));
             }
             for (OutletAllocation allocation : computation.allocations()) {
-                insertForId(jdbcTemplate, """
-                        INSERT INTO finance.payroll_result_allocation (
-                            payroll_employee_result_id, outlet_id, work_hours, allocated_amount, created_at
-                        ) VALUES (
-                            :payrollEmployeeResultId, :outletId, :workHours, :allocatedAmount, CURRENT_TIMESTAMP
-                        )
-                        """, params(
+                allAllocations.add(params(
                         "payrollEmployeeResultId", resultId,
                         "outletId", allocation.outletId(),
                         "workHours", allocation.workHours(),
@@ -554,15 +564,7 @@ public class PayrollRunOrchestrator {
                 ));
             }
             for (ApprovedAttendance item : employeeAttendance) {
-                insertForId(jdbcTemplate, """
-                        INSERT INTO finance.payroll_attendance_snapshot (
-                            payroll_run_id, payroll_employee_result_id, approval_id, shift_assignment_id, employee_id, outlet_id, contract_id,
-                            business_date, attendance_status, work_hours, overtime_hours, created_at
-                        ) VALUES (
-                            :payrollRunId, :payrollEmployeeResultId, :approvalId, :shiftAssignmentId, :employeeId, :outletId, :contractId,
-                            :businessDate, :attendanceStatus, :workHours, :overtimeHours, CURRENT_TIMESTAMP
-                        )
-                        """, params(
+                allAttendance.add(params(
                         "payrollRunId", runId,
                         "payrollEmployeeResultId", resultId,
                         "approvalId", item.approvalId(),
@@ -577,6 +579,41 @@ public class PayrollRunOrchestrator {
                 ));
             }
             totalAmount = totalAmount.add(computation.netPay()).setScale(scale, RoundingMode.HALF_UP);
+        }
+
+        // Batch-insert all result lines
+        if (!allLines.isEmpty()) {
+            jdbcTemplate.batchUpdate("""
+                    INSERT INTO finance.payroll_result_line (
+                        payroll_employee_result_id, line_type, description, amount, created_at
+                    ) VALUES (
+                        :payrollEmployeeResultId, :lineType, :description, :amount, CURRENT_TIMESTAMP
+                    )
+                    """, allLines.toArray(SqlParameterSource[]::new));
+        }
+
+        // Batch-insert all allocations
+        if (!allAllocations.isEmpty()) {
+            jdbcTemplate.batchUpdate("""
+                    INSERT INTO finance.payroll_result_allocation (
+                        payroll_employee_result_id, outlet_id, work_hours, allocated_amount, created_at
+                    ) VALUES (
+                        :payrollEmployeeResultId, :outletId, :workHours, :allocatedAmount, CURRENT_TIMESTAMP
+                    )
+                    """, allAllocations.toArray(SqlParameterSource[]::new));
+        }
+
+        // Batch-insert all attendance snapshots
+        if (!allAttendance.isEmpty()) {
+            jdbcTemplate.batchUpdate("""
+                    INSERT INTO finance.payroll_attendance_snapshot (
+                        payroll_run_id, payroll_employee_result_id, approval_id, shift_assignment_id, employee_id, outlet_id, contract_id,
+                        business_date, attendance_status, work_hours, overtime_hours, created_at
+                    ) VALUES (
+                        :payrollRunId, :payrollEmployeeResultId, :approvalId, :shiftAssignmentId, :employeeId, :outletId, :contractId,
+                        :businessDate, :attendanceStatus, :workHours, :overtimeHours, CURRENT_TIMESTAMP
+                    )
+                    """, allAttendance.toArray(SqlParameterSource[]::new));
         }
 
         jdbcTemplate.update("""

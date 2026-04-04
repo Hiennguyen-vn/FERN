@@ -184,29 +184,33 @@ public class PosStore {
     public void replaceOrderLines(NamedParameterJdbcTemplate jdbcTemplate, Long saleOrderId, List<PricedLine> lines) {
         jdbcTemplate.update("DELETE FROM pos.sale_order_line WHERE sale_order_id = :saleOrderId",
                 PosSql.params("saleOrderId", saleOrderId));
-        for (PricedLine line : lines) {
-            jdbcTemplate.update("""
-                    INSERT INTO pos.sale_order_line (
-                        sale_order_id, line_number, product_id, product_code, product_name_snapshot,
-                        unit_price, qty, discount_amount, tax_amount, line_total, note, created_at, updated_at
-                    ) VALUES (
-                        :saleOrderId, :lineNumber, :productId, :productCode, :productNameSnapshot,
-                        :unitPrice, :qty, :discountAmount, :taxAmount, :lineTotal, :note, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                    )
-                    """, PosSql.params(
-                    "saleOrderId", saleOrderId,
-                    "lineNumber", line.lineNumber(),
-                    "productId", line.productId(),
-                    "productCode", line.productCode(),
-                    "productNameSnapshot", line.productNameSnapshot(),
-                    "unitPrice", line.unitPrice(),
-                    "qty", line.qty(),
-                    "discountAmount", line.discountAmount(),
-                    "taxAmount", line.taxAmount(),
-                    "lineTotal", line.lineTotal(),
-                    "note", line.note()
-            ));
+        if (lines.isEmpty()) {
+            return;
         }
+        org.springframework.jdbc.core.namedparam.SqlParameterSource[] batchParams = lines.stream()
+                .map(line -> PosSql.params(
+                        "saleOrderId", saleOrderId,
+                        "lineNumber", line.lineNumber(),
+                        "productId", line.productId(),
+                        "productCode", line.productCode(),
+                        "productNameSnapshot", line.productNameSnapshot(),
+                        "unitPrice", line.unitPrice(),
+                        "qty", line.qty(),
+                        "discountAmount", line.discountAmount(),
+                        "taxAmount", line.taxAmount(),
+                        "lineTotal", line.lineTotal(),
+                        "note", line.note()
+                ))
+                .toArray(org.springframework.jdbc.core.namedparam.SqlParameterSource[]::new);
+        jdbcTemplate.batchUpdate("""
+                INSERT INTO pos.sale_order_line (
+                    sale_order_id, line_number, product_id, product_code, product_name_snapshot,
+                    unit_price, qty, discount_amount, tax_amount, line_total, note, created_at, updated_at
+                ) VALUES (
+                    :saleOrderId, :lineNumber, :productId, :productCode, :productNameSnapshot,
+                    :unitPrice, :qty, :discountAmount, :taxAmount, :lineTotal, :note, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                )
+                """, batchParams);
     }
 
     public Map<String, Object> getSaleSnapshot(NamedParameterJdbcTemplate jdbcTemplate, Long saleOrderId) {

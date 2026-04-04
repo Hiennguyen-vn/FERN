@@ -118,7 +118,8 @@ class PosOrderServiceTest {
                 operationalShardRegistry,
                 shardResolver,
                 java.time.Duration.ofMinutes(2),
-                50
+                50,
+                null // schedulerLock — not needed in unit test
         );
         principal = new FernPrincipal(
                 99L,

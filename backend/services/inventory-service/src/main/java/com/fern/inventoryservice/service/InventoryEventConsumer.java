@@ -12,12 +12,12 @@ public class InventoryEventConsumer {
     }
 
     @KafkaListener(topics = "pos.sale.completed", groupId = "${spring.kafka.consumer.group-id}")
-    public void consumeSaleCompleted(String payload) throws Exception {
+    public void consumeSaleCompleted(String payload) {
         inventoryEventConsumerService.consumeSaleCompleted(payload);
     }
 
     @KafkaListener(topics = "procurement.goods_receipt.posted", groupId = "${spring.kafka.consumer.group-id}")
-    public void consumeGoodsReceiptPosted(String payload) throws Exception {
+    public void consumeGoodsReceiptPosted(String payload) {
         inventoryEventConsumerService.consumeGoodsReceiptPosted(payload);
     }
 }

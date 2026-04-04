@@ -15,6 +15,7 @@ import com.fern.platform.contracts.PosSaleCompletedEvent;
 import com.fern.platform.contracts.RecipeUsageItem;
 import com.fern.platform.contracts.SalePaymentSnapshot;
 import com.fern.platform.contracts.SaleReservationResponse;
+import com.fern.platform.security.RedisSchedulerLock;
 import com.fern.posservice.dto.PosCommands.AddPaymentRequest;
 import com.fern.posservice.dto.PosCommands.CreateSaleOrderRequest;
 import com.fern.posservice.dto.PosCommands.UpdateSaleOrderRequest;
@@ -63,6 +64,7 @@ public class PosOrderService {
     private final ShardResolver shardResolver;
     private final Duration completionRecoveryAge;
     private final int completionRecoveryBatchSize;
+    private final RedisSchedulerLock schedulerLock;
 
     public PosOrderService(
             PosAuthorizer posAuthorizer,
@@ -79,7 +81,8 @@ public class PosOrderService {
             OperationalShardRegistry operationalShardRegistry,
             ShardResolver shardResolver,
             @Value("${fern.pos.completion-recovery.age:PT2M}") Duration completionRecoveryAge,
-            @Value("${fern.pos.completion-recovery.batch-size:50}") int completionRecoveryBatchSize
+            @Value("${fern.pos.completion-recovery.batch-size:50}") int completionRecoveryBatchSize,
+            @org.springframework.lang.Nullable RedisSchedulerLock schedulerLock
     ) {
         this.posAuthorizer = posAuthorizer;
         this.store = store;
@@ -97,6 +100,7 @@ public class PosOrderService {
         this.shardResolver = shardResolver;
         this.completionRecoveryAge = completionRecoveryAge;
         this.completionRecoveryBatchSize = completionRecoveryBatchSize;
+        this.schedulerLock = schedulerLock;
     }
 
     public SaleOrderResponse createOrder(FernPrincipal principal, CreateSaleOrderRequest request) {
@@ -447,7 +451,7 @@ public class PosOrderService {
             });
         } catch (RuntimeException exception) {
             if (reservation != null) {
-                releaseReservationAfterFailure(principal, reservation, exception);
+                releaseReservationAfterFailure(principal, reservation, exception, order.regionId(), order.outletId(), id, jdbcTemplate);
             }
             revertCompletingOrder(order.regionId(), order.outletId(), id);
             throw exception;
@@ -457,8 +461,21 @@ public class PosOrderService {
 
     @Scheduled(fixedDelayString = "${fern.pos.completion-recovery.delay-ms:30000}")
     public void recoverStaleCompletions() {
+        if (schedulerLock != null && !schedulerLock.tryAcquire("pos-completion-recovery", Duration.ofMinutes(2))) {
+            log.debug("recoverStaleCompletions: skipped — another instance holds the lock");
+            return;
+        }
+        try {
+            doRecoverStaleCompletions();
+        } finally {
+            if (schedulerLock != null) {
+                schedulerLock.release("pos-completion-recovery");
+            }
+        }
+    }
+
+    private void doRecoverStaleCompletions() {
         Instant cutoff = clock.instant().minus(completionRecoveryAge);
-        // Scan all shards — single-shard deployments have one shard, multi-shard deployments have many.
         for (OperationalShardAccess shardAccess : operationalShardRegistry.allShards()) {
             log.debug("recoverStaleCompletions: scanning shard {}", shardAccess.shardId().value());
             List<StaleCompletingOrder> staleOrders = shardAccess.jdbc().query("""
@@ -817,7 +834,15 @@ public class PosOrderService {
         }
     }
 
-    private void releaseReservationAfterFailure(FernPrincipal principal, SaleReservationResponse reservation, RuntimeException originalException) {
+    private void releaseReservationAfterFailure(
+            FernPrincipal principal,
+            SaleReservationResponse reservation,
+            RuntimeException originalException,
+            Long regionId,
+            Long outletId,
+            Long orderId,
+            NamedParameterJdbcTemplate jdbcTemplate
+    ) {
         if (reservation == null || reservation.reservationId() == null) {
             return;
         }
@@ -825,6 +850,15 @@ public class PosOrderService {
             inventoryClient.releaseInventoryReservation(principal, reservation.reservationId());
         } catch (RuntimeException releaseException) {
             originalException.addSuppressed(releaseException);
+            // The reservation release failed — the order is still COMPLETING.
+            // recoverStaleCompletions will retry via releaseInventoryReservationBySourceOrderId.
+            // The C1 expired-reservation scheduler in inventory-service is a safety net.
+            log.warn(
+                    "releaseReservationAfterFailure: REST release failed for reservationId={} orderId={} — will be retried by scheduler",
+                    reservation.reservationId(),
+                    orderId,
+                    releaseException
+            );
         }
     }
 

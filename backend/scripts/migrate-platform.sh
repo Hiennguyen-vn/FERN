@@ -166,9 +166,9 @@ migrate_master() {
   run_flyway "services/finance-service" "master/finance_projection" "${FERN_MASTER_JDBC_URL}" "${FERN_DB_USERNAME}" "${FERN_DB_PASSWORD}" \
     "services/finance-service/src/main/resources/db/migration/postgresql/master_projection" "finance_projection" "finance_projection"
   run_flyway "services/report-service" "master/reporting" "${FERN_MASTER_JDBC_URL}" "${FERN_DB_USERNAME}" "${FERN_DB_PASSWORD}" \
-    "services/report-service/src/main/resources/db/migration/postgresql/master" "raw_events" "raw_events,report"
+    "services/report-service/src/main/resources/db/migration/postgresql/reporting" "raw_events" "raw_events,report"
   run_flyway "services/audit-service" "master/audit" "${FERN_MASTER_JDBC_URL}" "${FERN_DB_USERNAME}" "${FERN_DB_PASSWORD}" \
-    "services/audit-service/src/main/resources/db/migration/postgresql/master" "audit" "audit"
+    "services/audit-service/src/main/resources/db/migration/postgresql/reporting" "audit" "audit"
   run_flyway "services/notification-service" "master/notification" "${FERN_MASTER_JDBC_URL}" "${FERN_DB_USERNAME}" "${FERN_DB_PASSWORD}" \
     "services/notification-service/src/main/resources/db/migration/postgresql/master" "notification" "notification"
 }

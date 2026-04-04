@@ -578,7 +578,10 @@ public class FinanceProcurementConsumer {
             digest.update(second.getBytes(StandardCharsets.UTF_8));
             digest.update((byte) 0);
             digest.update(payload.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest.digest());
+            byte[] full = digest.digest();
+            // Truncate to 16 bytes (32 hex chars) to keep synthetic IDs under 100 chars
+            byte[] truncated = java.util.Arrays.copyOf(full, 16);
+            return HexFormat.of().formatHex(truncated);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is not available", exception);
         }

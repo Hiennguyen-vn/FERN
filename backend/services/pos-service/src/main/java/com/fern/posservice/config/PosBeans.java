@@ -18,7 +18,9 @@ import com.fern.platform.web.FernDownstreamClientSpec;
 import com.fern.platform.security.FernJwtProperties;
 import com.fern.platform.security.FernServiceTokenSupport;
 import com.fern.platform.security.FernJwtService;
+import com.fern.platform.security.RedisSchedulerLock;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import java.lang.management.ManagementFactory;
 import java.time.Clock;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.ObjectProvider;
@@ -172,5 +174,15 @@ public class PosBeans {
     @Qualifier("orgCircuitBreaker")
     CircuitBreaker orgCircuitBreaker(@Qualifier("orgClientSpec") FernDownstreamClientSpec spec, FernDownstreamClientFactory factory) {
         return factory.createCircuitBreaker(spec);
+    }
+
+    @Bean
+    RedisSchedulerLock redisSchedulerLock(ObjectProvider<StringRedisTemplate> redisTemplateProvider) {
+        StringRedisTemplate redis = redisTemplateProvider.getIfAvailable();
+        if (redis == null) {
+            return null;
+        }
+        String instanceId = ManagementFactory.getRuntimeMXBean().getName();
+        return new RedisSchedulerLock(redis, instanceId);
     }
 }

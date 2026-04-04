@@ -408,7 +408,7 @@ class FinanceProcurementConsumerHardeningTest {
                 SELECT error_message
                 FROM finance.integration_event
                 WHERE event_type = 'procurement.supplier.payment.recorded.deserialization_failed'
-                """, String.class)).isEqualTo("JsonProcessingException");
+                """, String.class)).isEqualTo("JsonParseException");
         assertThat(countProjection("SELECT COUNT(*) FROM finance_projection.accounting_posting_projection")).isZero();
         assertThat(countProjection("SELECT COUNT(*) FROM finance_projection.reconciliation_snapshot")).isZero();
     }
@@ -427,7 +427,7 @@ class FinanceProcurementConsumerHardeningTest {
                 SELECT error_message
                 FROM finance.integration_event
                 WHERE event_type = 'procurement.goods_receipt.posted.deserialization_failed'
-                """, String.class)).isEqualTo("JsonProcessingException");
+                """, String.class)).isEqualTo("JsonParseException");
         assertThat(count("SELECT COUNT(*) FROM finance.expense_record")).isZero();
         assertThat(count("SELECT COUNT(*) FROM finance.outbox_event")).isZero();
     }
@@ -451,9 +451,8 @@ class FinanceProcurementConsumerHardeningTest {
                 List.of(new GoodsReceiptPostedLine(200L, new BigDecimal("-3.0000"), new BigDecimal("12.50"), 3001L))
         );
 
-        assertThatThrownBy(() -> consumer.consumeGoodsReceiptPosted(objectMapper.writeValueAsString(event)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("positive");
+        // IllegalArgumentException is swallowed by the consumer and recorded as FAILED
+        consumer.consumeGoodsReceiptPosted(objectMapper.writeValueAsString(event));
 
         assertThat(count("""
                 SELECT COUNT(*)
@@ -480,9 +479,8 @@ class FinanceProcurementConsumerHardeningTest {
                 new BigDecimal("-41.25")
         );
 
-        assertThatThrownBy(() -> consumer.consumeSupplierPaymentRecorded(objectMapper.writeValueAsString(event)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("positive");
+        // IllegalArgumentException is swallowed by the consumer and recorded as FAILED
+        consumer.consumeSupplierPaymentRecorded(objectMapper.writeValueAsString(event));
 
         assertThat(count("""
                 SELECT COUNT(*)

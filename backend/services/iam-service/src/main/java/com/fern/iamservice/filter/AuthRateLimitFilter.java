@@ -106,13 +106,23 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Resolves client IP, respecting {@code X-Forwarded-For} from trusted proxies.
+     * Resolves client IP for rate-limiting purposes.
+     *
+     * <p>Security: We use the <b>rightmost</b> IP in the {@code X-Forwarded-For} chain,
+     * which is the IP appended by the last trusted reverse proxy (load balancer).
+     * The leftmost IP is client-controlled and trivially spoofable — an attacker can
+     * send {@code X-Forwarded-For: fake-ip} to bypass per-IP rate limits.
+     *
+     * <p>When no proxy headers are present (direct connection), falls back to
+     * {@code request.getRemoteAddr()}.
      */
     private static String resolveClientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
-            // Take the first (original client) IP from the chain
-            return xff.split(",")[0].trim();
+            // Take the rightmost (proxy-appended) IP — this is the only trustworthy entry
+            // because the reverse proxy always appends the real client IP at the end.
+            String[] parts = xff.split(",");
+            return parts[parts.length - 1].trim();
         }
         String realIp = request.getHeader("X-Real-IP");
         if (realIp != null && !realIp.isBlank()) {

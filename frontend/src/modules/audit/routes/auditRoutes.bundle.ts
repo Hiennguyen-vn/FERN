@@ -1,5 +1,0 @@
-export { AuditEventsPage } from './AuditEventsPage'
-export { AuditEventDetailPage } from './AuditEventDetailPage'
-export { SecurityEventsPage } from './SecurityEventsPage'
-export { RequestTracesPage } from './RequestTracesPage'
-export { RequestTraceDetailPage } from './RequestTraceDetailPage'
