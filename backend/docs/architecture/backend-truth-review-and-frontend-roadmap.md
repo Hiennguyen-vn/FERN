@@ -2,103 +2,76 @@
 
 _Snapshot date: 2026-04-04_
 
-_Scope snapshot: current working tree, including uncommitted changes already present in `pos-service` and `iam-service`._
+_Scope snapshot: current working tree under `backend`; `frontend/` is still empty, so this deliverable stops at flow planning and screen-bundle sequencing._
 
-## 0. Delta Since Previous Review
+## 0. Delta Since Prior Review
 
-- `pos-service` has moved from `Usable with risk` to `Frontend-ready` for core cashier flows. `PosServiceIntegrationTest` now passes with `50` tests, `0` failures, `0` errors.
-- `procurement-service` has moved from `Usable with risk` to `Frontend-ready`. `ProcurementServiceIntegrationTest` now passes with `28` tests, `0` failures, `0` errors.
-- POS scope has expanded beyond cashier basics:
-  - customer CRUD and loyalty history are present
-  - outlet today stats are present
-  - dine-in table management is now present
-  - sale orders now support `promotionCode` and `tableId`
-- The main hard blocker did **not** change: `iam-service` still fails startup because `V19__pos_customer_permissions.sql` inserts permission rows without the required `name` column.
-- A new platform-level integration gap is now clearer: POS public APIs have expanded faster than gateway and IAM bootstrap support. The new frontend-facing gaps are:
-  - missing gateway routes for `customers/**`
-  - missing gateway routes for `pos-stats/**`
-  - missing gateway routes for `/api/pos/tables/**`
-  - missing IAM permission bootstrap for `pos.table.read`, `pos.table.write`, and `pos.table.manage`
+- The previous branch-level blockers in IAM and gateway are now closed on the current working tree:
+  - `iam-service` boots cleanly again; `V19__pos_customer_permissions.sql` and `V20__pos_table_permissions.sql` are present and covered by integration tests.
+  - `api-gateway` now routes `/customers/**`, `/pos-stats/**`, and `/api/pos/tables/**` to POS.
+- `IAM`, `POS customer/stats`, and `POS dine-in/table ops` move from `Blocked` or `Usable with risk` to `Frontend-ready` on this branch.
+- The current rerun of module integration suites is green across all frontend-relevant services. There is no current red-suite hard blocker for an integrated frontend pilot.
+- The remaining frontend-impacting gaps are narrower and mostly about public contract shape rather than missing domain logic:
+  - notification has live transport and webhook delivery, but no frontend inbox/history/ack API
+  - outlet-close coordination exists only through internal service-to-service APIs
+  - the shell exposes `/regional-ops`, but there is no dedicated regional-ops public API family
+  - POS tables use a non-uniform public path shape: `/api/pos/tables/**`
+- `Outlet Ops` is still the right first frontend slice. The difference now is that the pilot is no longer blocked by core backend readiness.
 
-## 1. Review Method
+## 1. Platform Contracts
 
-This review treats backend source code as the only source of truth. A flow is considered supported only when all of the following exist in code:
+### 1.1 Review Standard
 
-- public API surface in controller or gateway contract
+This review treats backend source code as the only source of truth. A flow is considered supported only when all of the following exist in the current branch:
+
+- public API surface in a gateway route or controller
 - business logic in service layer
 - persistence or migration support
-- runtime evidence from integration tests or current test logs
+- runtime evidence from rerun integration suites or current Surefire output
 
 Maturity labels used in this document:
 
-- `Frontend-ready`: API, logic, persistence, and current test signal are aligned enough to build UI now
-- `Usable with risk`: flow appears implemented, but there is a current regression, route gap, or red test that lowers delivery confidence
-- `Partial`: only part of the flow is implemented or the contract is too narrow for a real screen
-- `Blocked`: backend exists on paper, but current branch state prevents normal frontend integration
+- `Frontend-ready`: public API, logic, persistence, and current runtime signal are aligned enough to build UI now
+- `Usable with risk`: usable for a bounded UI flow, but there is still a contract or platform limitation that the frontend must work around
+- `Partial`: backend support exists only for a narrow slice of the workflow, or the public contract is missing a screen-critical part
+- `Blocked`: the current branch cannot support normal frontend integration for that flow
 
-Primary evidence sources for this review:
+Important review rule:
 
-- gateway shell and route contracts in `services/api-gateway`
-- permission model in `platform-common`
-- controllers, DTOs, services, and Flyway migrations inside each domain service
-- Surefire results under `services/*/target/surefire-reports`
+- Internal APIs are not counted as frontend-ready contracts. When a flow exists only through `/internal/**`, it is treated as a backend dependency, not a frontend capability.
 
-## 2. Executive Summary
+### 1.2 Verification Snapshot
 
-- The backend already supports a credible `Outlet Ops` pilot across shell/navigation, org scope, catalog lookup, POS core, inventory operations, procurement core, reporting, audit, and websocket-based live event fan-out.
-- Compared with the previous review, POS and procurement are materially stronger: both module-level integration suites are now green on the current branch.
-- POS has expanded into more realistic F&B outlet behavior: customer and loyalty workflows, order-level promotion support, and dine-in table management are now implemented in source.
-- The only hard branch-level blocker for an integrated frontend is `iam-service`: the current Flyway migration `V19__pos_customer_permissions.sql` breaks application startup, which blocks login and all authenticated frontend integration on this branch.
-- The current API gateway still routes only core POS endpoints. It does **not** route `customers/**`, `pos-stats/**`, or `/api/pos/tables/**`, even though the current working tree now exposes controllers for all of them. That is a frontend integration gap, not a domain logic gap.
-- The permission model also lags the new POS feature surface: `PermissionCodes` now defines `pos.table.read`, `pos.table.write`, and `pos.table.manage`, but there is no IAM migration yet to publish and assign those permissions.
-- A phase-based frontend roadmap should start with outlet operations, but it should include a short pre-wave backend stabilization gate.
+Rerun on the current branch used targeted integration suites and current Surefire output. Format below is `tests/failures/errors`.
 
-## 3. Frontend-Facing Platform Contracts
+- `iam-service`: `IamServiceIntegrationTest` `21/0/0`
+- `api-gateway`: `ApiGatewayIntegrationTest` `20/0/0`
+- `org-service`: `OrgServiceIntegrationTest` `10/0/0`
+- `catalog-service`: `CatalogServiceIntegrationTest` `23/0/0`, `CatalogAuditScopeIntegrationTest` `3/0/0`
+- `pos-service`: `PosServiceIntegrationTest` `50/0/0`
+- `inventory-service`: `InventoryServiceIntegrationTest` `41/0/0`
+- `procurement-service`: `ProcurementServiceIntegrationTest` `28/0/0`
+- `hr-service`: `HrServiceIntegrationTest` `27/0/0`
+- `finance-service`: `FinanceServiceIntegrationTest` `2/0/0`, `FinanceSecurityIntegrationTest` `18/0/0`, `FinanceProcurementConsumerHardeningTest` `13/0/0`
+- `report-service`: `ReportServiceIntegrationTest` `21/0/0`
+- `audit-service`: `AuditServiceIntegrationTest` `6/0/0`
+- `notification-service`: `NotificationServiceIntegrationTest` `10/0/0`
 
-### 3.1 Shell, scope, and module visibility
+Current conclusion from rerun evidence:
 
-Current frontend shell contracts already exist in the gateway:
+- there is no active red-suite blocker across the services that matter for frontend integration
+- frontend sequencing can now be driven by business priority and contract shape, not by core branch instability
 
-- `GET /ui/action-hub`
-- `GET /ui/shell-context`
+### 1.3 Frontend-Facing Platform Contract
 
-These contracts are backed by `UiSurfaceController` and already encode:
+#### Auth and access contract
 
-- role/persona inference
-- visible module list
-- quick actions
-- shell scope chips
-- region and outlet selection options
-
-The gateway currently exposes these module families:
-
-- `home`
-- `pos`
-- `catalog`
-- `iam`
-- `audit`
-- `org`
-- `regional-ops`
-- `hr`
-- `finance`
-- `procurement`
-- `inventory`
-- `workforce`
-- `reports`
-
-Important frontend implication:
-
-- module visibility is prefix-based, not feature-flag-based
-- `UiSurfaceController` determines visibility from permission prefixes such as `pos.`, `inventory.`, `procurement.`, `hr.`, `finance.`, `iam.`, `audit.`, and `report.`
-- the frontend information architecture should mirror this prefix model, then action-gate specific buttons by exact permissions
-
-### 3.2 Auth and access contracts
-
-The current branch exposes the right auth and access APIs for a real frontend:
+The current branch exposes a complete frontend auth and access base:
 
 - `POST /auth/login`
 - `POST /auth/refresh`
 - `POST /auth/logout`
+- `GET /.well-known/jwks.json`
 - `GET /users`
 - `POST /users`
 - `GET /users/{id}`
@@ -112,11 +85,47 @@ The current branch exposes the right auth and access APIs for a real frontend:
 - `POST /roles`
 - `GET /permissions`
 
-However, these contracts are `Blocked` at branch level because `iam-service` fails startup during Flyway migration.
+Frontend implication:
 
-### 3.3 Gateway-routed paths available to frontend today
+- the shell can rely on JWT plus `/users/{id}/effective-access` for exact permission gating
+- the admin UI can be deferred to Wave 3 without blocking login, shell, or Wave 1 outlet flows
 
-The gateway currently routes these public path groups:
+#### Shell and scope contract
+
+The gateway already exposes the two shell contracts that a frontend can anchor on:
+
+- `GET /ui/action-hub`
+- `GET /ui/shell-context`
+
+These responses already encode:
+
+- persona inference
+- visible module list
+- quick actions
+- scope chips
+- region and outlet selector options
+
+Module visibility is prefix-driven. The shell currently infers module visibility from permission families such as:
+
+- `pos.*`
+- `inventory.*`
+- `procurement.*`
+- `hr.*`
+- `finance.*`
+- `iam.*`
+- `audit.*`
+- `org.*`
+- `catalog.*`
+- `report.*`
+
+Frontend implication:
+
+- use permission prefixes for navigation visibility
+- use exact permission codes for button-level actions
+
+#### Gateway-routed public path families
+
+The gateway currently exposes these frontend-facing route families:
 
 - `/auth/**`
 - `/users/**`, `/roles/**`, `/permissions/**`
@@ -125,7 +134,7 @@ The gateway currently routes these public path groups:
 - `/products/**`, `/recipes/**`, `/recipe-versions/**`
 - `/tax-rates/**`, `/product-prices/**`, `/product-availability/**`, `/catalog/promotions/**`
 - `/audit/**`
-- `/pos-sessions/**`, `/sale-orders/**`
+- `/pos-sessions/**`, `/sale-orders/**`, `/customers/**`, `/pos-stats/**`, `/api/pos/tables/**`
 - `/stock-balances/**`, `/inventory-transactions/**`, `/stock-adjustments/**`, `/waste-records/**`, `/stock-count-sessions/**`
 - `/suppliers/**`, `/purchase-orders/**`, `/goods-receipts/**`, `/supplier-invoices/**`, `/supplier-payments/**`
 - `/employees/**`, `/employee-contracts/**`, `/employee-assignments/**`, `/shift-schedules/**`, `/shift-assignments/**`, `/attendance-events/**`, `/attendance-approvals/**`
@@ -133,124 +142,93 @@ The gateway currently routes these public path groups:
 - `/reports/**`
 - `/ws/**`
 
-Current route gap:
+#### Live ops transport contract
 
-- `customers/**` exists in `pos-service` source but is not routed by the gateway
-- `pos-stats/**` exists in `pos-service` source but is not routed by the gateway
-- `/api/pos/tables/**` exists in `pos-service` source but is not routed by the gateway
+The notification service currently gives the frontend a usable live transport, but not a full notification center:
 
-This means the current branch has a mismatch between backend capability and frontend entry path availability.
+- WebSocket/SockJS endpoint: `/ws`
+- broker topics: `/topic/**`, `/queue/**`
+- POS event fan-out topic: `/topic/pos/{outletId}`
+- backend also ingests `ops.alert` and configured DLQ topics for webhook delivery
 
-## 4. Domain Truth Matrix
+Frontend implication:
 
-### 4.1 Operational domains
+- a live outlet panel is feasible
+- a full inbox/history/acknowledgement screen is not yet supported by a public REST contract
 
-| Domain | Main actors | Real backend flows supported now | Permission dependency | Evidence | Maturity | Frontend recommendation |
-| --- | --- | --- | --- | --- | --- | --- |
-| Gateway UI shell | All authenticated users | Shell context, scope selection, action hub, module visibility, quick actions | Prefix-driven by `iam.*`, `pos.*`, `inventory.*`, `procurement.*`, `hr.*`, `finance.*`, `audit.*`, `report.*`, `org.*`, `catalog.*` | `UiSurfaceController`, `RouteConfig`, `ApiGatewayIntegrationTest` | Frontend-ready | Use as the navigation and persona backbone from day one |
-| Org | System admin, regional ops | Region CRUD, outlet CRUD, exchange rates, scope expansion, outlet-close coordination | `org.region.*`, `org.outlet.*`, `org.scope.resolve` | `RegionController`, `OutletController`, `ExchangeRateController`, `OrgScopeController`, passing org integration tests | Frontend-ready | Wave 1 lookup and scope selector; Wave 2 admin editing |
-| Catalog | HQ catalog admin, outlet ops | Product CRUD, ingredient CRUD, recipe and recipe-version lifecycle, tax, pricing, availability, promotions, reference masters, internal menu and resolution APIs | `catalog.*` | `ProductController`, `IngredientController`, `RecipeController`, `CatalogPricingController`, `PromotionController`, `InternalCatalogController`, passing catalog tests | Frontend-ready | Wave 1 lookup and selling dependencies; Wave 2 backoffice maintenance |
-| POS core | Cashier, outlet manager | POS session open/list/get/close/reconcile, sale order create/list/get/snapshot/update, payment capture, complete, cancel, order-level promotion support, order-level table assignment fields | `pos.session.*`, `pos.order.*` | `PosSessionController`, `SaleOrderController`, `PosOrderService`, `PosPricingService`, `PosServiceIntegrationTest` passing with `50` tests, `0` failures, `0` errors | Frontend-ready | Wave 1 core pilot flow |
-| POS customer and stats | Cashier, outlet manager | Customer create/get/update/search, loyalty history, outlet today stats | `pos.customer.read`, `pos.customer.write`, `pos.session.read` | `CustomerController`, `PosStatsController`, `PosCustomerService`, `PosStatsService`, POS module tests are green, but IAM migration and gateway route gaps remain | Usable with risk | Keep in Wave 1 only after IAM and gateway route alignment |
-| POS dine-in and table ops | Cashier, floor manager, outlet manager | Dining table create/update/get/list, table status transitions, assignment to orders, release after completion/cancel | `pos.table.read`, `pos.table.write`, `pos.table.manage` | `DineInController`, `PosDineInService`, `V9__dine_in_and_promotion.sql`, sale-order model now carries `tableId` and `tableName` | Usable with risk | Plan for late Wave 1 or Wave 2 after gateway and IAM bootstrap are fixed |
-| Inventory | Outlet manager, stock controller | Stock balances, inventory ledger, stock count lifecycle, stock adjustment lifecycle, waste lifecycle, sale reservation internal API, outlet close check | `inventory.balance.read`, `inventory.ledger.read`, `inventory.adjustment.write`, `inventory.waste.write`, `inventory.stock_count.*` | `InventoryReadController`, `InventoryCommandController`, `InternalInventoryController`, `StockCountService`, `StockReservationService`, passing inventory tests | Frontend-ready | Wave 1 |
-| Procurement core | Buyer, outlet manager, finance reviewer | Supplier create/list/update/activate, PO draft-submit-approve-issue-cancel, GR create-receive-post-cancel, supplier invoice create/approve/dispute, supplier payment record | `procurement.supplier.*`, `procurement.po.*`, `procurement.gr.*`, `procurement.invoice.*`, `procurement.payment.*` | `SupplierController`, `PurchaseOrderController`, `GoodsReceiptController`, `SupplierInvoiceController`, `SupplierPaymentController`, `PurchaseFlowService`, `ProcurementServiceIntegrationTest` passing with `28` tests, `0` failures, `0` errors | Frontend-ready | Wave 1 for supplier + PO + GR; Wave 2 for invoice/payment review screens |
-| Notification/live ops | Outlet ops, regional ops | WebSocket endpoint, outlet-level POS topic fan-out, ops alert ingest, DLQ ingest, webhook delivery | No dedicated published permission model yet; visibility should be tied to parent module permissions | `WebSocketConfig`, `NotificationEventConsumer`, passing notification tests | Usable with risk | Optional Wave 1 enhancement for live operations; do not build a full inbox yet |
+## 2. Domain Truth Matrix
 
-### 4.2 Admin, workforce, and analytics domains
+| Domain | Actors | Supported public flows and endpoints | Lifecycle/state in code | Permission dependency | Evidence | Maturity | Frontend impact |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Gateway shell and scope | All authenticated users | `/ui/action-hub`, `/ui/shell-context`; visible modules, quick actions, scope chips, region/outlet selector | Shell rehydrates from JWT claims plus selected region/outlet query params; no separate persisted UI state | Prefix-driven by `pos.*`, `inventory.*`, `procurement.*`, `hr.*`, `finance.*`, `iam.*`, `audit.*`, `org.*`, `catalog.*`, `report.*` | `UiSurfaceController`, `RouteConfig`, `ApiGatewayIntegrationTest` `20/0/0` | Frontend-ready | Use as the shared shell and navigation backbone from day one |
+| IAM auth and access admin | System admin, all users | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /.well-known/jwks.json`, `/users/**`, `/roles/**`, `/permissions` | login -> refresh -> logout is implemented; user status changes affect login; role assignment, scope assignment, and permission overrides flow into `/effective-access` | `iam.*` plus the exact domain permissions surfaced through `/effective-access` | `AuthController`, `UserController`, `RoleController`, `PermissionController`, `SecurityMetadataController`, `V19`, `V20`, `IamServiceIntegrationTest` `21/0/0` | Frontend-ready | Auth shell integration can start immediately; admin console can be deferred to Wave 3 |
+| Org master data | System admin, regional ops | `/regions/**`, `/outlets/**`, `/exchange-rates/**` for CRUD and lookup | Public lifecycle is CRUD-only; outlet-close coordination exists internally but is not exposed as a frontend contract | `org.region.*`, `org.outlet.*` | `RegionController`, `OutletController`, `ExchangeRateController`, `OrgServiceIntegrationTest` `10/0/0` | Frontend-ready | Use in Wave 1 for scope selector and outlet lookup; keep outlet-close UI out of scope for now |
+| Catalog selling dependencies | HQ catalog admin, outlet ops | `/products/**`, `/ingredients/**`, `/recipes/**`, `/recipe-versions/**`, `/tax-rates/**`, `/product-prices/**`, `/product-availability/**`, `/catalog/promotions/**` | CRUD and versioning are public; recipe version activation/archive is public; internal resolution APIs exist but are not required for the first frontend | `catalog.*` | `ProductController`, `IngredientController`, `RecipeController`, `CatalogPricingController`, `PromotionController`, `CatalogServiceIntegrationTest` `23/0/0`, `CatalogAuditScopeIntegrationTest` `3/0/0` | Frontend-ready | Wave 1 can consume products, prices, availability, and promotions directly |
+| POS cashier core | Cashier, outlet manager | `/pos-sessions/**`, `/sale-orders/**` for session open/list/get/close/reconcile, order create/list/get/snapshot/update, payments, complete, cancel | Session `OPEN -> CLOSED -> RECONCILED`; order `OPEN -> COMPLETED/CANCELLED`; payment `UNPAID -> PARTIALLY_PAID -> PAID`; pricing supports promotions and table assignment fields | `pos.session.*`, `pos.order.*` | `PosSessionController`, `SaleOrderController`, `PosOrderService`, `PosPricingService`, `PosServiceIntegrationTest` `50/0/0` | Frontend-ready | Core Wave 1 pilot flow |
+| POS customer, loyalty, and outlet stats | Cashier, outlet manager | `/customers`, `/customers/{id}`, `/customers/{id}/loyalty-transactions`, `/pos-stats/today` | Customer create/get/update/search is public; loyalty history is public; outlet operational stats are public by outlet list | `pos.customer.read`, `pos.customer.write`, `pos.session.read` | `CustomerController`, `PosStatsController`, `PosCustomerService`, `PosStatsService`, gateway route coverage in `ApiGatewayIntegrationTest`, IAM coverage in `IamServiceIntegrationTest` | Frontend-ready | Include in Wave 1 for customer lookup, loyalty context, and outlet dashboard cards |
+| POS dine-in and table ops | Cashier, floor manager, outlet manager | `/api/pos/tables`, `/api/pos/tables/{id}`, `/api/pos/tables/{id}/status` for create/update/get/list/status update | Table states include `AVAILABLE`, `RESERVED`, `OCCUPIED`, `CLEANING`; order creation can assign a table, completion/cancel can release it | `pos.table.read`, `pos.table.write`, `pos.table.manage` | `DineInController`, `PosDineInService`, `V9__dine_in_and_promotion.sql`, `V20__pos_table_permissions.sql`, `PosServiceIntegrationTest` `50/0/0`, gateway and IAM integration coverage | Frontend-ready | Ready for Wave 1 if the pilot includes dine-in; otherwise keep as Wave 1.5 |
+| Inventory operations | Outlet manager, stock controller | `/stock-balances`, `/inventory-transactions`, `/stock-adjustments/**`, `/waste-records/**`, `/stock-count-sessions/**` | Adjustment and waste `DRAFT -> POSTED/CANCELLED`; stock count `DRAFT -> STARTED -> POSTED/CANCELLED`; internal sale reservation exists but is not a frontend contract | `inventory.balance.read`, `inventory.ledger.read`, `inventory.adjustment.write`, `inventory.waste.write`, `inventory.stock_count.*` | `InventoryReadController`, `InventoryCommandController`, `InventoryServiceIntegrationTest` `41/0/0` | Frontend-ready | Strong Wave 1 candidate |
+| Procurement sourcing and receiving | Buyer, outlet manager | `/suppliers/**`, `/purchase-orders/**`, `/goods-receipts/**` | Supplier create/update/activate; PO `DRAFT -> SUBMITTED -> APPROVED -> ISSUED/CANCELLED`; GR `DRAFT -> RECEIVED -> POSTED/CANCELLED` | `procurement.supplier.*`, `procurement.po.*`, `procurement.gr.*` | `SupplierController`, `PurchaseOrderController`, `GoodsReceiptController`, `PurchaseFlowService`, `ProcurementServiceIntegrationTest` `28/0/0` | Frontend-ready | Wave 1 procurement slice |
+| Procurement payables | Finance reviewer, procurement reviewer | `/supplier-invoices/**`, `/supplier-payments/**` | Invoice create/list/get plus `APPROVE` and `DISPUTE`; supplier payment record allocates approved invoices; idempotency and scope checks are covered | `procurement.invoice.*`, `procurement.payment.*` | `SupplierInvoiceController`, `SupplierPaymentController`, `PayablesService`, `ProcurementServiceIntegrationTest` `28/0/0` | Frontend-ready | Wave 2; no need to pull into Wave 1 unless finance review is in pilot scope |
+| HR workforce | HR ops, outlet manager, staff | `/employees/**`, `/employee-contracts/**`, `/employee-assignments/**`, `/shift-schedules/**`, `/shift-assignments/**`, `/attendance-events/**`, `/attendance-approvals/**` | Attendance goes from event capture to `APPROVED/REJECTED`; employee, contract, assignment, and shift flows are public; internal effective-contract and approved-attendance APIs are not frontend contracts | `hr.employee.*`, `hr.contract.*`, `hr.shift.*`, `hr.attendance.*`, `hr.payroll.prepare` | `HrCommandController`, `HrReadController`, `HrServiceIntegrationTest` `27/0/0` | Frontend-ready | Wave 2, or earlier if the pilot needs attendance review |
+| Finance payroll and config | Finance lead, payroll ops | `/payroll-periods/**`, `/payroll-runs/**`, `/finance-config/**` | Payroll run lifecycle is public: `DRAFT -> SUBMITTED -> APPROVED/REJECTED/CANCELLED -> PAID`; detail visibility is gated by `finance.payroll.detail.read`; internal outlet-close check is not a frontend contract | `finance.payroll.*`, `finance.config.*` | `FinanceCommandController`, `FinanceReadController`, `FinanceServiceIntegrationTest` `2/0/0`, `FinanceSecurityIntegrationTest` `18/0/0`, `FinanceProcurementConsumerHardeningTest` `13/0/0` | Frontend-ready | Wave 3, or late Wave 2 for finance-only users |
+| Reports and export jobs | Regional ops, finance, executives | `/reports/revenue/outlet-stats/today`, `/reports/inventory/**`, `/reports/payroll/**`, `/reports/exports/**` | Read-model queries are public; export job create/list/get/preview/download is public; projection freshness is internal only | `report.read`, `report.export`, `report.payroll.read`, `report.payroll.export` | `ReportRevenueController`, `ReportInventoryController`, `ReportController`, `ReportExportController`, `ReportServiceIntegrationTest` `21/0/0` | Frontend-ready | Wave 2 dashboards and export center |
+| Audit lookup | System admin, security, ops leads | `/audit/events`, `/audit/events/{id}`, `/audit/security-events`, `/audit/security-events/{id}`, `/audit/request-traces`, `/audit/request-traces/{id}` | Public contract is list/detail lookup only; `audit.export` permission exists in shared codes, but there is no public audit export endpoint yet | `audit.read`, `audit.detail.read` | `AuditController`, `AuditServiceIntegrationTest` `6/0/0` | Frontend-ready | Wave 2 read screens are safe; do not plan audit export yet |
+| Notification and live ops | Outlet ops, regional ops | Public frontend transport is only `/ws/**` via gateway; live topic fan-out to `/topic/pos/{outletId}` | POS Kafka events fan out live; `ops.alert` and DLQ ingestion drive webhook delivery; there is no public inbox/history/ack workflow | No dedicated `notification.*` family yet; current gating should follow parent module access | `WebSocketConfig`, `NotificationEventConsumer`, `NotificationService`, `NotificationServiceIntegrationTest` `10/0/0` | Usable with risk | Optional Wave 1 live panel only; do not build a full notification center on current backend |
 
-| Domain | Main actors | Real backend flows supported now | Permission dependency | Evidence | Maturity | Frontend recommendation |
-| --- | --- | --- | --- | --- | --- | --- |
-| IAM | System admin, all users | Login, refresh, logout, user CRUD, role assignment, scope assignment, permission overrides, effective access, JWKS | `iam.*` | `AuthController`, `UserController`, `RoleController`, `PermissionController`, failing `IamServiceIntegrationTest` on Flyway migration | Blocked | Fix before integrated frontend work starts |
-| HR | HR ops, outlet manager, staff | Employee CRUD, contracts, assignments, shift schedules, shift assignments, attendance events, attendance approval and rejection, internal effective contracts and approved attendance | `hr.employee.*`, `hr.contract.*`, `hr.shift.*`, `hr.attendance.*`, `hr.payroll.prepare` | `HrCommandController`, `HrReadController`, `InternalHrController`, `HrAttendanceService`, passing HR integration tests | Frontend-ready | Wave 2; workforce approval queue can be added earlier if needed |
-| Finance payroll | Finance lead | Payroll periods and runs, submit, approve, reject, cancel, mark paid, numbering rules, system policies, outlet close check | `finance.payroll.*`, `finance.config.*` | `FinanceCommandController`, `FinanceReadController`, `InternalFinanceController`, `PayrollRunOrchestrator`, passing finance tests | Frontend-ready | Wave 3, or late Wave 2 for finance-only users |
-| Reports | Regional ops, finance, executives | Revenue today, inventory projections, payroll summary/run detail, export job create/list/get/preview/download, projection freshness | `report.*`, `report.payroll.*` | `ReportRevenueController`, `ReportInventoryController`, `ReportController`, `ReportExportController`, `ReportExportService`, passing report tests | Frontend-ready | Wave 2 |
-| Audit | System admin, security, ops leads | Audit event list/detail, security event list/detail, request trace list/detail | `audit.*` | `AuditController`, passing audit tests | Frontend-ready | Wave 2 |
+Internal APIs intentionally excluded from the matrix as frontend contracts:
 
-## 5. Current Test Health and What It Really Means
+- `/internal/scopes/expand`
+- `/internal/inventory/**`
+- `/internal/procurement/**`
+- `/internal/hr/**`
+- `/internal/finance/**`
+- `/internal/report/**`
 
-### 5.1 Services with passing module tests in the current branch
+Those APIs are real backend dependencies, but they do not yet justify frontend screens unless a public contract is added on top.
 
-- `api-gateway`
-- `org-service`
-- `catalog-service`
-- `pos-service`
-- `inventory-service`
-- `procurement-service`
-- `hr-service`
-- `finance-service`
-- `report-service`
-- `audit-service`
-- `notification-service`
+## 3. Frontend Roadmap and Blockers
 
-### 5.2 Services with red module tests in the current branch
+### 3.1 Recommended Roadmap
 
-| Service | Current failure signal | What it means for frontend |
-| --- | --- | --- |
-| IAM | `IamServiceIntegrationTest` fails to load `ApplicationContext` because `V19__pos_customer_permissions.sql` inserts into `iam.permission` without the required `name` column | Hard blocker for login and any authenticated frontend integration on the current branch |
+#### Pre-wave: contract lock, not backend rescue
 
-## 6. Backend Gaps That Block or Distort Frontend Work
+There is no current hard backend blocker that should delay frontend kickoff. Pre-wave work should focus on contract locking and UI planning:
 
-| Gap | Backend truth | Frontend impact | Required action |
-| --- | --- | --- | --- |
-| IAM startup failure | `V19__pos_customer_permissions.sql` inserts only `code` and `description`, but current schema requires `name` | Blocks real login and authenticated shell integration | Fix migration first; do not start integrated frontend on this branch until IAM boots cleanly |
-| Gateway route mismatch for POS customer, stats, and dine-in tables | `CustomerController`, `PosStatsController`, and `DineInController` exist, but `RouteConfig` still routes only `/pos-sessions/**` and `/sale-orders/**` to POS | Customer search, loyalty history, outlet today stats, and table management screens cannot be reached through the gateway | Add `/customers/**`, `/pos-stats/**`, and `/api/pos/tables/**` gateway routes before building those screens |
-| Missing IAM bootstrap for table permissions | `PermissionCodes` defines `pos.table.read`, `pos.table.write`, and `pos.table.manage`, but no IAM migration currently inserts and assigns these permissions | Even after gateway routing, dine-in screens cannot rely on stable permission-based access control | Add an IAM migration to publish and assign table permissions to the intended roles |
-| Inconsistent public path shape for dine-in tables | New POS table controller uses `/api/pos/tables`, while existing gateway-routed POS paths use root-level prefixes like `/pos-sessions` and `/sale-orders` | Frontend routing and gateway mapping become more brittle and less uniform | Decide whether to keep `/api/pos/tables/**` as-is and route it, or normalize it into the existing POS public path style |
-| Notification has no frontend read model | WebSocket fan-out exists, but there is no REST inbox, history query, ack, or alert preference API | Build live feed panels only; do not promise a full notification center yet | Keep Wave 1 notification scope to transient live signals only |
+- build the frontend against gateway contracts only
+- derive navigation from `/ui/action-hub` and `/ui/shell-context`
+- use `/users/{id}/effective-access` and exact permission codes for action gating
+- explicitly exclude outlet-close orchestration and a full notification center from the pilot backlog
+- decide whether the pilot includes dine-in tables; the backend is ready, so this is now a product sequencing decision, not a backend rescue task
 
-## 7. Frontend Roadmap Based on Current Backend Truth
-
-### Pre-wave stabilization gate
-
-Complete these backend items before integrated frontend development:
-
-- fix IAM migration so `iam-service` starts and login works
-- add gateway routes for `customers/**`, `pos-stats/**`, and `/api/pos/tables/**`
-- publish and assign `pos.table.read`, `pos.table.write`, and `pos.table.manage`
-
-### Wave 1: Outlet Ops pilot
+#### Wave 1: Outlet Ops pilot
 
 Target users:
 
 - cashier
 - outlet manager
-- stock controller at outlet level
+- stock controller
 
-Recommended screens and flows:
+Recommended screen bundles:
 
-- login, token refresh, logout
-- app shell using `/ui/action-hub` and `/ui/shell-context`
-- region and outlet scope selection
-- POS session list, open session, session detail, close, reconcile
-- sale order create, detail, line update, payment capture, complete, cancel
-- promotion-aware order pricing inside the sale flow
-- product and pricing lookup required by POS
-- customer search, create, update, loyalty history
+- login, refresh, logout
+- app shell and scope selector
+- POS session list/open/detail/close/reconcile
+- sale order create/edit/detail/payment/complete/cancel
+- product, price, availability, and promotion lookup inside the POS flow
+- customer search/create/update and loyalty history
 - outlet today stats
-- stock balances by outlet
-- stock count session create, start, enter lines, post, cancel
-- stock adjustment create, post, cancel
-- waste record create, post, cancel
+- stock balances
+- stock count session create/start/enter lines/post/cancel
+- stock adjustment create/post/cancel
+- waste record create/post/cancel
 - supplier list/create/update
-- purchase order create, edit draft, submit, approve, issue
-- goods receipt create, receive, post
-- optional live POS event panel via `/ws` and `/topic/pos/{outletId}`
+- purchase order create/edit draft/submit/approve/issue
+- goods receipt create/receive/post
+- dine-in tables and status board if the pilot includes table service
+- optional live outlet panel via `/ws` and `/topic/pos/{outletId}`
 
-Wave 1 intentionally avoids:
-
-- payroll operations
-- IAM administration screens
-- advanced exports
-- notification inbox/history workflows
-
-Wave 1.5, after gateway and IAM bootstrap fixes:
-
-- dining table list and status board
-- table assignment during dine-in order creation
-- simple floor-operation flow for `AVAILABLE -> OCCUPIED -> AVAILABLE/RESERVED/CLEANING`
-
-### Wave 2: HQ backoffice and supervisory operations
+#### Wave 2: HQ backoffice and supervisory flows
 
 Target users:
 
@@ -259,42 +237,47 @@ Target users:
 - HR reviewer
 - audit and reporting consumers
 
-Recommended screens and flows:
+Recommended screen bundles:
 
-- catalog maintenance for product, ingredient, recipe, pricing, tax, promotion, and availability
-- procurement invoice and payment review
-- attendance review and approval queues
-- revenue dashboard and inventory reporting
+- catalog maintenance for products, ingredients, recipes, pricing, tax, availability, and promotions
+- supplier invoice review and dispute flow
+- supplier payment review and record flow
+- attendance review and approval queue
+- revenue, inventory, and payroll reporting
+- export job center
 - audit event, security event, and request trace lookup
-- selected workforce screens for attendance visibility
+- regional ops screens composed from existing org, procurement, inventory, and report APIs
 
-### Wave 3: Platform admin and finance operations
+#### Wave 3: platform admin and finance operations
 
 Target users:
 
 - system admin
 - finance lead
-- payroll operations
+- payroll ops
 
-Recommended screens and flows:
+Recommended screen bundles:
 
 - user, role, scope, and permission-override administration
 - effective-access inspection
-- payroll periods and payroll run lifecycle
+- payroll period and payroll run lifecycle
 - finance configuration maintenance
-- export-job center and advanced reconciliation/reporting surfaces
+- advanced admin-only reporting and export utilities
 
-## 8. Recommended Frontend Sequencing Rules
+### 3.2 Current Backend Gaps That Still Matter To Frontend
 
-- Build the frontend against gateway contracts first, not direct service URLs.
-- Treat scope selection as a first-class shell concern because most operational flows are outlet- or region-scoped.
-- Mirror module visibility from permission prefixes in the shell, then enforce button-level actions by exact permissions.
-- Do not introduce a separate BFF in phase 1 unless new UI aggregation needs appear after the gateway route gaps are fixed.
-- Keep notification scope narrow until a read model exists.
+| Category | Gap | Backend truth | Frontend impact | Recommended action |
+| --- | --- | --- | --- | --- |
+| Missing public capability | Outlet-close orchestration is internal-only | Org service coordinates inventory, procurement, and finance close checks through `/internal/**`, but there is no gateway-routed public outlet-close workflow contract | A real outlet close screen is blocked on the current backend | Keep outlet close out of Wave 1; add a public orchestration API before designing that screen |
+| Missing public capability | Notification center read model is absent | `/ws` exists for live fan-out, and notification jobs/webhook delivery are implemented, but there is no public REST API for list/history/ack/preferences | A full notification inbox or alert history screen is blocked | Keep live ops to transient feed panels only; add REST read APIs before planning a notification center |
+| Permission model gap | Notification has no dedicated published permission family | Live ops visibility currently has to piggyback on parent modules like POS or ops-facing roles | Frontend cannot model notification as a standalone module with clean role assignment | Gate live panels through existing parent-module permissions in phase 1; add `notification.*` only if product needs independent control |
+| Platform aggregation gap | `/regional-ops` is a shell grouping, not a dedicated API family | The shell exposes a `regional-ops` module and quick action, but there is no `/regional-ops/**` backend route family or composite dashboard API | Regional dashboards must be composed in the frontend from existing org/report/inventory/procurement calls | Accept frontend composition in Wave 2; add a BFF only if the composition becomes too expensive or too slow |
+| Contract inconsistency | POS dine-in path shape is non-uniform | Tables use `/api/pos/tables/**` while other POS APIs use root-level prefixes | Client routing and API client code need one explicit exception | Document it and move on; do not block Wave 1 on path normalization |
+| Regression or red test | No active red-suite blocker in the rerun set | All targeted integration suites listed above are currently green | There is no test-based reason to delay frontend kickoff | Start frontend work; keep re-running the same suites as a contract safety net |
 
-## 9. Decision Summary
+### 3.3 Sequencing Rules
 
-- Start frontend with `Outlet Ops`, not with IAM admin or payroll.
-- Do not wait for every domain to be perfect before building Wave 1.
-- Do fix IAM startup and gateway POS route gaps before integrating the frontend against the current branch.
-- POS and procurement are no longer the main blockers; the main blockers are now IAM startup, gateway exposure for new POS APIs, and IAM permission bootstrap for dine-in tables.
+- Treat `pos-stats/today` as operational data for outlet screens; treat `/reports/**` as supervisory or HQ reporting.
+- Do not count internal controllers as hidden frontend contracts. If a screen needs a new public endpoint, call it out explicitly instead of tunneling through `/internal/**`.
+- Do not introduce a separate BFF in Wave 1 unless the Wave 2 regional-ops composition proves too chatty or too slow.
+- Keep notification scope intentionally narrow until a public read model exists.
