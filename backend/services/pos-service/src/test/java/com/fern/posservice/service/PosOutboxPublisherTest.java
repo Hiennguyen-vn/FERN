@@ -245,4 +245,14 @@ class PosOutboxPublisherTest {
                         && r.value().equals(nextEvent.payload())));
         verify(jdbcTemplate, times(2)).update(anyString(), any(MapSqlParameterSource.class));
     }
+
+    @Test
+    void shouldPurgeOnlyPublishedOutboxEvents() {
+        publisher.purgeOldEvents();
+
+        verify(jdbcTemplate).update(
+                argThat(sql -> sql.contains("status = 'PUBLISHED'")),
+                anyMap()
+        );
+    }
 }

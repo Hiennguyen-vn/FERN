@@ -3,7 +3,7 @@ package com.fern.financeservice;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.financeservice.service.FinanceProcurementConsumer;
 import com.fern.platform.contracts.GoodsReceiptPostedLine;
@@ -396,8 +396,9 @@ class FinanceProcurementConsumerHardeningTest {
 
     @Test
     void shouldRecordPoisonSupplierPaymentPayloadAsFailedIntegrationEvent() {
-        assertThatThrownBy(() -> consumer.consumeSupplierPaymentRecorded("{not-json"))
-                .isInstanceOf(JsonProcessingException.class);
+        // H-02 fix: deserialization failures are now swallowed (log + return)
+        // to prevent infinite Kafka retries on permanently unparseable payloads.
+        consumer.consumeSupplierPaymentRecorded("{not-json");
 
         assertThat(count("""
                 SELECT COUNT(*)
@@ -415,8 +416,9 @@ class FinanceProcurementConsumerHardeningTest {
 
     @Test
     void shouldRecordPoisonGoodsReceiptPayloadAsFailedIntegrationEvent() {
-        assertThatThrownBy(() -> consumer.consumeGoodsReceiptPosted("{not-json"))
-                .isInstanceOf(JsonProcessingException.class);
+        // H-02 fix: deserialization failures are now swallowed (log + return)
+        // to prevent infinite Kafka retries on permanently unparseable payloads.
+        consumer.consumeGoodsReceiptPosted("{not-json");
 
         assertThat(count("""
                 SELECT COUNT(*)

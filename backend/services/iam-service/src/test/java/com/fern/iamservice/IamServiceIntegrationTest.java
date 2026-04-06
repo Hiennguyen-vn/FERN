@@ -777,6 +777,44 @@ class IamServiceIntegrationTest {
     }
 
     @Test
+    void shouldAllowStaffUserToReadOwnEffectiveAccessButNotAnotherUsersAccess() throws Exception {
+        String adminToken = issueBootstrapAdminToken();
+        Long staffUserId = createUser(adminToken, "self-staff-user", "Self123!").get("id").asLong();
+
+        mockMvc.perform(post("/users/%d/roles".formatted(staffUserId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"roleCodes":["staff"]}
+                                """))
+                .andExpect(status().isOk());
+
+        adminToken = issueBootstrapAdminToken();
+
+        mockMvc.perform(post("/users/%d/scopes".formatted(staffUserId))
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"regionIds":[],"outletIds":[101]}
+                                """))
+                .andExpect(status().isOk());
+
+        String selfToken = relayForIam(login("self-staff-user", "Self123!").get("accessToken").asText());
+
+        mockMvc.perform(get("/users/%d/effective-access".formatted(staffUserId))
+                        .header("Authorization", "Bearer " + selfToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(staffUserId))
+                .andExpect(jsonPath("$.roles[?(@=='staff')]").exists())
+                .andExpect(jsonPath("$.effectivePermissions[?(@=='pos.session.read')]").exists())
+                .andExpect(jsonPath("$.scopeRoots.outlets[0]").value(101));
+
+        mockMvc.perform(get("/users/1/effective-access")
+                        .header("Authorization", "Bearer " + selfToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void shouldBumpPolicyVersionAtomicallyUnderConcurrency() throws Exception {
         int taskCount = 8;
         CountDownLatch ready = new CountDownLatch(taskCount);

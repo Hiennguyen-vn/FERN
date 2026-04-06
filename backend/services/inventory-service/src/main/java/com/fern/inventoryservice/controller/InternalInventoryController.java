@@ -1,7 +1,9 @@
 package com.fern.inventoryservice.controller;
 
 import com.fern.inventoryservice.dto.InventoryResponses.OutletCloseCheckResponse;
+import com.fern.inventoryservice.dto.InventoryResponses.InboxReplayResponse;
 import com.fern.inventoryservice.service.InventoryAuthorizer;
+import com.fern.inventoryservice.service.InventoryEventConsumerService;
 import com.fern.inventoryservice.service.OutletCloseCheckService;
 import com.fern.inventoryservice.service.StockReservationService;
 import com.fern.platform.common.FernPrincipal;
@@ -27,15 +29,18 @@ public class InternalInventoryController {
     private final InventoryAuthorizer inventoryAuthorizer;
     private final StockReservationService stockReservationService;
     private final OutletCloseCheckService outletCloseCheckService;
+    private final InventoryEventConsumerService inventoryEventConsumerService;
 
     public InternalInventoryController(
             InventoryAuthorizer inventoryAuthorizer,
             StockReservationService stockReservationService,
-            OutletCloseCheckService outletCloseCheckService
+            OutletCloseCheckService outletCloseCheckService,
+            InventoryEventConsumerService inventoryEventConsumerService
     ) {
         this.inventoryAuthorizer = inventoryAuthorizer;
         this.stockReservationService = stockReservationService;
         this.outletCloseCheckService = outletCloseCheckService;
+        this.inventoryEventConsumerService = inventoryEventConsumerService;
     }
 
     @Operation(summary = "Create or execute Inventory — Internal")
@@ -73,5 +78,15 @@ public class InternalInventoryController {
     ) {
         inventoryAuthorizer.requireInternalPermission(principal, PermissionCodes.INVENTORY_INTERNAL_READ);
         return outletCloseCheckService.getOutletCloseCheck(outletId);
+    }
+
+    @Operation(summary = "Replay failed inventory inbox event")
+    @PostMapping("/inbox-events/{sourceEventId}/replay")
+    public InboxReplayResponse replayInboxEvent(
+            @AuthenticationPrincipal FernPrincipal principal,
+            @PathVariable String sourceEventId
+    ) {
+        inventoryAuthorizer.requireInternalPermission(principal, PermissionCodes.INVENTORY_INTERNAL_READ);
+        return inventoryEventConsumerService.replayFailedInboxEvent(sourceEventId);
     }
 }

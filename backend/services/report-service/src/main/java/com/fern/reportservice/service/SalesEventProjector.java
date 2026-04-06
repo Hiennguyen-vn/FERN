@@ -46,6 +46,11 @@ public class SalesEventProjector {
                     int lineNumber = 0;
                     for (Map<String, Object> line : extractSnapshotLines(event.saleSnapshot())) {
                         lineNumber++;
+                        BigDecimal qty = support.decimalValue(line.get("qty"));
+                        BigDecimal discountAmount = support.decimalValue(line.get("discountAmount"));
+                        BigDecimal taxAmount = support.decimalValue(line.get("taxAmount"));
+                        BigDecimal netAmount = support.decimalValue(line.get("lineTotal"));
+                        BigDecimal grossAmount = netAmount.add(discountAmount);
                         support.jdbcTemplate().update("""
                                 INSERT INTO report.sales_fact (
                                     fact_id, source_event_id, source_service, event_type, occurred_at, ingested_at, idempotency_key,
@@ -70,11 +75,11 @@ public class SalesEventProjector {
                                 "productId", support.longValue(line.get("productId")),
                                 "lineNumber", lineNumber,
                                 "businessDate", event.businessDate(),
-                                "qty", support.decimalValue(line.get("qty")),
-                                "grossAmount", support.decimalValue(line.get("lineTotal")),
-                                "discountAmount", support.decimalValue(line.get("discountAmount")),
-                                "taxAmount", support.decimalValue(line.get("taxAmount")),
-                                "netAmount", support.decimalValue(line.get("lineTotal")),
+                                "qty", qty,
+                                "grossAmount", grossAmount,
+                                "discountAmount", discountAmount,
+                                "taxAmount", taxAmount,
+                                "netAmount", netAmount,
                                 "payload", support.toJson(line)
                         ));
                     }

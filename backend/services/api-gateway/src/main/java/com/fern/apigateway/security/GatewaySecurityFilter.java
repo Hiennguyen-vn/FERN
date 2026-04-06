@@ -286,16 +286,7 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
     }
 
     private String clientKey(ServerWebExchange exchange) {
-        String xForwardedFor = exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
-        if (trustedProxyCount > 0 && xForwardedFor != null && !xForwardedFor.isBlank()) {
-            String[] addresses = xForwardedFor.split(",");
-            int clientIndex = Math.max(0, addresses.length - trustedProxyCount);
-            return addresses[clientIndex].trim();
-        }
-        if (exchange.getRequest().getRemoteAddress() == null || exchange.getRequest().getRemoteAddress().getAddress() == null) {
-            return "unknown";
-        }
-        return exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
+        return GatewayClientIpResolver.resolve(exchange.getRequest(), trustedProxyCount);
     }
 
     private Mono<Void> enqueueSecurityEvent(

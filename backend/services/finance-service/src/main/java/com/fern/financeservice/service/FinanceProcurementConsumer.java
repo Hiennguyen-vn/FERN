@@ -2,7 +2,11 @@ package com.fern.financeservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.financeservice.dto.FinanceResponses.IntegrationEventReplayResponse;
+import com.fern.platform.common.BadRequestException;
+import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.ExceptionSummaries;
+import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.common.SnowflakeIdGenerator;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
 import com.fern.platform.contracts.SupplierInvoiceApprovedEvent;
@@ -32,6 +36,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class FinanceProcurementConsumer {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FinanceProcurementConsumer.class);
     private static final String GOODS_RECEIPT_TOPIC = "procurement.goods_receipt.posted";
     private static final String SUPPLIER_INVOICE_APPROVED_TOPIC = "procurement.supplier_invoice.approved";
     private static final String SUPPLIER_PAYMENT_TOPIC = "procurement.supplier.payment.recorded";
@@ -64,13 +69,16 @@ public class FinanceProcurementConsumer {
     }
 
     @KafkaListener(topics = GOODS_RECEIPT_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
-    public void consumeGoodsReceiptPosted(String payload) throws Exception {
+    public void consumeGoodsReceiptPosted(String payload) {
         ProcurementGoodsReceiptPostedEvent event;
         try {
             event = objectMapper.readValue(payload, ProcurementGoodsReceiptPostedEvent.class);
         } catch (JsonProcessingException exception) {
             recordDeserializationFailure(GOODS_RECEIPT_TOPIC, payload, ProcurementGoodsReceiptPostedEvent.class, exception);
-            throw exception;
+            // Do not re-throw: deserialization failure is permanently unparseable.
+            // Re-throwing would cause Kafka to retry indefinitely.
+            log.error("Deserialization failure for goods_receipt.posted: {}", exception.getMessage(), exception);
+            return;
         }
         String sourceEventId = resolveSourceEventId(event.eventId(), GOODS_RECEIPT_TOPIC, payload, "validation");
         String eventType = resolveEventType(event.eventType(), GOODS_RECEIPT_TOPIC);
@@ -90,13 +98,14 @@ public class FinanceProcurementConsumer {
     }
 
     @KafkaListener(topics = SUPPLIER_PAYMENT_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
-    public void consumeSupplierPaymentRecorded(String payload) throws Exception {
+    public void consumeSupplierPaymentRecorded(String payload) {
         SupplierPaymentRecordedEvent event;
         try {
             event = objectMapper.readValue(payload, SupplierPaymentRecordedEvent.class);
         } catch (JsonProcessingException exception) {
             recordDeserializationFailure(SUPPLIER_PAYMENT_TOPIC, payload, SupplierPaymentRecordedEvent.class, exception);
-            throw exception;
+            log.error("Deserialization failure for supplier.payment.recorded: {}", exception.getMessage(), exception);
+            return;
         }
         String sourceEventId = resolveSourceEventId(event.eventId(), SUPPLIER_PAYMENT_TOPIC, payload, "validation");
         String eventType = resolveEventType(event.eventType(), SUPPLIER_PAYMENT_TOPIC);
@@ -116,13 +125,14 @@ public class FinanceProcurementConsumer {
     }
 
     @KafkaListener(topics = SUPPLIER_INVOICE_APPROVED_TOPIC, groupId = "${spring.kafka.consumer.group-id}")
-    public void consumeSupplierInvoiceApproved(String payload) throws Exception {
+    public void consumeSupplierInvoiceApproved(String payload) {
         SupplierInvoiceApprovedEvent event;
         try {
             event = objectMapper.readValue(payload, SupplierInvoiceApprovedEvent.class);
         } catch (JsonProcessingException exception) {
             recordDeserializationFailure(SUPPLIER_INVOICE_APPROVED_TOPIC, payload, SupplierInvoiceApprovedEvent.class, exception);
-            throw exception;
+            log.error("Deserialization failure for supplier_invoice.approved: {}", exception.getMessage(), exception);
+            return;
         }
         String sourceEventId = resolveSourceEventId(event.eventId(), SUPPLIER_INVOICE_APPROVED_TOPIC, payload, "validation");
         String eventType = resolveEventType(event.eventType(), SUPPLIER_INVOICE_APPROVED_TOPIC);
@@ -138,6 +148,38 @@ public class FinanceProcurementConsumer {
         } catch (RuntimeException exception) {
             transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
             // Do not re-throw: the event is recorded as FAILED in the integration log.
+        }
+    }
+
+    public IntegrationEventReplayResponse replayFailedIntegrationEvent(String sourceEventId) {
+        requireNonBlank(sourceEventId, "Source event id is required");
+        IntegrationEventStatusRecord record = findIntegrationEventStatus(sourceEventId);
+        if (record == null) {
+            throw new ResourceNotFoundException("Integration event not found: " + sourceEventId);
+        }
+        if (!"FAILED".equals(record.status())) {
+            throw new ConflictException("Only FAILED integration events can be replayed");
+        }
+        replayByEventType(record.eventType(), record.payload());
+        IntegrationEventStatusRecord latest = findIntegrationEventStatus(sourceEventId);
+        if (latest == null) {
+            throw new IllegalStateException("Integration event disappeared after replay: " + sourceEventId);
+        }
+        return new IntegrationEventReplayResponse(
+                latest.sourceEventId(),
+                latest.eventType(),
+                latest.status(),
+                latest.processedAt(),
+                latest.errorMessage()
+        );
+    }
+
+    private void replayByEventType(String eventType, String payload) {
+        switch (eventType) {
+            case GOODS_RECEIPT_TOPIC -> consumeGoodsReceiptPosted(payload);
+            case SUPPLIER_PAYMENT_TOPIC -> consumeSupplierPaymentRecorded(payload);
+            case SUPPLIER_INVOICE_APPROVED_TOPIC -> consumeSupplierInvoiceApproved(payload);
+            default -> throw new BadRequestException("Unsupported integration event type for replay: " + eventType);
         }
     }
 
@@ -325,6 +367,25 @@ public class FinanceProcurementConsumer {
                         rs.getString("idempotency_key"),
                         rs.getString("payload"),
                         rs.getString("status"))
+                : null);
+    }
+
+    private IntegrationEventStatusRecord findIntegrationEventStatus(String sourceEventId) {
+        return jdbcTemplate.query("""
+                SELECT source_event_id, event_type, payload::text AS payload, status, processed_at, error_message
+                FROM finance.integration_event
+                WHERE source_event_id = :sourceEventId
+                """, params("sourceEventId", sourceEventId), rs -> rs.next()
+                ? new IntegrationEventStatusRecord(
+                        rs.getString("source_event_id"),
+                        rs.getString("event_type"),
+                        rs.getString("payload"),
+                        rs.getString("status"),
+                        rs.getObject("processed_at", OffsetDateTime.class) == null
+                                ? null
+                                : rs.getObject("processed_at", OffsetDateTime.class).toInstant(),
+                        rs.getString("error_message")
+                )
                 : null);
     }
 
@@ -625,6 +686,16 @@ public class FinanceProcurementConsumer {
             String idempotencyKey,
             String payload,
             String status
+    ) {
+    }
+
+    private record IntegrationEventStatusRecord(
+            String sourceEventId,
+            String eventType,
+            String payload,
+            String status,
+            Instant processedAt,
+            String errorMessage
     ) {
     }
 }

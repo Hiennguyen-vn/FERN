@@ -196,6 +196,7 @@ class PosOrderServiceTest {
         assertThatThrownBy(() -> service.cancelOrder(principal, 10L))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("Orders with successful payments cannot be cancelled");
+        verify(dineInService, never()).releaseTable(any(), any(), any());
     }
 
     @Test
@@ -209,6 +210,24 @@ class PosOrderServiceTest {
 
         verify(store, never()).successfulPaymentTotal(any(NamedParameterJdbcTemplate.class), eq(10L));
         verify(transactionTemplate, never()).executeWithoutResult(any());
+        verify(dineInService, never()).releaseTable(any(), any(), any());
+    }
+
+    @Test
+    void shouldReleaseDiningTableAfterOrderCancellation() {
+        OrderRecord openOrder = order(SaleOrderStatus.OPEN.name(), new BigDecimal("10.00"), null, 999L);
+        OrderRecord cancelledOrder = order(SaleOrderStatus.CANCELLED.name(), new BigDecimal("10.00"), null, 999L);
+        SaleOrderResponse cancelledResponse = response(cancelledOrder);
+        when(store.requireOrder(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(openOrder, cancelledOrder);
+        when(store.requireOrderForUpdate(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(openOrder);
+        when(store.successfulPaymentTotal(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(BigDecimal.ZERO);
+        when(store.queryOrderLines(any(NamedParameterJdbcTemplate.class), eq(10L))).thenReturn(List.of());
+        when(store.mapOrder(any(NamedParameterJdbcTemplate.class), eq(cancelledOrder), any())).thenReturn(cancelledResponse);
+
+        SaleOrderResponse result = service.cancelOrder(principal, 10L);
+
+        verify(dineInService).releaseTable(999L, 1L, 2L);
+        assertThat(result).isSameAs(cancelledResponse);
     }
 
     @Test
@@ -250,6 +269,10 @@ class PosOrderServiceTest {
     }
 
     private OrderRecord order(String status, BigDecimal totalAmount, Long reservationId) {
+        return order(status, totalAmount, reservationId, null);
+    }
+
+    private OrderRecord order(String status, BigDecimal totalAmount, Long reservationId, Long tableId) {
         return new OrderRecord(
                 10L,
                 "SO-10",
@@ -270,7 +293,7 @@ class PosOrderServiceTest {
                 null,
                 reservationId,
                 null, // customerId
-                null  // tableId
+                tableId
         );
     }
 

@@ -586,6 +586,8 @@ public class PosOrderService {
                     "id", id
             ));
         });
+        // Release table immediately after cancellation so dine-in capacity is not blocked.
+        dineInService.releaseTable(order.tableId(), order.regionId(), order.outletId());
         // AUD-006: publish cancel audit with before/after snapshot
         posAuditService.publishOrderEvent(
                 "pos.order.cancelled.audit",

@@ -152,7 +152,7 @@ public class UserController {
     @Operation(summary = "Get Users")
     @GetMapping("/{id}/effective-access")
     public EffectiveAccessResponse effectiveAccess(@AuthenticationPrincipal FernPrincipal principal, @PathVariable Long id) {
-        iamAuthorizer.requirePermission(principal, PermissionCodes.IAM_USER_READ);
+        iamAuthorizer.requirePermissionOrSelf(principal, PermissionCodes.IAM_USER_READ, id);
         return userViewService.effectiveAccess(id);
     }
 }

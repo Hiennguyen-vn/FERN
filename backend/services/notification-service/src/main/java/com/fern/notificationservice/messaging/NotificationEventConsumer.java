@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.notificationservice.service.NotificationService;
 import com.fern.platform.contracts.OperationalAlertEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class NotificationEventConsumer {
+    private static final Logger log = LoggerFactory.getLogger(NotificationEventConsumer.class);
+
     private final ObjectMapper objectMapper;
     private final NotificationService notificationService;
     private final SimpMessagingTemplate messagingTemplate;
@@ -45,7 +49,7 @@ public class NotificationEventConsumer {
                 messagingTemplate.convertAndSend("/topic/pos/" + outletId, payload);
             }
         } catch (Exception e) {
-            // Log and ignore
+            log.warn("NOTIFICATION_WS_FORWARD_FAILED topic={} key={}: {}", topic, key, e.getMessage());
         }
     }
 
@@ -66,6 +70,8 @@ public class NotificationEventConsumer {
         try {
             return objectMapper.readValue(payload, type);
         } catch (JsonProcessingException exception) {
+            // Log the failure before throwing — the DLQ handler will route the message
+            log.error("DESERIALIZATION_FAILED type={}: {}", type.getSimpleName(), exception.getMessage());
             throw new IllegalArgumentException("Unable to deserialize " + type.getSimpleName(), exception);
         }
     }

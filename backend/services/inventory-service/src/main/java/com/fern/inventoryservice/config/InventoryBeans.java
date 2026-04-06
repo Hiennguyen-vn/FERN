@@ -32,6 +32,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.client.RestClient;
+import com.fern.platform.security.RedisSchedulerLock;
 
 @Configuration
 public class InventoryBeans {
@@ -130,5 +131,21 @@ public class InventoryBeans {
             TransactionTemplate transactionTemplate
     ) {
         return new SingleOperationalShardRegistry(new OperationalShardAccess(defaultOperationalShardId, jdbcTemplate, transactionTemplate));
+    }
+
+    /**
+     * P1-03 FIX: Distributed lock for scheduled reservation cleanup.
+     * Returns null when Redis is unavailable — StockReservationService will
+     * fall through to execute without the lock (same pattern as POS).
+     */
+    @Bean
+    @org.springframework.lang.Nullable
+    RedisSchedulerLock redisSchedulerLock(ObjectProvider<StringRedisTemplate> redisTemplateProvider) {
+        StringRedisTemplate redis = redisTemplateProvider.getIfAvailable();
+        if (redis == null) {
+            return null;
+        }
+        String instanceId = System.getenv().getOrDefault("HOSTNAME", java.util.UUID.randomUUID().toString());
+        return new RedisSchedulerLock(redis, instanceId);
     }
 }

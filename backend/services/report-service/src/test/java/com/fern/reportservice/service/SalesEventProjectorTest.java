@@ -113,13 +113,15 @@ class SalesEventProjectorTest {
         assertThat(line1Params.getValue("idempotencyKey")).isEqualTo("idem-sale-1:sale:1");
         assertThat(line1Params.getValue("productId")).isEqualTo(10L);
         assertThat(line1Params.getValue("grossAmount")).isEqualTo(new BigDecimal("100.0"));
+        assertThat(line1Params.getValue("netAmount")).isEqualTo(new BigDecimal("100.0"));
 
         // Verify Line 2 Insert
         assertThat(sqlCaptor.getAllValues().get(1)).contains("INSERT INTO report.sales_fact");
         MapSqlParameterSource line2Params = paramsCaptor.getAllValues().get(1);
         assertThat(line2Params.getValue("idempotencyKey")).isEqualTo("idem-sale-1:sale:2");
         assertThat(line2Params.getValue("productId")).isEqualTo(11L);
-        assertThat(line2Params.getValue("grossAmount")).isEqualTo(new BigDecimal("50.0"));
+        assertThat(line2Params.getValue("grossAmount")).isEqualTo(new BigDecimal("55.0"));
+        assertThat(line2Params.getValue("netAmount")).isEqualTo(new BigDecimal("50.0"));
 
         // Verify Payment Insert
         assertThat(sqlCaptor.getAllValues().get(2)).contains("INSERT INTO report.payment_fact");

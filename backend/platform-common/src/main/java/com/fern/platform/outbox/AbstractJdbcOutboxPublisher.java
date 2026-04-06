@@ -133,16 +133,16 @@ public abstract class AbstractJdbcOutboxPublisher {
     }
 
     /**
-     * Purge outbox events that have been successfully sent and are older than the given retention period.
+     * Purge outbox events that have been successfully published and are older than the given retention period.
      * Subclasses should call this from a {@code @Scheduled} method (e.g., daily at 3 AM).
      *
-     * @param retention how long to keep sent events before purging
+     * @param retention how long to keep published events before purging
      * @return the number of purged events
      */
     protected final int purgeSentEvents(Duration retention) {
         java.time.Instant cutoff = clock.instant().minus(retention);
         int deleted = jdbcTemplate.update(
-                "DELETE FROM " + qualifiedOutboxTable() + " WHERE status = 'SENT' AND created_at < :cutoff",
+                "DELETE FROM " + qualifiedOutboxTable() + " WHERE status = 'PUBLISHED' AND created_at < :cutoff",
                 Map.of("cutoff", java.time.OffsetDateTime.ofInstant(cutoff, java.time.ZoneOffset.UTC))
         );
         if (deleted > 0) {

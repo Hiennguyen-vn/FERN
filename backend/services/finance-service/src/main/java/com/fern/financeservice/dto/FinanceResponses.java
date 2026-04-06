@@ -100,4 +100,13 @@ public final class FinanceResponses {
             boolean hasBlockingObligations
     ) {
     }
+
+    public record IntegrationEventReplayResponse(
+            String sourceEventId,
+            String eventType,
+            String status,
+            Instant processedAt,
+            String errorMessage
+    ) {
+    }
 }

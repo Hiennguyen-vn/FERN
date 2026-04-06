@@ -117,6 +117,12 @@ public class PayrollRunOrchestrator {
         PayrollRunRecord run = requirePayrollRunRecord(runId);
         PayrollPeriodRecord period = payrollPeriodService.requirePayrollPeriodRecord(run.payrollPeriodId());
         financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PREPARE);
+        // DOUBLE-CHECK PATTERN:
+        // 1st check (here): Early reject — avoids the expensive prefetchRecalculation()
+        //    call below when the run is already in a non-submittable state.
+        // 2nd check (inside transaction): Race-safe check — ensures another concurrent
+        //    request hasn't changed the status between now and the atomic UPDATE.
+        // Both checks are intentional and required for correctness + performance.
         if (!"DRAFT".equals(run.status()) && !"REJECTED".equals(run.status())) {
             throw new BadRequestException("Only draft or rejected payroll runs can be submitted");
         }

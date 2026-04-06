@@ -69,7 +69,14 @@ public class InventoryRepository {
         ));
     }
 
-    void applyBalanceDelta(Long regionId, Long outletId, Long ingredientId, BigDecimal delta, BigDecimal unitCost, boolean overwriteLastCountDateOnly) {
+    /**
+     * Applies a delta to the stock balance for a given ingredient at a given outlet.
+     *
+     * @param overwriteLastCountDate if {@code true}, also sets {@code last_count_date}
+     *        to the current date. This is used by the stock-count posting flow to record
+     *        that a physical count has been reconciled for this ingredient.
+     */
+    void applyBalanceDelta(Long regionId, Long outletId, Long ingredientId, BigDecimal delta, BigDecimal unitCost, boolean overwriteLastCountDate) {
         ensureBalanceRow(regionId, outletId, ingredientId);
         MapSqlParameterSource parameters = params(
                 "regionId", regionId,
@@ -78,12 +85,13 @@ public class InventoryRepository {
                 "delta", delta,
                 "unitCost", unitCost
         );
-        String sql = overwriteLastCountDateOnly
+        String sql = overwriteLastCountDate
                 ? """
                     UPDATE inventory.stock_balance
                     SET qty_on_hand = qty_on_hand + :delta,
                         qty_available = (qty_on_hand + :delta) - qty_reserved,
                         unit_cost = COALESCE(:unitCost, unit_cost),
+                        last_count_date = CURRENT_DATE,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE outlet_id = :outletId AND ingredient_id = :ingredientId
                     """
@@ -262,12 +270,43 @@ public class InventoryRepository {
     }
 
     /**
-     * Resolves the regionId for an outlet by looking up any existing stock_balance row.
-     * Falls back to 0L if no balance rows exist for this outlet (should not happen in normal operation).
+     * Resolves regionId for an outlet from existing stock_balance data.
+     *
+     * <p>Returns {@code null} when no stock rows exist yet (e.g., newly created outlets).
+     * Callers should fallback to org-service route metadata in that case.
      */
     Long resolveOutletRegionId(Long outletId) {
         return jdbcTemplate.query("""
                 SELECT region_id FROM inventory.stock_balance WHERE outlet_id = :outletId LIMIT 1
-                """, params("outletId", outletId), rs -> rs.next() ? rs.getLong("region_id") : 0L);
+                """, params("outletId", outletId), rs -> rs.next() ? rs.getLong("region_id") : null);
+    }
+
+    InboxEventStatusRecord findInboxEventStatus(String sourceEventId) {
+        return jdbcTemplate.query("""
+                SELECT source_event_id, event_type, payload::text AS payload, status, processed_at, error_message
+                FROM inventory.inbox_event
+                WHERE source_event_id = :sourceEventId
+                """, params("sourceEventId", sourceEventId), rs -> rs.next()
+                ? new InboxEventStatusRecord(
+                        rs.getString("source_event_id"),
+                        rs.getString("event_type"),
+                        rs.getString("payload"),
+                        rs.getString("status"),
+                        rs.getObject("processed_at", OffsetDateTime.class) == null
+                                ? null
+                                : rs.getObject("processed_at", OffsetDateTime.class).toInstant(),
+                        rs.getString("error_message")
+                )
+                : null);
+    }
+
+    record InboxEventStatusRecord(
+            String sourceEventId,
+            String eventType,
+            String payload,
+            String status,
+            Instant processedAt,
+            String errorMessage
+    ) {
     }
 }

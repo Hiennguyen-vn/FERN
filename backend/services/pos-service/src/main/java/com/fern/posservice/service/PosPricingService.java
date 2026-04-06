@@ -17,6 +17,24 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
+/**
+ * Resolves pricing for POS orders: menu lookup, line subtotals, tax, and promotional discounts.
+ *
+ * <h3>Tax Calculation Policy</h3>
+ * <p>Tax (VAT) is computed on the <strong>original unit price</strong> (before any discounts),
+ * consistent with Vietnamese VAT regulations (Circular 219/2013/TT-BTC). This means:
+ * <ul>
+ *     <li>Each line's {@code taxAmount = unitPrice × qty × taxRate}</li>
+ *     <li>Discounts are applied to the subtotal, not to individual line taxes</li>
+ *     <li>{@code totalAmount = subtotal + taxAmount - discountAmount}</li>
+ * </ul>
+ * <p>If the jurisdiction requires tax on the post-discount amount, this class must be updated.
+ *
+ * <h3>Discount Distribution</h3>
+ * <p>Order-level discounts are distributed proportionally across lines based on their
+ * share of the subtotal. The last line absorbs any rounding remainder to ensure
+ * the total discount matches exactly.
+ */
 @Service
 public class PosPricingService {
     private final PosCatalogClient catalogClient;

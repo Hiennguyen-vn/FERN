@@ -6,6 +6,8 @@ import com.fern.posservice.dto.PosResponses.PosSessionResponse;
 import com.fern.posservice.dto.PosResponses.SaleOrderLineResponse;
 import com.fern.posservice.dto.PosResponses.SaleOrderResponse;
 import com.fern.posservice.dto.PosResponses.SalePaymentResponse;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +24,13 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class PosStore {
+
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
+    private final ObjectMapper objectMapper;
+
+    public PosStore(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     // No injected jdbcTemplate — callers must supply the shard-resolved template.
 
@@ -222,14 +231,27 @@ public class PosStore {
                 """, batchParams);
     }
 
+    /**
+     * Retrieves the sale snapshot for a completed order.
+     *
+     * <p>P1-05 FIX: PostgreSQL jsonb columns return {@code PGobject} when using
+     * {@code rs.getObject(col, Map.class)}, causing {@code ClassCastException}.
+     * Instead, read the column as a String and deserialize with Jackson.
+     */
     public Map<String, Object> getSaleSnapshot(NamedParameterJdbcTemplate jdbcTemplate, Long saleOrderId) {
         return jdbcTemplate.query("""
-                SELECT order_snapshot
+                SELECT CAST(order_snapshot AS text) AS order_snapshot_text
                 FROM pos.sale_snapshot
                 WHERE sale_order_id = :saleOrderId
                 """, PosSql.params("saleOrderId", saleOrderId), rs -> {
             if (!rs.next()) return null;
-            return rs.getObject("order_snapshot", Map.class);
+            String json = rs.getString("order_snapshot_text");
+            if (json == null || json.isBlank()) return null;
+            try {
+                return objectMapper.readValue(json, MAP_TYPE);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new IllegalStateException("Failed to deserialize sale snapshot for order " + saleOrderId, e);
+            }
         });
     }
 

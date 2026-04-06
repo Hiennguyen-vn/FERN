@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.reset;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.financeservice.dto.FinanceResponses.IntegrationEventReplayResponse;
 import com.fern.financeservice.service.FinanceProcurementConsumer;
 import com.fern.platform.contracts.GoodsReceiptPostedLine;
 import com.fern.platform.contracts.ProcurementGoodsReceiptPostedEvent;
@@ -311,6 +312,59 @@ class FinanceProcurementConsumerArchitectureGapTest {
                 FROM finance.integration_event
                 WHERE source_event_id = 'gr-mark-gap-1'
                   AND status = 'PROCESSED'
+                """)).isEqualTo(1);
+    }
+
+    @Test
+    void shouldReplayFailedIntegrationEventViaReplayApiMethod() throws Exception {
+        SupplierPaymentRecordedEvent event = new SupplierPaymentRecordedEvent(
+                "payment-replay-api-1",
+                "procurement.supplier.payment.recorded",
+                Instant.parse("2026-03-27T15:00:00Z"),
+                "procurement-service",
+                "corr-payment-replay-api-1",
+                "idem-payment-replay-api-1",
+                9403L,
+                7001L,
+                Instant.parse("2026-03-27T15:00:00Z"),
+                new BigDecimal("42.75"),
+                "VND",
+                List.of(new SupplierPaymentAllocation(8203L, new BigDecimal("42.75"))),
+                3L
+        );
+        String payload = objectMapper.writeValueAsString(event);
+        AtomicBoolean failOnce = new AtomicBoolean(true);
+
+        doAnswer(invocation -> {
+            String sql = invocation.getArgument(0, String.class);
+            if (sql.contains("INSERT INTO finance_projection.reconciliation_snapshot")
+                    && failOnce.compareAndSet(true, false)) {
+                throw new DataAccessResourceFailureException("forced replayable projection failure");
+            }
+            return invocation.callRealMethod();
+        }).when(projectionJdbcTemplate).update(anyString(), any(MapSqlParameterSource.class));
+
+        consumer.consumeSupplierPaymentRecorded(payload);
+
+        assertThat(count("""
+                SELECT COUNT(*)
+                FROM finance.integration_event
+                WHERE source_event_id = 'payment-replay-api-1'
+                  AND status = 'FAILED'
+                """)).isEqualTo(1);
+
+        IntegrationEventReplayResponse replay = consumer.replayFailedIntegrationEvent("payment-replay-api-1");
+
+        assertThat(replay.status()).isEqualTo("PROCESSED");
+        assertThat(countProjection("""
+                SELECT COUNT(*)
+                FROM finance_projection.accounting_posting_projection
+                WHERE source_event_id = 'payment-replay-api-1'
+                """)).isEqualTo(1);
+        assertThat(countProjection("""
+                SELECT COUNT(*)
+                FROM finance_projection.reconciliation_snapshot
+                WHERE source_event_id = 'payment-replay-api-1'
                 """)).isEqualTo(1);
     }
 

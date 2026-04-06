@@ -110,4 +110,13 @@ public final class InventoryResponses {
             boolean hasBlockingOperations
     ) {
     }
+
+    public record InboxReplayResponse(
+            String sourceEventId,
+            String eventType,
+            String status,
+            Instant processedAt,
+            String errorMessage
+    ) {
+    }
 }

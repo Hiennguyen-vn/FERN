@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Service for customer CRUD and loyalty point management.
@@ -111,7 +112,10 @@ public class PosCustomerService {
     public List<CustomerResponse> searchCustomers(FernPrincipal principal, String query, int limit) {
         posAuthorizer.requirePermission(principal, PermissionCodes.POS_CUSTOMER_READ);
         int clampedLimit = Math.min(Math.max(limit, 1), MAX_PAGE_SIZE);
-        String pattern = "%" + (query == null ? "" : query.trim().toLowerCase()) + "%";
+        String trimmed = query == null ? "" : query.trim().toLowerCase();
+        // Use prefix-only matching (query%) to allow B-tree index usage.
+        // Leading-wildcard (%query%) would force a full table scan.
+        String pattern = trimmed + "%";
         return rootJdbcTemplate().query("""
                 SELECT id, customer_code, full_name, phone, email, dob, gender, loyalty_tier, loyalty_points,
                        total_spend, visit_count, status, note, created_at
@@ -174,19 +178,26 @@ public class PosCustomerService {
 
     /**
      * Accrues a customer visit after a sale order is completed.
-     * Increments visit_count, adds to total_spend, and earns loyalty points.
-     * This method is called within the completion transaction.
+     * Increments visit_count, adds to total_spend, earns loyalty points, and auto-upgrades tier.
+     *
+     * <p>This overload accepts an explicit {@link NamedParameterJdbcTemplate} so callers that
+     * operate on a shard-specific transaction can pass their own template. Customer data lives
+     * on the root shard, so the provided template <strong>must</strong> target the root database.
+     * If {@code null}, the root JDBC template is used (standalone / non-sharded callers).
+     *
+     * @param jdbcTemplate the JDBC template to use (pass {@code null} for default root template)
      */
-    public void accrueVisit(Long customerId, Long saleOrderId, Long outletId, BigDecimal totalAmount) {
+    @Transactional
+    public void accrueVisit(NamedParameterJdbcTemplate jdbcTemplate, Long customerId, Long saleOrderId, Long outletId, BigDecimal totalAmount) {
         if (customerId == null) {
             return;
         }
+        NamedParameterJdbcTemplate tpl = jdbcTemplate != null ? jdbcTemplate : rootJdbcTemplate();
         int earnedPoints = totalAmount
                 .divide(LOYALTY_EARN_DIVISOR, 0, RoundingMode.FLOOR)
                 .intValue();
-        NamedParameterJdbcTemplate jdbcTemplate = rootJdbcTemplate();
         // Update customer aggregates
-        jdbcTemplate.update("""
+        tpl.update("""
                 UPDATE pos.customer
                 SET visit_count = visit_count + 1,
                     total_spend = total_spend + :totalAmount,
@@ -201,12 +212,12 @@ public class PosCustomerService {
         // Insert loyalty earn transaction
         if (earnedPoints > 0) {
             // Read current balance after the update above
-            Long currentPoints = jdbcTemplate.queryForObject(
+            Long currentPoints = tpl.queryForObject(
                     "SELECT loyalty_points FROM pos.customer WHERE id = :id",
                     PosSql.params("id", customerId),
                     Long.class
             );
-            jdbcTemplate.update("""
+            tpl.update("""
                     INSERT INTO pos.loyalty_transaction (
                         customer_id, sale_order_id, outlet_id, txn_type, points, balance_after, description, created_at
                     ) VALUES (
@@ -221,6 +232,47 @@ public class PosCustomerService {
                     "description", "Earned from order completion"
             ));
         }
+        // M-01: Auto-upgrade loyalty tier based on total_spend thresholds
+        upgradeLoyaltyTier(tpl, customerId);
+    }
+
+    /**
+     * Convenience overload that uses the root JDBC template.
+     * Use this when calling from outside a shard-specific transaction.
+     */
+    @Transactional
+    public void accrueVisit(Long customerId, Long saleOrderId, Long outletId, BigDecimal totalAmount) {
+        accrueVisit(null, customerId, saleOrderId, outletId, totalAmount);
+    }
+
+    /**
+     * Auto-upgrades loyalty tier based on cumulative total_spend.
+     * Tiers: BRONZE (default) → SILVER (≥5M VND) → GOLD (≥20M VND) → PLATINUM (≥50M VND).
+     */
+    private void upgradeLoyaltyTier(NamedParameterJdbcTemplate tpl, Long customerId) {
+        BigDecimal totalSpend = tpl.queryForObject(
+                "SELECT total_spend FROM pos.customer WHERE id = :id",
+                PosSql.params("id", customerId),
+                BigDecimal.class
+        );
+        if (totalSpend == null) {
+            return;
+        }
+        String newTier;
+        if (totalSpend.compareTo(new BigDecimal("50000000")) >= 0) {
+            newTier = "PLATINUM";
+        } else if (totalSpend.compareTo(new BigDecimal("20000000")) >= 0) {
+            newTier = "GOLD";
+        } else if (totalSpend.compareTo(new BigDecimal("5000000")) >= 0) {
+            newTier = "SILVER";
+        } else {
+            newTier = "BRONZE";
+        }
+        tpl.update("""
+                UPDATE pos.customer
+                SET loyalty_tier = :newTier, updated_at = CURRENT_TIMESTAMP
+                WHERE id = :id AND (loyalty_tier IS NULL OR loyalty_tier != :newTier)
+                """, PosSql.params("newTier", newTier, "id", customerId));
     }
 
     /**

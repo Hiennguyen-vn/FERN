@@ -1,5 +1,7 @@
 package com.fern.posservice.service;
 
+import com.fern.platform.common.ResourceNotFoundException;
+
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.PermissionCodes;
 import com.fern.platform.observability.CorrelationId;
@@ -47,7 +49,7 @@ public class PosCatalogClient {
             FernServiceTokenSupport serviceTokenSupport,
             FernDownstreamClientFactory downstreamClientFactory,
             FernDownstreamErrorMapper errorMapper,
-            @Value("${fern.pos.menu-cache-ttl-seconds:60}") int menuCacheTtlSeconds
+            @Value("${fern.pos.menu-cache-ttl-seconds:15}") int menuCacheTtlSeconds
     ) {
         this.restClient = restClient;
         this.circuitBreaker = catalogCircuitBreaker;
@@ -55,10 +57,38 @@ public class PosCatalogClient {
         this.serviceTokenSupport = serviceTokenSupport;
         this.downstreamClientFactory = downstreamClientFactory;
         this.errorMapper = errorMapper;
+        // P1-04 FIX: Reduced default TTL from 60s to 15s to limit the window
+        // during which stale prices can cause incorrect order totals.
         this.menuCache = Caffeine.newBuilder()
                 .expireAfterWrite(Duration.ofSeconds(menuCacheTtlSeconds))
                 .maximumSize(200)
                 .build();
+    }
+
+    /**
+     * Invalidates the menu cache for a specific outlet and business date.
+     * Call when a price change event is received from catalog-service.
+     */
+    public void invalidateMenuCache(Long outletId, LocalDate businessDate) {
+        String cacheKey = outletId + ":" + businessDate;
+        menuCache.invalidate(cacheKey);
+    }
+
+    /**
+     * Invalidates all cached menus for a specific outlet (all business dates).
+     * Use for a full outlet price refresh.
+     */
+    public void invalidateMenuCacheForOutlet(Long outletId) {
+        String prefix = outletId + ":";
+        menuCache.asMap().keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
+    /**
+     * Invalidates the entire menu cache.
+     * Useful for admin-triggered global refresh.
+     */
+    public void invalidateAllMenuCaches() {
+        menuCache.invalidateAll();
     }
 
     public MenuResponse fetchMenu(FernPrincipal principal, Long outletId, LocalDate businessDate) {
@@ -148,8 +178,11 @@ public class PosCatalogClient {
                     )::contribute)
                     .retrieve()
                     .body(PromotionSnapshot.class)));
-        } catch (RuntimeException exception) {
-            // Promotion not found is not a fatal error — treat as no discount
+        } catch (ResourceNotFoundException exception) {
+            // P1-02 FIX: Only treat 404 (promotion not found) as "no discount".
+            // Other errors (network, 500, circuit-breaker) must propagate so the
+            // caller knows the promotion couldn't be validated — preventing silent
+            // price miscalculation during catalog-service outages.
             return null;
         }
     }

@@ -2,6 +2,10 @@ package com.fern.inventoryservice.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fern.inventoryservice.dto.InventoryResponses.InboxReplayResponse;
+import com.fern.platform.common.BadRequestException;
+import com.fern.platform.common.ConflictException;
+import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.contracts.GoodsReceiptPostedLine;
 import com.fern.platform.contracts.InventoryAdjustmentPostedEvent;
 import com.fern.platform.contracts.PosSaleCompletedEvent;
@@ -81,6 +85,39 @@ public class InventoryEventConsumerService {
 
     public void consumeGoodsReceiptPosted(ProcurementGoodsReceiptPostedEvent event) {
         consumeGoodsReceiptPosted(event, toJson(event));
+    }
+
+    public InboxReplayResponse replayFailedInboxEvent(String sourceEventId) {
+        if (sourceEventId == null || sourceEventId.isBlank()) {
+            throw new BadRequestException("Source event id is required");
+        }
+        InventoryRepository.InboxEventStatusRecord failedEvent = inventoryRepository.findInboxEventStatus(sourceEventId);
+        if (failedEvent == null) {
+            throw new ResourceNotFoundException("Inbox event not found: " + sourceEventId);
+        }
+        if (!"FAILED".equals(failedEvent.status())) {
+            throw new ConflictException("Only FAILED inbox events can be replayed");
+        }
+        replayByEventType(failedEvent.eventType(), failedEvent.payload());
+        InventoryRepository.InboxEventStatusRecord latest = inventoryRepository.findInboxEventStatus(sourceEventId);
+        if (latest == null) {
+            throw new IllegalStateException("Inbox event disappeared after replay: " + sourceEventId);
+        }
+        return new InboxReplayResponse(
+                latest.sourceEventId(),
+                latest.eventType(),
+                latest.status(),
+                latest.processedAt(),
+                latest.errorMessage()
+        );
+    }
+
+    private void replayByEventType(String eventType, String payload) {
+        switch (eventType) {
+            case POS_SALE_COMPLETED_TOPIC -> consumeSaleCompleted(payload);
+            case PROCUREMENT_GOODS_RECEIPT_POSTED_TOPIC -> consumeGoodsReceiptPosted(payload);
+            default -> throw new BadRequestException("Unsupported inbox event type for replay: " + eventType);
+        }
     }
 
     private void consumeSaleCompleted(PosSaleCompletedEvent event, String payload) {

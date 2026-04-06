@@ -9,6 +9,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.reset;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fern.inventoryservice.dto.InventoryResponses.InboxReplayResponse;
 import com.fern.platform.common.FernPrincipal;
 import com.fern.platform.common.FernPrincipalType;
 import com.fern.platform.common.PermissionCodes;
@@ -198,10 +199,10 @@ class InventoryInboxReplayIntegrationTest {
         assertThat(inboxError("sale-event-retry-failed")).isEqualTo("DataAccessResourceFailureException");
         assertThat(transactionCount("SALE_USAGE", "5003")).isZero();
 
-        // Retry: inbox allows re-processing FAILED events
-        inventoryEventConsumerService.consumeSaleCompleted(event);
+        InboxReplayResponse replay = inventoryEventConsumerService.replayFailedInboxEvent("sale-event-retry-failed");
 
         assertThat(inboxStatus("sale-event-retry-failed")).isEqualTo("PROCESSED");
+        assertThat(replay.status()).isEqualTo("PROCESSED");
         assertThat(transactionCount("SALE_USAGE", "5003")).isEqualTo(1);
     }
 
@@ -271,10 +272,10 @@ class InventoryInboxReplayIntegrationTest {
         assertThat(inboxError("receipt-event-retry-failed")).isEqualTo("DataAccessResourceFailureException");
         assertThat(transactionCount("PURCHASE_IN", "9401")).isZero();
 
-        // Retry: inbox allows re-processing FAILED events
-        inventoryEventConsumerService.consumeGoodsReceiptPosted(event);
+        InboxReplayResponse replay = inventoryEventConsumerService.replayFailedInboxEvent("receipt-event-retry-failed");
 
         assertThat(inboxStatus("receipt-event-retry-failed")).isEqualTo("PROCESSED");
+        assertThat(replay.status()).isEqualTo("PROCESSED");
         assertThat(transactionCount("PURCHASE_IN", "9401")).isEqualTo(1);
     }
 

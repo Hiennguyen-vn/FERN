@@ -11,4 +11,12 @@ public class IamAuthorizer {
             throw new ForbiddenException("Missing permission: " + permission);
         }
     }
+
+    public void requirePermissionOrSelf(FernPrincipal principal, String permission, Long userId) {
+        if (principal != null && principal.userId() != null && principal.userId().equals(userId)) {
+            return;
+        }
+
+        requirePermission(principal, permission);
+    }
 }

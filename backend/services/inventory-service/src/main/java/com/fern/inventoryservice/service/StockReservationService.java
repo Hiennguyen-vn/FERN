@@ -9,11 +9,13 @@ import com.fern.platform.common.ResourceNotFoundException;
 import com.fern.platform.contracts.InventoryAdjustmentPostedEvent;
 import com.fern.platform.contracts.PosSaleCompletedEvent;
 import com.fern.platform.contracts.RecipeUsageItem;
+import com.fern.platform.security.RedisSchedulerLock;
 import com.fern.platform.contracts.SaleReservationItem;
 import com.fern.platform.contracts.SaleReservationRequest;
 import com.fern.platform.contracts.SaleReservationResponse;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -36,24 +38,30 @@ public class StockReservationService {
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final InventoryAuthorizer inventoryAuthorizer;
     private final InventoryRepository inventoryRepository;
+    private final InventoryOrgClient inventoryOrgClient;
     private final InventoryProperties inventoryProperties;
     private final InventoryOutboxService inventoryOutboxService;
     private final Clock clock;
+    private final RedisSchedulerLock schedulerLock;
 
     public StockReservationService(
             NamedParameterJdbcTemplate jdbcTemplate,
             InventoryAuthorizer inventoryAuthorizer,
             InventoryRepository inventoryRepository,
+            InventoryOrgClient inventoryOrgClient,
             InventoryProperties inventoryProperties,
             InventoryOutboxService inventoryOutboxService,
-            Clock clock
+            Clock clock,
+            @org.springframework.lang.Nullable RedisSchedulerLock schedulerLock
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.inventoryAuthorizer = inventoryAuthorizer;
         this.inventoryRepository = inventoryRepository;
+        this.inventoryOrgClient = inventoryOrgClient;
         this.inventoryProperties = inventoryProperties;
         this.inventoryOutboxService = inventoryOutboxService;
         this.clock = clock;
+        this.schedulerLock = schedulerLock;
     }
 
     @Transactional
@@ -111,7 +119,7 @@ public class StockReservationService {
                     "expiresAt", expiresAt
             ));
         }
-        Long regionId = inventoryRepository.resolveOutletRegionId(request.outletId());
+        Long regionId = resolveOutletRegionId(request.outletId());
         lockReservationBalances(regionId, request.outletId(), aggregates.values().stream()
                 .map(ReservationAggregate::ingredientId)
                 .toList());
@@ -130,7 +138,7 @@ public class StockReservationService {
                     "uomCode", aggregate.uomCode(),
                     "qty", aggregate.qty()
             ));
-            applyReservationDelta(request.outletId(), aggregate.ingredientId(), aggregate.qty());
+            applyReservationDelta(regionId, request.outletId(), aggregate.ingredientId(), aggregate.qty());
         }
         return new SaleReservationResponse(reservationId, expiresAt);
     }
@@ -258,15 +266,23 @@ public class StockReservationService {
         return aggregates;
     }
 
-    private void applyReservationDelta(Long outletId, Long ingredientId, BigDecimal qtyReservedDelta) {
+    /**
+     * Applies a reservation delta to the stock balance.
+     * The {@code regionId} parameter is used for a defensive consistency check against
+     * the stored balance row — if the region_id in the DB does not match, we log a warning
+     * indicating a possible outlet-region mapping inconsistency.
+     */
+    private void applyReservationDelta(Long regionId, Long outletId, Long ingredientId, BigDecimal qtyReservedDelta) {
         int updated = jdbcTemplate.update("""
                 UPDATE inventory.stock_balance
                 SET qty_reserved = qty_reserved + :qtyReservedDelta,
                     qty_available = qty_available - :qtyReservedDelta,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE outlet_id = :outletId AND ingredient_id = :ingredientId
+                  AND region_id = :regionId
                   AND qty_available >= :qtyReservedDelta
-                """, inventoryRepository.params("qtyReservedDelta", qtyReservedDelta, "outletId", outletId, "ingredientId", ingredientId));
+                """, inventoryRepository.params("qtyReservedDelta", qtyReservedDelta,
+                "outletId", outletId, "ingredientId", ingredientId, "regionId", regionId));
         if (updated == 0) {
             BigDecimal available = jdbcTemplate.query("""
                     SELECT qty_available
@@ -389,7 +405,7 @@ public class StockReservationService {
 
     private void releaseReservation(ReservationRecord reservation) {
         List<ReservationLineRecord> lines = queryReservationLines(reservation.id());
-        Long regionId = inventoryRepository.resolveOutletRegionId(reservation.outletId());
+        Long regionId = resolveOutletRegionId(reservation.outletId());
         lockReservationBalances(regionId, reservation.outletId(), lines.stream()
                 .map(ReservationLineRecord::ingredientId)
                 .toList());
@@ -419,6 +435,14 @@ public class StockReservationService {
                     inventoryRepository.ensureBalanceRowPublic(regionId, outletId, ingredientId);
                     inventoryRepository.lockExistingStockBalance(outletId, ingredientId);
                 });
+    }
+
+    private Long resolveOutletRegionId(Long outletId) {
+        Long fromBalance = inventoryRepository.resolveOutletRegionId(outletId);
+        if (fromBalance != null) {
+            return fromBalance;
+        }
+        return inventoryOrgClient.requireOutlet(outletId).regionId();
     }
 
     private Instant instant(java.sql.ResultSet resultSet, String column) throws java.sql.SQLException {
@@ -496,9 +520,26 @@ public class StockReservationService {
     /**
      * Scheduled job that releases reservations whose TTL has expired but were never committed or cancelled.
      * Without this, a crashed POS client would leave qty_reserved permanently locked ("ghost reservation").
+     *
+     * <p>P1-03 FIX: Uses {@link RedisSchedulerLock} to prevent multiple instances from running
+     * the cleanup concurrently, which could cause double-release and stock data corruption.
      */
     @Scheduled(fixedDelayString = "${fern.inventory.reservation-expiry-cleanup-delay-ms:60000}")
     public void releaseExpiredReservations() {
+        if (schedulerLock != null && !schedulerLock.tryAcquire("inventory-reservation-cleanup", Duration.ofMinutes(2))) {
+            log.debug("releaseExpiredReservations: skipped — another instance holds the lock");
+            return;
+        }
+        try {
+            doReleaseExpiredReservations();
+        } finally {
+            if (schedulerLock != null) {
+                schedulerLock.release("inventory-reservation-cleanup");
+            }
+        }
+    }
+
+    private void doReleaseExpiredReservations() {
         Instant now = Instant.now(clock);
         List<ReservationRecord> expiredReservations = jdbcTemplate.query("""
                 SELECT id, outlet_id, business_date, source_order_id, status, expires_at, committed_at

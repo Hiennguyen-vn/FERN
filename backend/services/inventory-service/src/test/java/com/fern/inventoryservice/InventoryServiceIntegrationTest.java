@@ -112,6 +112,16 @@ class InventoryServiceIntegrationTest {
                           "closedAt": %s
                         }
                         """.formatted(outletStatus, closedAtJson).getBytes();
+            } else if ("/outlets/102".equals(path)) {
+                status = 200;
+                body = """
+                        {
+                          "id": 102,
+                          "regionId": 1,
+                          "status": "ACTIVE",
+                          "closedAt": null
+                        }
+                        """.getBytes();
             }
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(status, body.length);
@@ -1335,6 +1345,33 @@ class InventoryServiceIntegrationTest {
     }
 
     @Test
+    void shouldResolveRegionFromOrgWhenOutletHasNoStockRows() {
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.stock_balance
+                WHERE outlet_id = 102
+                """, Integer.class)).isZero();
+
+        assertThatThrownBy(() -> stockReservationService.reserveSale(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        102L,
+                        LocalDate.of(2026, 3, 27),
+                        5102L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(300L, "ING-300", "Cream", "L", new BigDecimal("1.0000")))
+                )
+        ))
+                .isInstanceOf(com.fern.platform.common.ConflictException.class)
+                .hasMessage("Insufficient available stock for ingredient 300");
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT region_id
+                FROM inventory.stock_balance
+                WHERE outlet_id = 102 AND ingredient_id = 300
+                """, Long.class)).isEqualTo(1L);
+    }
+
+    @Test
     void shouldReuseExpiredReservationWithoutDoubleCountingStock() {
         SaleReservationResponse initialReservation = stockReservationService.reserveSale(
                 servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
@@ -1777,6 +1814,69 @@ class InventoryServiceIntegrationTest {
                 .andExpect(jsonPath("$.blockingReservations").value(1))
                 .andExpect(jsonPath("$.blockingStockCountSessions").value(1))
                 .andExpect(jsonPath("$.hasBlockingOperations").value(true));
+    }
+
+    @Test
+    void shouldReplayFailedInboxEventViaInternalEndpoint() throws Exception {
+        SaleReservationResponse reservation = stockReservationService.reserveSale(
+                servicePrincipal(Set.of(PermissionCodes.INVENTORY_INTERNAL_RESERVE)),
+                new com.fern.platform.contracts.SaleReservationRequest(
+                        101L,
+                        LocalDate.of(2026, 3, 27),
+                        5407L,
+                        List.of(new com.fern.platform.contracts.SaleReservationItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+                )
+        );
+        PosSaleCompletedEvent event = new PosSaleCompletedEvent(
+                "manual-replay-1",
+                "pos.sale.completed",
+                Instant.parse("2026-03-27T11:30:00Z"),
+                "pos-service",
+                "corr-manual-replay-1",
+                "idem-manual-replay-1",
+                5407L,
+                7407L,
+                1L,
+                101L,
+                LocalDate.of(2026, 3, 27),
+                Instant.parse("2026-03-27T11:30:00Z"),
+                1L,
+                reservation.reservationId(),
+                List.of(),
+                java.util.Map.of(),
+                List.of(new RecipeUsageItem(200L, "ING-200", "Milk", "L", new BigDecimal("2.0000")))
+        );
+        jdbcTemplate.update("""
+                INSERT INTO inventory.inbox_event (
+                    id, source_event_id, source_service, event_type, partition_key, payload, status, received_at, error_message
+                ) VALUES (
+                    CAST(? AS uuid), ?, ?, ?, ?, CAST(? AS jsonb), 'FAILED', CURRENT_TIMESTAMP, ?
+                )
+                """,
+                "11111111-1111-1111-1111-111111111111",
+                "manual-replay-1",
+                "pos-service",
+                "pos.sale.completed",
+                "5407",
+                objectMapper.writeValueAsString(event),
+                "forced-failure");
+
+        mockMvc.perform(post("/internal/inventory/inbox-events/{sourceEventId}/replay", "manual-replay-1")
+                        .header("Authorization", serviceBearer(Set.of(PermissionCodes.INVENTORY_INTERNAL_READ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sourceEventId").value("manual-replay-1"))
+                .andExpect(jsonPath("$.status").value("PROCESSED"));
+
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT status
+                FROM inventory.inbox_event
+                WHERE source_event_id = 'manual-replay-1'
+                """, String.class)).isEqualTo("PROCESSED");
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM inventory.inventory_transaction
+                WHERE txn_type = 'SALE_USAGE' AND source_reference_id = '5407'
+                """, Integer.class)).isEqualTo(1);
     }
 
     @Test
