@@ -25,8 +25,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.MDC;
@@ -115,13 +115,33 @@ public class StockCountService {
                     """, inventoryRepository.params("outletId", record.outletId()), Long.class);
             batchInsertCountLines(jdbcTemplate, id, lineIngredientIds);
         }
-        for (Long ingredientId : lineIngredientIds) {
-            BigDecimal systemQty = currentOnHand(record.outletId(), ingredientId);
-            jdbcTemplate.update("""
+        if (!lineIngredientIds.isEmpty()) {
+            // Batch-load all system quantities in one query, then batch-update — avoids N+1 round-trips
+            Map<Long, BigDecimal> onHandByIngredient = jdbcTemplate.query("""
+                    SELECT ingredient_id, qty_on_hand
+                    FROM inventory.stock_balance
+                    WHERE outlet_id = :outletId
+                      AND ingredient_id IN (:ingredientIds)
+                    """, inventoryRepository.params("outletId", record.outletId(), "ingredientIds", lineIngredientIds),
+                    rs -> {
+                        Map<Long, BigDecimal> map = new java.util.HashMap<>();
+                        while (rs.next()) {
+                            map.put(rs.getLong("ingredient_id"), rs.getBigDecimal("qty_on_hand"));
+                        }
+                        return map;
+                    });
+            Map<Long, BigDecimal> safeOnHand = onHandByIngredient != null ? onHandByIngredient : Map.of();
+            org.springframework.jdbc.core.namedparam.SqlParameterSource[] batchParams = lineIngredientIds.stream()
+                    .map(ingredientId -> inventoryRepository.params(
+                            "systemQty", safeOnHand.getOrDefault(ingredientId, BigDecimal.ZERO),
+                            "sessionId", id,
+                            "ingredientId", ingredientId))
+                    .toArray(org.springframework.jdbc.core.namedparam.SqlParameterSource[]::new);
+            jdbcTemplate.batchUpdate("""
                     UPDATE inventory.stock_count_line
                     SET system_qty = :systemQty, variance_qty = 0, updated_at = CURRENT_TIMESTAMP
                     WHERE stock_count_session_id = :sessionId AND ingredient_id = :ingredientId
-                    """, inventoryRepository.params("systemQty", systemQty, "sessionId", id, "ingredientId", ingredientId));
+                    """, batchParams);
         }
         int updated = jdbcTemplate.update("""
                 UPDATE inventory.stock_count_session

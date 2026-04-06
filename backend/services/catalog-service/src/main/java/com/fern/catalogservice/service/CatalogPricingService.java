@@ -137,7 +137,9 @@ public class CatalogPricingService {
         } else if (outletId != null) {
             entities = productOutletAvailabilityRepository.findByIdOutletId(outletId);
         } else {
-            entities = productOutletAvailabilityRepository.findAll();
+            entities = productOutletAvailabilityRepository.findAll(
+                    org.springframework.data.domain.PageRequest.of(0, 1000)
+            ).getContent();
         }
         return entities.stream()
                 .map(this::toAvailabilityResponse)
