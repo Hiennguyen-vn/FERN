@@ -49,7 +49,10 @@ fern:
     inventory:
       base-url: ${FERN_INVENTORY_BASE_URL:http://localhost:8087}
       connect-timeout: 2s
-      read-timeout: 5s
+      # Kept short (2 s) because inventory reservation is on the critical cashier path.
+      # If inventory-service is slow, the circuit breaker opens after 4 failures and
+      # the recovery job will release any orphaned reservations after their TTL expires.
+      read-timeout: 2s
       circuit-breaker:
         failure-rate-threshold: 50
         minimum-number-of-calls: 4

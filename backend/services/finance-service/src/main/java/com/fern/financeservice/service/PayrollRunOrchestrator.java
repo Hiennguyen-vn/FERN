@@ -88,6 +88,19 @@ public class PayrollRunOrchestrator {
         financeAuthorizer.requireRegionPermission(principal, period.regionId(), PermissionCodes.FINANCE_PAYROLL_PREPARE);
         PrefetchedRecalculation prefetched = prefetchRecalculation(period, correlationId, actorId(principal));
         Long runId = transactionTemplate.execute(status -> {
+            // Idempotency guard: only one active (DRAFT/SUBMITTED/APPROVED) run per period is allowed.
+            // Prevents duplicate runs from double-clicks, retries, or concurrent requests.
+            Integer activeCount = jdbcTemplate.queryForObject("""
+                    SELECT COUNT(*) FROM finance.payroll_run
+                    WHERE payroll_period_id = :periodId
+                      AND status IN ('DRAFT', 'SUBMITTED', 'APPROVED')
+                    """, params("periodId", request.payrollPeriodId()), Integer.class);
+            if (activeCount != null && activeCount > 0) {
+                throw new com.fern.platform.common.ConflictException(
+                    "An active payroll run already exists for this period. "
+                    + "Reject or complete the existing run before creating a new one."
+                );
+            }
             Long createdRunId = insertForId(jdbcTemplate, """
                     INSERT INTO finance.payroll_run (
                         payroll_period_id, run_code, run_date, status, total_amount, processed_by_user_id, note, created_at, updated_at

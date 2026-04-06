@@ -178,18 +178,20 @@ public class PosOrderService {
     }
 
     public SaleOrderResponse getOrder(FernPrincipal principal, Long id) {
-        // Use root template to resolve regionId/outletId, then switch to shard-specific template for line/payment queries
-        OrderRecord order = store.requireOrder(rootJdbcTemplate(), id);
-        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
-        posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_READ);
+        // Lightweight shard-key lookup (id, region_id, outlet_id only), then full fetch on the correct shard.
+        PosStore.OrderShardKey key = store.requireOrderShardKey(rootJdbcTemplate(), id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(key.regionId(), key.outletId());
+        posAuthorizer.requireRoutePermission(principal, key.regionId(), key.outletId(), PermissionCodes.POS_ORDER_READ);
+        OrderRecord order = store.requireOrder(jdbcTemplate, id);
         CustomerSummaryResponse customerSummary = store.resolveCustomerSummary(rootJdbcTemplate(), order.customerId());
-        return store.mapOrder(jdbcTemplate, order, customerSummary);
+        String tableName = dineInService.resolveTableName(jdbcTemplate, order.tableId());
+        return store.mapOrder(jdbcTemplate, order, customerSummary, tableName);
     }
 
     public java.util.Map<String, Object> getSaleOrderSnapshot(FernPrincipal principal, Long id) {
-        OrderRecord order = store.requireOrder(rootJdbcTemplate(), id);
-        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
-        posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_READ);
+        PosStore.OrderShardKey key = store.requireOrderShardKey(rootJdbcTemplate(), id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(key.regionId(), key.outletId());
+        posAuthorizer.requireRoutePermission(principal, key.regionId(), key.outletId(), PermissionCodes.POS_ORDER_READ);
         java.util.Map<String, Object> snapshot = store.getSaleSnapshot(jdbcTemplate, id);
         if (snapshot == null) {
             throw new com.fern.platform.common.ResourceNotFoundException("Sale snapshot not available for this order");
@@ -204,17 +206,19 @@ public class PosOrderService {
         return store.listOrdersBySession(jdbcTemplate, posSessionId, limit).stream()
                 .map(order -> {
                     CustomerSummaryResponse cs = store.resolveCustomerSummary(rootJdbcTemplate(), order.customerId());
+                    String tableName = dineInService.resolveTableName(jdbcTemplate, order.tableId());
                     return store.mapOrder(order, store.queryOrderLines(jdbcTemplate, order.id()),
-                            store.queryPayments(jdbcTemplate, order.id()), cs);
+                            store.queryPayments(jdbcTemplate, order.id()), cs, tableName);
                 })
                 .toList();
     }
 
     public SaleOrderResponse updateOrder(FernPrincipal principal, Long id, UpdateSaleOrderRequest request) {
-        OrderRecord order = store.requireOrder(rootJdbcTemplate(), id);
-        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
-        TransactionTemplate transactionTemplate = transactionTemplate(order.regionId(), order.outletId());
-        posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_UPDATE);
+        PosStore.OrderShardKey key = store.requireOrderShardKey(rootJdbcTemplate(), id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(key.regionId(), key.outletId());
+        TransactionTemplate transactionTemplate = transactionTemplate(key.regionId(), key.outletId());
+        posAuthorizer.requireRoutePermission(principal, key.regionId(), key.outletId(), PermissionCodes.POS_ORDER_UPDATE);
+        OrderRecord order = store.requireOrder(jdbcTemplate, id);
         ensureOrderOpen(order);
         ensureNoSuccessfulPayments(jdbcTemplate, id);
         customerService.requireActiveCustomer(request.customerId());
@@ -268,8 +272,9 @@ public class PosOrderService {
             AddPaymentRequest request
     ) {
         requireIdempotencyKey(idempotencyKey);
-        OrderRecord order = store.requireOrder(rootJdbcTemplate(), id);
-        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
+        PosStore.OrderShardKey key = store.requireOrderShardKey(rootJdbcTemplate(), id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(key.regionId(), key.outletId());
+        OrderRecord order = store.requireOrder(jdbcTemplate, id);
         TransactionTemplate transactionTemplate = transactionTemplate(order.regionId(), order.outletId());
         posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_UPDATE);
         ensureOrderOpen(order);
@@ -398,10 +403,11 @@ public class PosOrderService {
     }
 
     public SaleOrderResponse completeOrder(FernPrincipal principal, Long id, String correlationId) {
-        OrderRecord order = store.requireOrder(rootJdbcTemplate(), id);
-        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(order.regionId(), order.outletId());
-        TransactionTemplate transactionTemplate = transactionTemplate(order.regionId(), order.outletId());
-        posAuthorizer.requireRoutePermission(principal, order.regionId(), order.outletId(), PermissionCodes.POS_ORDER_COMPLETE);
+        PosStore.OrderShardKey key = store.requireOrderShardKey(rootJdbcTemplate(), id);
+        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(key.regionId(), key.outletId());
+        TransactionTemplate transactionTemplate = transactionTemplate(key.regionId(), key.outletId());
+        posAuthorizer.requireRoutePermission(principal, key.regionId(), key.outletId(), PermissionCodes.POS_ORDER_COMPLETE);
+        OrderRecord order = store.requireOrder(jdbcTemplate, id);
         if (isCompletionReplay(order)) {
             return getOrder(principal, id);
         }

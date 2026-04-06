@@ -74,6 +74,33 @@ public class PosStore {
         return record;
     }
 
+    /**
+     * Lightweight shard-key lookup: fetches only {@code id, region_id, outlet_id} from the
+     * root (or any) shard template to resolve which shard owns this order.
+     *
+     * <p>Use this instead of {@link #requireOrder} when the only goal is to determine
+     * {@code regionId}/{@code outletId} for subsequent shard routing — avoids pulling the full
+     * order row from the root template and then again from the shard template.
+     *
+     * <p>Invariant: {@code region_id} and {@code outlet_id} are immutable after order creation,
+     * so reading them from any replica/root is safe.
+     */
+    public OrderShardKey requireOrderShardKey(NamedParameterJdbcTemplate jdbcTemplate, Long id) {
+        OrderShardKey key = jdbcTemplate.query("""
+                SELECT id, region_id, outlet_id
+                FROM pos.sale_order
+                WHERE id = :id
+                """, PosSql.params("id", id), rs -> rs.next()
+                ? new OrderShardKey(rs.getLong("id"), rs.getLong("region_id"), rs.getLong("outlet_id"))
+                : null);
+        if (key == null) {
+            throw new ResourceNotFoundException("Sale order not found");
+        }
+        return key;
+    }
+
+    public record OrderShardKey(Long id, Long regionId, Long outletId) {}
+
     public OrderRecord requireOrder(NamedParameterJdbcTemplate jdbcTemplate, Long id) {
         return requireOrder(jdbcTemplate, id, false);
     }
@@ -297,20 +324,18 @@ public class PosStore {
     }
 
     public SaleOrderResponse mapOrder(NamedParameterJdbcTemplate jdbcTemplate, OrderRecord order,
-                                      CustomerSummaryResponse customerSummary) {
+                                      CustomerSummaryResponse customerSummary, String tableName) {
         return mapOrder(order, queryOrderLines(jdbcTemplate, order.id()),
-                queryPayments(jdbcTemplate, order.id()), customerSummary);
+                queryPayments(jdbcTemplate, order.id()), customerSummary, tableName);
     }
 
     public SaleOrderResponse mapOrder(
             OrderRecord order,
             List<SaleOrderLineResponse> lines,
             List<SalePaymentResponse> payments,
-            CustomerSummaryResponse customerSummary
+            CustomerSummaryResponse customerSummary,
+            String tableName
     ) {
-        // Resolve table name if tableId is set
-        String tableName = null;
-        // Table name is resolved by the caller via DineInService if needed
         return new SaleOrderResponse(
                 order.id(),
                 order.orderNumber(),

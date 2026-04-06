@@ -431,7 +431,8 @@ public class StockReservationService {
                 .distinct()
                 .sorted()
                 .forEach(ingredientId -> {
-                    // BUG-008: Ensure balance row exists before locking — handles ingredients never stocked at this outlet
+                    // Upsert balance row before acquiring a pessimistic lock.
+                    // Prevents a "row not found" deadlock for ingredients that have never been stocked at this outlet.
                     inventoryRepository.ensureBalanceRowPublic(regionId, outletId, ingredientId);
                     inventoryRepository.lockExistingStockBalance(outletId, ingredientId);
                 });
