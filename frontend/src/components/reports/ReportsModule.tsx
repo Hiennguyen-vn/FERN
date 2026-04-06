@@ -12,6 +12,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 import { useReportData, type LowStockAlert } from '@/hooks/use-dashboard-data';
+import { useScopeIds } from '@/lib/scope/ScopeContext';
 
 type ReportTab = 'revenue' | 'inventory';
 
@@ -61,7 +62,8 @@ export function ReportsModule() {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 function RevenueDashboard() {
-  const { outletRevenue, loading } = useReportData();
+  const { scope } = useScopeIds();
+  const { outletRevenue, loading } = useReportData(scope);
 
   const totalRevenue = outletRevenue.reduce((s, o) => s + o.revenue, 0);
   const totalOrders = outletRevenue.reduce((s, o) => s + o.orders, 0);
@@ -250,7 +252,8 @@ function RevenueDashboard() {
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 function InventoryHealth() {
-  const { lowStockItems, loading } = useReportData();
+  const { scope } = useScopeIds();
+  const { lowStockItems, loading } = useReportData(scope);
 
   const oosCount = lowStockItems.filter(i => i.quantity === 0).length;
   const lowCount = lowStockItems.filter(i => i.quantity > 0).length;

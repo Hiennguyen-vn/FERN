@@ -13,6 +13,7 @@ export default function POSPage() {
     <POSModule
       outletName={scope.outletName || 'Downtown Flagship'}
       operatorName={user.displayName}
+      outletId={scope.outletId}
     />
   );
 }

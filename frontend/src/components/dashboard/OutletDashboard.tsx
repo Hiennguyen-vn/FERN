@@ -102,7 +102,7 @@ interface OutletDashboardProps {
 }
 
 export function OutletDashboard({ scope }: OutletDashboardProps) {
-  const { kpis, recentOrders, lowStock, loading, refresh } = useDashboardData();
+  const { kpis, recentOrders, lowStock, loading, refresh } = useDashboardData(scope);
   const [sessionActive, setSessionActive] = useState(true);
   const outletName = scope.outletName || 'All Outlets';
 
