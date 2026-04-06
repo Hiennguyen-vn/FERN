@@ -203,12 +203,30 @@ public class PosOrderService {
         SessionRecord session = store.requireSession(rootJdbcTemplate(), posSessionId);
         NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(session.regionId(), session.outletId());
         posAuthorizer.requireRoutePermission(principal, session.regionId(), session.outletId(), PermissionCodes.POS_ORDER_READ);
-        return store.listOrdersBySession(jdbcTemplate, posSessionId, limit).stream()
+        List<PosStore.OrderRecord> orders = store.listOrdersBySession(jdbcTemplate, posSessionId, limit);
+        if (orders.isEmpty()) {
+            return List.of();
+        }
+        List<Long> orderIds = orders.stream().map(PosStore.OrderRecord::id).toList();
+        java.util.Set<Long> customerIds = orders.stream()
+                .map(PosStore.OrderRecord::customerId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Map<Long, CustomerSummaryResponse> customerMap =
+                store.resolveCustomerSummaries(rootJdbcTemplate(), customerIds);
+        java.util.Map<Long, List<com.fern.posservice.dto.PosResponses.SaleOrderLineResponse>> linesMap =
+                store.queryOrderLinesBatch(jdbcTemplate, orderIds);
+        java.util.Map<Long, List<com.fern.posservice.dto.PosResponses.SalePaymentResponse>> paymentsMap =
+                store.queryPaymentsBatch(jdbcTemplate, orderIds);
+        return orders.stream()
                 .map(order -> {
-                    CustomerSummaryResponse cs = store.resolveCustomerSummary(rootJdbcTemplate(), order.customerId());
                     String tableName = dineInService.resolveTableName(jdbcTemplate, order.tableId());
-                    return store.mapOrder(order, store.queryOrderLines(jdbcTemplate, order.id()),
-                            store.queryPayments(jdbcTemplate, order.id()), cs, tableName);
+                    return store.mapOrder(
+                            order,
+                            linesMap.getOrDefault(order.id(), List.of()),
+                            paymentsMap.getOrDefault(order.id(), List.of()),
+                            customerMap.get(order.customerId()),
+                            tableName);
                 })
                 .toList();
     }

@@ -6,6 +6,7 @@ import com.fern.catalogservice.domain.ProductPriceEntity;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,7 +14,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface ProductPriceRepository extends JpaRepository<ProductPriceEntity, Long> {
     @EntityGraph(attributePaths = {"product"})
-    List<ProductPriceEntity> findAllByOrderByEffectiveFromDescIdDesc();
+    List<ProductPriceEntity> findAllByOrderByEffectiveFromDescIdDesc(Pageable pageable);
 
     @Query("""
             select (count(p) > 0)

@@ -17,6 +17,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -274,31 +276,49 @@ public class OutletService {
     }
 
     private void ensureOutletCanBeClosed(FernPrincipal principal, Long outletId) {
-        if (orgPosClient.hasOpenSessions(outletId, principal)) {
-            throw new ConflictException("Cannot close outlet while open POS sessions still exist");
-        }
-        OrgInventoryClient.OutletCloseCheck inventoryCheck = orgInventoryClient.getOutletCloseCheck(outletId, principal);
-        if (inventoryCheck.hasBlockingOperations()) {
-            throw new ConflictException(
-                    "Cannot close outlet while inventory workflows remain open: "
-                            + "reservations=" + inventoryCheck.blockingReservations()
-                            + ", stockCountSessions=" + inventoryCheck.blockingStockCountSessions()
-            );
-        }
-        OrgProcurementClient.OutletCloseCheck procurementCheck = orgProcurementClient.getOutletCloseCheck(outletId, principal);
-        if (procurementCheck.hasBlockingDocuments()) {
-            throw new ConflictException(
-                    "Cannot close outlet while procurement documents remain open: "
-                            + "purchaseOrders=" + procurementCheck.blockingPurchaseOrders()
-                            + ", goodsReceipts=" + procurementCheck.blockingGoodsReceipts()
-                            + ", supplierInvoices=" + procurementCheck.blockingSupplierInvoices()
-            );
-        }
-        OrgFinanceClient.OutletCloseCheck financeCheck = orgFinanceClient.getOutletCloseCheck(outletId, principal);
-        if (financeCheck.hasBlockingObligations()) {
-            throw new ConflictException(
-                    "Cannot close outlet while finance obligations remain open: payrollRuns=" + financeCheck.blockingPayrollRuns()
-            );
+        CompletableFuture<Boolean> posFuture =
+                CompletableFuture.supplyAsync(() -> orgPosClient.hasOpenSessions(outletId, principal));
+        CompletableFuture<OrgInventoryClient.OutletCloseCheck> inventoryFuture =
+                CompletableFuture.supplyAsync(() -> orgInventoryClient.getOutletCloseCheck(outletId, principal));
+        CompletableFuture<OrgProcurementClient.OutletCloseCheck> procurementFuture =
+                CompletableFuture.supplyAsync(() -> orgProcurementClient.getOutletCloseCheck(outletId, principal));
+        CompletableFuture<OrgFinanceClient.OutletCloseCheck> financeFuture =
+                CompletableFuture.supplyAsync(() -> orgFinanceClient.getOutletCloseCheck(outletId, principal));
+        try {
+            CompletableFuture.allOf(posFuture, inventoryFuture, procurementFuture, financeFuture).join();
+            if (posFuture.get()) {
+                throw new ConflictException("Cannot close outlet while open POS sessions still exist");
+            }
+            OrgInventoryClient.OutletCloseCheck inventoryCheck = inventoryFuture.get();
+            if (inventoryCheck.hasBlockingOperations()) {
+                throw new ConflictException(
+                        "Cannot close outlet while inventory workflows remain open: "
+                                + "reservations=" + inventoryCheck.blockingReservations()
+                                + ", stockCountSessions=" + inventoryCheck.blockingStockCountSessions()
+                );
+            }
+            OrgProcurementClient.OutletCloseCheck procurementCheck = procurementFuture.get();
+            if (procurementCheck.hasBlockingDocuments()) {
+                throw new ConflictException(
+                        "Cannot close outlet while procurement documents remain open: "
+                                + "purchaseOrders=" + procurementCheck.blockingPurchaseOrders()
+                                + ", goodsReceipts=" + procurementCheck.blockingGoodsReceipts()
+                                + ", supplierInvoices=" + procurementCheck.blockingSupplierInvoices()
+                );
+            }
+            OrgFinanceClient.OutletCloseCheck financeCheck = financeFuture.get();
+            if (financeCheck.hasBlockingObligations()) {
+                throw new ConflictException(
+                        "Cannot close outlet while finance obligations remain open: payrollRuns=" + financeCheck.blockingPayrollRuns()
+                );
+            }
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof RuntimeException re) throw re;
+            throw new com.fern.platform.common.DownstreamUnavailableException("Outlet close check failed", cause);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new com.fern.platform.common.DownstreamUnavailableException("Outlet close check interrupted", e);
         }
     }
 

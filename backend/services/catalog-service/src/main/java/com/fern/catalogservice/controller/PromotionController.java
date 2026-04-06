@@ -37,10 +37,11 @@ public class PromotionController {
     public List<PromotionResponse> list(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam(required = false) String scopeType,
-            @RequestParam(required = false) Long scopeId
+            @RequestParam(required = false) Long scopeId,
+            @RequestParam(required = false) Integer limit
     ) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_PROMOTION_READ);
-        return promotionService.listPromotions(principal, scopeType, scopeId);
+        return promotionService.listPromotions(principal, scopeType, scopeId, com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @Operation(summary = "Create or execute Catalog — Promotions")

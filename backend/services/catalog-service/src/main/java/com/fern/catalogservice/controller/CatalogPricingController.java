@@ -38,9 +38,9 @@ public class CatalogPricingController {
 
     @Operation(summary = "Get Catalog — Pricing")
     @GetMapping("/tax-rates")
-    public List<TaxRateResponse> listTaxRates(@AuthenticationPrincipal FernPrincipal principal) {
+    public List<TaxRateResponse> listTaxRates(@AuthenticationPrincipal FernPrincipal principal, @RequestParam(required = false) Integer limit) {
         catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRICE_READ);
-        return catalogPricingService.listTaxRates();
+        return catalogPricingService.listTaxRates(com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @Operation(summary = "Get Catalog — Pricing")
@@ -70,9 +70,9 @@ public class CatalogPricingController {
 
     @Operation(summary = "Get Catalog — Pricing")
     @GetMapping("/product-prices")
-    public List<ProductPriceResponse> listProductPrices(@AuthenticationPrincipal FernPrincipal principal) {
+    public List<ProductPriceResponse> listProductPrices(@AuthenticationPrincipal FernPrincipal principal, @RequestParam(required = false) Integer limit) {
         catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRICE_READ);
-        return catalogPricingService.listProductPrices();
+        return catalogPricingService.listProductPrices(com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @Operation(summary = "Get Catalog — Pricing")
@@ -105,10 +105,11 @@ public class CatalogPricingController {
     public List<ProductAvailabilityResponse> listAvailability(
             @AuthenticationPrincipal FernPrincipal principal,
             @RequestParam(required = false) Long productId,
-            @RequestParam(required = false) Long outletId
+            @RequestParam(required = false) Long outletId,
+            @RequestParam(required = false) Integer limit
     ) {
         catalogAuthorizer.requirePermissionAnyScope(principal, PermissionCodes.CATALOG_PRICE_READ);
-        return catalogPricingService.listAvailability(productId, outletId);
+        return catalogPricingService.listAvailability(productId, outletId, com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @Operation(summary = "Update Catalog — Pricing")

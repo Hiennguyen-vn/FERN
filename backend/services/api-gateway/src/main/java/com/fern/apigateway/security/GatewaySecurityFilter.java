@@ -282,7 +282,10 @@ public class GatewaySecurityFilter implements GlobalFilter, Ordered {
                 .next()
                 .defaultIfEmpty(0L)
                 .map(count -> count <= limit)
-                .onErrorReturn(true);
+                .onErrorResume(exception -> {
+                    LOGGER.warn("rate_limit_redis_error key={} — failing closed to deny request", key, exception);
+                    return Mono.just(false);
+                });
     }
 
     private String clientKey(ServerWebExchange exchange) {

@@ -77,26 +77,40 @@ public class FernJwtService {
     }
 
     /**
-     * Emits a startup warning when any key ring falls back to the shared FERN_JWT_SECRET
-     * instead of dedicated PEM keypairs.
+     * Enforces that all three JWT key rings use dedicated PEM keypairs when
+     * {@code fern.security.jwt.allow-insecure-default-secret} is {@code false} (the default
+     * for production).  In shared-secret fallback mode all three rings are derived
+     * deterministically from the same secret — a single secret compromise exposes all rings
+     * simultaneously.
      *
-     * <p>In this fallback mode all three key rings (user / gateway / service) are derived
-     * deterministically from the same secret — they are namespaced so the resulting RSA keys
-     * are mathematically distinct, but a single secret compromise exposes all three rings at
-     * once.  Production deployments MUST supply per-ring PEM keypairs via:
-     * {@code fern.security.jwt.user.private-key-pem / public-key-pem},
-     * {@code fern.security.jwt.gateway.*}, and {@code fern.security.jwt.service.*}.
+     * <p>Local/test environments may set {@code allow-insecure-default-secret: true} to
+     * bypass this check and use the built-in default secret.
+     *
+     * @throws IllegalStateException if any ring is missing PEM keypairs and the insecure
+     *     default secret is not explicitly allowed
      */
     private static void warnIfUsingSharedSecretFallback(FernJwtProperties properties) {
         boolean userHasPem = hasPem(properties.getUser());
         boolean gatewayHasPem = hasPem(properties.getGateway());
         boolean serviceHasPem = hasPem(properties.getService());
         if (!userHasPem || !gatewayHasPem || !serviceHasPem) {
+            if (!properties.isAllowInsecureDefaultSecret()) {
+                throw new IllegalStateException(
+                    "[SECURITY] All JWT key rings must use dedicated PEM keypairs in production. "
+                    + "Missing PEM for: "
+                    + (!userHasPem ? "user " : "")
+                    + (!gatewayHasPem ? "gateway " : "")
+                    + (!serviceHasPem ? "service" : "")
+                    + ". Configure fern.security.jwt.{user,gateway,service}.private-key-pem and "
+                    + "public-key-pem, or set fern.security.jwt.allow-insecure-default-secret=true "
+                    + "for local/test environments only."
+                );
+            }
             log.warn(
                 "[SECURITY] One or more JWT key rings are using the shared FERN_JWT_SECRET fallback "
                 + "(user.pem={}, gateway.pem={}, service.pem={}). "
-                + "Configure dedicated PEM keypairs for each ring in production to limit blast radius "
-                + "if the shared secret is ever compromised.",
+                + "This is only acceptable in local/test environments. "
+                + "Configure dedicated PEM keypairs for each ring in production.",
                 userHasPem, gatewayHasPem, serviceHasPem
             );
         }

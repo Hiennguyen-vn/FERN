@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fern.platform.common.BadRequestException;
 import com.fern.platform.common.ConflictException;
 import com.fern.platform.common.DownstreamUnavailableException;
+import com.fern.platform.common.ResourceNotFoundException;
 import java.io.IOException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientResponseException;
@@ -24,7 +25,8 @@ public class PosDownstreamErrorHandler {
         }
         return switch (exception.getStatusCode().value()) {
             case 400 -> new BadRequestException(message);
-            case 404, 409 -> new ConflictException(message);
+            case 404 -> new ResourceNotFoundException(message);
+            case 409 -> new ConflictException(message);
             default -> new DownstreamUnavailableException(serviceName + " is unavailable", exception);
         };
     }

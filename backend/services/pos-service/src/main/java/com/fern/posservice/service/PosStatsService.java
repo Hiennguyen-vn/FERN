@@ -48,8 +48,20 @@ public class PosStatsService {
         }
 
         LinkedHashMap<Long, OutletBusinessContext> contexts = resolveOutletContexts(principal, normalizedOutletIds);
+        // findLatestSessionsByOutlet already groups by shard internally and returns sessions keyed by outletId.
+        // We also need the per-shard jdbc to fetch stats from the correct shard.
         Map<Long, SessionRecord> sessionByOutlet = findLatestSessionsByOutlet(contexts);
-        Map<Long, SessionStats> statsBySessionId = findStatsBySessionId(sessionByOutlet.values().stream().map(SessionRecord::id).toList());
+
+        // Group sessions by their shard (resolved via regionId+outletId) to fetch stats per-shard.
+        Map<NamedParameterJdbcTemplate, List<Long>> sessionIdsByJdbc = new java.util.LinkedHashMap<>();
+        for (SessionRecord session : sessionByOutlet.values()) {
+            NamedParameterJdbcTemplate jt = jdbcTemplate(session.regionId(), session.outletId());
+            sessionIdsByJdbc.computeIfAbsent(jt, ignored -> new ArrayList<>()).add(session.id());
+        }
+        Map<Long, SessionStats> statsBySessionId = new java.util.LinkedHashMap<>();
+        for (Map.Entry<NamedParameterJdbcTemplate, List<Long>> entry : sessionIdsByJdbc.entrySet()) {
+            statsBySessionId.putAll(findStatsBySessionIdOnShard(entry.getKey(), entry.getValue()));
+        }
 
         List<OutletTodayStatResponse> rows = new ArrayList<>(normalizedOutletIds.size());
         for (Long outletId : normalizedOutletIds) {
@@ -105,65 +117,69 @@ public class PosStatsService {
     }
 
     private Map<Long, SessionRecord> findLatestSessionsByOutlet(Map<Long, OutletBusinessContext> contexts) {
-        List<Long> outletIds = new ArrayList<>(contexts.keySet());
-        List<LocalDate> businessDates = contexts.values().stream()
-                .map(OutletBusinessContext::businessDate)
-                .distinct()
-                .toList();
-        if (outletIds.isEmpty() || businessDates.isEmpty()) {
+        if (contexts.isEmpty()) {
             return Map.of();
         }
-
-        NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(contexts.values().iterator().next().regionId(), outletIds.get(0));
-        List<SessionRecord> sessions = jdbcTemplate.query("""
-                SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
-                       status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
-                FROM pos.pos_session
-                WHERE outlet_id IN (:outletIds)
-                  AND business_date IN (:businessDates)
-                ORDER BY outlet_id ASC, opened_at DESC, id DESC
-                """, PosSql.params(
-                "outletIds", outletIds,
-                "businessDates", businessDates
-        ), (rs, rowNum) -> new SessionRecord(
-                rs.getLong("id"),
-                rs.getString("session_code"),
-                rs.getLong("region_id"),
-                rs.getLong("outlet_id"),
-                rs.getString("terminal_id"),
-                rs.getString("currency_code"),
-                rs.getObject("cashier_user_id", Long.class),
-                rs.getObject("manager_user_id", Long.class),
-                rs.getObject("business_date", LocalDate.class),
-                rs.getString("status"),
-                rs.getString("note"),
-                PosSql.instant(rs, "opened_at"),
-                PosSql.instant(rs, "closed_at"),
-                PosSql.instant(rs, "reconciled_at"),
-                rs.getBigDecimal("expected_cash_amount"),
-                rs.getBigDecimal("counted_cash_amount"),
-                rs.getBigDecimal("discrepancy_amount")
-        ));
+        // Group outlets by shard so each shard is queried independently.
+        Map<NamedParameterJdbcTemplate, List<Map.Entry<Long, OutletBusinessContext>>> byJdbc = new java.util.LinkedHashMap<>();
+        for (Map.Entry<Long, OutletBusinessContext> entry : contexts.entrySet()) {
+            NamedParameterJdbcTemplate jt = jdbcTemplate(entry.getValue().regionId(), entry.getKey());
+            byJdbc.computeIfAbsent(jt, ignored -> new ArrayList<>()).add(entry);
+        }
 
         Map<Long, SessionRecord> latestByOutlet = new LinkedHashMap<>();
-        for (SessionRecord session : sessions) {
-            OutletBusinessContext context = contexts.get(session.outletId());
-            if (context == null || !context.businessDate().equals(session.businessDate()) || latestByOutlet.containsKey(session.outletId())) {
-                continue;
+        for (Map.Entry<NamedParameterJdbcTemplate, List<Map.Entry<Long, OutletBusinessContext>>> shardEntry : byJdbc.entrySet()) {
+            NamedParameterJdbcTemplate jdbcTemplate = shardEntry.getKey();
+            List<Long> shardOutletIds = shardEntry.getValue().stream().map(Map.Entry::getKey).toList();
+            List<LocalDate> businessDates = shardEntry.getValue().stream()
+                    .map(e -> e.getValue().businessDate())
+                    .distinct()
+                    .toList();
+            List<SessionRecord> sessions = jdbcTemplate.query("""
+                    SELECT id, session_code, region_id, outlet_id, terminal_id, currency_code, cashier_user_id, manager_user_id, business_date,
+                           status, note, opened_at, closed_at, reconciled_at, expected_cash_amount, counted_cash_amount, discrepancy_amount
+                    FROM pos.pos_session
+                    WHERE outlet_id IN (:outletIds)
+                      AND business_date IN (:businessDates)
+                    ORDER BY outlet_id ASC, opened_at DESC, id DESC
+                    """, PosSql.params(
+                    "outletIds", shardOutletIds,
+                    "businessDates", businessDates
+            ), (rs, rowNum) -> new SessionRecord(
+                    rs.getLong("id"),
+                    rs.getString("session_code"),
+                    rs.getLong("region_id"),
+                    rs.getLong("outlet_id"),
+                    rs.getString("terminal_id"),
+                    rs.getString("currency_code"),
+                    rs.getObject("cashier_user_id", Long.class),
+                    rs.getObject("manager_user_id", Long.class),
+                    rs.getObject("business_date", LocalDate.class),
+                    rs.getString("status"),
+                    rs.getString("note"),
+                    PosSql.instant(rs, "opened_at"),
+                    PosSql.instant(rs, "closed_at"),
+                    PosSql.instant(rs, "reconciled_at"),
+                    rs.getBigDecimal("expected_cash_amount"),
+                    rs.getBigDecimal("counted_cash_amount"),
+                    rs.getBigDecimal("discrepancy_amount")
+            ));
+            for (SessionRecord session : sessions) {
+                OutletBusinessContext context = contexts.get(session.outletId());
+                if (context == null || !context.businessDate().equals(session.businessDate()) || latestByOutlet.containsKey(session.outletId())) {
+                    continue;
+                }
+                latestByOutlet.put(session.outletId(), session);
             }
-            latestByOutlet.put(session.outletId(), session);
         }
         return latestByOutlet;
     }
 
-    private Map<Long, SessionStats> findStatsBySessionId(List<Long> sessionIds) {
+    private Map<Long, SessionStats> findStatsBySessionIdOnShard(NamedParameterJdbcTemplate jdbcTemplate, List<Long> sessionIds) {
         if (sessionIds.isEmpty()) {
             return Map.of();
         }
-        // Sessions passed here were already resolved from a single shard (findLatestSessionsByOutlet uses the
-        // first outlet's shard). Use the root/default shard template for this aggregation query.
-        NamedParameterJdbcTemplate statsJdbc = operationalShardRegistry.get(shardResolver.resolve(com.fern.platform.common.RouteKey.of(0L, 0L))).jdbc();
-        return statsJdbc.query("""
+        return jdbcTemplate.query("""
                 WITH order_summary AS (
                     SELECT sale_order.pos_session_id,
                            COUNT(*) AS total_orders,

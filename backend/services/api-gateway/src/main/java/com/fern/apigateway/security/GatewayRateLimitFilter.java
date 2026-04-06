@@ -79,7 +79,13 @@ public class GatewayRateLimitFilter implements GlobalFilter, Ordered {
                 List.of(String.valueOf(WINDOW.toMillis()))
         )
         .next()
-        .defaultIfEmpty(1L)
+        .defaultIfEmpty(limit + 1)  // Treat empty result (Redis error) as over-limit — fail closed
+        .onErrorReturn(limit + 1)   // Treat Redis exception as over-limit — fail closed
+        .doOnNext(count -> {
+            if (count >= limit + 1) {
+                log.warn("RATE_LIMIT_REDIS_UNAVAILABLE ip={} path={} — failing closed", clientIp, path);
+            }
+        })
         .flatMap(count -> {
             if (count > limit) {
                 log.warn("RATE_LIMIT_EXCEEDED ip={} path={} count={} limit={}", clientIp, path, count, limit);

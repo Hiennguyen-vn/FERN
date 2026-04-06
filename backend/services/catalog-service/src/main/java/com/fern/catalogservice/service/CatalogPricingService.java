@@ -55,8 +55,8 @@ public class CatalogPricingService {
     }
 
     @Transactional(readOnly = true)
-    public List<TaxRateResponse> listTaxRates() {
-        return taxRateRepository.findAllByOrderByEffectiveFromDescIdDesc().stream().map(this::toTaxRateResponse).toList();
+    public List<TaxRateResponse> listTaxRates(int limit) {
+        return taxRateRepository.findAllByOrderByEffectiveFromDescIdDesc(org.springframework.data.domain.PageRequest.of(0, limit)).stream().map(this::toTaxRateResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -90,8 +90,8 @@ public class CatalogPricingService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductPriceResponse> listProductPrices() {
-        return productPriceRepository.findAllByOrderByEffectiveFromDescIdDesc().stream().map(this::toProductPriceResponse).toList();
+    public List<ProductPriceResponse> listProductPrices(int limit) {
+        return productPriceRepository.findAllByOrderByEffectiveFromDescIdDesc(org.springframework.data.domain.PageRequest.of(0, limit)).stream().map(this::toProductPriceResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -125,7 +125,7 @@ public class CatalogPricingService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductAvailabilityResponse> listAvailability(Long productId, Long outletId) {
+    public List<ProductAvailabilityResponse> listAvailability(Long productId, Long outletId, int limit) {
         List<ProductOutletAvailabilityEntity> entities;
         if (productId != null && outletId != null) {
             entities = productOutletAvailabilityRepository
@@ -138,7 +138,7 @@ public class CatalogPricingService {
             entities = productOutletAvailabilityRepository.findByIdOutletId(outletId);
         } else {
             entities = productOutletAvailabilityRepository.findAll(
-                    org.springframework.data.domain.PageRequest.of(0, 1000)
+                    org.springframework.data.domain.PageRequest.of(0, limit)
             ).getContent();
         }
         return entities.stream()

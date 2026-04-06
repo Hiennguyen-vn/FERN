@@ -70,7 +70,7 @@ public class PosSessionService {
             PosOrgClient.RegionRoute region
     ) {
         NamedParameterJdbcTemplate jdbcTemplate = jdbcTemplate(outlet.regionId(), request.outletId());
-        lockOpenSessionScope(jdbcTemplate, request.outletId());
+        lockOpenSessionScope(jdbcTemplate, request.outletId(), request.terminalId());
         SessionRecord existingOpenSession = findOpenSession(jdbcTemplate, request.outletId(), request.terminalId());
         if (existingOpenSession != null) {
             if (!java.util.Objects.equals(existingOpenSession.cashierUserId(), principal.userId())) {
@@ -331,10 +331,25 @@ public class PosSessionService {
         ) : null);
     }
 
-    private void lockOpenSessionScope(NamedParameterJdbcTemplate jdbcTemplate, Long outletId) {
+    /**
+     * Acquires a transaction-scoped advisory lock keyed on (outletId, terminalId) to prevent
+     * two concurrent requests from opening duplicate sessions for the same outlet+terminal pair.
+     *
+     * <p>The lock key combines the outletId and a stable hash of the terminalId so that:
+     * <ul>
+     *   <li>Different terminals at the same outlet can open sessions concurrently.</li>
+     *   <li>Two requests for the same outlet+terminal are serialized.</li>
+     * </ul>
+     * {@code pg_advisory_xact_lock} is automatically released at transaction end.
+     */
+    private void lockOpenSessionScope(NamedParameterJdbcTemplate jdbcTemplate, Long outletId, String terminalId) {
+        // Combine outletId with a hash of terminalId into a single long lock key.
+        // outletId occupies the upper 32 bits; lower 32 bits are derived from terminalId hash.
+        int terminalHash = terminalId == null ? 0 : terminalId.hashCode();
+        long lockKey = (outletId << 32) | (terminalHash & 0xFFFFFFFFL);
         jdbcTemplate.query("""
                 SELECT pg_advisory_xact_lock(:lockKey)
-                """, PosSql.params("lockKey", outletId), rs -> null);
+                """, PosSql.params("lockKey", lockKey), rs -> null);
     }
 
     private NamedParameterJdbcTemplate rootJdbcTemplate() {

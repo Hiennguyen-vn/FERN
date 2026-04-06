@@ -383,4 +383,106 @@ public class PosStore {
                 rs.getString("loyalty_tier")
         ) : null);
     }
+
+    /**
+     * Batch-fetches customer summaries for a set of customer IDs in a single query.
+     * Walk-in orders (customerId == null) are not included in the result map.
+     */
+    public Map<Long, CustomerSummaryResponse> resolveCustomerSummaries(
+            NamedParameterJdbcTemplate rootJdbcTemplate,
+            java.util.Collection<Long> customerIds
+    ) {
+        java.util.List<Long> nonNullIds = customerIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (nonNullIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, CustomerSummaryResponse> result = new java.util.HashMap<>();
+        rootJdbcTemplate.query("""
+                SELECT id, customer_code, full_name, phone, loyalty_tier
+                FROM pos.customer
+                WHERE id IN (:ids)
+                """, PosSql.params("ids", nonNullIds), (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
+            Long id = rs.getLong("id");
+            result.put(id, new CustomerSummaryResponse(
+                    id,
+                    rs.getString("customer_code"),
+                    rs.getString("full_name"),
+                    rs.getString("phone"),
+                    rs.getString("loyalty_tier")
+            ));
+        });
+        return result;
+    }
+
+    /**
+     * Batch-fetches order lines for a collection of order IDs in a single query.
+     * Returns a map of orderId → list of lines.
+     */
+    public Map<Long, List<com.fern.posservice.dto.PosResponses.SaleOrderLineResponse>> queryOrderLinesBatch(
+            NamedParameterJdbcTemplate jdbcTemplate,
+            java.util.Collection<Long> orderIds
+    ) {
+        if (orderIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<com.fern.posservice.dto.PosResponses.SaleOrderLineResponse>> result = new java.util.HashMap<>();
+        jdbcTemplate.query("""
+                SELECT sale_order_id, line_number, product_id, product_code, product_name_snapshot,
+                       unit_price, qty, discount_amount, tax_amount, line_total, note
+                FROM pos.sale_order_line
+                WHERE sale_order_id IN (:orderIds)
+                ORDER BY sale_order_id, line_number
+                """, PosSql.params("orderIds", orderIds), (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
+            Long orderId = rs.getLong("sale_order_id");
+            result.computeIfAbsent(orderId, ignored -> new java.util.ArrayList<>())
+                    .add(new com.fern.posservice.dto.PosResponses.SaleOrderLineResponse(
+                            rs.getInt("line_number"),
+                            rs.getLong("product_id"),
+                            rs.getString("product_code"),
+                            rs.getString("product_name_snapshot"),
+                            rs.getBigDecimal("unit_price"),
+                            rs.getBigDecimal("qty"),
+                            rs.getBigDecimal("discount_amount"),
+                            rs.getBigDecimal("tax_amount"),
+                            rs.getBigDecimal("line_total"),
+                            rs.getString("note")
+                    ));
+        });
+        return result;
+    }
+
+    /**
+     * Batch-fetches payments for a collection of order IDs in a single query.
+     * Returns a map of orderId → list of payments.
+     */
+    public Map<Long, List<com.fern.posservice.dto.PosResponses.SalePaymentResponse>> queryPaymentsBatch(
+            NamedParameterJdbcTemplate jdbcTemplate,
+            java.util.Collection<Long> orderIds
+    ) {
+        if (orderIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<com.fern.posservice.dto.PosResponses.SalePaymentResponse>> result = new java.util.HashMap<>();
+        jdbcTemplate.query("""
+                SELECT sale_order_id, id, payment_method, amount, status, payment_time, transaction_ref
+                FROM pos.sale_payment
+                WHERE sale_order_id IN (:orderIds)
+                ORDER BY sale_order_id, created_at, id
+                """, PosSql.params("orderIds", orderIds), (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
+            Long orderId = rs.getLong("sale_order_id");
+            result.computeIfAbsent(orderId, ignored -> new java.util.ArrayList<>())
+                    .add(new com.fern.posservice.dto.PosResponses.SalePaymentResponse(
+                            rs.getLong("id"),
+                            rs.getString("payment_method"),
+                            rs.getBigDecimal("amount"),
+                            rs.getString("status"),
+                            PosSql.instant(rs, "payment_time"),
+                            rs.getString("transaction_ref")
+                    ));
+        });
+        return result;
+    }
 }

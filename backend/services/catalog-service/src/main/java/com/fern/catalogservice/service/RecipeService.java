@@ -64,8 +64,8 @@ public class RecipeService {
     }
 
     @Transactional(readOnly = true)
-    public List<RecipeResponse> listRecipes() {
-        return recipeRepository.findAllByOrderByRecipeCodeAsc().stream().map(this::toRecipeResponse).toList();
+    public List<RecipeResponse> listRecipes(int limit) {
+        return recipeRepository.findAllByOrderByRecipeCodeAsc(org.springframework.data.domain.PageRequest.of(0, limit)).stream().map(this::toRecipeResponse).toList();
     }
 
     @Transactional(readOnly = true)
@@ -110,7 +110,18 @@ public class RecipeService {
     @Transactional(readOnly = true)
     public List<RecipeVersionResponse> listRecipeVersions(Long recipeId) {
         requireRecipe(recipeId);
-        return recipeVersionRepository.findByRecipe_IdOrderByEffectiveFromDesc(recipeId).stream().map(this::toRecipeVersionResponse).toList();
+        List<RecipeVersionEntity> versions = recipeVersionRepository.findByRecipe_IdOrderByEffectiveFromDesc(recipeId);
+        if (versions.isEmpty()) {
+            return List.of();
+        }
+        List<Long> versionIds = versions.stream().map(RecipeVersionEntity::getId).toList();
+        Map<Long, List<RecipeVersionIngredientEntity>> ingredientsByVersion =
+                recipeVersionIngredientRepository.findByRecipeVersion_IdInOrderByRecipeVersion_IdAscSortOrderAsc(versionIds)
+                        .stream()
+                        .collect(java.util.stream.Collectors.groupingBy(i -> i.getRecipeVersion().getId()));
+        return versions.stream()
+                .map(v -> toRecipeVersionResponse(v, ingredientsByVersion.getOrDefault(v.getId(), List.of())))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -308,7 +319,13 @@ public class RecipeService {
     }
 
     private RecipeVersionResponse toRecipeVersionResponse(RecipeVersionEntity entity) {
-        List<RecipeVersionIngredientResponse> ingredients = recipeVersionIngredientRepository.findByRecipeVersion_IdOrderBySortOrderAsc(entity.getId()).stream()
+        List<RecipeVersionIngredientEntity> lines =
+                recipeVersionIngredientRepository.findByRecipeVersion_IdOrderBySortOrderAsc(entity.getId());
+        return toRecipeVersionResponse(entity, lines);
+    }
+
+    private RecipeVersionResponse toRecipeVersionResponse(RecipeVersionEntity entity, List<RecipeVersionIngredientEntity> lines) {
+        List<RecipeVersionIngredientResponse> ingredients = lines.stream()
                 .map(line -> new RecipeVersionIngredientResponse(
                         line.getIngredient().getId(),
                         line.getIngredient().getCode(),

@@ -36,9 +36,9 @@ public class RecipeController {
 
     @Operation(summary = "Get Catalog — Recipes")
     @GetMapping("/recipes")
-    public List<RecipeResponse> listRecipes(@AuthenticationPrincipal FernPrincipal principal) {
+    public List<RecipeResponse> listRecipes(@AuthenticationPrincipal FernPrincipal principal, @RequestParam(required = false) Integer limit) {
         catalogAuthorizer.requireSystemPermission(principal, PermissionCodes.CATALOG_RECIPE_READ);
-        return recipeService.listRecipes();
+        return recipeService.listRecipes(com.fern.platform.common.ListQueryDefaults.clampLimit(limit));
     }
 
     @Operation(summary = "Get Catalog — Recipes")

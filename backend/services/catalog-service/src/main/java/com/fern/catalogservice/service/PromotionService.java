@@ -64,8 +64,8 @@ public class PromotionService {
     }
 
     @Transactional(readOnly = true)
-    public List<PromotionResponse> listPromotions(FernPrincipal principal, String scopeType, Long scopeId) {
-        return promotionRepository.findAllByOrderByEffectiveFromDescIdDesc().stream()
+    public List<PromotionResponse> listPromotions(FernPrincipal principal, String scopeType, Long scopeId, int limit) {
+        return promotionRepository.findAllByOrderByEffectiveFromDescIdDesc(org.springframework.data.domain.PageRequest.of(0, limit)).stream()
                 .filter(entity -> scopeType == null || entity.getScopeType().equalsIgnoreCase(scopeType))
                 .filter(entity -> scopeId == null || (entity.getScopeId() != null && entity.getScopeId().equals(scopeId)))
                 .map(this::toResponse)
@@ -133,7 +133,18 @@ public class PromotionService {
         entity.setUpdatedByUserId(principal == null ? null : principal.userId());
     }
 
+    private static final java.util.Set<String> VALID_SCOPE_TYPES = java.util.Set.of("GLOBAL", "REGION", "OUTLET");
+    private static final java.util.Set<String> VALID_PROMOTION_TYPES = java.util.Set.of("PERCENTAGE", "FIXED_AMOUNT", "FREE_ITEM");
+
     private void validate(PromotionUpsertRequest request) {
+        if (request.scopeType() == null || !VALID_SCOPE_TYPES.contains(request.scopeType().toUpperCase())) {
+            throw new com.fern.platform.common.BadRequestException(
+                    "Invalid scopeType '" + request.scopeType() + "'. Must be one of: " + VALID_SCOPE_TYPES);
+        }
+        if (request.promotionType() == null || !VALID_PROMOTION_TYPES.contains(request.promotionType().toUpperCase())) {
+            throw new com.fern.platform.common.BadRequestException(
+                    "Invalid promotionType '" + request.promotionType() + "'. Must be one of: " + VALID_PROMOTION_TYPES);
+        }
         if (request.effectiveTo() != null && request.effectiveTo().isBefore(request.effectiveFrom())) {
             throw new ConflictException("Promotion effectiveTo must be on or after effectiveFrom");
         }

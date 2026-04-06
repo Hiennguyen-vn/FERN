@@ -91,7 +91,14 @@ public class FinanceProcurementConsumer {
             validateGoodsReceiptPostedEvent(event);
             transactionTemplate.executeWithoutResult(status -> processGoodsReceiptPosted(event, sourceEventId));
         } catch (RuntimeException exception) {
-            transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
+            log.error("FINANCE_INTEGRATION_FAILED topic={} sourceEventId={} — event marked FAILED, use replay endpoint to retry",
+                    GOODS_RECEIPT_TOPIC, sourceEventId, exception);
+            try {
+                transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
+            } catch (RuntimeException markException) {
+                log.error("FINANCE_INTEGRATION_MARK_FAILED_ERROR topic={} sourceEventId={} — unable to record failure, event may be stuck RECEIVED",
+                        GOODS_RECEIPT_TOPIC, sourceEventId, markException);
+            }
             // Do not re-throw: the event is recorded as FAILED in the integration log.
             // Re-throwing would cause Kafka to retry indefinitely for persistent errors.
         }
@@ -119,7 +126,14 @@ public class FinanceProcurementConsumer {
             transactionTemplate.executeWithoutResult(status ->
                     processSupplierPaymentRecorded(event, payload, sourceEventId));
         } catch (RuntimeException exception) {
-            transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
+            log.error("FINANCE_INTEGRATION_FAILED topic={} sourceEventId={} — event marked FAILED, use replay endpoint to retry",
+                    SUPPLIER_PAYMENT_TOPIC, sourceEventId, exception);
+            try {
+                transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
+            } catch (RuntimeException markException) {
+                log.error("FINANCE_INTEGRATION_MARK_FAILED_ERROR topic={} sourceEventId={} — unable to record failure, event may be stuck RECEIVED",
+                        SUPPLIER_PAYMENT_TOPIC, sourceEventId, markException);
+            }
             // Do not re-throw: the event is recorded as FAILED in the integration log.
         }
     }
@@ -146,7 +160,14 @@ public class FinanceProcurementConsumer {
             transactionTemplate.executeWithoutResult(status ->
                     processSupplierInvoiceApproved(event, payload, sourceEventId));
         } catch (RuntimeException exception) {
-            transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
+            log.error("FINANCE_INTEGRATION_FAILED topic={} sourceEventId={} — event marked FAILED, use replay endpoint to retry",
+                    SUPPLIER_INVOICE_APPROVED_TOPIC, sourceEventId, exception);
+            try {
+                transactionTemplate.executeWithoutResult(status -> markIntegrationFailed(sourceEventId, exception));
+            } catch (RuntimeException markException) {
+                log.error("FINANCE_INTEGRATION_MARK_FAILED_ERROR topic={} sourceEventId={} — unable to record failure, event may be stuck RECEIVED",
+                        SUPPLIER_INVOICE_APPROVED_TOPIC, sourceEventId, markException);
+            }
             // Do not re-throw: the event is recorded as FAILED in the integration log.
         }
     }

@@ -5,6 +5,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class PolicyVersionService {
@@ -39,7 +41,14 @@ public class PolicyVersionService {
                 RETURNING version
                 """, Map.of(), Long.class);
         long resolved = next == null ? currentVersion() + 1 : next;
-        redisTemplate.opsForValue().set(REDIS_KEY, Long.toString(resolved));
+        // Write Redis only after the DB transaction commits to avoid a stale cache
+        // if the transaction is later rolled back.
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                redisTemplate.opsForValue().set(REDIS_KEY, Long.toString(resolved));
+            }
+        });
         return resolved;
     }
 
